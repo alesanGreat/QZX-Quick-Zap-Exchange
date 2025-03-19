@@ -1,0 +1,19 @@
+{
+  "articles": ["a", "an", "the"],
+  "pronouns": {
+    "personal": ["i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them"],
+    "possessive": ["my", "your", "his", "her", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs"],
+    "reflexive": ["myself", "yourself", "himself", "herself", "itself", "ourselves", "yourselves", "themselves"],
+    "relative": ["who", "whom", "whose", "which", "that"],
+    "indefinite": ["all", "another", "any", "anybody", "anyone", "anything", "both", "each", "either", "everybody", "everyone", "everything", "few", "many", "most", "neither", "nobody", "none", "nothing", "one", "other", "others", "several", "some", "somebody", "someone", "something", "such"]
+  },
+  "prepositions": ["about", "above", "across", "after", "against", "along", "amid", "among", "around", "at", "before", "behind", "below", "beneath", "beside", "between", "beyond", "by", "down", "during", "except", "for", "from", "in", "inside", "into", "like", "near", "of", "off", "on", "onto", "out", "outside", "over", "past", "through", "throughout", "to", "toward", "towards", "under", "underneath", "until", "unto", "up", "upon", "with", "within", "without"],
+  "conjunctions": {
+    "coordinating": ["and", "but", "or", "nor", "for", "yet", "so"],
+    "subordinating": ["although", "as", "because", "before", "if", "once", "since", "than", "that", "though", "till", "unless", "until", "when", "whenever", "where", "whereas", "wherever", "while"]
+  },
+  "auxiliary_verbs": ["am", "are", "be", "been", "being", "can", "could", "did", "do", "does", "had", "has", "have", "having", "is", "may", "might", "must", "shall", "should", "was", "were", "will", "would"],
+  "determiners": ["this", "that", "these", "those", "what", "whatever", "which", "whichever"],
+  "common": ["not", "there", "here", "then", "now", "just", "only", "very", "too", "quite", "rather"],
+  "sample_words": ["good", "morning", "everyone", "this", "paragraph", "written", "entirely", "english", "test", "language", "detection", "system", "linguistic", "analysis", "important", "understanding", "content", "multilingual", "documents", "words", "have", "their", "unique", "characteristics", "compared", "other", "languages", "united", "states", "kingdom", "australia", "many", "countries", "spoken", "regional", "variations", "enrich"]
+} 

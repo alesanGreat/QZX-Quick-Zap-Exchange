@@ -1,0 +1,92 @@
+{
+  "keywords": [
+    "as", "async", "await", "break", "const", "continue", "crate", "dyn", "else", "enum",
+    "extern", "false", "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod", "move",
+    "mut", "pub", "ref", "return", "self", "Self", "static", "struct", "super", "trait",
+    "true", "type", "unsafe", "use", "where", "while", "abstract", "become", "box", "do",
+    "final", "macro", "override", "priv", "try", "typeof", "unsized", "virtual", "yield"
+  ],
+  "builtins": {
+    "primitive_types": [
+      "bool", "char", "str", "i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32",
+      "u64", "u128", "usize", "f32", "f64", "array", "slice", "tuple", "never", "unit"
+    ],
+    "standard_types": [
+      "String", "Vec", "Option", "Result", "Box", "Rc", "Arc", "Cell", "RefCell", "Mutex",
+      "RwLock", "OnceLock", "Cow", "HashMap", "HashSet", "BTreeMap", "BTreeSet", "LinkedList",
+      "VecDeque", "BinaryHeap", "Path", "PathBuf", "Ordering", "Range", "Duration", "Instant",
+      "SystemTime", "PhantomData", "Pin"
+    ],
+    "traits": [
+      "Copy", "Clone", "Debug", "Default", "Eq", "PartialEq", "Ord", "PartialOrd", "Hash",
+      "Send", "Sync", "Drop", "Fn", "FnMut", "FnOnce", "From", "Into", "AsRef", "AsMut",
+      "Borrow", "BorrowMut", "ToOwned", "Display", "Error", "Iterator", "IntoIterator",
+      "Future", "Stream", "Sink", "Read", "Write", "Deref", "DerefMut"
+    ]
+  },
+  "macros": [
+    "println!", "print!", "format!", "vec!", "assert!", "assert_eq!", "assert_ne!",
+    "panic!", "unreachable!", "unimplemented!", "todo!", "dbg!", "include!", "include_str!",
+    "include_bytes!", "env!", "option_env!", "concat!", "file!", "line!", "column!",
+    "module_path!", "stringify!", "cfg!", "macro_rules!", "matches!", "try!", "write!",
+    "writeln!", "format_args!"
+  ],
+  "attributes": [
+    "#[derive]", "#[allow]", "#[deny]", "#[forbid]", "#[warn]", "#[deprecated]", "#[must_use]",
+    "#[inline]", "#[cold]", "#[no_mangle]", "#[repr]", "#[path]", "#[cfg]", "#[test]",
+    "#[bench]", "#[doc]", "#[non_exhaustive]", "#[macro_export]", "#[macro_use]", "#[link]",
+    "#[automatically_derived]", "#[target_feature]", "#[track_caller]", "#[global_allocator]",
+    "#[export_name]", "#[link_section]", "#[used]", "#[recursion_limit]", "#[feature]"
+  ],
+  "libraries": {
+    "standard": [
+      "std", "core", "alloc", "collections", "std::io", "std::fs", "std::path", "std::env",
+      "std::time", "std::thread", "std::sync", "std::process", "std::net", "std::collections"
+    ],
+    "popular": [
+      "serde", "tokio", "async-std", "futures", "rand", "rayon", "clap", "reqwest", "hyper",
+      "log", "once_cell", "chrono", "regex", "lazy_static", "anyhow", "thiserror", "bytes",
+      "crossbeam", "diesel", "sqlx", "actix-web", "warp", "rocket", "tower", "tracing"
+    ]
+  },
+  "patterns": {
+    "function_definition": [
+      "(?:pub(?:\\s*\\((?:[^)]+)\\))?\\s+)?(?:async\\s+)?fn\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?\\s*\\([^)]*\\)(?:\\s*->\\s*[^{;]+)?(?:\\s+where\\s+[^{]+)?\\s*\\{"
+    ],
+    "struct_definition": [
+      "(?:pub(?:\\s*\\((?:[^)]+)\\))?\\s+)?struct\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\([^)]*\\)|\\s*\\{[^}]*\\}|\\s*;)"
+    ],
+    "enum_definition": [
+      "(?:pub(?:\\s*\\((?:[^)]+)\\))?\\s+)?enum\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s+where\\s+[^{]+)?\\s*\\{[^}]*\\}"
+    ],
+    "trait_definition": [
+      "(?:pub(?:\\s*\\((?:[^)]+)\\))?\\s+)?(?:unsafe\\s+)?trait\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s*:\\s*[^{]+)?(?:\\s+where\\s+[^{]+)?\\s*\\{[^}]*\\}"
+    ],
+    "impl_block": [
+      "impl(?:\\s*<[^>]*>)?\\s+(?:!?[a-zA-Z_][a-zA-Z0-9_:]*(?:<[^>]*>)?\\s+for\\s+)?([a-zA-Z_][a-zA-Z0-9_:]*)(?:<[^>]*>)?(?:\\s+where\\s+[^{]+)?\\s*\\{"
+    ],
+    "macro_definition": [
+      "macro_rules!\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{",
+      "#\\[proc_macro(?:_derive|_attribute)?\\]\\s*(?:pub\\s+)?fn\\s+([a-zA-Z_][a-zA-Z0-9_]*)"
+    ],
+    "mod_definition": [
+      "(?:pub(?:\\s*\\((?:[^)]+)\\))?\\s+)?mod\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{",
+      "(?:pub(?:\\s*\\((?:[^)]+)\\))?\\s+)?mod\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*;"
+    ],
+    "use_statement": [
+      "use\\s+([^;]+);"
+    ],
+    "lifetime": [
+      "'([a-zA-Z_][a-zA-Z0-9_]*)"
+    ]
+  },
+  "comments": {
+    "single_line": ["//"],
+    "multi_line": ["/\\*.*?\\*/"],
+    "doc_comments": ["///", "//!"]
+  },
+  "string_literals": [
+    "\"(?:[^\"\\\\]|\\\\.)*\"", "'(?:[^'\\\\]|\\\\.)*'", "r#\"(?:[^\"\\\\]|\\\\.)*\"#", "b\"[^\"]*\""
+  ],
+  "file_extensions": [".rs", ".rlib", ".rmeta"]
+} 

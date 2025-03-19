@@ -1,0 +1,41 @@
+// This is a test file with mixed English and Spanish content
+// Este es un archivo de prueba con contenido mezclado en inglés y español
+
+/*
+ * English paragraph:
+ * The quick brown fox jumps over the lazy dog. Programming languages like Python and JavaScript
+ * are widely used in software development. They offer different paradigms and features that make
+ * them suitable for various applications. Many developers work with these languages every day.
+ */
+
+/*
+ * Párrafo en español:
+ * El veloz zorro marrón salta sobre el perro perezoso. Lenguajes de programación como Python y JavaScript
+ * son ampliamente utilizados en el desarrollo de software. Ofrecen diferentes paradigmas y características
+ * que los hacen adecuados para varias aplicaciones. Muchos desarrolladores trabajan con estos lenguajes todos los días.
+ */
+
+// Some code-like elements that should be filtered
+function calculateSum(a, b) {
+    return a + b;
+}
+
+def python_function(parameter):
+    return parameter * 2
+
+if (condition) {
+    executeThis();
+} else {
+    executeThat();
+}
+
+// Mixed language comments
+// This system works perfectly for analyzing text
+// Este sistema funciona perfectamente para analizar texto
+
+let x = 5;
+const y = 10;
+var z = x + y;
+
+English words: development, language, programming, software, application, developer, features
+Palabras en español: desarrollo, lenguaje, programación, aplicación, desarrollador, características 

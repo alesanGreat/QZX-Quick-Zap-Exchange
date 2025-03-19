@@ -1,0 +1,22 @@
+{
+  "articles": {
+    "definite": ["le", "la", "les", "l'"],
+    "indefinite": ["un", "une", "des"],
+    "partitive": ["du", "de la", "des", "de l'"]
+  },
+  "pronouns": {
+    "personal": ["je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles", "me", "te", "le", "la", "lui", "nous", "vous", "les", "leur", "moi", "toi", "lui", "elle", "soi", "nous", "vous", "eux", "elles"],
+    "possessive": ["mon", "ma", "mes", "ton", "ta", "tes", "son", "sa", "ses", "notre", "nos", "votre", "vos", "leur", "leurs", "le mien", "la mienne", "les miens", "les miennes", "le tien", "la tienne", "les tiens", "les tiennes", "le sien", "la sienne", "les siens", "les siennes", "le nôtre", "la nôtre", "les nôtres", "le vôtre", "la vôtre", "les vôtres", "le leur", "la leur", "les leurs"],
+    "demonstrative": ["ce", "cet", "cette", "ces", "celui", "celle", "ceux", "celles", "celui-ci", "celle-ci", "ceux-ci", "celles-ci", "celui-là", "celle-là", "ceux-là", "celles-là", "ceci", "cela", "ça"],
+    "relative": ["qui", "que", "quoi", "dont", "où", "lequel", "laquelle", "lesquels", "lesquelles", "auquel", "à laquelle", "auxquels", "auxquelles", "duquel", "de laquelle", "desquels", "desquelles"],
+    "indefinite": ["tout", "toute", "tous", "toutes", "aucun", "aucune", "aucuns", "aucunes", "certain", "certaine", "certains", "certaines", "tel", "telle", "tels", "telles", "quelque", "quelques", "plusieurs", "chaque", "nul", "nulle", "nuls", "nulles", "quelqu'un", "quelqu'une", "quelques-uns", "quelques-unes", "personne", "rien", "autrui", "quiconque", "on"]
+  },
+  "prepositions": ["à", "de", "en", "dans", "sur", "sous", "par", "pour", "avec", "sans", "chez", "entre", "vers", "jusqu'à", "jusque", "depuis", "pendant", "durant", "avant", "après", "derrière", "devant", "contre", "malgré", "sauf", "hormis", "outre", "selon", "suivant", "d'après", "près de", "loin de", "à côté de", "au-dessus de", "au-dessous de", "à cause de", "grâce à", "quant à"],
+  "conjunctions": {
+    "coordinating": ["et", "ou", "ni", "mais", "car", "or", "donc"],
+    "subordinating": ["que", "quand", "comme", "si", "lorsque", "puisque", "quoique", "afin que", "bien que", "parce que", "pour que", "alors que", "tandis que", "pendant que", "dès que", "depuis que", "à mesure que", "jusqu'à ce que"]
+  },
+  "auxiliary_verbs": ["être", "avoir", "suis", "es", "est", "sommes", "êtes", "sont", "étais", "était", "étions", "étiez", "étaient", "serai", "seras", "sera", "serons", "serez", "seront", "ai", "as", "a", "avons", "avez", "ont", "avais", "avait", "avions", "aviez", "avaient", "aurai", "auras", "aura", "aurons", "aurez", "auront"],
+  "common_adverbs": ["ne", "pas", "plus", "jamais", "rien", "très", "bien", "mal", "toujours", "souvent", "parfois", "rarement", "assez", "trop", "peu", "beaucoup", "moins", "davantage", "aussi", "ainsi", "alors", "aujourd'hui", "demain", "hier", "maintenant", "bientôt", "tard", "tôt", "ici", "là", "partout", "ailleurs", "dessus", "dessous", "dedans", "dehors", "loin", "près", "ensemble", "comment", "pourquoi", "combien", "peut-être", "certainement", "vraiment", "exactement"],
+  "sample_words": ["bonjour", "tous", "paragraphe", "écrit", "entièrement", "français", "pour", "tester", "système", "détection", "langue", "analyse", "linguistique", "importante", "comprendre", "contenu", "documents", "multilingues", "mots", "leurs", "propres", "caractéristiques", "uniques", "rapport", "autres", "langues", "france", "canada", "belgique", "nombreux", "pays", "parlé", "variations", "régionales", "enrichissent"]
+} 

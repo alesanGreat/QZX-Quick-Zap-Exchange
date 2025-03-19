@@ -1,0 +1,17 @@
+English:
+This is a test file to check the language detection functionality. We are using function words from various languages to determine the predominant language of a text file.
+
+Spanish:
+Este es un archivo de prueba para verificar la funcionalidad de detección de idiomas. Estamos utilizando palabras funcionales de varios idiomas para determinar el idioma predominante de un archivo de texto.
+
+French:
+Ceci est un fichier de test pour vérifier la fonctionnalité de détection de langue. Nous utilisons des mots fonctionnels de différentes langues pour déterminer la langue prédominante d'un fichier texte.
+
+German:
+Dies ist eine Testdatei, um die Spracherkennungsfunktion zu überprüfen. Wir verwenden Funktionswörter aus verschiedenen Sprachen, um die vorherrschende Sprache einer Textdatei zu bestimmen.
+
+Italian:
+Questo è un file di test per verificare la funzionalità di rilevamento della lingua. Stiamo utilizzando parole funzionali da varie lingue per determinare la lingua predominante di un file di testo.
+
+Portuguese:
+Este é um arquivo de teste para verificar a funcionalidade de detecção de idioma. Estamos usando palavras funcionais de vários idiomas para determinar o idioma predominante de um arquivo de texto. 

@@ -1,0 +1,29 @@
+FROM python:3.10-slim
+
+# Instalar dependencias necesarias
+RUN apt-get update && apt-get install -y \
+    git \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Crear directorios para tests y resultados
+RUN mkdir -p /app/test-data /app/test-results
+
+# No ejecutar como root
+RUN useradd -m testuser
+RUN chown -R testuser:testuser /app/test-data /app/test-results
+USER testuser
+
+# Instalar dependencias de Python
+RUN pip install --user pytest pytest-cov pytest-mock colorama
+
+# Volumen para compartir resultados y datos
+VOLUME /app/test-results
+VOLUME /app/test-data
+
+# Comando predeterminado (deja el shell interactivo para pruebas manuales)
+CMD ["/bin/bash"] 

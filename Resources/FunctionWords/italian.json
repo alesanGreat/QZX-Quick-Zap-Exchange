@@ -1,0 +1,25 @@
+{
+  "articles": {
+    "definite": ["il", "lo", "la", "i", "gli", "le", "l'"],
+    "indefinite": ["un", "uno", "una", "un'"],
+    "partitive": ["del", "dello", "della", "dei", "degli", "delle"]
+  },
+  "pronouns": {
+    "personal": ["io", "tu", "lui", "lei", "egli", "ella", "esso", "essa", "noi", "voi", "loro", "essi", "esse", "me", "te", "se", "ce", "ve", "mi", "ti", "si", "ci", "vi", "lo", "la", "li", "le", "gli", "ne"],
+    "possessive": ["mio", "mia", "miei", "mie", "tuo", "tua", "tuoi", "tue", "suo", "sua", "suoi", "sue", "nostro", "nostra", "nostri", "nostre", "vostro", "vostra", "vostri", "vostre", "loro"],
+    "demonstrative": ["questo", "questa", "questi", "queste", "quello", "quella", "quelli", "quelle", "ciò", "codesto", "codesta", "codesti", "codeste", "costui", "costei", "costoro", "colui", "colei", "coloro"],
+    "relative": ["che", "chi", "cui", "quale", "quali", "dove", "il quale", "la quale", "i quali", "le quali"],
+    "indefinite": ["alcuno", "alcuna", "alcuni", "alcune", "nessuno", "nessuna", "nessuni", "nessune", "ogni", "ciascuno", "ciascuna", "ciascuni", "ciascune", "qualche", "qualcuno", "qualcuna", "qualcheduno", "qualcheduna", "chiunque", "ognuno", "ognuna", "uno", "una", "qualsiasi", "qualunque", "qualsivoglia", "altro", "altra", "altri", "altre", "taluno", "taluna", "taluni", "talune", "molto", "molta", "molti", "molte", "poco", "poca", "pochi", "poche", "tanto", "tanta", "tanti", "tante", "troppo", "troppa", "troppi", "troppe", "alquanto", "alquanta", "alquanti", "alquante", "altrettanto", "altrettanta", "altrettanti", "altrettante", "tutto", "tutta", "tutti", "tutte", "niente", "nulla", "qualcosa"]
+  },
+  "prepositions": {
+    "simple": ["di", "a", "da", "in", "con", "su", "per", "tra", "fra"],
+    "articulated": ["del", "dello", "della", "dell'", "dei", "degli", "delle", "al", "allo", "alla", "all'", "ai", "agli", "alle", "dal", "dallo", "dalla", "dall'", "dai", "dagli", "dalle", "nel", "nello", "nella", "nell'", "nei", "negli", "nelle", "sul", "sullo", "sulla", "sull'", "sui", "sugli", "sulle", "col", "coi", "pel", "pei"]
+  },
+  "conjunctions": {
+    "coordinating": ["e", "né", "o", "oppure", "ovvero", "ossia", "cioè", "infatti", "ma", "però", "tuttavia", "pure", "anzi", "piuttosto", "invece", "eppure", "dunque", "quindi", "perciò", "pertanto", "così", "allora", "onde"],
+    "subordinating": ["che", "mentre", "quando", "appena", "finché", "poiché", "siccome", "giacché", "perché", "affinché", "onde", "sebbene", "benché", "quantunque", "anche se", "come se", "fuorché", "tranne che", "a meno che", "purché", "posto che", "qualora"]
+  },
+  "auxiliary_verbs": ["essere", "avere", "sono", "sei", "è", "siamo", "siete", "sono", "ero", "eri", "era", "eravamo", "eravate", "erano", "fui", "fosti", "fu", "fummo", "foste", "furono", "sarò", "sarai", "sarà", "saremo", "sarete", "saranno", "sia", "siate", "siano", "fossi", "fosse", "fossimo", "foste", "fossero", "sarei", "saresti", "sarebbe", "saremmo", "sareste", "sarebbero", "ho", "hai", "ha", "abbiamo", "avete", "hanno", "avevo", "avevi", "aveva", "avevamo", "avevate", "avevano", "ebbi", "avesti", "ebbe", "avemmo", "aveste", "ebbero", "avrò", "avrai", "avrà", "avremo", "avrete", "avranno", "abbia", "abbiate", "abbiano", "avessi", "avesse", "avessimo", "aveste", "avessero", "avrei", "avresti", "avrebbe", "avremmo", "avreste", "avrebbero"],
+  "common_adverbs": ["non", "sì", "molto", "troppo", "poco", "bene", "male", "così", "ecco", "già", "ancora", "sempre", "mai", "spesso", "raramente", "forse", "certamente", "davvero", "proprio", "qui", "qua", "lì", "là", "su", "giù", "dentro", "fuori", "prima", "dopo", "oggi", "ieri", "domani", "presto", "tardi", "ora", "adesso", "subito", "allora", "poi", "quindi", "perciò", "infatti", "inoltre", "comunque", "altrimenti", "invece", "piuttosto"],
+  "sample_words": ["buongiorno", "tutti", "questo", "paragrafo", "scritto", "interamente", "italiano", "testare", "sistema", "rilevamento", "della", "lingua", "analisi", "linguistica", "importante", "comprendere", "contenuto", "documenti", "multilingue", "parole", "italiane", "hanno", "caratteristiche", "uniche", "rispetto", "altre", "lingue", "italia", "alcune", "parti", "della", "svizzera", "parlato", "variazioni", "regionali", "arricchiscono"]
+} 

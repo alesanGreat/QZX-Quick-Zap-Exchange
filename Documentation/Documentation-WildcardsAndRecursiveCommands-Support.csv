@@ -1,0 +1,8 @@
+Command,Description,Wildcards Support,Recursive Support,Recursive Parameter,Wildcard Example,Recursive Example
+GetHumanLanguageStatsFromFile,"Analyzes files to determine the percentage of text in different languages",Yes,Yes,recursive,"qzx getHumanLanguageStatsFromFile ""*.md""","qzx getHumanLanguageStatsFromFile ""src/**/*.txt"" false 3 null -r"
+GetProgrammingLanguageStatsFromFile,"Analyzes files to determine the programming language and provides statistics about the code",Yes,Yes,recursive,"qzx getProgrammingLanguageStatsFromFile ""*.js""","qzx getProgrammingLanguageStatsFromFile ""src/**/*.py"" -r"
+FindFiles,"Advanced file search with multiple filtering options (like find + grep combined)",Yes,Yes,recursive,"qzx findFiles . ""*.txt""","qzx findFiles . ""*.py"" -r"
+FindText,"Searches for text patterns in files with advanced filtering options",Yes,Yes,recursive,"qzx findText ""function"" . false false ""*.js""","qzx findText ""class"" src -r false true ""*.py"""
+FindLargeFiles,"Searches for files with specific extensions that exceed a given size",Yes,Yes,recursive,"qzx findLargeFiles . ""*.log"" 1000000","qzx findLargeFiles src ""*.mp4"" 5000000 -r"
+ListFiles,"Lists files in a directory with support for wildcards and recursive searching",Yes,Yes,recursive,"qzx listFiles . ""*.py""","qzx listFiles src ""*.js"" -r"
+CountLinesInFile,"Counts the number of lines in files with support for wildcards and recursive searching",Yes,Yes,recursive,"qzx countLinesInFile ""*.py""","qzx countLinesInFile ""src/**/*.js"" -r2" 

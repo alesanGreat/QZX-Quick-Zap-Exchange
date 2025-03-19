@@ -1,0 +1,10 @@
+Command,Parameters,Success,Observations
+FindFiles,test-data/godot "*.cpp" -r,Yes,"Command works correctly with -r option for unlimited recursion"
+FindFiles,test-data/godot "*.cpp" --recursive,Yes,"Command works correctly with --recursive option for unlimited recursion"
+FindFiles,test-data/godot "*.cpp" -r2,Yes,"Command works correctly with -r2 option for recursion limited to 2 levels"
+FindFiles,test-data/godot "*.cpp" --recursive3,Yes,"Command works correctly with --recursive3 option for recursion limited to 3 levels"
+FindFiles,test-data/godot "*.py" -r,Yes,"Fixed implementation now correctly finds Python files with recursive option"
+ListFiles,test-data/godot "*.py" -r,Yes,"Improved implementation now correctly handles recursive search with -r option"
+ListFiles,test-data/godot "*.py" -r2,Yes,"Command correctly limits recursion to 2 levels with -r2 option"
+FindText,"import" test-data/godot --file_pattern="*.py" -r,Yes,"Fixed encoding issues when displaying special characters"
+FindText,"import" test-data/godot/methods.py,Yes,"Command correctly finds text patterns in files and handles encoding properly" 
