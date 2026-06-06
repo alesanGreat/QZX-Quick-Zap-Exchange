@@ -36,43 +36,113 @@ Add `--json` anywhere in the command arguments to force raw JSON output (optimal
 ## Complete Command Index
 
 ### 📁 File Commands
-*   **`listFiles`** `[path] [pattern]` - Lists files in a directory with wildcard matching and details.
-*   **`findFiles`** `[path] [pattern]` - Deep search for files.
-*   **`detectFileType`** `[file_path]` - Analyzes binary magic bytes to determine file type/MIME.
-*   **`countLinesInFile`** `[file_path]` - Counts lines, empty lines, and comments in a text file.
-*   **`getFileHash`** `[file_path] [algorithm]` - Calculates MD5, SHA-1, or SHA-256 checksums.
-*   **`compressZip`** `[zip_path] [source_path] [exclude_patterns]` - Creates a ZIP archive recursively.
-*   **`decompressZip`** `[zip_path] [target_path]` - Safely extracts a ZIP, preventing directory traversal.
-*   **`findDuplicateFiles`** `[scan_path] [min_size_kb] [max_depth]` - Groups and lists duplicate files.
-*   **`findBrokenSymlinks`** `[folder_path] [max_depth]` - Identifies broken shortcuts and symbolic links.
-*   **`inspectImage`** `[image_path]` - Extracts dimensions and metadata from PNG/JPEG/GIF/BMP.
-*   **`read_file`**, **`copy_file`**, **`move_file`**, **`delete_file`**, **`touch_file`**, **`create_directory`** - Standard filesystem operations with uniform JSON outcomes.
+*   **`changePermissions`** <path> <mode> [recursive] - Changes permissions of a file or directory
+*   **`compressZip`** <zip_path> <source_path> [exclude_patterns] - Compresses a directory or file into a ZIP archive with custom exclusion rules
+*   **`copyFile`** <source> <destination> [recursive] [force] - Copies a file or directory from source to destination
+*   **`countLinesInFile`** <file_path> [recursive] [ignore_empty] - Counts the number of lines in files with support for wildcards and recursive searching
+*   **`createDirectory`** <directory_paths> - Creates one or more directories at specified paths
+*   **`decompressZip`** <zip_path> [target_path] - Extracts all files from a ZIP archive to a destination folder, safely and securely
+*   **`deleteFile`** <target> [recursive] [force] - Deletes a file or directory from the filesystem
+*   **`detectFileType`** <file_path> [detailed_info] - Identifies file type based on its magic number (file signature) rather than extension
+    *Aliases: `wonderFileTypeMagic`*
+*   **`downloadFile`** <url> <destination_path> [show_progress] [timeout] - Downloads a file from the Internet (similar to 'wget' or 'curl' in Unix)
+*   **`findBrokenSymlinks`** [folder_path] [max_depth] - Scans directories for broken symbolic links (pointing to nonexistent files or folders)
+*   **`findDuplicateFiles`** [scan_path] [min_size_kb] [max_depth] - Scans a directory for identical/duplicate files by file size matching and MD5 hashing
+*   **`findFiles`** [search_path] [pattern] [recursive] [max_depth] [type] [size] [min_size] [max_size] [mtime] [newer_than] [older_than] [contains] [contains_regex] [case_sensitive] [exclude] [exclude_dir] [follow_symlinks] [sort_by] [reverse_sort] [format] [limit] - Advanced file search with multiple filtering options (like find + grep combined)
+*   **`findLargeFiles`** <directory> <extension> <min_size> [recursive] [sort_by] - Searches for files with specific extensions that exceed a given size
+*   **`findText`** <pattern> <target> [recursive] [regex] [case_sensitive] [file_pattern] [context_lines] [invert_match] [count_only] [max_matches] [colored] - Searches for text patterns in files with advanced filtering options
+*   **`getFileHash`** <file_path> [algorithm] - Calculates cryptographic hashes (MD5, SHA-1, SHA-256) of a file
+*   **`getHumanLanguageStats`** <file_path> [ignore_comments] [min_word_length] [languages] [recursive] [show_files_match] - Analyzes files to determine the percentage of text in different languages. Improved version using centralized file finder.
+    *Aliases: `getHumanLanguageStatsFromFile`*
+*   **`getProgrammingLanguageStats`** <file_path> [detailed] [languages] [recursive] - Analyzes files to determine the programming language and provides statistics about the code. Supports wildcards and recursive directory search.
+    *Aliases: `getProgrammingLanguageStatsFromFile`*
+*   **`inspectImage`** <image_path> - Inspects image dimensions, format, and size natively from headers (supports PNG, JPEG, GIF, BMP)
+*   **`isDirectoryEmpty`** <directory_path> [include_hidden] - Checks if a directory is empty (contains no files or subdirectories)
+    *Aliases: `wonderIfDirectoryEmpty`*
+*   **`isFileBinary`** <file_path> [sample_size] [binary_threshold] - Analyzes a file to determine if it's binary or plain text
+    *Aliases: `wonderIfFileIsBinary`*
+*   **`isFileEmpty`** <file_path> [consider_whitespace] - Checks if a file is empty (has zero bytes)
+    *Aliases: `wonderIfFileEmpty`*
+*   **`listFiles`** [directory_path] [pattern] [recursive] - Lists files in a directory with support for wildcards and recursive searching
+*   **`moveFile`** <source> <destination> [recursive] [force] - Moves or renames a file or directory from source to destination
+*   **`readFile`** <file_path> [max_lines] - Reads and displays the content of a file
+*   **`touchFile`** <path> [create_dirs] [content] - Creates an empty file or updates the timestamp of an existing file
 
 ### 🌐 Network Commands
-*   **`checkUrlStatus`** `[url] [timeout]` - Pings a URL to check HTTP status, code, headers, and online status.
-*   **`checkDns`** `[domain]` - Queries A, AAAA, MX, TXT, NS, and CNAME records.
-*   **`checkSslCertificate`** `[host] [port]` - Inspects SSL/TLS expiration dates, domain matching, and cipher parameters.
-*   **`getNetworkConfig`** `[check_public]` - Lists local IPs, adapters, default gateway, DNS servers, and checks for VPN.
-*   **`testWebSpeed`** `[max_seconds]` - Benchmarks download speed (Mbps) and HTTP latency (ms).
+*   **`checkDns`** <domain> - Queries A, AAAA, MX, TXT, NS, and CNAME DNS records for a given domain
+*   **`checkSslCertificate`** <host> [port] - Inspects the SSL/TLS certificate of a hostname, checking validity dates and issuers
+*   **`checkUrlStatus`** <url> [timeout] - Pings an HTTP URL, returning its status code, response time, and basic headers
+*   **`getNetworkConfig`** [check_public] - Displays comprehensive network status (interfaces, local IPs, DNS, public IP, VPN detection)
+*   **`testWebSpeed`** [max_seconds] - Measures internet download speed (Mbps) and HTTP ping latency (ms)
 
 ### 💻 System Commands
-*   **`SystemInfo`** - Displays operating system details, RAM size, CPU model, python version, and user context.
-*   **`getEnvironmentInfo`** - Retrieves detailed hardware usage reports (RAM, Storage, GPU load).
-*   **`inspectPort`** `[port] [kill]` - Identifies processes utilizing a port and can optionally kill them.
-*   **`getStartupPrograms`** - Lists apps configured to run at boot (Windows Registry / Unix Autostart).
-*   **`testDiskSpeed`** `[test_path] [size_mb]` - Benchmarks sequential read and write speeds.
-*   **`listSystemServices`** `[status]` - Inventories running or stopped OS background services.
-*   **`list_processes`**, **`kill_process`** - Monitors and manages active processes.
-*   **`isAdmin`** - Assesses if the shell runs with root/Administrator permissions.
-*   **`clear_screen`**, **`current_dir`**, **`version`** - Basic environmental shell utilities.
+*   **`checkDependency`** <dependency> - Checks if a command-line dependency is installed in the system PATH and retrieves its version
+*   **`checkSystemPath`** [binary_name] - Diagnoses the system PATH variable, lists broken or duplicate folders, and locates all instances of a binary
+*   **`clearScreen`** - Clears the terminal screen
+    *Aliases: `cls`, `clear`, `clrscr`*
+*   **`commandsBridge`** <command> [args] - Safely executes system commands with detailed feedback
+    *Aliases: `bridge`, `cmd`, `run`*
+*   **`currentDir`** [full] - Shows the current working directory
+    *Aliases: `pwd`, `cwd`, `dir`, `where`, `location`*
+*   **`generateContent`** <file_path> [sample_size] [model] [custom_prompt] - Uses Gemini AI to analyze and explain file contents
+    *Aliases: `explainfile`, `aianalyze`, `analyzeContent`*
+*   **`getCPULoad`** [interval] - Gets information about current CPU usage
+*   **`getCommandCount`** - Reports the total number of available commands in QZX
+    *Aliases: `wonderCommandsAmount`*
+*   **`getCurrentDate`** - Gets the current date in YYYY-MM-DD format
+*   **`getCurrentTime`** - Gets the current time in HH-MM-SS-milliseconds format
+*   **`getCurrentUser`** - Gets information about the currently logged in user
+*   **`getDiskInfo`** [path] - Gets information about disk space usage
+*   **`getDiskName`** [disk_path] - Gets disk name/model information for a disk or all disks
+*   **`getEnvironmentInfo`** [detailed] - Displays detailed information about the system environment
+    *Aliases: `environment`, `sysinfo`, `systeminfo`*
+*   **`getGPULoad`** [detailed] - Displays information about GPUs in the system
+    *Aliases: `gpuload`, `gpuinfo`, `gpustatus`*
+*   **`getRAMInfo`** - Gets detailed information about system RAM usage
+*   **`getSmartValues`** <disk> [format] - Retrieves disk health information using S.M.A.R.T. technology
+*   **`getStartupPrograms`** - Lists all startup programs configured to run on system boot or user login
+*   **`getToday`** [format] - Displays detailed information about the current date and time
+    *Aliases: `today`, `now`, `datetime`, `fecha`*
+*   **`inspectPort`** <port> [kill] - Checks if a port is in use, lists details of the process using it, and can optionally terminate it
+*   **`isAdmin`** - Checks if the current user has administrative privileges
+    *Aliases: `wonderIfAdmin`*
+*   **`killProcess`** <pid> [force] - Terminates a process by its ID (similar to 'kill' in Unix)
+*   **`listProcesses`** [filter_str] [sort_by] [limit] - Lists running processes (similar to 'ps' in Unix)
+*   **`listSystemServices`** [status] - Lists system services and their running status (supports Windows and Linux)
+*   **`runScript`** <script_path> [args] - Executes a script with parameters
+*   **`shell`** [prompt] [history_file] [show_path] - Launches an interactive shell for QZX commands (alias for Terminal)
+    *Aliases: `Terminal`, `Console`, `REPL`*
+*   **`systemInfo`** - Gets information about the operating system and environment
+*   **`term`** [prompt] [history_file] [show_path] - Launches an interactive QZX terminal (case-insensitive alias)
+    *Aliases: `terminal`, `Terminal`, `TERMINAL`, `shell`, `Shell`, `SHELL`, `console`, `Console`, `CONSOLE`, `repl`, `REPL`, `Repl`, `term`, `TERM`*
+*   **`terminal`** [prompt] [history_file] [show_path] - Launches an interactive terminal/shell for QZX commands
+    *Aliases: `terminal`, `TERMINAL`, `Shell`, `shell`, `SHELL`, `Console`, `console`, `CONSOLE`, `REPL`, `repl`*
+*   **`terminal`** [prompt] [history_file] [show_path] - Launches an interactive terminal/shell for QZX commands
+    *Aliases: `terminal`, `TERMINAL`, `Shell`, `shell`, `SHELL`, `Console`, `console`, `CONSOLE`, `REPL`, `repl`*
+*   **`terminal`** [prompt] [history_file] [show_path] - Launches an interactive terminal/shell for QZX commands
+    *Aliases: `terminal`, `TERMINAL`, `Shell`, `shell`, `SHELL`, `Console`, `console`, `CONSOLE`, `REPL`, `repl`*
+*   **`testDiskSpeed`** [test_path] [size_mb] - Benchmarks sequential write and read speeds (MB/s) of the filesystem at a target path
+*   **`version`** - Displays the current version of QZX and system information
+    *Aliases: `qzxVersion`*
+*   **`welcome`** [full_info] - Displays the welcome screen with system information
+    *Aliases: `welcome`, `hello`, `hi`*
 
 ### 🛠️ Development Commands
-*   **`getGitStatus`** `[repo_path]` - Summarizes git branch, upstream sync, modified files, and recent history.
-*   **`scanProject`** `[project_path]` - Audits tech stacks, package managers, scripts, and checks `.env` variables compared to `.env.example`.
-*   **`getProjectTree`** `[dir_path] [max_depth]` - Displays ASCII directory layouts excluding build/temp folders.
-*   **`analyze_complexity`** `[file_path]` - Rates cyclomatic complexity of Python source files.
-*   **`compare_files`** `[file_a] [file_b]` - Performs side-by-side file diff comparisons.
-*   **`scaffold_python`**, **`scaffold_rust`**, **`scaffold_cpp`**, **`scaffold_c`** - Standardizes project scaffolds.
+*   **`analyzeComplexity`** <file_path> [recursive] [format] - Analyzes code complexity metrics for files or projects
+*   **`cleanDevCaches`** [scan_path] [dry_run] [max_depth] - Scans recursively for heavy development caches/dependencies (node_modules, __pycache__, dist) and purges them
+*   **`compareFiles`** <file1> <file2> [mode] - Compara dos archivos y muestra sus diferencias, útil para IDE
+*   **`createDocTemplatePython`** <file_path> [style] [overwrite] [preview] - Creates basic documentation templates for Python code that lacks docstrings
+*   **`getGitStatus`** [repo_path] - Provides a structured summary of the Git repository state (branch, remote, changes, recent commits)
+*   **`getProjectTree`** [dir_path] [max_depth] [exclude_dirs] [include_files] - Generates a clean visual directory tree (ASCII and JSON) excluding heavy directories like node_modules
+*   **`scaffoldC`** <project_name> [path] [with_tests] [build_system] - Creates a basic scaffolding for a C program
+    *Aliases: `cScaff`, `newC`, `createC`, `makeScaffProgramC`*
+*   **`scaffoldCpp`** <project_name> [path] [with_tests] [build_system] [cpp_standard] - Creates a basic scaffolding for a C++ program
+    *Aliases: `cppScaff`, `newCpp`, `createCpp`, `makeScaffProgramCpp`*
+*   **`scaffoldPython`** <project_name> [path] [with_tests] [create_venv] - Creates a basic scaffolding for a Python program
+    *Aliases: `pythonScaff`, `newPython`, `createPython`, `makeScaffProgramPython`*
+*   **`scaffoldRust`** <project_name> [path] [binary] [with_tests] - Creates a basic scaffolding for a Rust program
+    *Aliases: `rustScaff`, `newRust`, `createRust`, `makeScaffProgramRust`*
+*   **`scanProject`** [project_path] - Scans a project root to identify technologies, scripts, configuration files, and missing environment keys
 
 ---
 
