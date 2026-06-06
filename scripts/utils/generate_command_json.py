@@ -26,8 +26,112 @@ except ImportError:
     print("Error: Cannot import CommandBase. Make sure you're running this from the project root.")
     sys.exit(1)
 
-# Output file path
+# Output file paths
 OUTPUT_FILE = os.path.join(root_dir, "WebsiteQZX", "public", "data", "commands.json")
+LLMS_TXT_FILE = os.path.join(root_dir, "WebsiteQZX", "public", "llms.txt")
+
+def generate_llms_txt(categories):
+    """Generates the content for llms.txt containing all commands dynamically"""
+    lines = [
+        "# QZX - Quick Zap Exchange",
+        "> Verbose is Gold. Consistent cross-platform CLI diagnostics.",
+        "",
+        "QZX is a cross-platform command-line tool designed to provide identical outputs and JSON formatting across Windows, macOS, and Linux.",
+        "",
+        "## Philosophy: Verbose is Gold",
+        "Traditional Unix commands favor silence on success. QZX operates under the **\"Verbose is Gold\"** philosophy: every command returns a structured JSON payload with rich metadata and human-readable context. Responses always contain at least:",
+        "```json",
+        "{",
+        '  "success": true,',
+        '  "message": "Descriptive status message",',
+        '  "details": { ... extra records ... }',
+        "}",
+        "```",
+        "",
+        "---",
+        "",
+        "## Installation & Usage",
+        "",
+        "### CLI Installation",
+        "Install globally using npm/pnpm:",
+        "```bash",
+        "npm install -g qzx-cli",
+        "# or",
+        "pnpm add -g qzx-cli",
+        "```",
+        "",
+        "### Basic Syntax",
+        "```bash",
+        "qzx <command> [arguments] [options]",
+        "```",
+        "Add `--json` anywhere in the command arguments to force raw JSON output (optimal for AI agents and automation scripts).",
+        "",
+        "---",
+        "",
+        "## Complete Command Index",
+        ""
+    ]
+
+    # Map categories to their display names and emoji
+    category_map = {
+        'file': '📁 File Commands',
+        'network': '🌐 Network Commands',
+        'system': '💻 System Commands',
+        'dev': '🛠️ Development Commands',
+        'development': '🛠️ Development Commands'
+    }
+
+    # Normalize category grouping
+    grouped_cmds = {}
+    for cat_name, cmd_classes in categories.items():
+        normalized_cat = 'development' if cat_name == 'dev' else cat_name
+        if normalized_cat not in grouped_cmds:
+            grouped_cmds[normalized_cat] = []
+        grouped_cmds[normalized_cat].extend(cmd_classes)
+
+    # Output categories in a specific order: file, network, system, development
+    for cat_key in ['file', 'network', 'system', 'development']:
+        if cat_key not in grouped_cmds:
+            continue
+        
+        display_title = category_map.get(cat_key, f"{cat_key.capitalize()} Commands")
+        lines.append(f"### {display_title}")
+        
+        # Sort commands by name
+        sorted_cmds = sorted(grouped_cmds[cat_key], key=lambda c: c.name)
+        for cmd_class in sorted_cmds:
+            # Build parameter list string
+            param_parts = []
+            if cmd_class.parameters:
+                for param in cmd_class.parameters:
+                    name = param.get('name', 'unnamed')
+                    required = param.get('required', False)
+                    if required:
+                        param_parts.append(f"<{name}>")
+                    else:
+                        param_parts.append(f"[{name}]")
+            
+            param_str = " " + " ".join(param_parts) if param_parts else ""
+            desc = cmd_class.description or "No description"
+            
+            lines.append(f"*   **`{cmd_class.name}`**{param_str} - {desc}")
+            
+            # If there are aliases, append them
+            if cmd_class.aliases:
+                aliases_str = ", ".join([f"`{alias}`" for alias in cmd_class.aliases])
+                lines.append(f"    *Aliases: {aliases_str}*")
+                
+        lines.append("")
+
+    lines.extend([
+        "---",
+        "",
+        "For full details, interactive demos, and documentation, visit: https://qzx.yumbale.com",
+        ""
+    ])
+
+    return "\n".join(lines)
+
 
 def get_commands_directories():
     """Returns a list of directories that contain commands"""
@@ -230,6 +334,14 @@ def main():
             json.dump(json_data, f, indent=2, ensure_ascii=False)
         
         print(f"JSON documentation successfully written to {OUTPUT_FILE}")
+        
+        # Write to llms.txt
+        llms_data = generate_llms_txt(categories)
+        print(f"Writing to {LLMS_TXT_FILE}...")
+        with open(LLMS_TXT_FILE, 'w', encoding='utf-8') as f:
+            f.write(llms_data)
+        
+        print(f"llms.txt successfully written to {LLMS_TXT_FILE}")
     
     except Exception as e:
         print(f"Error generating JSON documentation: {str(e)}")
