@@ -87,4 +87,50 @@ Para que el sistema de carga dinámica y autogeneración de documentación funci
 3. **Regenerar Documentación:** Siempre que agregues un nuevo comando, recuerda regenerar el archivo JSON de comandos utilizando el script automatizado (Sección 4).
 
 ---
-*Documento creado el 6 de junio de 2026 para la automatización e integración eficiente de agentes.*
+
+## 6. Particularidades del Repositorio y Entorno Local (Git, Dropbox y Vite)
+
+* **Sincronización con Dropbox:** Debido a que Dropbox ignora directorios `.git`, el directorio `WebsiteQZX/` carece de carpeta `.git` en el entorno local sincronizado. Todo comando git ejecutado allí se resolverá en el repositorio raíz.
+* **Archivos Ignorados pero Requeridos en Git:** Como `WebsiteQZX/` está en el `.gitignore` raíz, cualquier archivo modificado o nuevo dentro de esta carpeta (por ejemplo, `QZXInAction.tsx` o `llms.txt`) debe ser agregado de manera forzada para comenzar su seguimiento:
+  ```powershell
+  git add -f WebsiteQZX/src/pages/QZXInAction.tsx WebsiteQZX/public/llms.txt
+  ```
+  Una vez que están bajo seguimiento (tracked), los scripts automáticos como `subir_cambios_github.bat` funcionarán sin problemas.
+* **Diferencias de Compilación en Vite/TS:**
+  * `pnpm run build` ejecuta comprobación estricta de tipos (`tsc -b`), la cual puede fallar debido a errores preexistentes heredados en archivos antiguos no relacionados con tus cambios.
+  * Para desarrollo y despliegues exitosos sin comprobación de tipos estricta, usa `pnpm run build:deploy` (ejecuta `vite build` directamente).
+
+---
+
+## 7. Arquitectura de Servidores, VPS Manager y Nginx
+
+* **Estructura del Servidor de Producción:** El sitio web se ejecuta en un contenedor Incus (basado en Alpine Linux) llamado `qzx` (`10.204.179.237`), el cual reside sobre el servidor bare metal `ubuntu-8gb-ash-1` (`5.161.246.120`).
+* **VPS Manager (`vps_manager.py`):** Ubicado en `C:\Team Dropbox\Valis Idealis\Servidores VPSs y Equipos de Clientes\RelacionadoConServidores\vps_manager.py`. Úsalo para administrar y correr comandos en el host de producción:
+  ```powershell
+  # Ejecutar un comando remoto en bare metal
+  python vps_manager.py --server ubuntu-8gb-ash-1 --yes-i-mean-baremetal cmd "incus list"
+  ```
+* **Configuración de Nginx y Codificación (Charset):**
+  * Para asegurar que los caracteres especiales y emojis en archivos de texto plano (como `llms.txt`) no se muestren corruptos en el navegador (ej. `### ðŸ ï D`), la directiva de codificación en el servidor Nginx debe configurarse explícitamente como UTF-8.
+  * El archivo de configuración de Nginx reside en el contenedor en `/etc/nginx/http.d/default.conf` (mapeado desde el archivo local `scripts/nginx-qzx.conf`).
+  * **Procedimiento para subir y recargar cambios de configuración en Nginx:**
+    1. Modificar `scripts/nginx-qzx.conf` localmente (debe incluir la directiva `charset utf-8;` dentro del bloque `server`).
+    2. Subir el archivo al host temporalmente:
+       ```powershell
+       python vps_manager.py --server ubuntu-8gb-ash-1 --yes-i-mean-baremetal sftp-put scripts/nginx-qzx.conf /tmp/nginx-qzx.conf
+       ```
+    3. Copiar el archivo del host al contenedor `qzx`:
+       ```powershell
+       python vps_manager.py --server ubuntu-8gb-ash-1 --yes-i-mean-baremetal cmd "incus file push /tmp/nginx-qzx.conf qzx/etc/nginx/http.d/default.conf"
+       ```
+    4. Recargar Nginx en el contenedor:
+       ```powershell
+       python vps_manager.py --server ubuntu-8gb-ash-1 --yes-i-mean-baremetal cmd "incus exec qzx -- nginx -s reload"
+       ```
+    5. Eliminar el archivo temporal del host:
+       ```powershell
+       python vps_manager.py --server ubuntu-8gb-ash-1 --yes-i-mean-baremetal cmd "rm -f /tmp/nginx-qzx.conf"
+       ```
+
+---
+*Documento actualizado el 6 de junio de 2026 para la automatización e integración eficiente de agentes.*
