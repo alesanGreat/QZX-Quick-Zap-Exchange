@@ -1,0 +1,53 @@
+{
+  "keywords": [
+    "auto", "break", "case", "char", "const", "continue", "default", "do", 
+    "double", "else", "enum", "extern", "float", "for", "goto", "if", 
+    "int", "long", "register", "return", "short", "signed", "sizeof", "static", 
+    "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while",
+    "inline", "restrict", "_Bool", "_Complex", "_Imaginary", "_Alignas", "_Alignof",
+    "_Atomic", "_Generic", "_Noreturn", "_Static_assert", "_Thread_local"
+  ],
+  "builtins": [
+    "malloc", "calloc", "realloc", "free", "memcpy", "memmove", "memset", "strlen",
+    "strcpy", "strncpy", "strcat", "strncat", "strcmp", "strncmp", "strchr", "strrchr",
+    "strstr", "strtok", "strtol", "strtoul", "atoi", "atol", "atof", "printf",
+    "sprintf", "fprintf", "scanf", "sscanf", "fscanf", "fopen", "fclose", "fread",
+    "fwrite", "fseek", "ftell", "fgetc", "fputc", "fgets", "fputs", "getchar",
+    "putchar", "gets", "puts", "exit", "abort", "assert", "qsort", "bsearch"
+  ],
+  "libraries": {
+    "standard": [
+      "stdio.h", "stdlib.h", "string.h", "math.h", "time.h", "ctype.h", "assert.h",
+      "limits.h", "float.h", "stddef.h", "stdarg.h", "setjmp.h", "signal.h", "locale.h",
+      "errno.h", "stdbool.h", "stdint.h", "complex.h", "iso646.h", "wchar.h", "wctype.h"
+    ],
+    "common": [
+      "pthread.h", "unistd.h", "fcntl.h", "sys/types.h", "sys/stat.h", "sys/socket.h",
+      "netinet/in.h", "arpa/inet.h", "dirent.h", "dlfcn.h", "regex.h", "termios.h"
+    ]
+  },
+  "patterns": {
+    "function_definition": [
+      "([a-zA-Z_][a-zA-Z0-9_]*\\s+)+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)\\s*\\{",
+      "^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)\\s*\\{"
+    ],
+    "struct_definition": [
+      "struct\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{",
+      "typedef\\s+struct\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{"
+    ],
+    "include_statement": [
+      "#include\\s+[<\"]([^>\"]+)[>\"]"
+    ],
+    "macro_definition": [
+      "#define\\s+([a-zA-Z_][a-zA-Z0-9_]*)"
+    ]
+  },
+  "comments": {
+    "single_line": ["//"],
+    "multi_line": ["/\\*.*?\\*/"]
+  },
+  "string_literals": [
+    "\"(?:[^\"\\\\]|\\\\.)*\"", "'(?:[^'\\\\]|\\\\.)*'"
+  ],
+  "file_extensions": [".c", ".h"]
+} 

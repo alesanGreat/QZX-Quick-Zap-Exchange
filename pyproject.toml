@@ -9,4 +9,8 @@ include = '\.pyi?$'
 
 [tool.isort]
 profile = "black"
-multi_line_output = 3 
+multi_line_output = 3
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,44 @@
+Command,Category,Verbose Level,Message Quality,JSON Structure,Error Handling,Recommendations
+WonderIfFileIsBinary,file,Excellent,Detailed,Yes,Excellent,None - Reference model to follow
+WonderIfFileEmpty,file,Excellent,Detailed,Yes,Excellent,None - Perfectly meets the standard
+WonderIfDirectoryEmpty,file,Excellent,Detailed,Yes,Excellent,None - Excellent result descriptions
+WonderIfAdmin,system,Excellent,Detailed,Yes,Excellent,None - Very detailed and OS-specific
+CopyFile,file,Good,Good,Yes,Good,Could improve details about replaced files
+MoveFile,file,Fair,Basic,Yes,Good,Improve messages to distinguish between file/directory
+DeleteFile,file,Good,Good,Yes,Excellent,Clear messages but could be more detailed
+TouchFile,file,Excellent,Detailed,Yes,Good,None - Very specific and clear messages
+CreateDirectory,file,Poor,Basic,No,Basic,Convert to standardized JSON structure
+ReadFile,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+ListFiles,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+FindFiles,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+FindText,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+CountLinesInFile,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+ChangePermissions,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+DownloadFile,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+FindLargeFiles,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetHumanLanguageStatsFromFile,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetProgrammingLanguageStatsFromFile,file,Unknown,Unknown,Unknown,Unknown,Review implementation
+CommandsBridge,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+CurrentDir,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetCPULoad,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetCurrentDate,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetCurrentTime,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetCurrentUser,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetDiskInfo,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetDiskName,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetGPULoad,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetRAMInfo,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+GetSmartValues,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+KillProcess,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+ListProcesses,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+QZXVersion,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+RunScript,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+Shell,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+SystemInfo,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+Term,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+Terminal,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+Welcome,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+WonderCommandsAmount,system,Unknown,Unknown,Unknown,Unknown,Review implementation
+AnalyzeComplexity,dev,Unknown,Unknown,Unknown,Unknown,Review implementation
+CompareFiles,dev,Unknown,Unknown,Unknown,Unknown,Review implementation
+CreateDocTemplatePython,dev,Unknown,Unknown,Unknown,Unknown,Review implementation 

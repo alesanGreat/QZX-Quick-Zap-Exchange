@@ -1,0 +1,22 @@
+{
+  "articles": {
+    "definite": ["der", "die", "das", "den", "dem", "des"],
+    "indefinite": ["ein", "eine", "einen", "einem", "einer", "eines"]
+  },
+  "pronouns": {
+    "personal": ["ich", "du", "er", "sie", "es", "wir", "ihr", "sie", "Sie", "mich", "dich", "ihn", "uns", "euch", "mir", "dir", "ihm", "ihr", "ihnen", "Ihnen"],
+    "possessive": ["mein", "meine", "meiner", "meinem", "meinen", "meines", "dein", "deine", "deiner", "deinem", "deinen", "deines", "sein", "seine", "seiner", "seinem", "seinen", "seines", "ihr", "ihre", "ihrer", "ihrem", "ihren", "ihres", "unser", "unsere", "unserer", "unserem", "unseren", "unseres", "euer", "eure", "eurer", "eurem", "euren", "eures", "ihr", "ihre", "ihrer", "ihrem", "ihren", "ihres", "Ihr", "Ihre", "Ihrer", "Ihrem", "Ihren", "Ihres"],
+    "demonstrative": ["dieser", "diese", "dieses", "diesen", "diesem", "jener", "jene", "jenes", "jenen", "jenem", "solcher", "solche", "solches", "solchen", "solchem", "derjenige", "diejenige", "dasjenige", "denjenigen", "demjenigen", "desjenigen", "derselbe", "dieselbe", "dasselbe", "denselben", "demselben", "desselben"],
+    "relative": ["der", "die", "das", "den", "dem", "deren", "dessen", "welcher", "welche", "welches", "welchen", "welchem", "wer", "was", "wen", "wem", "wessen"],
+    "indefinite": ["man", "jemand", "jemanden", "jemandem", "jemandes", "niemand", "niemanden", "niemandem", "niemandes", "etwas", "nichts", "alles", "alle", "aller", "allen", "allem", "keiner", "keine", "keines", "keinen", "keinem", "jeder", "jede", "jedes", "jeden", "jedem", "einige", "einiger", "einigen", "einigem", "mehrere", "mehrerer", "mehreren", "mehrerem", "wenige", "weniger", "wenigen", "wenigem", "viele", "vieler", "vielen", "vielem", "beide", "beider", "beiden", "beidem"]
+  },
+  "prepositions": ["ab", "an", "auf", "aus", "bei", "bis", "durch", "für", "gegen", "hinter", "in", "mit", "nach", "neben", "ohne", "seit", "über", "um", "unter", "von", "vor", "während", "wegen", "zu", "zwischen", "außer", "entlang", "gegenüber", "gemäß", "laut", "mitsamt", "nebst", "samt", "statt", "trotz", "zuwider", "entgegen", "entsprechend", "zufolge", "zuliebe"],
+  "conjunctions": {
+    "coordinating": ["und", "oder", "aber", "denn", "sondern", "beziehungsweise", "jedoch", "allerdings", "dennoch", "bzw.", "d.h."],
+    "subordinating": ["als", "bevor", "bis", "da", "damit", "dass", "ehe", "falls", "indem", "insofern", "insoweit", "nachdem", "ob", "obgleich", "obschon", "obwohl", "sobald", "sofern", "solange", "sooft", "soviel", "soweit", "sowie", "trotzdem", "während", "weil", "wenn", "wenngleich", "wie", "wobei", "wohingegen", "zumal"]
+  },
+  "auxiliary_verbs": ["sein", "haben", "werden", "bin", "bist", "ist", "sind", "seid", "war", "warst", "waren", "wart", "gewesen", "werde", "wirst", "wird", "werden", "werdet", "wurde", "wurdest", "wurden", "wurdet", "worden", "habe", "hast", "hat", "haben", "habt", "hatte", "hattest", "hatten", "hattet", "gehabt"],
+  "modal_verbs": ["dürfen", "können", "mögen", "müssen", "sollen", "wollen", "darf", "darfst", "darf", "dürfen", "dürft", "dürfen", "kann", "kannst", "kann", "können", "könnt", "können", "mag", "magst", "mag", "mögen", "mögt", "mögen", "muss", "musst", "muss", "müssen", "müsst", "müssen", "soll", "sollst", "soll", "sollen", "sollt", "sollen", "will", "willst", "will", "wollen", "wollt", "wollen"],
+  "common_adverbs": ["nicht", "hier", "dort", "oben", "unten", "innen", "außen", "vorne", "hinten", "links", "rechts", "heute", "gestern", "morgen", "jetzt", "gleich", "bald", "später", "früher", "immer", "oft", "manchmal", "selten", "nie", "niemals", "gern", "sehr", "besonders", "kaum", "fast", "nur", "auch", "sogar", "bereits", "schon", "noch", "erst", "gerade", "wieder", "plötzlich", "vielleicht", "wahrscheinlich", "sicher", "bestimmt", "gewiss", "natürlich", "wirklich", "tatsächlich", "allerdings", "nämlich", "zwar", "etwa", "ungefähr", "circa", "ziemlich", "genug", "eher", "lieber", "anders"],
+  "sample_words": ["guten", "morgen", "allerseits", "dieser", "absatz", "vollständig", "deutsch", "geschrieben", "spracherkennungssystem", "testen", "linguistische", "analyse", "wichtig", "inhalt", "mehrsprachiger", "dokumente", "verstehen", "wörter", "haben", "eigenen", "einzigartigen", "eigenschaften", "vergleich", "anderen", "sprachen", "deutschland", "österreich", "schweiz", "vielen", "ländern", "wird", "regionalen", "variationen", "gesprochen", "bereichern"]
+} 

@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-from setuptools import setup, find_packages
 import platform
+from setuptools import find_packages, setup
 
 # Leer README desde el directorio actual
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -27,15 +25,21 @@ extras_require = {
 
 setup(
     name="qzx",
-    version="0.02.2",
+    version="0.2.2",
     author="Alejandro Sánchez",
     author_email="alesangreat@gmail.com",
     description="QZX - Quick Zap Exchange - Command line tool for automating common tasks across platforms",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/alesanGreat/QZX-Quick-Zap-Exchange",
-    packages=find_packages(),
-    py_modules=["qzx"],
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    package_data={
+        "qzx": [
+            "resources/function_words/*.json",
+            "resources/programming_languages/*.json",
+        ],
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -46,8 +50,8 @@ setup(
     extras_require=extras_require,
     entry_points={
         "console_scripts": [
-            "qzx=qzx:main",  # Esto permitirá ejecutar 'qzx' en la terminal
+            "qzx=qzx.cli:main",
         ],
     },
     include_package_data=True,
-) 
+)

@@ -4,10 +4,10 @@ This directory contains test files for QZX development and testing. These files 
 
 ## Files in this directory
 
-- **test_code_with_comments.py**: Sample Python file with mixed English and Spanish comments. Used for testing language detection features.
-- **test_languages.txt**: Text file with mixed English and Spanish content for testing language detection.
+- **fixtures/code/code-with-comments.py**: Sample Python file with mixed English and Spanish comments.
+- **fixtures/language/languages.txt**: Mixed English and Spanish text for language detection.
 - **test_terminal.py**: Test file for terminal functionality.
-- **test_undocumented.py**: Example file for testing undocumented code detection.
+- **fixtures/code/undocumented.py**: Example file for testing undocumented code detection.
 
 ## Purpose
 
@@ -15,4 +15,4 @@ These test files are separated from the main codebase to maintain clarity in the
 
 ## Usage
 
-These files should be used only for testing purposes and not referenced in production code. 
+These files should be used only for testing purposes and not referenced in production code.

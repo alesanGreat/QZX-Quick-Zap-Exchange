@@ -9,7 +9,7 @@ import os
 import re
 import pytest
 from unittest.mock import patch, mock_open, Mock
-from Commands.FileCommands.FindText import FindTextCommand
+from qzx.commands.file.find_text import FindTextCommand
 
 class TestFindTextCommand:
     """
@@ -183,4 +183,4 @@ class TestFindTextCommand:
             assert result["recursive"] == "unlimited"
             assert result["files_searched"] == 2
             assert result["files_with_matches"] == 2
-            assert result["total_matches"] == 5 
+            assert result["total_matches"] == 5

@@ -53,10 +53,8 @@ venv.bak/
 *.swo
 *~
 
-# Project specific
-output/
-test-results/
-Backups/
+# Project-specific generated files
+artifacts/
 
 # Ensure large binary files are ignored
 *.zip
@@ -66,4 +64,4 @@ Backups/
 *.exe
 *.dll
 *.pdb
-*.bin 
+*.bin

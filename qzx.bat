@@ -4,7 +4,7 @@ REM Universal Command Interface wrapper for Windows
 
 REM Get the directory where this script is located
 SET "SCRIPT_DIR=%~dp0"
-SET "QZX_PYTHON=%SCRIPT_DIR%qzx.py"
+SET "PYTHONPATH=%SCRIPT_DIR%src;%PYTHONPATH%"
 
 REM Check if Python is available
 python --version >nul 2>&1
@@ -13,5 +13,5 @@ IF %ERRORLEVEL% NEQ 0 (
     EXIT /B 1
 )
 
-REM Pass all arguments to the Python script
-python "%QZX_PYTHON%" %* 
+REM Pass all arguments to the QZX package
+python -m qzx %*

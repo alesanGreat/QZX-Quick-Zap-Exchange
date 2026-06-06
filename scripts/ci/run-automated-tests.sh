@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Construir imagen
-podman build -t qzx-test-env -f containers/Containerfile.automated-tests .
+podman build -t qzx-test-env -f infra/containers/Containerfile.tests .
 
 # Ejecutar pruebas con restricciones de seguridad
 podman run --rm \
@@ -12,5 +12,5 @@ podman run --rm \
     --pids-limit=100 \
     --memory=256m \
     --cpu-shares=512 \
-    -v "$(pwd)/test-results:/app/test-results:Z" \
-    qzx-test-env "$@" 
+    -v "$(pwd)/artifacts/tests/results:/app/artifacts/tests/results:Z" \
+    qzx-test-env "$@"
