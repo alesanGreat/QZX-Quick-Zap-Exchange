@@ -52,19 +52,9 @@ venv.bak/
 *.swo
 *~
 
-# Project specific
-output/
-test-results/
-
-# Ensure Backups folder is ignored
-Backups/
-Backups
-/Backups
-/Backups/
-
-# Ignore embedded Git repositories
-test-data/godot/
-test-data/godot 
+# Project-specific generated files
+artifacts/*
+!artifacts/README.md
 
 # Ignore Website
 WebsiteQZX/
@@ -74,4 +64,4 @@ WebsiteQZX/
 # Node.js
 node_modules/
 */node_modules/
-**/node_modules/ 
+**/node_modules/

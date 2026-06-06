@@ -5,10 +5,9 @@
 Test for the CountLinesInFile command
 """
 
-import os
-import pytest
-from unittest.mock import patch, mock_open, MagicMock
-from Commands.FileCommands.CountLinesInFile import CountLinesInFileCommand
+from unittest.mock import mock_open, patch
+
+from qzx.commands.file.count_lines_in_file import CountLinesInFileCommand
 
 class TestCountLinesInFileCommand:
     """
@@ -35,71 +34,41 @@ class TestCountLinesInFileCommand:
         # Unrecognized format
         assert self.command._parse_recursive_parameter("invalid") == 0
     
-    @patch('os.path.isfile')
-    @patch('os.path.isdir')
-    def test_find_files_single_file(self, mock_isdir, mock_isfile):
+    def test_find_files_single_file(self, tmp_path):
         """Test finding a single file"""
-        mock_isfile.return_value = True
-        mock_isdir.return_value = False
-        
-        file_path = "test.txt"
-        result = self.command._find_files(file_path)
-        
-        assert result == [file_path]
-        mock_isfile.assert_called_once_with(file_path)
-    
-    @patch('os.walk')
-    @patch('os.path.isfile')
-    @patch('os.path.isdir')
-    @patch('os.listdir')
-    def test_find_files_directory_no_recursion(self, mock_listdir, mock_isdir, mock_isfile, mock_walk):
+        file_path = tmp_path / "test.txt"
+        file_path.write_text("content", encoding="utf-8")
+
+        result = self.command._find_files(str(file_path))
+
+        assert result == [str(file_path.resolve())]
+
+    def test_find_files_directory_no_recursion(self, tmp_path):
         """Test finding files in a directory without recursion"""
-        mock_isfile.return_value = False
-        mock_isdir.return_value = True
-        mock_listdir.return_value = ["file1.txt", "file2.txt"]
-        
-        # Simulate files as actual files
-        def fake_isfile(path):
-            return os.path.basename(path) in ["file1.txt", "file2.txt"]
-        
-        # Use the fake function for isfile method
-        mock_isfile.side_effect = fake_isfile
-        
-        dir_path = "test_dir"
-        result = self.command._find_files(dir_path, recursive=None)
-        
-        assert len(result) == 2
-        assert os.path.join(dir_path, "file1.txt") in result
-        assert os.path.join(dir_path, "file2.txt") in result
-        
-        mock_isdir.assert_called_once_with(dir_path)
-        mock_listdir.assert_called_once_with(dir_path)
-        
-        # Verify that walk was not called
-        mock_walk.assert_not_called()
-    
-    @patch('os.walk')
-    @patch('os.path.isfile')
-    @patch('os.path.isdir')
-    def test_find_files_recursive(self, mock_isdir, mock_isfile, mock_walk):
+        file1 = tmp_path / "file1.txt"
+        file2 = tmp_path / "file2.txt"
+        nested = tmp_path / "nested"
+        nested.mkdir()
+        nested_file = nested / "file3.txt"
+        for path in (file1, file2, nested_file):
+            path.write_text("content", encoding="utf-8")
+
+        result = self.command._find_files(str(tmp_path), recursive=None)
+
+        assert set(result) == {str(file1.resolve()), str(file2.resolve())}
+
+    def test_find_files_recursive(self, tmp_path):
         """Test finding files recursively"""
-        mock_isfile.return_value = False
-        mock_isdir.return_value = True
-        
-        mock_walk.return_value = [
-            ("test_dir", ["subdir"], ["file1.txt"]),
-            ("test_dir/subdir", [], ["file2.txt"])
-        ]
-        
-        dir_path = "test_dir"
-        result = self.command._find_files(dir_path, recursive="-r")
-        
-        assert len(result) == 2
-        assert os.path.join("test_dir", "file1.txt") in result
-        assert os.path.join("test_dir/subdir", "file2.txt") in result
-        
-        mock_isdir.assert_called_once_with(dir_path)
-        mock_walk.assert_called_once_with(dir_path)
+        root_file = tmp_path / "file1.txt"
+        nested = tmp_path / "nested"
+        nested.mkdir()
+        nested_file = nested / "file2.txt"
+        for path in (root_file, nested_file):
+            path.write_text("content", encoding="utf-8")
+
+        result = self.command._find_files(str(tmp_path), recursive="-r")
+
+        assert set(result) == {str(root_file.resolve()), str(nested_file.resolve())}
     
     def test_count_lines(self):
         """Test counting lines in files"""
@@ -121,8 +90,8 @@ class TestCountLinesInFileCommand:
             assert success is True
             assert error is None
     
-    @patch('Commands.FileCommands.CountLinesInFile.CountLinesInFileCommand._find_files')
-    @patch('Commands.FileCommands.CountLinesInFile.CountLinesInFileCommand._count_lines')
+    @patch("qzx.commands.file.count_lines_in_file.CountLinesInFileCommand._find_files")
+    @patch("qzx.commands.file.count_lines_in_file.CountLinesInFileCommand._count_lines")
     def test_execute(self, mock_count_lines, mock_find_files):
         """Test the complete execution of the command"""
         # Configure mocks
@@ -157,4 +126,4 @@ class TestCountLinesInFileCommand:
         assert ".txt" in result["extension_stats"]
         assert ".py" in result["extension_stats"]
         assert result["extension_stats"][".txt"] == 5
-        assert result["extension_stats"][".py"] == 10 
+        assert result["extension_stats"][".py"] == 10

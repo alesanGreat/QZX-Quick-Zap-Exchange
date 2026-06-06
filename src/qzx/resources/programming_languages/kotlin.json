@@ -1,0 +1,108 @@
+{
+  "keywords": [
+    "as", "as?", "break", "class", "continue", "do", "else", "false", "for", "fun",
+    "if", "in", "!in", "interface", "is", "!is", "null", "object", "package", "return",
+    "super", "this", "throw", "true", "try", "typealias", "typeof", "val", "var", "when",
+    "while", "by", "catch", "constructor", "delegate", "dynamic", "field", "file",
+    "finally", "get", "import", "init", "param", "property", "receiver", "set", "setparam",
+    "where", "actual", "abstract", "annotation", "companion", "const", "crossinline", "data",
+    "enum", "expect", "external", "final", "infix", "inline", "inner", "internal", "lateinit",
+    "noinline", "open", "operator", "out", "override", "private", "protected", "public",
+    "reified", "sealed", "suspend", "tailrec", "vararg"
+  ],
+  "builtins": {
+    "primitive_types": [
+      "Byte", "Short", "Int", "Long", "Float", "Double", "Boolean", "Char", "String",
+      "Array", "Unit", "Nothing", "Any"
+    ],
+    "standard_types": [
+      "List", "MutableList", "Set", "MutableSet", "Map", "MutableMap", "Pair", "Triple",
+      "Sequence", "Iterable", "Collection", "ArrayList", "LinkedList", "HashSet", "LinkedHashSet",
+      "HashMap", "LinkedHashMap", "Throwable", "Exception", "Error", "Number", "Comparable",
+      "Runnable", "Lazy", "Regex", "Thread", "KProperty", "KClass", "KType", "KCallable",
+      "KFunction", "KProperty1", "KMutableProperty", "Result", "SuspendFunction", "Coroutine",
+      "CoroutineScope", "Job", "Deferred", "Channel", "Flow", "Duration", "ByteArray", "IntArray",
+      "LongArray", "FloatArray", "DoubleArray", "BooleanArray", "CharArray"
+    ],
+    "standard_functions": [
+      "run", "let", "apply", "also", "with", "repeat", "takeIf", "takeUnless", "lazy",
+      "lazyOf", "arrayOf", "listOf", "mutableListOf", "setOf", "mutableSetOf", "mapOf",
+      "mutableMapOf", "emptyList", "emptySet", "emptyMap", "toList", "toSet", "toMap",
+      "forEach", "forEachIndexed", "map", "mapIndexed", "flatMap", "filter", "filterNot",
+      "first", "firstOrNull", "last", "lastOrNull", "find", "findLast", "any", "all", "none",
+      "count", "reduce", "fold", "sorted", "sortedBy", "joinToString", "associateBy", "groupBy",
+      "chunked", "partition", "zip", "unzip", "sumOf", "maxOf", "minOf", "maxByOrNull", "minByOrNull",
+      "requireNotNull", "checkNotNull", "error", "TODO", "runCatching", "print", "println"
+    ]
+  },
+  "annotations": [
+    "@Deprecated", "@Suppress", "@OptIn", "@Retention", "@Target", "@DslMarker", "@JvmName",
+    "@JvmMultifileClass", "@JvmStatic", "@JvmOverloads", "@JvmField", "@Synchronized", "@Volatile",
+    "@Throws", "@JvmWildcard", "@JvmInline", "@PublishedApi", "@RepeatedTest", "@Test", "@Before",
+    "@After", "@BeforeEach", "@AfterEach", "@BeforeClass", "@AfterClass", "@Ignore", "@MockK",
+    "@InjectMockKs", "@ExperimentalCoroutinesApi", "@ExperimentalTime", "@ExperimentalStdlibApi",
+    "@RequiresApi", "@Composable", "@Preview", "@Inject", "@Module", "@Provides", "@Singleton"
+  ],
+  "libraries": {
+    "standard": [
+      "kotlin", "kotlin.collections", "kotlin.comparisons", "kotlin.io", "kotlin.ranges",
+      "kotlin.sequences", "kotlin.text", "kotlin.random", "kotlin.reflect", "kotlin.math",
+      "kotlin.properties", "kotlin.coroutines", "kotlinx.coroutines", "java.lang", "java.util",
+      "java.io", "java.math", "java.time", "android", "androidx"
+    ],
+    "popular": [
+      "ktor", "retrofit", "okhttp", "gson", "moshi", "kotlinx.serialization", "kotlinx.datetime",
+      "room", "compose", "glide", "picasso", "datastore", "livedata", "viewmodel", "dagger",
+      "koin", "hilt", "flow", "channel", "timber", "coil", "mvi", "rxjava", "rxkotlin", "paging"
+    ]
+  },
+  "patterns": {
+    "function_definition": [
+      "fun\\s+(?:<[^>]*>\\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)(?:\\s*:\\s*[^{=]+)?\\s*(?:=|\\{)",
+      "suspend\\s+fun\\s+(?:<[^>]*>\\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)(?:\\s*:\\s*[^{=]+)?\\s*(?:=|\\{)",
+      "infix\\s+fun\\s+(?:<[^>]*>\\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)(?:\\s*:\\s*[^{=]+)?\\s*(?:=|\\{)",
+      "operator\\s+fun\\s+(?:<[^>]*>\\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)(?:\\s*:\\s*[^{=]+)?\\s*(?:=|\\{)"
+    ],
+    "class_definition": [
+      "class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s*constructor\\s*\\([^)]*\\))?(?:\\s*:\\s*[^({]+)?(?:\\s*\\([^)]*\\))?\\s*(?:\\{|$)",
+      "data\\s+class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s*\\([^)]*\\))(?:\\s*:\\s*[^{]+)?\\s*(?:\\{|$)",
+      "abstract\\s+class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s*constructor\\s*\\([^)]*\\))?(?:\\s*:\\s*[^({]+)?\\s*(?:\\{|$)",
+      "sealed\\s+class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s*constructor\\s*\\([^)]*\\))?(?:\\s*:\\s*[^({]+)?\\s*(?:\\{|$)",
+      "inner\\s+class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s*constructor\\s*\\([^)]*\\))?(?:\\s*:\\s*[^({]+)?\\s*(?:\\{|$)"
+    ],
+    "interface_definition": [
+      "interface\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s*:\\s*[^{]+)?\\s*(?:\\{|$)"
+    ],
+    "object_definition": [
+      "object\\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\\s*:\\s*[^{]+)?\\s*(?:\\{|$)",
+      "companion\\s+object(?:\\s+([a-zA-Z_][a-zA-Z0-9_]*))?(?:\\s*:\\s*[^{]+)?\\s*(?:\\{|$)"
+    ],
+    "enum_definition": [
+      "enum\\s+class\\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\\s*\\([^)]*\\))?(?:\\s*:\\s*[^{]+)?\\s*(?:\\{|$)"
+    ],
+    "extension_function": [
+      "fun\\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\\.[a-zA-Z_][a-zA-Z0-9_]*)*(?:<[^>]*>)?)\\s*\\.\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)(?:\\s*:\\s*[^{=]+)?\\s*(?:=|\\{)"
+    ],
+    "property_declaration": [
+      "(?:val|var)\\s+(?:[a-zA-Z_][a-zA-Z0-9_]*(?:\\s*,\\s*[a-zA-Z_][a-zA-Z0-9_]*)*)\\s*(?::\\s*[^=\\n]+)?(?:\\s*=\\s*[^\\n;]+)?",
+      "const\\s+val\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?::\\s*[^=\\n]+)?\\s*=\\s*[^\\n;]+"
+    ],
+    "import_statement": [
+      "import\\s+([a-zA-Z_][a-zA-Z0-9_.]*(?:\\s*as\\s*[a-zA-Z_][a-zA-Z0-9_]*)?)(?:\\s*\\.\\s*\\*)?\\s*"
+    ],
+    "package_statement": [
+      "package\\s+([a-zA-Z_][a-zA-Z0-9_.]*)"
+    ]
+  },
+  "comments": {
+    "single_line": ["//"],
+    "multi_line": ["/\\*.*?\\*/"],
+    "doc_comments": ["///", "/**"]
+  },
+  "string_literals": [
+    "\"(?:[^\"\\\\]|\\\\.)*\"", 
+    "'(?:[^'\\\\]|\\\\.)*'", 
+    "\"\"\"[\\s\\S]*?\"\"\""
+  ],
+  "file_extensions": [".kt", ".kts"]
+} 

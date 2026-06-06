@@ -1,96 +1,220 @@
-# QZX - Universal Command Interface for AI Agents
+# QZX — Quick Zap Exchange
 
-**QZX** (Quick Zap Exchange) provides a universal command interface enabling AI agents to execute system operations across Windows, Linux, and macOS with identical syntax, eliminating OS-specific command variations.
+> **Unix says: "silence is gold."**
+> For humans reading a terminal, that's elegant.
+> For AI agents, silence is a dead end.
 
-## Core Concept
+When an AI agent runs a command and gets no output, it doesn't know what happened. Did it succeed? Did it fail silently? It has to run *another* command to verify. Then maybe another. Every silent operation costs tokens, roundtrips, and reasoning cycles — and still leaves room for doubt.
 
-QZX creates a uniform abstraction layer over OS-specific commands, allowing consistent syntax across systems:
+**QZX is built on the opposite principle: verbose is gold.**
 
-```bash
-qzx CreateDirectory "ProjectFolder"  # Instead of mkdir/New-Item/etc.
-qzx FindText "ERROR" "logs/app.log"  # Instead of grep/findstr/Select-String
-qzx ListProcesses "python"           # Instead of ps/tasklist/Get-Process
-```
+Every QZX command returns structured JSON with an explicit `success` field, a human-readable message, and rich contextual data — on every platform, every time, without flags or special modes.
 
-## Technical Features
+---
 
-- **Cross-platform Middleware**: Automatic translation of commands to native OS instructions
-- **Structured JSON Responses**: Rich, detailed outputs with consistent schema for AI consumption
-- **Advanced Pattern Recognition**: Wildcards and recursive operations with unified syntax
-- **Performance Optimized**: Low overhead translation layer using native system calls
-- **Intelligent Context Preservation**: Maintains environment context across command executions
+## The Problem in Concrete Terms
 
-## Advanced Use Cases
+To get basic system information, an AI agent without QZX needs to:
 
-### Automated DevOps Pipeline
+**On Linux:** `uname -a` + `cat /proc/cpuinfo` + `free -h` + `df -h` — then parse four different text formats.
 
-```bash
-qzx CreateDirectory "Deployment/$(qzx GetCurrentDate)"
-qzx RunScript "build.py" "--env=prod" "--optimize"
-qzx FindLargeFiles "dist" "*.map" "1MB" -r > "large_source_maps.log"
-qzx SystemInfo > "Deployment/$(qzx GetCurrentDate)/build_environment.json"
-```
+**On Windows:** `systeminfo` + `wmic cpu get name` + `wmic memorychip get capacity` + `wmic logicaldisk get size,freespace` — then parse four different text formats again, differently.
 
-### System Monitoring & Diagnostics
+**On macOS:** `sw_vers` + `sysctl -n machdep.cpu.brand_string` + `vm_stat` + `df -h` — four more, formatted differently from both.
+
+**With QZX, on any platform:**
 
 ```bash
-# Comprehensive system health check
-qzx GetSmartValues "/dev/sda" > "disk_health.json"
-qzx GetCPULoad | jq '.cores[] | select(.usage > 80)'
-qzx FindText "OOM|SEGV|FATAL" "/var/log/syslog" -r7 true true
+qzx SystemInfo
 ```
-
-### Cross-Platform Development Automation
-
-```bash
-# Create standardized project structure
-qzx CreateDirectory {project_dirs}
-qzx TouchFile "src/.gitkeep" ".github/workflows/.gitkeep"
-qzx FindFiles "src" "*.{js,jsx,ts,tsx}" -r | xargs qzx CountLinesInFile
-```
-
-## Technical Implementation
-
-QZX implements a command-translation layer with:
-
-- Python core with OS-specific modules
-- Consistent return schema for all commands
-- Extensible architecture for custom command integration
-- Detailed verbosity with minimal performance impact
-
-## Command Categories
-
-- **File System Operations**: CreateDirectory, CopyFile, MoveFile, DeleteFile, ChangePermissions
-- **System Analysis**: SystemInfo, GetRAMInfo, GetCPULoad, GetDiskInfo, GetSmartValues
-- **Process Management**: ListProcesses, KillProcess
-- **Search & Data Analysis**: FindText, CountLinesInFile, FindFiles, FindLargeFiles
-- **Development Tools**: RunScript, TouchFile, GetCurrentDate, GetCurrentTime
-
-## "Verbose is Gold" Philosophy
-
-QZX implements rich, structured responses specifically designed for AI consumption:
 
 ```json
 {
   "success": true,
-  "disk_info": {
-    "model": "Samsung SSD 970 EVO",
-    "size_bytes": 512110190592,
-    "size_formatted": "512.11 GB",
-    "smart_health": "PASSED",
-    "temperature": 38,
-    "temperature_formatted": "38°C"
-  },
-  "message": "Disk health check passed. Temperature normal at 38°C."
+  "os": "Linux",
+  "os_version": "Ubuntu 22.04.3 LTS",
+  "cpu": "Intel Core i7-12700K",
+  "cpu_cores": 12,
+  "ram_total": "32.0 GB",
+  "ram_available": "18.4 GB",
+  "disk_total": "512.11 GB",
+  "disk_free": "234.7 GB",
+  "message": "System information retrieved successfully."
 }
 ```
 
-## Dependencies
+One command. One schema. Zero ambiguity. Same on Windows, Linux, and macOS.
 
-- Python 3.6+
-- psutil (optional, for extended system monitoring)
-- smartmontools (optional, for S.M.A.R.T. diagnostics)
+---
 
-## Current Version
+## Install
 
-v0.02 - Updated with 42 verified commands
+```bash
+pip install qzx
+```
+
+Requires Python 3.6+. No mandatory dependencies — `psutil` and `smartmontools` are optional for extended monitoring.
+
+---
+
+## Core Philosophy
+
+| Unix tradition | QZX for agents |
+|---|---|
+| Silence means success | Explicit `success: true/false` always |
+| Parse text output | Consume structured JSON |
+| Learn per-OS syntax | One syntax everywhere |
+| Chain verification commands | Get full context in one call |
+
+QZX does not replace the shell. It adds a reliable, AI-friendly layer on top of it — one that treats the agent as a first-class consumer of output, not an afterthought.
+
+---
+
+## Every Command Returns Two Outputs
+
+QZX never forces you to choose between human-readable and machine-readable output.
+
+**stdout** — readable, descriptive, good for logs and terminals.
+**JSON** — structured, consistent schema, good for agents and scripts.
+
+Both. Always. No flags needed.
+
+---
+
+## Command Reference
+
+### System Analysis
+
+```bash
+qzx SystemInfo              # OS, CPU, RAM, disk — all at once
+qzx GetRAMInfo              # Detailed memory breakdown
+qzx GetCPULoad              # Per-core usage
+qzx GetDiskInfo             # All mounted volumes
+qzx GetSmartValues "/dev/sda"  # Disk health and temperature
+```
+
+### File System Operations
+
+```bash
+qzx CreateDirectory "path/to/folder"
+qzx CopyFile "source.txt" "destination.txt"
+qzx MoveFile "old/path" "new/path"
+qzx DeleteFile "target.txt"
+qzx ChangePermissions "script.sh" "755"
+qzx TouchFile "file.txt"
+qzx ListFiles "."
+```
+
+### Search & Analysis
+
+```bash
+qzx FindText "ERROR" "logs/app.log"
+qzx FindFiles "src" "*.py" -r
+qzx FindLargeFiles "dist" "*.map" "1MB" -r
+qzx CountLinesInFile "main.py"
+```
+
+### Process Management
+
+```bash
+qzx ListProcesses "python"
+qzx KillProcess "12345"
+```
+
+### Development Tools
+
+```bash
+qzx RunScript "build.py" "--env=prod"
+qzx GetCurrentDate
+qzx GetCurrentTime
+qzx qzxVersion
+```
+
+42 verified commands. All tested. All returning structured JSON.
+
+---
+
+## Real Agent Workflows
+
+### Autonomous DevOps Pipeline
+
+```bash
+qzx SystemInfo > "build_environment.json"
+qzx CreateDirectory "Deployment/$(qzx GetCurrentDate)"
+qzx RunScript "build.py" "--env=prod" "--optimize"
+qzx FindLargeFiles "dist" "*.map" "1MB" -r > "large_files.log"
+```
+
+The agent knows at every step whether the operation succeeded — without a single verification roundtrip.
+
+### System Health Check
+
+```bash
+qzx GetSmartValues "/dev/sda" > "disk_health.json"
+qzx GetCPULoad | jq '.cores[] | select(.usage > 80)'
+qzx FindText "OOM|SEGV|FATAL" "/var/log/syslog" -r
+```
+
+### Cross-Platform Project Setup
+
+```bash
+qzx CreateDirectory "src/components" "src/utils" "src/styles" "tests"
+qzx TouchFile "src/.gitkeep" ".github/workflows/.gitkeep"
+qzx RunScript "setup_env.py" "--with-dependencies"
+```
+
+Identical commands. Any OS. Agent doesn't need to know which one.
+
+---
+
+## Extending QZX
+
+Adding a command takes minutes:
+
+```python
+from qzx.core.command_base import CommandBase
+
+class MyCommand(CommandBase):
+    name = "myCommand"
+    description = "What it does"
+    category = "development"
+
+    def execute(self, param1, param2):
+        return {
+            "success": True,
+            "result": f"{param1}, {param2}",
+            "message": "Operation completed successfully."
+        }
+```
+
+Drop it in `src/qzx/commands/` under the right category. The loader discovers it automatically.
+
+---
+
+## Status
+
+**v0.02 — Alpha**
+
+Alpha means the API may still evolve. It does not mean untested — all 42 commands have unit tests passing in green across platforms. Use in production at your own judgment; the foundations are solid.
+
+---
+
+## Contributing
+
+```bash
+git clone https://github.com/alesanGreat/QZX-Quick-Zap-Exchange.git
+cd QZX-Quick-Zap-Exchange
+pip install -e .
+```
+
+Fork → branch → PR. Tests required for new commands.
+
+---
+
+## License
+
+MIT — use it, build on it, integrate it.
+
+---
+
+*QZX — because an agent that can't trust its own tool output isn't autonomous. It's just expensive.*

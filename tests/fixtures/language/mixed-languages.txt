@@ -1,0 +1,20 @@
+====== ESPAÑOL ======
+Buenos días a todos. Este es un párrafo escrito completamente en español para probar el sistema de detección de idiomas. Los análisis lingüísticos son importantes para entender el contenido de documentos multilingües. Las palabras en español tienen características únicas como los acentos y la letra eñe. En España y Latinoamérica se habla español con diferentes variaciones regionales que enriquecen nuestro idioma.
+
+====== ENGLISH ======
+Good morning everyone. This paragraph is written entirely in English to test the language detection system. Linguistic analysis is important for understanding the content of multilingual documents. English words have their own unique characteristics compared to other languages. In the United States, United Kingdom, Australia, and many other countries, English is spoken with regional variations that enrich the language.
+
+====== FRANÇAIS ======
+Bonjour à tous. Ce paragraphe est écrit entièrement en français pour tester le système de détection de langue. L'analyse linguistique est importante pour comprendre le contenu des documents multilingues. Les mots français ont leurs propres caractéristiques uniques par rapport aux autres langues. En France, au Canada, en Belgique et dans de nombreux autres pays, le français est parlé avec des variations régionales qui enrichissent la langue.
+
+====== DEUTSCH ======
+Guten Morgen allerseits. Dieser Absatz ist vollständig auf Deutsch geschrieben, um das Spracherkennungssystem zu testen. Linguistische Analyse ist wichtig, um den Inhalt mehrsprachiger Dokumente zu verstehen. Deutsche Wörter haben ihre eigenen einzigartigen Eigenschaften im Vergleich zu anderen Sprachen. In Deutschland, Österreich, der Schweiz und vielen anderen Ländern wird Deutsch mit regionalen Variationen gesprochen, die die Sprache bereichern.
+
+====== ITALIANO ======
+Buongiorno a tutti. Questo paragrafo è scritto interamente in italiano per testare il sistema di rilevamento della lingua. L'analisi linguistica è importante per comprendere il contenuto dei documenti multilingue. Le parole italiane hanno caratteristiche uniche rispetto ad altre lingue. In Italia e in alcune parti della Svizzera, l'italiano è parlato con variazioni regionali che arricchiscono la lingua.
+
+====== PORTUGUÊS ======
+Bom dia a todos. Este parágrafo está escrito inteiramente em português para testar o sistema de detecção de idioma. A análise linguística é importante para entender o conteúdo de documentos multilíngues. As palavras portuguesas têm características únicas em comparação com outros idiomas. Em Portugal, Brasil e em vários países africanos, o português é falado com variações regionais que enriquecem o idioma.
+
+====== MIXED LANGUAGES ======
+Esta es una sección with mixed languages para testing the detection algorithm. Je vais continuer avec quelques phrases en français. Dann werde ich auf Deutsch weitermachen. Ora continuerò in italiano per un po'. E finalmente vou terminar com algumas frases em português. The goal is to challenge el sistema de detección para ver cómo maneja texto mezclado. 

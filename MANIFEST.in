@@ -1,11 +1,6 @@
-include LICENSE
 include README.md
 include README-English.md
 include qzx.bat
 include qzx.sh
-include __init__.py
-recursive-include Core *
-recursive-include Commands *
-recursive-include Documentation *
-recursive-include Resources *
-recursive-include test-data * 
+recursive-include src/qzx/resources *.json
+recursive-include docs *.md *.csv

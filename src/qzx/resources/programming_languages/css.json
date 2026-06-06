@@ -1,0 +1,106 @@
+{
+  "properties": [
+    "color", "background", "background-color", "background-image", "background-position",
+    "background-repeat", "background-size", "border", "border-color", "border-style",
+    "border-width", "border-radius", "border-top", "border-right", "border-bottom",
+    "border-left", "box-shadow", "margin", "margin-top", "margin-right", "margin-bottom",
+    "margin-left", "padding", "padding-top", "padding-right", "padding-bottom",
+    "padding-left", "width", "height", "min-width", "min-height", "max-width", "max-height",
+    "display", "position", "top", "right", "bottom", "left", "float", "clear", "z-index",
+    "overflow", "overflow-x", "overflow-y", "opacity", "visibility", "flex", "flex-basis",
+    "flex-direction", "flex-flow", "flex-grow", "flex-shrink", "flex-wrap", "justify-content",
+    "align-items", "align-content", "align-self", "order", "grid", "grid-template-columns",
+    "grid-template-rows", "grid-template-areas", "grid-column-gap", "grid-row-gap", "grid-gap",
+    "grid-column", "grid-row", "grid-area", "font", "font-family", "font-size", "font-style",
+    "font-weight", "font-variant", "line-height", "text-align", "text-decoration",
+    "text-transform", "text-shadow", "white-space", "vertical-align", "word-break",
+    "word-wrap", "word-spacing", "letter-spacing", "content", "cursor", "pointer-events",
+    "transition", "transition-delay", "transition-duration", "transition-property", 
+    "transition-timing-function", "animation", "animation-name", "animation-duration",
+    "animation-timing-function", "animation-delay", "animation-iteration-count",
+    "animation-direction", "animation-fill-mode", "animation-play-state", "transform",
+    "transform-origin", "box-sizing", "list-style", "list-style-type", "list-style-position",
+    "list-style-image", "caption-side", "table-layout", "empty-cells", "quotes",
+    "outline", "outline-color", "outline-style", "outline-width", "resize", "text-overflow",
+    "clip", "clip-path", "mask", "filter", "backdrop-filter", "object-fit", "object-position"
+  ],
+  "selectors": {
+    "basic": [
+      "element", "class", "id", "universal", "attribute", "pseudo-class", "pseudo-element"
+    ],
+    "combinators": [
+      "descendant", "child", "adjacent-sibling", "general-sibling"
+    ],
+    "pseudo_classes": [
+      ":active", ":checked", ":disabled", ":empty", ":enabled", ":first-child", ":first-of-type",
+      ":focus", ":hover", ":in-range", ":invalid", ":lang", ":last-child", ":last-of-type",
+      ":link", ":not", ":nth-child", ":nth-last-child", ":nth-last-of-type", ":nth-of-type",
+      ":only-of-type", ":only-child", ":optional", ":out-of-range", ":read-only", ":read-write",
+      ":required", ":root", ":target", ":valid", ":visited", ":is", ":where", ":has"
+    ],
+    "pseudo_elements": [
+      "::after", "::before", "::first-letter", "::first-line", "::selection", "::marker",
+      "::placeholder", "::backdrop"
+    ]
+  },
+  "values": {
+    "colors": [
+      "rgb", "rgba", "hsl", "hsla", "hex", "named-colors", "currentColor", "transparent"
+    ],
+    "lengths": [
+      "px", "em", "rem", "vh", "vw", "vmin", "vmax", "ex", "ch", "cm", "mm", "in", "pt", "pc", "%"
+    ],
+    "keywords": [
+      "auto", "none", "inherit", "initial", "unset", "revert", "normal", "bold", "italic",
+      "underline", "hidden", "visible", "block", "inline", "inline-block", "flex", "grid",
+      "absolute", "relative", "fixed", "sticky", "center", "left", "right", "top", "bottom",
+      "space-between", "space-around", "space-evenly", "wrap", "nowrap", "cover", "contain"
+    ],
+    "functions": [
+      "url", "calc", "var", "clamp", "min", "max", "linear-gradient", "radial-gradient",
+      "conic-gradient", "repeat", "rotate", "scale", "translate", "skew", "matrix"
+    ]
+  },
+  "patterns": {
+    "rule_set": [
+      "([^{}]*)\\s*\\{([^{}]*)\\}"
+    ],
+    "declaration": [
+      "\\s*([a-zA-Z-]+)\\s*:\\s*([^;]*);?"
+    ],
+    "selector": [
+      "([a-zA-Z0-9_.#:][^{]*?)\\s*\\{"
+    ],
+    "at_rule": [
+      "@([a-zA-Z-]+)\\s+([^{;]*);?",
+      "@([a-zA-Z-]+)\\s*([^{]*)?\\s*\\{[^}]*\\}"
+    ],
+    "media_query": [
+      "@media\\s+([^{]*?)\\s*\\{"
+    ],
+    "keyframes": [
+      "@keyframes\\s+([a-zA-Z0-9-_]+)\\s*\\{",
+      "([0-9]+%|from|to)\\s*\\{"
+    ],
+    "import": [
+      "@import\\s+(?:url\\()?['\"]?([^'\"\\)\\s]+)['\"]?\\)?\\s*([^;]*);"
+    ]
+  },
+  "at_rules": {
+    "standard": [
+      "@charset", "@import", "@namespace", "@media", "@supports", "@page",
+      "@font-face", "@keyframes", "@counter-style", "@font-feature-values",
+      "@property", "@layer", "@container"
+    ],
+    "vendor_prefixed": [
+      "@-webkit-", "@-moz-", "@-ms-", "@-o-"
+    ]
+  },
+  "comments": {
+    "multi_line": ["/\\*.*?\\*/"]
+  },
+  "string_literals": [
+    "\"[^\"]*\"", "'[^']*'"
+  ],
+  "file_extensions": [".css", ".scss", ".sass", ".less", ".styl", ".postcss"]
+} 

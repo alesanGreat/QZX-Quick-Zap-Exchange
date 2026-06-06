@@ -17,7 +17,6 @@ QZX (pronounced "Qui-Zi-Ex") is a universal command interface that allows AI age
 
 *Note: The pronunciation maintains the connection to the original letters Q, Z, and X while being adaptable across multiple languages.*
 
-![QZX Logo](https://via.placeholder.com/150x150.png?text=QZX)
 
 **Current Version: 0.01**
 
@@ -74,7 +73,7 @@ qzx RunScript "myscript.py" "param1" "param2"
 qzx qzxVersion
 ```
 
-For a complete list of all available commands and detailed documentation, please see [Documentation-Commands.md](Documentation-Commands.md).
+For a complete list of all available commands and detailed documentation, see [the generated command reference](docs/reference/commands-generated.md).
 
 ## Command Reference
 
@@ -135,7 +134,7 @@ qzx RunScript "cleanup.py" "--older-than=30days"
    ```
 3. Make the scripts executable (Linux/Mac):
    ```bash
-   chmod +x qzx.py qzx.sh
+   chmod +x qzx.sh
    ```
 4. Add QZX to your PATH (optional, but recommended):
    - **Linux/Mac**: Add `export PATH="$PATH:/path/to/qzx"` to your `.bashrc` or `.zshrc`
@@ -161,27 +160,29 @@ qzx.bat CreateDirectory "src\components\SearchBox" "src\components\ThemeToggle" 
 
 ### Direct Python Execution:
 ```
-python qzx.py CreateDirectory "NewFolder"
-python qzx.py CreateDirectory "src/components/SearchBox" "src/components/ThemeToggle" "src/components/PatientTable"
+python -m qzx CreateDirectory "NewFolder"
+python -m qzx CreateDirectory "src/components/SearchBox" "src/components/ThemeToggle" "src/components/PatientTable"
 ```
 
 ## Extending QZX
 
 QZX is designed to be easily extendable. To add a new command:
 
-1. Open `qzx.py`
-2. Add your new command method to the `QZX` class:
+1. Add a module under `src/qzx/commands/` in the appropriate category.
+2. Implement a command class derived from `CommandBase`:
    ```python
-   def my_new_command(self, param1, param2):
-       """Description of what your command does"""
-       # Your implementation here
-       return f"Result: {param1}, {param2}"
+   from qzx.core.command_base import CommandBase
+
+   class MyNewCommand(CommandBase):
+       name = "myNewCommand"
+       description = "Description of what your command does"
+       category = "development"
+
+       def execute(self, param1, param2):
+           return {"success": True, "result": f"{param1}, {param2}"}
    ```
-3. Register your command in the `__init__` method:
-   ```python
-   self.commands["myNewCommand"] = self.my_new_command
-   ```
-4. Add documentation for your command in [Documentation-Commands.md](Documentation-Commands.md)
+3. The command loader discovers modules in the category packages automatically.
+4. Regenerate [the command reference](docs/reference/commands-generated.md).
 
 ## Contributing
 

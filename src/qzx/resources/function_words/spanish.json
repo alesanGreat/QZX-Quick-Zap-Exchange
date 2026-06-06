@@ -1,0 +1,21 @@
+{
+  "articles": {
+    "definite": ["el", "la", "los", "las", "lo"],
+    "indefinite": ["un", "una", "unos", "unas"]
+  },
+  "pronouns": {
+    "personal": ["yo", "tú", "él", "ella", "usted", "nosotros", "nosotras", "vosotros", "vosotras", "ellos", "ellas", "ustedes", "me", "te", "le", "nos", "os", "les", "mí", "ti", "sí", "conmigo", "contigo", "consigo"],
+    "possessive": ["mi", "mis", "tu", "tus", "su", "sus", "nuestro", "nuestra", "nuestros", "nuestras", "vuestro", "vuestra", "vuestros", "vuestras", "mío", "mía", "míos", "mías", "tuyo", "tuya", "tuyos", "tuyas", "suyo", "suya", "suyos", "suyas"],
+    "demonstrative": ["este", "esta", "estos", "estas", "ese", "esa", "esos", "esas", "aquel", "aquella", "aquellos", "aquellas", "esto", "eso", "aquello"],
+    "relative": ["que", "quien", "quienes", "cuyo", "cuya", "cuyos", "cuyas", "cual", "cuales", "donde", "cuando", "como"],
+    "indefinite": ["alguno", "alguna", "algunos", "algunas", "ninguno", "ninguna", "ningunos", "ningunas", "otro", "otra", "otros", "otras", "todo", "toda", "todos", "todas", "cualquiera", "cualesquiera", "alguien", "nadie", "algo", "nada", "bastante", "bastantes", "demasiado", "demasiada", "demasiados", "demasiadas", "mucho", "mucha", "muchos", "muchas", "poco", "poca", "pocos", "pocas", "tanto", "tanta", "tantos", "tantas"]
+  },
+  "prepositions": ["a", "ante", "bajo", "cabe", "con", "contra", "de", "desde", "durante", "en", "entre", "excepto", "hacia", "hasta", "mediante", "para", "por", "salvo", "según", "sin", "sobre", "tras"],
+  "conjunctions": {
+    "coordinating": ["y", "e", "ni", "o", "u", "pero", "mas", "sino", "aunque"],
+    "subordinating": ["que", "si", "porque", "pues", "como", "cuando", "mientras", "donde", "mientras que", "puesto que", "ya que", "a pesar de que", "aunque", "a menos que"]
+  },
+  "auxiliary_verbs": ["haber", "ser", "estar", "tener", "he", "has", "ha", "hemos", "habéis", "han", "soy", "eres", "es", "somos", "sois", "son", "estoy", "estás", "está", "estamos", "estáis", "están", "tengo", "tienes", "tiene", "tenemos", "tenéis", "tienen"],
+  "common_adverbs": ["no", "sí", "también", "muy", "mucho", "poco", "bastante", "demasiado", "casi", "sólo", "solamente", "apenas", "ya", "aún", "todavía", "siempre", "nunca", "jamás", "aquí", "allí", "ahí", "cerca", "lejos", "arriba", "abajo", "dentro", "fuera", "ahora", "luego", "después", "antes", "pronto", "tarde", "temprano", "ayer", "hoy", "mañana", "bien", "mal", "regular", "así", "quizás", "acaso", "tal vez"],
+  "sample_words": ["español", "buenos", "días", "todos", "este", "párrafo", "escrito", "completamente", "para", "probar", "sistema", "detección", "idiomas", "análisis", "lingüísticos", "importantes", "entender", "contenido", "documentos", "multilingües", "palabras", "tienen", "características", "únicas", "como", "acentos", "letra", "españa", "latinoamérica", "habla", "diferentes", "variaciones", "regionales", "enriquecen", "nuestro", "idioma"]
+} 

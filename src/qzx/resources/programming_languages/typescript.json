@@ -1,0 +1,89 @@
+{
+  "keywords": [
+    "function", "var", "let", "const", "if", "else", "for", "while", "switch", 
+    "case", "break", "return", "try", "catch", "finally", "class", "extends",
+    "import", "export", "typeof", "instanceof", "new", "this", "async", "await",
+    "do", "default", "continue", "delete", "in", "of", "throw", "void", "yield",
+    "super", "debugger", "interface", "type", "as", "is", "enum", "namespace",
+    "readonly", "keyof", "abstract", "implements", "declare", "private", "protected",
+    "public", "static", "get", "set", "module", "never", "unknown", "any", "infer",
+    "satisfies", "asserts", "override", "package", "with"
+  ],
+  "builtins": [
+    "Array", "Boolean", "Date", "Error", "Function", "JSON", "Math", "Number",
+    "Object", "Promise", "RegExp", "String", "Symbol", "Map", "Set", "WeakMap", 
+    "WeakSet", "Proxy", "Reflect", "Intl", "ArrayBuffer", "DataView", "Int8Array",
+    "Uint8Array", "Uint8ClampedArray", "Int16Array", "Uint16Array", "Int32Array",
+    "Uint32Array", "Float32Array", "Float64Array", "BigInt", "BigInt64Array",
+    "BigUint64Array", "Atomics", "SharedArrayBuffer"
+  ],
+  "types": {
+    "builtin": [
+      "string", "number", "boolean", "bigint", "symbol", "undefined", "null", "void",
+      "any", "unknown", "never", "object", "array", "tuple", "Record", "Partial",
+      "Required", "Readonly", "Pick", "Omit", "Exclude", "Extract", "NonNullable",
+      "Parameters", "ConstructorParameters", "ReturnType", "InstanceType", "ThisType",
+      "Awaited", "Uppercase", "Lowercase", "Capitalize", "Uncapitalize"
+    ],
+    "operators": [
+      "&", "|", "keyof", "typeof", "extends", "?", ":", "infer", "is", "as",
+      "as const", "satisfies"
+    ]
+  },
+  "global_functions": [
+    "setTimeout", "clearTimeout", "setInterval", "clearInterval", "parseInt",
+    "parseFloat", "isNaN", "isFinite", "encodeURI", "decodeURI", "encodeURIComponent",
+    "decodeURIComponent", "eval", "console"
+  ],
+  "dom_objects": [
+    "document", "window", "navigator", "location", "history", "screen", "localStorage",
+    "sessionStorage", "event", "XMLHttpRequest", "fetch", "Node", "Element", "HTMLElement",
+    "addEventListener", "removeEventListener", "querySelector", "querySelectorAll",
+    "getElementById", "getElementsByClassName", "getElementsByTagName", "createElement"
+  ],
+  "patterns": {
+    "function_definition": [
+      "function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*<[^>]*>?\\s*\\([^)]*\\)\\s*:\\s*[^{;]+\\s*\\{",
+      "function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\([^)]*\\)\\s*:\\s*[^{;]+\\s*\\{",
+      "function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\([^)]*\\)\\s*\\{",
+      "([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*=\\s*(?:async\\s*)?\\([^)]*\\)(?:\\s*:\\s*[^{;]+)?\\s*=>\\s*\\{",
+      "(?:async\\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\([^)]*\\)\\s*:\\s*[^{;]+\\s*\\{",
+      "([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*:\\s*(?:async\\s*)?\\([^)]*\\)(?:\\s*=>\\s*[^{;]+|\\s*=>\\s*\\{)"
+    ],
+    "class_definition": [
+      "class\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*(?:<[^>]*>)?(?:\\s+extends\\s+[^{]+)?(?:\\s+implements\\s+[^{]+)?\\s*\\{",
+      "abstract\\s+class\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*(?:<[^>]*>)?(?:\\s+extends\\s+[^{]+)?(?:\\s+implements\\s+[^{]+)?\\s*\\{"
+    ],
+    "interface_definition": [
+      "interface\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*(?:<[^>]*>)?(?:\\s+extends\\s+[^{]+)?\\s*\\{"
+    ],
+    "type_definition": [
+      "type\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*(?:<[^>]*>)?\\s*=\\s*"
+    ],
+    "enum_definition": [
+      "enum\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\{",
+      "const\\s+enum\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\{"
+    ],
+    "import_statement": [
+      "import\\s+(?:\\{[^}]*\\}|\\*\\s+as\\s+[a-zA-Z_$][a-zA-Z0-9_$]*|[a-zA-Z_$][a-zA-Z0-9_$]*)\\s+from\\s+['\"]([^'\"]+)['\"]",
+      "import\\s+['\"]([^'\"]+)['\"]"
+    ],
+    "export_statement": [
+      "export\\s+(?:default\\s+)?(?:function|class|interface|type|enum|const|let|var)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)",
+      "export\\s+\\{([^}]+)\\}",
+      "export\\s+\\*\\s+from\\s+['\"]([^'\"]+)['\"]"
+    ],
+    "decorator": [
+      "@([a-zA-Z_$][a-zA-Z0-9_$.]*)"
+    ]
+  },
+  "comments": {
+    "single_line": ["//"],
+    "multi_line": ["/\\*.*?\\*/"],
+    "jsdoc": ["/\\*\\*[\\s\\S]*?\\*/"]
+  },
+  "string_literals": [
+    "\"(?:[^\"\\\\]|\\\\.)*\"", "'(?:[^'\\\\]|\\\\.)*'", "`(?:[^`\\\\]|\\\\.|\\${[^}]*})*`"
+  ],
+  "file_extensions": [".ts", ".tsx", ".mts", ".cts", ".d.ts"]
+} 

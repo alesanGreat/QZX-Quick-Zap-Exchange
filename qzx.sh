@@ -5,7 +5,7 @@
 
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-QZX_PYTHON="$SCRIPT_DIR/qzx.py"
+export PYTHONPATH="$SCRIPT_DIR/src${PYTHONPATH:+:$PYTHONPATH}"
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
@@ -13,8 +13,5 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Make sure the Python script is executable
-chmod +x "$QZX_PYTHON" 2>/dev/null
-
-# Pass all arguments to the Python script
-python3 "$QZX_PYTHON" "$@" 
+# Pass all arguments to the QZX package
+python3 -m qzx "$@"

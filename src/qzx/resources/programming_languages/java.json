@@ -1,0 +1,113 @@
+{
+  "keywords": [
+    "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class",
+    "const", "continue", "default", "do", "double", "else", "enum", "extends", "final",
+    "finally", "float", "for", "goto", "if", "implements", "import", "instanceof", "int",
+    "interface", "long", "native", "new", "package", "private", "protected", "public",
+    "return", "short", "static", "strictfp", "super", "switch", "synchronized", "this",
+    "throw", "throws", "transient", "try", "void", "volatile", "while", "true", "false",
+    "null", "var", "yield", "sealed", "non-sealed", "permits", "record"
+  ],
+  "builtins": {
+    "primitive_types": [
+      "boolean", "byte", "char", "short", "int", "long", "float", "double", "void"
+    ],
+    "core_classes": [
+      "String", "Object", "Class", "System", "Thread", "Runnable", "Throwable", "Exception",
+      "RuntimeException", "Error", "Integer", "Boolean", "Long", "Double", "Float", "Character",
+      "Byte", "Short", "Number", "Math", "StringBuilder", "StringBuffer", "Enum", "Comparable",
+      "Iterable", "Cloneable", "AutoCloseable", "Override", "Deprecated", "SuppressWarnings"
+    ],
+    "collection_classes": [
+      "Collection", "List", "ArrayList", "LinkedList", "Vector", "Stack", "Set", "HashSet",
+      "LinkedHashSet", "TreeSet", "Map", "HashMap", "LinkedHashMap", "TreeMap", "Hashtable",
+      "Iterator", "Enumeration", "Queue", "Deque", "PriorityQueue", "Arrays", "Collections"
+    ],
+    "io_classes": [
+      "File", "InputStream", "OutputStream", "Reader", "Writer", "BufferedReader",
+      "BufferedWriter", "FileInputStream", "FileOutputStream", "FileReader", "FileWriter",
+      "PrintWriter", "PrintStream", "Scanner", "Path", "Paths", "Files", "Charset", "Stream"
+    ],
+    "concurrency_classes": [
+      "Thread", "Runnable", "Callable", "Executor", "ExecutorService", "Executors",
+      "Future", "CompletableFuture", "ForkJoinPool", "RecursiveAction", "RecursiveTask",
+      "Lock", "ReentrantLock", "ReadWriteLock", "Condition", "Semaphore", "CountDownLatch",
+      "CyclicBarrier", "Phaser", "AtomicInteger", "AtomicLong", "AtomicBoolean", "AtomicReference"
+    ]
+  },
+  "annotations": [
+    "@Override", "@Deprecated", "@SuppressWarnings", "@FunctionalInterface", "@SafeVarargs",
+    "@Documented", "@Target", "@Retention", "@Inherited", "@Repeatable", "@Native",
+    "@NotNull", "@Nullable", "@NonNull", "@Resource", "@PostConstruct", "@PreDestroy",
+    "@Required", "@Autowired", "@Component", "@Service", "@Repository", "@Controller",
+    "@RequestMapping", "@GetMapping", "@PostMapping", "@PutMapping", "@DeleteMapping",
+    "@Test", "@Before", "@After", "@BeforeClass", "@AfterClass", "@RunWith", "@Ignore"
+  ],
+  "libraries": {
+    "standard": [
+      "java.lang", "java.util", "java.io", "java.nio", "java.math", "java.time", "java.text",
+      "java.net", "java.sql", "java.awt", "java.applet", "java.beans", "java.rmi", "java.security",
+      "javax.servlet", "javax.swing", "javax.xml", "javax.sql", "javax.naming", "javax.crypto"
+    ],
+    "popular": [
+      "org.springframework", "org.hibernate", "org.apache.commons", "com.google.gson",
+      "com.fasterxml.jackson", "org.json", "org.slf4j", "org.junit", "org.mockito",
+      "org.apache.log4j", "com.google.guava", "io.reactivex", "reactor.core", "org.reactivestreams",
+      "junit.framework", "org.hamcrest", "org.aspectj", "lombok", "org.apache.maven", "org.gradle"
+    ]
+  },
+  "patterns": {
+    "class_definition": [
+      "(?:public|private|protected|)\\s+(?:abstract|final|static|)\\s*class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s+extends\\s+[^\\{]+)?(?:\\s+implements\\s+[^\\{]+)?\\s*\\{",
+      "(?:public|private|protected|)\\s+(?:abstract|final|static|)\\s*class\\s+([a-zA-Z_][a-zA-Z0-9_]*)"
+    ],
+    "interface_definition": [
+      "(?:public|private|protected|)\\s+interface\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]*>)?(?:\\s+extends\\s+[^\\{]+)?\\s*\\{",
+      "(?:public|private|protected|)\\s+interface\\s+([a-zA-Z_][a-zA-Z0-9_]*)"
+    ],
+    "enum_definition": [
+      "(?:public|private|protected|)\\s+enum\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:\\s+implements\\s+[^\\{]+)?\\s*\\{",
+      "(?:public|private|protected|)\\s+enum\\s+([a-zA-Z_][a-zA-Z0-9_]*)"
+    ],
+    "record_definition": [
+      "(?:public|private|protected|)\\s+record\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^\\)]*\\)\\s*(?:\\s+implements\\s+[^\\{]+)?\\s*\\{",
+      "(?:public|private|protected|)\\s+record\\s+([a-zA-Z_][a-zA-Z0-9_]*)"
+    ],
+    "method_definition": [
+      "(?:public|private|protected|)\\s+(?:static|final|abstract|native|synchronized|transient|volatile|)?\\s*(?:<[^>]*>)?\\s*(?:[a-zA-Z_][a-zA-Z0-9_<>\\[\\],\\s]*\\s+)+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^\\)]*\\)\\s*(?:throws\\s+[^\\{]+)?\\s*(?:\\{|;)",
+      "(?:public|private|protected|)\\s+(?:static|final|abstract|native|synchronized|transient|volatile|)?\\s*(?:<[^>]*>)?\\s*(?:[a-zA-Z_][a-zA-Z0-9_<>\\[\\],\\s]*\\s+)+([a-zA-Z_][a-zA-Z0-9_]*)"
+    ],
+    "constructor_definition": [
+      "(?:public|private|protected|)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^\\)]*\\)\\s*(?:throws\\s+[^\\{]+)?\\s*\\{"
+    ],
+    "field_definition": [
+      "(?:public|private|protected|)\\s+(?:static|final|transient|volatile|)?\\s*(?:[a-zA-Z_][a-zA-Z0-9_<>\\[\\],\\s]*\\s+)+([a-zA-Z_][a-zA-Z0-9_\\[\\]\\s,]*)\\s*(?:=\\s*[^;]+)?\\s*;"
+    ],
+    "package_statement": [
+      "package\\s+([a-zA-Z_][a-zA-Z0-9_.]*)"
+    ],
+    "import_statement": [
+      "import\\s+(?:static\\s+)?([a-zA-Z_][a-zA-Z0-9_.]*)(?:\\s*\\.\\s*\\*)?;"
+    ],
+    "annotation_definition": [
+      "(?:public|private|protected|)\\s+@interface\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{"
+    ],
+    "lambda_expression": [
+      "\\([^\\)]*\\)\\s*->\\s*(?:\\{[^\\}]*\\}|[^;]*)"
+    ],
+    "generic_type": [
+      "<([^<>]+)>"
+    ]
+  },
+  "comments": {
+    "single_line": ["//"],
+    "multi_line": ["/\\*.*?\\*/"],
+    "javadoc": ["/\\*\\*.*?\\*/"]
+  },
+  "string_literals": [
+    "\"(?:[^\"\\\\]|\\\\.)*\"", 
+    "'(?:[^'\\\\]|\\\\.)*'", 
+    "\"\"\"[\\s\\S]*?\"\"\""
+  ],
+  "file_extensions": [".java", ".jav", ".class", ".jar"]
+} 

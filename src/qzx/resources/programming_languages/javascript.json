@@ -1,0 +1,62 @@
+{
+  "keywords": [
+    "function", "var", "let", "const", "if", "else", "for", "while", "switch", 
+    "case", "break", "return", "try", "catch", "finally", "class", "extends",
+    "import", "export", "typeof", "instanceof", "new", "this", "async", "await",
+    "do", "default", "continue", "delete", "in", "of", "throw", "void", "yield",
+    "super", "debugger", "with", "implements", "interface", "package", "private",
+    "protected", "public", "static"
+  ],
+  "builtins": [
+    "Array", "Boolean", "Date", "Error", "Function", "JSON", "Math", "Number",
+    "Object", "Promise", "RegExp", "String", "Symbol", "Map", "Set", "WeakMap", 
+    "WeakSet", "Proxy", "Reflect", "Intl", "ArrayBuffer", "DataView", "Int8Array",
+    "Uint8Array", "Uint8ClampedArray", "Int16Array", "Uint16Array", "Int32Array",
+    "Uint32Array", "Float32Array", "Float64Array"
+  ],
+  "global_functions": [
+    "setTimeout", "clearTimeout", "setInterval", "clearInterval", "parseInt",
+    "parseFloat", "isNaN", "isFinite", "encodeURI", "decodeURI", "encodeURIComponent",
+    "decodeURIComponent", "eval", "alert", "confirm", "prompt", "fetch", "console"
+  ],
+  "dom_objects": [
+    "document", "window", "navigator", "location", "history", "screen", "localStorage",
+    "sessionStorage", "event", "XMLHttpRequest", "Node", "Element", "HTMLElement",
+    "addEventListener", "removeEventListener", "querySelector", "querySelectorAll",
+    "getElementById", "getElementsByClassName", "getElementsByTagName", "createElement"
+  ],
+  "patterns": {
+    "function_definition": [
+      "function\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\(",
+      "([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*=\\s*function\\s*\\(",
+      "([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*:\\s*function\\s*\\(",
+      "(async\\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\(\\s*[^)]*\\)\\s*{",
+      "(get|set|async)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\(",
+      "\\(\\s*\\)\\s*=>\\s*\\{",
+      "([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*=>\\s*\\{"
+    ],
+    "class_definition": [
+      "class\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)"
+    ],
+    "import_statement": [
+      "import\\s+.*?from\\s+['\"]([^'\"]+)['\"]",
+      "import\\s+['\"]([^'\"]+)['\"]",
+      "require\\(['\"]([^'\"]+)['\"]\\)"
+    ],
+    "export_statement": [
+      "export\\s+(default\\s+)?(?:function|class|const|let|var)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)",
+      "export\\s+\\{([^}]+)\\}"
+    ],
+    "variable_declaration": [
+      "(var|let|const)\\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*="
+    ]
+  },
+  "comments": {
+    "single_line": ["^\\s*//"],
+    "multi_line": ["/\\*.*?\\*/"]
+  },
+  "string_literals": [
+    "\".*?\"", "'.*?'", "`.*?`"
+  ],
+  "file_extensions": [".js", ".jsx", ".mjs", ".cjs"]
+} 

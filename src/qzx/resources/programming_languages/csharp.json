@@ -1,0 +1,72 @@
+{
+  "keywords": [
+    "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked",
+    "class", "const", "continue", "decimal", "default", "delegate", "do", "double", "else",
+    "enum", "event", "explicit", "extern", "false", "finally", "fixed", "float", "for",
+    "foreach", "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock",
+    "long", "namespace", "new", "null", "object", "operator", "out", "override", "params",
+    "private", "protected", "public", "readonly", "ref", "return", "sbyte", "sealed",
+    "short", "sizeof", "stackalloc", "static", "string", "struct", "switch", "this", "throw",
+    "true", "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort", "using",
+    "virtual", "void", "volatile", "while", "add", "alias", "ascending", "async", "await",
+    "by", "descending", "dynamic", "equals", "from", "get", "global", "group", "into", "join",
+    "let", "nameof", "nint", "not", "notnull", "nuint", "on", "orderby", "partial", "record",
+    "remove", "select", "set", "unmanaged", "value", "var", "when", "where", "with", "yield"
+  ],
+  "builtins": [
+    "Console", "String", "Int32", "Boolean", "Object", "DateTime", "TimeSpan", "Guid",
+    "List", "Dictionary", "Array", "HashSet", "IEnumerable", "ICollection", "IList",
+    "IDictionary", "Task", "Func", "Action", "Delegate", "Predicate", "StringBuilder",
+    "Regex", "Math", "Convert", "Exception", "Type", "Enum", "Stream", "File", "Directory",
+    "Path", "Environment", "Process", "Thread", "Task", "Parallel", "Linq", "Debug", "Trace"
+  ],
+  "libraries": {
+    "standard": [
+      "System", "System.Collections", "System.Collections.Generic", "System.Linq",
+      "System.Text", "System.Text.RegularExpressions", "System.IO", "System.Threading",
+      "System.Threading.Tasks", "System.Net", "System.Net.Http", "System.Reflection",
+      "System.Diagnostics", "System.ComponentModel", "System.Xml", "System.Json",
+      "Microsoft.Extensions", "System.Runtime", "System.Data", "System.Security"
+    ],
+    "popular": [
+      "Newtonsoft.Json", "Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore",
+      "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.Configuration",
+      "Microsoft.Extensions.Logging", "AutoMapper", "Dapper", "Moq", "xUnit", "NUnit",
+      "FluentValidation", "MediatR", "RestSharp", "Serilog", "NLog", "Polly", "IdentityServer"
+    ]
+  },
+  "patterns": {
+    "function_definition": [
+      "(?:public|private|protected|internal|static|virtual|override|abstract|async|unsafe|extern)\\s+(?:[a-zA-Z0-9_<>\\[\\],\\s]+)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)\\s*(?:\\s*where\\s+[^{]+)?\\s*(?:=>|\\{)",
+      "(?:void|Task|[a-zA-Z_][a-zA-Z0-9_<>\\[\\],\\s]+)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)\\s*(?:\\s*where\\s+[^{]+)?\\s*(?:=>|\\{)"
+    ],
+    "class_definition": [
+      "(?:public|private|protected|internal|static|abstract|sealed|partial)\\s+(?:class|record|struct|interface)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]+>)?\\s*(?::\\s*[^{]+)?\\s*(?:where\\s+[^{]+)?\\s*\\{",
+      "(?:class|record|struct|interface)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:<[^>]+>)?\\s*(?::\\s*[^{]+)?\\s*(?:where\\s+[^{]+)?\\s*\\{"
+    ],
+    "namespace_definition": [
+      "namespace\\s+([a-zA-Z_][a-zA-Z0-9_.]*)",
+      "namespace\\s+([a-zA-Z_][a-zA-Z0-9_.]*);?"
+    ],
+    "property_definition": [
+      "(?:public|private|protected|internal|virtual|override|abstract)\\s+(?:[a-zA-Z0-9_<>\\[\\],\\s]+)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{\\s*(?:get|set)",
+      "(?:[a-zA-Z0-9_<>\\[\\],\\s]+)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{\\s*(?:get|set|init)",
+      "(?:public|private|protected|internal)\\s+(?:[a-zA-Z0-9_<>\\[\\],\\s]+)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{\\s*(?:get|set|init)\\s*;\\s*(?:set|get|init)\\s*;\\s*\\}"
+    ],
+    "using_statement": [
+      "using\\s+([a-zA-Z_][a-zA-Z0-9_.]*);",
+      "using\\s+static\\s+([a-zA-Z_][a-zA-Z0-9_.]*);",
+      "using\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*=\\s*([a-zA-Z_][a-zA-Z0-9_.]*)"
+    ]
+  },
+  "comments": {
+    "single_line": ["//"],
+    "multi_line": ["/\\*.*?\\*/"],
+    "xml_doc": ["///"]
+  },
+  "string_literals": [
+    "\"(?:[^\"\\\\]|\\\\.)*\"", "@\"[^\"]*(?:\"\"[^\"]*)*\"", "'(?:[^'\\\\]|\\\\.)*'",
+    "\\$\"(?:[^\"\\\\]|\\\\.|\\{[^}]*\\})*\"", "\\$@\"(?:[^\"\\\\]|\\\\.|\\{[^}]*\\}|\"\")*\""
+  ],
+  "file_extensions": [".cs", ".csx"]
+} 

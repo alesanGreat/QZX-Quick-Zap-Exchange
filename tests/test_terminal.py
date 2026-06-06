@@ -5,7 +5,7 @@
 Quick test script for QZX Terminal functionality
 """
 
-from Commands.SystemCommands.Terminal import QZXTerminalCommand
+from qzx.commands.system.terminal import QZXTerminalCommand
 
 def main():
     """
@@ -17,4 +17,4 @@ def main():
     terminal.execute()
 
 if __name__ == "__main__":
-    main() 
+    main()

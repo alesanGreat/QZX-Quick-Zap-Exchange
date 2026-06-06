@@ -1,0 +1,64 @@
+{
+  "keywords": [
+    "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool", "break",
+    "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept", "const",
+    "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return",
+    "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else",
+    "enum", "explicit", "export", "extern", "false", "float", "for", "friend", "goto", "if",
+    "inline", "int", "long", "mutable", "namespace", "new", "noexcept", "not", "not_eq", "nullptr",
+    "operator", "or", "or_eq", "private", "protected", "public", "register", "reinterpret_cast",
+    "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast",
+    "struct", "switch", "template", "this", "thread_local", "throw", "true", "try", "typedef",
+    "typeid", "typename", "union", "unsigned", "using", "virtual", "void", "volatile", "wchar_t",
+    "while", "xor", "xor_eq"
+  ],
+  "builtins": [
+    "std::string", "std::vector", "std::map", "std::unordered_map", "std::set", "std::unordered_set",
+    "std::list", "std::deque", "std::array", "std::pair", "std::tuple", "std::make_pair",
+    "std::make_tuple", "std::shared_ptr", "std::unique_ptr", "std::weak_ptr", "std::make_shared",
+    "std::make_unique", "std::function", "std::bind", "std::move", "std::forward", "std::cout",
+    "std::cin", "std::cerr", "std::endl", "std::exception", "std::runtime_error", "std::logic_error",
+    "std::numeric_limits", "std::transform", "std::sort", "std::find", "std::copy", "std::fill",
+    "std::replace", "std::accumulate", "std::for_each", "std::any_of", "std::all_of", "std::none_of"
+  ],
+  "libraries": {
+    "standard": [
+      "iostream", "string", "vector", "map", "unordered_map", "set", "unordered_set",
+      "list", "deque", "queue", "stack", "array", "algorithm", "memory", "utility",
+      "functional", "chrono", "thread", "mutex", "condition_variable", "future", "atomic",
+      "exception", "stdexcept", "fstream", "sstream", "iomanip", "numeric", "random",
+      "filesystem", "regex", "type_traits", "initializer_list", "tuple", "bitset", "limits"
+    ],
+    "popular": [
+      "boost", "fmt", "nlohmann/json", "OpenCV", "Eigen", "SFML", "SDL", "Qt", "gtest",
+      "gmock", "protobuf", "grpc", "folly", "abseil", "glm", "asio", "poco", "wxWidgets"
+    ]
+  },
+  "patterns": {
+    "function_definition": [
+      "([a-zA-Z_][a-zA-Z0-9_:]*\\s+)+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)\\s*(const)?\\s*(?:noexcept|throw\\s*\\([^)]*\\))?\\s*(?:->\\s*[^{;]+)?\\s*\\{",
+      "([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^)]*\\)\\s*(const)?\\s*(?:noexcept|throw\\s*\\([^)]*\\))?\\s*(?:->\\s*[^{;]+)?\\s*\\{"
+    ],
+    "class_definition": [
+      "(?:class|struct)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:final|sealed)?(?:\\s*:\\s*[^{]+)?\\s*\\{",
+      "template\\s*<[^>]+>\\s*(?:class|struct)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:final|sealed)?(?:\\s*:\\s*[^{]+)?\\s*\\{"
+    ],
+    "namespace_definition": [
+      "namespace\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\{"
+    ],
+    "include_statement": [
+      "#include\\s+[<\"]([^>\"]+)[>\"]"
+    ],
+    "template_instantiation": [
+      "([a-zA-Z_][a-zA-Z0-9_]*)<[^>]+>"
+    ]
+  },
+  "comments": {
+    "single_line": ["//"],
+    "multi_line": ["/\\*.*?\\*/"]
+  },
+  "string_literals": [
+    "\"(?:[^\"\\\\]|\\\\.)*\"", "'(?:[^'\\\\]|\\\\.)*'", "R\"([^()]*?)\\(.*?\\)\\1\""
+  ],
+  "file_extensions": [".cpp", ".cc", ".cxx", ".c++", ".hpp", ".hh", ".hxx", ".h++", ".h"]
+} 

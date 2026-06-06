@@ -1,0 +1,79 @@
+{
+  "keywords": [
+    "html", "head", "body", "div", "span", "p", "a", "img", "script", "style",
+    "link", "meta", "title", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li",
+    "table", "tr", "td", "th", "thead", "tbody", "tfoot", "form", "input", "button",
+    "select", "option", "textarea", "label", "fieldset", "legend", "nav", "header",
+    "footer", "main", "section", "article", "aside", "details", "summary", "figure",
+    "figcaption", "canvas", "audio", "video", "source", "track", "iframe", "code",
+    "pre", "br", "hr", "em", "strong", "i", "b", "u", "s", "small", "sub", "sup",
+    "mark", "del", "ins", "blockquote", "cite", "q", "abbr", "address", "time",
+    "progress", "meter", "datalist", "output", "template", "slot", "svg", "math",
+    "picture", "dialog", "data", "embed", "object", "param", "map", "area"
+  ],
+  "attributes": {
+    "common": [
+      "id", "class", "style", "title", "hidden", "data-", "aria-", "role", "tabindex",
+      "lang", "dir", "accesskey", "contenteditable", "draggable", "spellcheck", "translate"
+    ],
+    "form_related": [
+      "action", "method", "enctype", "autocomplete", "name", "value", "type", "placeholder",
+      "required", "disabled", "readonly", "checked", "selected", "min", "max", "step",
+      "pattern", "accept", "multiple", "size", "rows", "cols", "for", "form", "autofocus"
+    ],
+    "media_related": [
+      "src", "alt", "href", "target", "rel", "width", "height", "controls", "autoplay",
+      "loop", "muted", "preload", "poster", "download", "crossorigin", "loading", "srcset",
+      "sizes", "media", "type", "sandbox"
+    ],
+    "event_handlers": [
+      "onclick", "onchange", "onsubmit", "onload", "onerror", "onkeyup", "onkeydown",
+      "onmouseover", "onmouseout", "onfocus", "onblur", "ondrag", "ondrop", "onscroll"
+    ]
+  },
+  "patterns": {
+    "tag_definition": [
+      "<([a-zA-Z][a-zA-Z0-9]*)(?:\\s+[^>]*)?\\s*>",
+      "<([a-zA-Z][a-zA-Z0-9]*)(?:\\s+[^>]*)?\\s*/>"
+    ],
+    "attribute_definition": [
+      "\\s+([a-zA-Z][a-zA-Z0-9-]*)(?:=(?:\"[^\"]*\"|'[^']*'|[^\\s>]+))?"
+    ],
+    "script_block": [
+      "<script(?:\\s+[^>]*)?\\s*>([\\s\\S]*?)<\\/script>"
+    ],
+    "style_block": [
+      "<style(?:\\s+[^>]*)?\\s*>([\\s\\S]*?)<\\/style>"
+    ],
+    "doctype": [
+      "<!DOCTYPE\\s+[^>]*>"
+    ],
+    "comment": [
+      "<!--[\\s\\S]*?-->"
+    ],
+    "entity": [
+      "&[a-zA-Z0-9#]+;"
+    ]
+  },
+  "embedded_languages": {
+    "javascript": {
+      "patterns": [
+        "<script(?:\\s+[^>]*)?\\s*>([\\s\\S]*?)<\\/script>",
+        "on[a-z]+\\s*=\\s*(?:\"[^\"]*\"|'[^']*')"
+      ]
+    },
+    "css": {
+      "patterns": [
+        "<style(?:\\s+[^>]*)?\\s*>([\\s\\S]*?)<\\/style>",
+        "style\\s*=\\s*(?:\"[^\"]*\"|'[^']*')"
+      ]
+    }
+  },
+  "comments": {
+    "multi_line": ["<!--[\\s\\S]*?-->"]
+  },
+  "string_literals": [
+    "\"[^\"]*\"", "'[^']*'"
+  ],
+  "file_extensions": [".html", ".htm", ".xhtml", ".shtml", ".phtml"]
+} 
