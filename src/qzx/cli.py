@@ -57,6 +57,47 @@ if platform.system().lower() == 'windows':
             try:
                 import pyreadline3
                 print("Successfully installed pyreadline3.")
+
+# Try to import psutil, or install it if missing
+try:
+    import psutil
+except ImportError:
+    print("Warning: psutil module not found. Some system commands may not work.")
+    print("Attempting to install psutil...")
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "psutil"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        try:
+            import psutil
+            print("Successfully installed psutil.")
+        except ImportError:
+            print("Failed to automatically install psutil. Install it manually with: pip install psutil")
+            psutil = None
+    except Exception:
+        print("Failed to automatically install psutil. Install it manually with: pip install psutil")
+        psutil = None
+
+# Try to import pyreadline3 on Windows for better command line experience
+if platform.system().lower() == 'windows':
+    try:
+        import pyreadline3
+    except ImportError:
+        print("Warning: pyreadline3 module not found. Command history and editing will be limited.")
+        print("Attempting to install pyreadline3...")
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "pyreadline3"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            try:
+                import pyreadline3
+                print("Successfully installed pyreadline3.")
             except ImportError:
                 print("Failed to automatically install pyreadline3. Install it manually with: pip install pyreadline3")
         except Exception:
@@ -65,7 +106,11 @@ if platform.system().lower() == 'windows':
 class QZX:
     def __init__(self):
         self.os_type = platform.system().lower()
-        self.version = "0.02"
+        try:
+            from qzx import __version__
+            self.version = __version__
+        except ImportError:
+            self.version = "0.2.2"
         
         # Initialize command loader
         self.command_loader = CommandLoader()
@@ -302,34 +347,38 @@ Commands:
 
 
 def main():
-    # Modificación para manejar correctamente opciones como -r, --recursive, etc.
-    if len(sys.argv) < 2:
-        # En lugar de mostrar mensaje de uso, ejecutamos Welcome por defecto
-        qzx = QZX()
-        result = qzx.execute("Welcome")
-        
-        # Mostrar el resultado
-        if isinstance(result, dict) and "message" in result:
-            print(result["message"])
-        else:
-            print(result)
-        
-        sys.exit(0)
-    
-    command = sys.argv[1]
-    
-    # Check if json output is requested
+    # Check if json output is requested anywhere in arguments list
     json_output = False
     filtered_args = []
     
-    for arg in sys.argv[2:]:
+    for arg in sys.argv[1:]:
         if arg == '--json' or arg == '-json':
             json_output = True
         else:
             filtered_args.append(arg)
+            
+    if not filtered_args:
+        # En lugar de mostrar mensaje de uso, ejecutamos Welcome por defecto
+        qzx = QZX()
+        result = qzx.execute("Welcome")
+        
+        # Mostrar the resultado
+        if json_output:
+            import json
+            if isinstance(result, dict):
+                print(json.dumps(result, indent=2))
+            else:
+                print(json.dumps({"result": result}, indent=2))
+        else:
+            if isinstance(result, dict) and "message" in result:
+                print(result["message"])
+            else:
+                print(result)
+        
+        sys.exit(0)
     
-    # Pasamos los argumentos filtrados (sin los flags de formato) al comando
-    args = filtered_args
+    command = filtered_args[0]
+    args = filtered_args[1:]
     
     qzx = QZX()
     result = qzx.execute(command, args)
@@ -352,4 +401,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
