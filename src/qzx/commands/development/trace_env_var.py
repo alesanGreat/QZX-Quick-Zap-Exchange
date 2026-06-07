@@ -226,4 +226,12 @@ class TraceEnvVarCommand(CommandBase):
         if js_match:
             return js_match.group(1).strip()
             
+        # PHP: getenv('VAR') ?: 'fallback' or $_ENV['VAR'] ?? 'fallback' or $_SERVER['VAR'] ?? 'fallback'
+        php_match = re.search(
+            r'(?:getenv\(\s*[\'"]' + re.escape(var_name) + r'[\'"]\s*\)|(?:\$_ENV|\$_SERVER)\[\s*[\'"]' + re.escape(var_name) + r'[\'"]\s*\])\s*(?:\?\?:|\?:|\?\?)\s*([^\n;]+)',
+            line
+        )
+        if php_match:
+            return php_match.group(1).strip()
+            
         return None

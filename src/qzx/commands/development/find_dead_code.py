@@ -47,7 +47,7 @@ class FindDeadCodeCommand(CommandBase):
         }
     ]
     
-    SUPPORTED_EXTENSIONS = {'.py', '.js', '.jsx', '.ts', '.tsx'}
+    SUPPORTED_EXTENSIONS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.php'}
     
     def execute(self, scan_path='.'):
         """
@@ -125,6 +125,8 @@ class FindDeadCodeCommand(CommandBase):
                 self._extract_python_symbols(content, file_path, rel_path, symbols)
             elif ext.lower() in ('.js', '.jsx', '.ts', '.tsx'):
                 self._extract_js_ts_symbols(content, file_path, rel_path, symbols)
+            elif ext.lower() == '.php':
+                self._extract_php_symbols(content, file_path, rel_path, symbols)
                 
         # 4. Check references for each symbol
         dead_symbols = []
@@ -240,6 +242,57 @@ class FindDeadCodeCommand(CommandBase):
                 symbols.append({
                     "name": name,
                     "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+
+    def _extract_php_symbols(self, content, file_path, rel_path, symbols):
+        """Extracts PHP classes, interfaces, traits, and functions using regex"""
+        # Match 'class ClassName', 'interface InterfaceName', 'trait TraitName'
+        class_pattern = re.compile(
+            r'^\s*(?:abstract\s+|final\s+)?(?:class|interface|trait)\s+([A-Za-z0-9_]+)',
+            re.MULTILINE | re.IGNORECASE
+        )
+        # Match functions
+        func_pattern = re.compile(
+            r'^\s*(?:public\s+|protected\s+|private\s+|static\s+|final\s+)*function\s+([A-Za-z0-9_]+)',
+            re.MULTILINE | re.IGNORECASE
+        )
+        
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, 1):
+            # Check classes/interfaces/traits
+            match = class_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_'):
+                    continue
+                sym_type = "class"
+                if "interface" in line.lower():
+                    sym_type = "interface"
+                elif "trait" in line.lower():
+                    sym_type = "trait"
+                    
+                symbols.append({
+                    "name": name,
+                    "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+                continue
+                
+            # Check functions
+            match = func_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                # Skip magic methods and tests
+                if name.startswith('__') or name.lower().startswith('test'):
+                    continue
+                symbols.append({
+                    "name": name,
+                    "type": "function",
                     "file_abs": file_path,
                     "file_rel": rel_path,
                     "line_number": idx

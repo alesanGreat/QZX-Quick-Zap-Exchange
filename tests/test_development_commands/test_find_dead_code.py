@@ -94,3 +94,36 @@ class TestFindDeadCodeCommand:
         assert "UnusedClassExport" in dead_names
         assert "unusedConstExport" in dead_names
         assert "activeExport" not in dead_names
+
+    def test_find_dead_code_php(self, tmp_path):
+        """Test identifying unused PHP functions and classes"""
+        php_lib = (
+            "<?php\n"
+            "class ActiveService {\n"
+            "    public function handle() {}\n"
+            "}\n"
+            "class DeadService {\n"
+            "    public function run() {}\n"
+            "}\n"
+            "function active_helper() {}\n"
+            "function dead_helper() {}\n"
+        )
+        php_app = (
+            "<?php\n"
+            "$service = new ActiveService();\n"
+            "active_helper();\n"
+        )
+        
+        with open(tmp_path / "lib.php", "w", encoding="utf-8") as f:
+            f.write(php_lib)
+        with open(tmp_path / "app.php", "w", encoding="utf-8") as f:
+            f.write(php_app)
+            
+        result = self.command.execute(str(tmp_path))
+        assert result["success"] is True
+        
+        dead_names = [sym["name"] for sym in result["dead_symbols"]]
+        assert "DeadService" in dead_names
+        assert "dead_helper" in dead_names
+        assert "ActiveService" not in dead_names
+        assert "active_helper" not in dead_names
