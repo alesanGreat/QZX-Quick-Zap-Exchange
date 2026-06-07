@@ -65,3 +65,7 @@ WebsiteQZX/
 node_modules/
 */node_modules/
 **/node_modules/
+
+# Agent guidelines (local only)
+AGENTS.md
+
