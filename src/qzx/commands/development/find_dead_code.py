@@ -47,7 +47,10 @@ class FindDeadCodeCommand(CommandBase):
         }
     ]
     
-    SUPPORTED_EXTENSIONS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.php'}
+    SUPPORTED_EXTENSIONS = {
+        '.py', '.js', '.jsx', '.ts', '.tsx', '.php',
+        '.rs', '.cpp', '.hpp', '.cc', '.cxx', '.h'
+    }
     
     def execute(self, scan_path='.'):
         """
@@ -127,6 +130,10 @@ class FindDeadCodeCommand(CommandBase):
                 self._extract_js_ts_symbols(content, file_path, rel_path, symbols)
             elif ext.lower() == '.php':
                 self._extract_php_symbols(content, file_path, rel_path, symbols)
+            elif ext.lower() == '.rs':
+                self._extract_rust_symbols(content, file_path, rel_path, symbols)
+            elif ext.lower() in ('.cpp', '.hpp', '.cc', '.cxx', '.h'):
+                self._extract_cpp_symbols(content, file_path, rel_path, symbols)
                 
         # 4. Check references for each symbol
         dead_symbols = []
@@ -289,6 +296,90 @@ class FindDeadCodeCommand(CommandBase):
                 name = match.group(1).strip()
                 # Skip magic methods and tests
                 if name.startswith('__') or name.lower().startswith('test'):
+                    continue
+                symbols.append({
+                    "name": name,
+                    "type": "function",
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+
+    def _extract_rust_symbols(self, content, file_path, rel_path, symbols):
+        """Extracts Rust struct, enum, fn, trait definitions using regex"""
+        # Match pub/pub(crate)/etc. fn/struct/enum/trait/type/union name
+        pattern = re.compile(
+            r'^\s*(?:pub(?:\([^\)]+\))?\s+)?(?:fn|struct|enum|trait|type|union)\s+([A-Za-z0-9_]+)',
+            re.MULTILINE
+        )
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, 1):
+            match = pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_') or name.startswith('test_'):
+                    continue
+                # Determine type
+                sym_type = "function"
+                if "struct" in line:
+                    sym_type = "struct"
+                elif "enum" in line:
+                    sym_type = "enum"
+                elif "trait" in line:
+                    sym_type = "trait"
+                elif "type" in line:
+                    sym_type = "type"
+                elif "union" in line:
+                    sym_type = "union"
+                    
+                symbols.append({
+                    "name": name,
+                    "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+
+    def _extract_cpp_symbols(self, content, file_path, rel_path, symbols):
+        """Extracts C++ class, struct, union, and function definitions using regex"""
+        # Match class/struct/union definitions
+        class_pattern = re.compile(
+            r'^\s*(?:class|struct|union)\s+([A-Za-z0-9_]+)\b',
+            re.MULTILINE
+        )
+        # Match function declarations/definitions (simplified: return_type name(args))
+        func_pattern = re.compile(
+            r'^\s*(?:inline\s+|static\s+|virtual\s+)?(?:[A-Za-z0-9_\:\<\>]+(?:\s*\*|\s*&)?\s+)+([A-Za-z0-9_]+)\s*\([^\)]*\)\s*(?:const)?\s*[\{;]',
+            re.MULTILINE
+        )
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, 1):
+            match = class_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_'):
+                    continue
+                sym_type = "class"
+                if "struct" in line:
+                    sym_type = "struct"
+                elif "union" in line:
+                    sym_type = "union"
+                symbols.append({
+                    "name": name,
+                    "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+                continue
+                
+            match = func_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                # Skip keywords that look like function names, or main
+                if name in ('if', 'while', 'for', 'switch', 'catch', 'main', 'return'):
+                    continue
+                if name.startswith('_'):
                     continue
                 symbols.append({
                     "name": name,

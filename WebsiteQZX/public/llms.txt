@@ -140,10 +140,16 @@ Add `--json` anywhere in the command arguments to force raw JSON output (optimal
     *Aliases: `cScaff`, `newC`, `createC`, `makeScaffProgramC`*
 *   **`scaffoldCpp`** <project_name> [path] [with_tests] [build_system] [cpp_standard] - Creates a basic scaffolding for a C++ program
     *Aliases: `cppScaff`, `newCpp`, `createCpp`, `makeScaffProgramCpp`*
+*   **`scaffoldJavascript`** <project_name> [path] [with_tests] - Creates a basic scaffolding for a JavaScript/Node.js program
+    *Aliases: `jsScaff`, `newJs`, `createJs`, `makeScaffProgramJavascript`*
+*   **`scaffoldPhp`** <project_name> [path] [with_tests] - Creates a basic scaffolding for a PHP/Composer program
+    *Aliases: `phpScaff`, `newPhp`, `createPhp`, `makeScaffProgramPhp`*
 *   **`scaffoldPython`** <project_name> [path] [with_tests] [create_venv] - Creates a basic scaffolding for a Python program
     *Aliases: `pythonScaff`, `newPython`, `createPython`, `makeScaffProgramPython`*
 *   **`scaffoldRust`** <project_name> [path] [binary] [with_tests] - Creates a basic scaffolding for a Rust program
     *Aliases: `rustScaff`, `newRust`, `createRust`, `makeScaffProgramRust`*
+*   **`scaffoldTypescript`** <project_name> [path] [with_tests] - Creates a basic scaffolding for a TypeScript program
+    *Aliases: `tsScaff`, `newTs`, `createTs`, `makeScaffProgramTypescript`*
 *   **`scanProject`** [project_path] - Scans a project root to identify technologies, scripts, configuration files, and missing environment keys
 *   **`traceCircularImports`** [scan_path] - Traces module imports recursively and identifies circular import dependencies (loops)
 *   **`traceEnvVar`** <var_name> [project_path] [recursive] - Traces usage of an environment variable across code files, .env, and .env.example templates

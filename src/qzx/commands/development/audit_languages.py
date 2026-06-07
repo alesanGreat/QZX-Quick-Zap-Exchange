@@ -62,21 +62,21 @@ class AuditLanguagesCommand(CommandBase):
         },
         'javascript': {
             'display_name': 'JavaScript',
-            'scaffolding': False,
+            'scaffolding': True,
             'complexity': True,
             'dead_code': True,
             'env_fallbacks': True
         },
         'typescript': {
             'display_name': 'TypeScript',
-            'scaffolding': False,
+            'scaffolding': True,
             'complexity': True,
             'dead_code': True,
             'env_fallbacks': True
         },
         'php': {
             'display_name': 'PHP',
-            'scaffolding': False,
+            'scaffolding': True,
             'complexity': True,
             'dead_code': True,
             'env_fallbacks': True
@@ -85,8 +85,8 @@ class AuditLanguagesCommand(CommandBase):
             'display_name': 'Rust',
             'scaffolding': True,
             'complexity': True,
-            'dead_code': False,
-            'env_fallbacks': False
+            'dead_code': True,
+            'env_fallbacks': True
         },
         'go': {
             'display_name': 'Go',
@@ -120,8 +120,8 @@ class AuditLanguagesCommand(CommandBase):
             'display_name': 'C++',
             'scaffolding': True,
             'complexity': True,
-            'dead_code': False,
-            'env_fallbacks': False
+            'dead_code': True,
+            'env_fallbacks': True
         },
         'csharp': {
             'display_name': 'C#',

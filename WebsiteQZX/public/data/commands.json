@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_on": "2026-06-06 19:15:36",
+    "generated_on": "2026-06-06 23:17:57",
     "generator": "generate_command_json.py"
   },
   "categories": {
@@ -26,8 +26,11 @@
         "getProjectTree",
         "scaffoldC",
         "scaffoldCpp",
+        "scaffoldJavascript",
+        "scaffoldPhp",
         "scaffoldPython",
         "scaffoldRust",
+        "scaffoldTypescript",
         "scanProject"
       ]
     },
@@ -617,6 +620,94 @@
       "execute_doc": "Creates a basic scaffolding for a C++ program\n\nArgs:\n    project_name (str): Name of the C++ project to create\n    path (str): Path where to create the project\n    with_tests (str): Whether to include testing scaffolding\n    build_system (str): Build system to use (make, cmake, or none)\n    cpp_standard (str): C++ standard to use (11, 14, 17, 20)\n    \nReturns:\n    Dictionary with the operation results and status",
       "module": "qzx.commands.development.scaffold_cpp"
     },
+    "scaffoldJavascript": {
+      "name": "scaffoldJavascript",
+      "category": "development",
+      "description": "Creates a basic scaffolding for a JavaScript/Node.js program",
+      "aliases": [
+        "jsScaff",
+        "newJs",
+        "createJs",
+        "makeScaffProgramJavascript"
+      ],
+      "parameters": [
+        {
+          "name": "project_name",
+          "description": "Name of the JavaScript project to create",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "path",
+          "description": "Path where to create the project (default: current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "with_tests",
+          "description": "Whether to include test scaffolding (jest)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx makeScaffProgramJavascript my_js_project",
+          "description": "Creates a new JavaScript project named \"my_js_project\" in the current directory"
+        },
+        {
+          "command": "qzx jsScaff backend_api /path/to/dir true",
+          "description": "Creates a new JavaScript project with Jest tests in the specified directory"
+        }
+      ],
+      "class_doc": "Command to generate a basic scaffolding for a JavaScript/Node.js program.\nCreates a new JavaScript project with standard directory structure and basic files.",
+      "execute_doc": "Creates a basic scaffolding for a JavaScript program\n\nArgs:\n    project_name (str): Name of the JavaScript project to create\n    path (str): Path where to create the project\n    with_tests (str): Whether to include test scaffolding\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.development.scaffold_javascript"
+    },
+    "scaffoldPhp": {
+      "name": "scaffoldPhp",
+      "category": "development",
+      "description": "Creates a basic scaffolding for a PHP/Composer program",
+      "aliases": [
+        "phpScaff",
+        "newPhp",
+        "createPhp",
+        "makeScaffProgramPhp"
+      ],
+      "parameters": [
+        {
+          "name": "project_name",
+          "description": "Name of the PHP project to create",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "path",
+          "description": "Path where to create the project (default: current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "with_tests",
+          "description": "Whether to include test scaffolding (phpunit)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx makeScaffProgramPhp my_php_project",
+          "description": "Creates a new PHP project named \"my_php_project\" in the current directory"
+        },
+        {
+          "command": "qzx phpScaff app_service /path/to/dir true",
+          "description": "Creates a new PHP project with PHPUnit tests in the specified directory"
+        }
+      ],
+      "class_doc": "Command to generate a basic scaffolding for a PHP/Composer program.\nCreates a new PHP project with standard directory structure and basic files.",
+      "execute_doc": "Creates a basic scaffolding for a PHP program\n\nArgs:\n    project_name (str): Name of the PHP project to create\n    path (str): Path where to create the project\n    with_tests (str): Whether to include test scaffolding\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.development.scaffold_php"
+    },
     "scaffoldPython": {
       "name": "scaffoldPython",
       "category": "development",
@@ -724,6 +815,50 @@
       "class_doc": "Command to generate a basic scaffolding for a Rust program.\nCreates a new Rust project with standard directory structure and basic files.",
       "execute_doc": "Creates a basic scaffolding for a Rust program\n\nArgs:\n    project_name (str): Name of the Rust project to create\n    path (str): Path where to create the project\n    binary (str): Whether to create a binary application (true) or a library (false)\n    with_tests (str): Whether to include test scaffolding\n    \nReturns:\n    Dictionary with the operation results and status",
       "module": "qzx.commands.development.scaffold_rust"
+    },
+    "scaffoldTypescript": {
+      "name": "scaffoldTypescript",
+      "category": "development",
+      "description": "Creates a basic scaffolding for a TypeScript program",
+      "aliases": [
+        "tsScaff",
+        "newTs",
+        "createTs",
+        "makeScaffProgramTypescript"
+      ],
+      "parameters": [
+        {
+          "name": "project_name",
+          "description": "Name of the TypeScript project to create",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "path",
+          "description": "Path where to create the project (default: current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "with_tests",
+          "description": "Whether to include test scaffolding (jest & ts-jest)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx makeScaffProgramTypescript my_ts_project",
+          "description": "Creates a new TypeScript project named \"my_ts_project\" in the current directory"
+        },
+        {
+          "command": "qzx tsScaff backend_api_ts /path/to/dir true",
+          "description": "Creates a new TypeScript project with Jest/ts-jest tests in the specified directory"
+        }
+      ],
+      "class_doc": "Command to generate a basic scaffolding for a TypeScript program.\nCreates a new TypeScript project with standard directory structure and basic files.",
+      "execute_doc": "Creates a basic scaffolding for a TypeScript program\n\nArgs:\n    project_name (str): Name of the TypeScript project to create\n    path (str): Path where to create the project\n    with_tests (str): Whether to include test scaffolding\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.development.scaffold_typescript"
     },
     "scanProject": {
       "name": "scanProject",

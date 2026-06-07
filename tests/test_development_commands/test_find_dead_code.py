@@ -127,3 +127,61 @@ class TestFindDeadCodeCommand:
         assert "dead_helper" in dead_names
         assert "ActiveService" not in dead_names
         assert "active_helper" not in dead_names
+
+    def test_find_dead_code_rust(self, tmp_path):
+        """Test identifying unused Rust functions and structs"""
+        rust_lib = (
+            "pub struct ActiveStruct {}\n"
+            "pub struct DeadStruct {}\n"
+            "pub fn active_fn() {}\n"
+            "pub fn dead_fn() {}\n"
+        )
+        rust_app = (
+            "use lib::{ActiveStruct, active_fn};\n"
+            "fn main() {\n"
+            "    let a = ActiveStruct {};\n"
+            "    active_fn();\n"
+            "}\n"
+        )
+        with open(tmp_path / "lib.rs", "w", encoding="utf-8") as f:
+            f.write(rust_lib)
+        with open(tmp_path / "main.rs", "w", encoding="utf-8") as f:
+            f.write(rust_app)
+            
+        result = self.command.execute(str(tmp_path))
+        assert result["success"] is True
+        
+        dead_names = [sym["name"] for sym in result["dead_symbols"]]
+        assert "DeadStruct" in dead_names
+        assert "dead_fn" in dead_names
+        assert "ActiveStruct" not in dead_names
+        assert "active_fn" not in dead_names
+
+    def test_find_dead_code_cpp(self, tmp_path):
+        """Test identifying unused C++ functions and classes"""
+        cpp_lib = (
+            "class ActiveClass {};\n"
+            "class DeadClass {};\n"
+            "void active_func() {}\n"
+            "void dead_func() {}\n"
+        )
+        cpp_app = (
+            "#include \"lib.hpp\"\n"
+            "int main() {\n"
+            "    ActiveClass a;\n"
+            "    active_func();\n"
+            "}\n"
+        )
+        with open(tmp_path / "lib.hpp", "w", encoding="utf-8") as f:
+            f.write(cpp_lib)
+        with open(tmp_path / "main.cpp", "w", encoding="utf-8") as f:
+            f.write(cpp_app)
+            
+        result = self.command.execute(str(tmp_path))
+        assert result["success"] is True
+        
+        dead_names = [sym["name"] for sym in result["dead_symbols"]]
+        assert "DeadClass" in dead_names
+        assert "dead_func" in dead_names
+        assert "ActiveClass" not in dead_names
+        assert "active_func" not in dead_names

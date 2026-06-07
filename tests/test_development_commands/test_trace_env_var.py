@@ -105,3 +105,49 @@ class TestTraceEnvVarCommand:
         assert result_user["success"] is True
         assert result_user["references_count"] == 1
         assert result_user["references"][0]["fallback_detected"] == "'root'"
+
+    def test_trace_rust_fallback(self, tmp_path):
+        """Test tracing environment variables in Rust files with fallbacks"""
+        rust_content = (
+            "fn main() {\n"
+            "    let port = std::env::var(\"DB_PORT\").unwrap_or(\"5432\".to_string());\n"
+            "    let host = option_env!(\"DB_HOST\").unwrap_or(\"localhost\");\n"
+            "}\n"
+        )
+        with open(tmp_path / "main.rs", "w", encoding="utf-8") as f:
+            f.write(rust_content)
+            
+        result_port = self.command.execute("DB_PORT", str(tmp_path))
+        assert result_port["success"] is True
+        assert result_port["references_count"] == 1
+        assert result_port["references"][0]["file"] == "main.rs"
+        assert result_port["references"][0]["fallback_detected"] == '"5432".to_string()'
+        
+        result_host = self.command.execute("DB_HOST", str(tmp_path))
+        assert result_host["success"] is True
+        assert result_host["references_count"] == 1
+        assert result_host["references"][0]["fallback_detected"] == '"localhost"'
+
+    def test_trace_cpp_fallback(self, tmp_path):
+        """Test tracing environment variables in C++ files with fallbacks"""
+        cpp_content = (
+            "#include <iostream>\n"
+            "#include <cstdlib>\n"
+            "int main() {\n"
+            "    const char* port = std::getenv(\"DB_PORT\") ? std::getenv(\"DB_PORT\") : \"3306\";\n"
+            "    const char* host = getenv(\"DB_HOST\") ?: \"127.0.0.1\";\n"
+            "}\n"
+        )
+        with open(tmp_path / "main.cpp", "w", encoding="utf-8") as f:
+            f.write(cpp_content)
+            
+        result_port = self.command.execute("DB_PORT", str(tmp_path))
+        assert result_port["success"] is True
+        assert result_port["references_count"] == 1
+        assert result_port["references"][0]["file"] == "main.cpp"
+        assert result_port["references"][0]["fallback_detected"] == '"3306"'
+        
+        result_host = self.command.execute("DB_HOST", str(tmp_path))
+        assert result_host["success"] is True
+        assert result_host["references_count"] == 1
+        assert result_host["references"][0]["fallback_detected"] == '"127.0.0.1"'

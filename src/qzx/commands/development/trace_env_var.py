@@ -57,10 +57,10 @@ class TraceEnvVarCommand(CommandBase):
         }
     ]
     
-    # Supported code extensions to inspect
     SUPPORTED_EXTENSIONS = {
         '.py', '.js', '.jsx', '.ts', '.tsx', '.json', '.java', '.cs',
-        '.php', '.rb', '.go', '.rs', '.sh', '.bat', '.yaml', '.yml'
+        '.php', '.rb', '.go', '.rs', '.sh', '.bat', '.yaml', '.yml',
+        '.c', '.cpp', '.h', '.hpp', '.cc', '.cxx'
     }
     
     def execute(self, var_name, project_path='.', recursive=True):
@@ -233,5 +233,21 @@ class TraceEnvVarCommand(CommandBase):
         )
         if php_match:
             return php_match.group(1).strip()
+
+        # Rust: env::var("VAR").unwrap_or("fallback") or option_env!("VAR").unwrap_or("fallback")
+        rust_match = re.search(
+            r'(?:env::var|option_env!)\(\s*[\'"]' + re.escape(var_name) + r'[\'"]\s*\)\s*\.\s*(?:unwrap_or|unwrap_or_else)\(\s*([^()]+(?:\([^()]*\))?[^()]*)\)',
+            line
+        )
+        if rust_match:
+            return rust_match.group(1).strip()
+
+        # C++: getenv("VAR") ? getenv("VAR") : "fallback" or std::getenv("VAR") ?: "fallback"
+        cpp_match = re.search(
+            r'(?:std::)?getenv\(\s*[\'"]' + re.escape(var_name) + r'[\'"]\s*\)\s*(?:\?\s*(?:std::)?getenv\(\s*[\'"]' + re.escape(var_name) + r'[\'"]\s*\)\s*:\s*|\?\:\s*)([^\n;]+)',
+            line
+        )
+        if cpp_match:
+            return cpp_match.group(1).strip()
             
         return None
