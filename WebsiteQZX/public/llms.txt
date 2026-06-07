@@ -129,6 +129,7 @@ Add `--json` anywhere in the command arguments to force raw JSON output (optimal
 
 ### 🛠️ Development Commands
 *   **`analyzeComplexity`** <file_path> [recursive] [format] - Analyzes code complexity metrics for files or projects
+*   **`auditLanguages`** [scan_path] [threshold] - Audits a project workspace for programming languages and alerts on underrepresented ones in QZX
 *   **`cleanDevCaches`** [scan_path] [dry_run] [max_depth] - Scans recursively for heavy development caches/dependencies (node_modules, __pycache__, dist) and purges them
 *   **`compareFiles`** <file1> <file2> [mode] - Compara dos archivos y muestra sus diferencias, útil para IDE
 *   **`createDocTemplatePython`** <file_path> [style] [overwrite] [preview] - Creates basic documentation templates for Python code that lacks docstrings
