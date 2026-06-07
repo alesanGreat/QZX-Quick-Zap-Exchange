@@ -44,25 +44,23 @@ class TestAuditLanguagesCommand:
         assert len(result["fully_represented"]) == 1
         assert result["fully_represented"][0]["language"] == "python"
         
-    def test_underrepresented_go(self, tmp_path):
-        """Test with Go files which are underrepresented in QZX"""
+    def test_partially_represented_go(self, tmp_path):
+        """Test with Go files which now have scaffolding and dead code support in QZX"""
         # Create 5 Go files
         for i in range(5):
             (tmp_path / f"file_{i}.go").touch()
-            
+
         # Create 1 Python file to have a mixed total
         (tmp_path / "app.py").touch()
-        
+
         result = self.command.execute(str(tmp_path), threshold=3)
         assert result["success"] is True
         assert result["total_files"] == 6
         assert "go" in result["languages_found"]
-        
-        # Go should trigger an alert because it exceeds the threshold and lacks capabilities
-        assert result["alerts_count"] == 1
-        alert = result["alerts"][0]
-        assert alert["language"] == "go"
-        assert alert["severity"] in ("HIGH", "WARNING")
-        assert "scaffolding" in alert["missing_capabilities"]
-        assert "dead_code" in alert["missing_capabilities"]
-        assert "env_fallbacks" in alert["missing_capabilities"]
+
+        # Go should be partially represented (scaffolding and dead_code present, env_fallbacks missing)
+        go_entry = next((p for p in result["partially_represented"] if p["language"] == "go"), None)
+        assert go_entry is not None
+        assert "env_fallbacks" in go_entry["missing_capabilities"]
+        assert "scaffolding" not in go_entry["missing_capabilities"]
+        assert "dead_code" not in go_entry["missing_capabilities"]
