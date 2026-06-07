@@ -83,6 +83,9 @@ class ScanProjectCommand(CommandBase):
             # 4. Parse Python requirements
             python_details = self._parse_python_requirements(abs_path)
             
+            # 4b. Parse PHP composer details
+            php_details = self._parse_composer_json(abs_path)
+            
             # 5. Environment File Diagnostics (.env vs .env.example)
             env_details = self._diagnose_env_files(abs_path)
             
@@ -101,6 +104,10 @@ class ScanProjectCommand(CommandBase):
                     
             if python_details and python_details.get("requirements_file_found"):
                 msg += f"- Python: Found requirements.txt with {python_details['count']} packages.\n"
+                
+            if php_details and php_details.get("name"):
+                msg += f"- PHP Project: {php_details['name']}\n"
+                msg += f"  - Composer Dependencies: {php_details['dependencies_count']} packages, {php_details['devDependencies_count']} dev packages\n"
                 
             if env_details.get("example_file_found"):
                 missing = env_details.get("missing_keys", [])
@@ -122,6 +129,7 @@ class ScanProjectCommand(CommandBase):
                 "configuration_files": configs,
                 "package_json": node_details,
                 "python_dependencies": python_details,
+                "php_dependencies": php_details,
                 "environment_diagnostics": env_details,
                 "message": msg
             }
@@ -144,7 +152,8 @@ class ScanProjectCommand(CommandBase):
             "tailwind": ["tailwind.config.js", "tailwind.config.ts"],
             "vite": ["vite.config.js", "vite.config.ts", "vite.config.mjs"],
             "next": ["next.config.js", "next.config.mjs"],
-            "github_workflows": ".github/workflows"
+            "github_workflows": ".github/workflows",
+            "composer": "composer.json"
         }
         
         results = {}
@@ -206,6 +215,12 @@ class ScanProjectCommand(CommandBase):
             techs.append("Next.js")
         elif configs.get("vite"):
             techs.append("Vite")
+            
+        # PHP
+        if configs.get("composer") or any(f.endswith('.php') for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))):
+            techs.append("PHP")
+            if configs.get("composer"):
+                managers.append("composer")
             
         return techs, list(set(managers))
         
@@ -341,3 +356,24 @@ class ScanProjectCommand(CommandBase):
         except Exception:
             pass
         return keys
+
+    def _parse_composer_json(self, path):
+        """Parses composer.json if it exists"""
+        file_path = os.path.join(path, "composer.json")
+        if not os.path.exists(file_path):
+            return None
+            
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            return {
+                "name": data.get("name"),
+                "description": data.get("description"),
+                "dependencies_count": len(data.get("require", {})),
+                "devDependencies_count": len(data.get("require-dev", {})),
+                "dependencies_keys": list(data.get("require", {}).keys()),
+                "devDependencies_keys": list(data.get("require-dev", {}).keys())
+            }
+        except Exception:
+            return {"error": "Failed to parse composer.json (invalid JSON)"}

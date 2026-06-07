@@ -157,3 +157,33 @@ class TestScanProjectCommand:
         assert "PORT" not in env["missing_keys"]
         assert "DB_HOST" not in env["missing_keys"]
         assert env["keys_configured_ok"] == 2
+
+    def test_scan_php_project(self, tmp_path):
+        """Test scanning a PHP project with composer.json"""
+        composer_json = {
+            "name": "mock/php-app",
+            "description": "Mock PHP composer project",
+            "require": {
+                "php": ">=8.1",
+                "laravel/framework": "^10.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10.0"
+            }
+        }
+        with open(tmp_path / "composer.json", "w", encoding="utf-8") as f:
+            json.dump(composer_json, f)
+            
+        result = self.command.execute(str(tmp_path))
+        
+        assert result["success"] is True
+        assert "PHP" in result["project_types"]
+        assert "composer" in result["package_managers"]
+        assert result["configuration_files"]["composer"] is True
+        
+        php = result["php_dependencies"]
+        assert php is not None
+        assert php["name"] == "mock/php-app"
+        assert php["dependencies_count"] == 2
+        assert php["devDependencies_count"] == 1
+        assert "laravel/framework" in php["dependencies_keys"]

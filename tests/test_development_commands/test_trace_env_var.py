@@ -78,3 +78,30 @@ class TestTraceEnvVarCommand:
         assert result_secret["references_count"] == 1
         assert result_secret["references"][0]["file"] == "app.py"
         assert result_secret["references"][0]["line_number"] == 4
+
+    def test_trace_php_fallback(self, tmp_path):
+        """Test tracing environment variables in PHP files with fallbacks"""
+        php_content = (
+            "<?php\n"
+            "$port = getenv('DB_PORT') ?: 3306;\n"
+            "$host = $_ENV['DB_HOST'] ?? 'localhost';\n"
+            "$user = $_SERVER['DB_USER'] ?? 'root';\n"
+        )
+        with open(tmp_path / "config.php", "w", encoding="utf-8") as f:
+            f.write(php_content)
+            
+        result_port = self.command.execute("DB_PORT", str(tmp_path))
+        assert result_port["success"] is True
+        assert result_port["references_count"] == 1
+        assert result_port["references"][0]["file"] == "config.php"
+        assert result_port["references"][0]["fallback_detected"] == "3306"
+        
+        result_host = self.command.execute("DB_HOST", str(tmp_path))
+        assert result_host["success"] is True
+        assert result_host["references_count"] == 1
+        assert result_host["references"][0]["fallback_detected"] == "'localhost'"
+
+        result_user = self.command.execute("DB_USER", str(tmp_path))
+        assert result_user["success"] is True
+        assert result_user["references_count"] == 1
+        assert result_user["references"][0]["fallback_detected"] == "'root'"
