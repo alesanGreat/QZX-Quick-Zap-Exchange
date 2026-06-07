@@ -132,6 +132,7 @@ Add `--json` anywhere in the command arguments to force raw JSON output (optimal
 *   **`cleanDevCaches`** [scan_path] [dry_run] [max_depth] - Scans recursively for heavy development caches/dependencies (node_modules, __pycache__, dist) and purges them
 *   **`compareFiles`** <file1> <file2> [mode] - Compara dos archivos y muestra sus diferencias, útil para IDE
 *   **`createDocTemplatePython`** <file_path> [style] [overwrite] [preview] - Creates basic documentation templates for Python code that lacks docstrings
+*   **`findDeadCode`** [scan_path] - Scans files for declared functions and classes, and identifies those with zero references in other files
 *   **`getGitStatus`** [repo_path] - Provides a structured summary of the Git repository state (branch, remote, changes, recent commits)
 *   **`getProjectTree`** [dir_path] [max_depth] [exclude_dirs] [include_files] - Generates a clean visual directory tree (ASCII and JSON) excluding heavy directories like node_modules
 *   **`scaffoldC`** <project_name> [path] [with_tests] [build_system] - Creates a basic scaffolding for a C program
@@ -143,6 +144,8 @@ Add `--json` anywhere in the command arguments to force raw JSON output (optimal
 *   **`scaffoldRust`** <project_name> [path] [binary] [with_tests] - Creates a basic scaffolding for a Rust program
     *Aliases: `rustScaff`, `newRust`, `createRust`, `makeScaffProgramRust`*
 *   **`scanProject`** [project_path] - Scans a project root to identify technologies, scripts, configuration files, and missing environment keys
+*   **`traceCircularImports`** [scan_path] - Traces module imports recursively and identifies circular import dependencies (loops)
+*   **`traceEnvVar`** <var_name> [project_path] [recursive] - Traces usage of an environment variable across code files, .env, and .env.example templates
 
 ---
 
