@@ -66,6 +66,25 @@ node_modules/
 */node_modules/
 **/node_modules/
 
-# Agent guidelines (local only)
+# Local config and agent guidance
+.dropboxignore
 AGENTS.md
+GEMINI.md
 
+# Non-core project directories
+archive/
+artifacts/
+infra/
+
+# Utility scripts not part of QZX core
+scripts/archive/
+scripts/ci/
+scripts/debug/
+scripts/deploy-rsync-qzx.py
+scripts/git/
+scripts/maintenance/
+scripts/nginx-qzx.conf
+scripts/setup/
+scripts/terminal/
+scripts/utils/generate_command_docs.py
+scripts/utils/generate_command_json.py
