@@ -90,16 +90,16 @@ class AuditLanguagesCommand(CommandBase):
         },
         'go': {
             'display_name': 'Go',
-            'scaffolding': False,
+            'scaffolding': True,
             'complexity': True,
-            'dead_code': False,
+            'dead_code': True,
             'env_fallbacks': False
         },
         'java': {
             'display_name': 'Java',
-            'scaffolding': False,
+            'scaffolding': True,
             'complexity': True,
-            'dead_code': False,
+            'dead_code': True,
             'env_fallbacks': False
         },
         'ruby': {
@@ -125,6 +125,27 @@ class AuditLanguagesCommand(CommandBase):
         },
         'csharp': {
             'display_name': 'C#',
+            'scaffolding': True,
+            'complexity': True,
+            'dead_code': True,
+            'env_fallbacks': False
+        },
+        'kotlin': {
+            'display_name': 'Kotlin',
+            'scaffolding': True,
+            'complexity': True,
+            'dead_code': True,
+            'env_fallbacks': False
+        },
+        'swift': {
+            'display_name': 'Swift',
+            'scaffolding': False,
+            'complexity': True,
+            'dead_code': False,
+            'env_fallbacks': False
+        },
+        'dart': {
+            'display_name': 'Dart',
             'scaffolding': False,
             'complexity': True,
             'dead_code': False,
@@ -147,7 +168,11 @@ class AuditLanguagesCommand(CommandBase):
         '.cpp': 'cpp',
         '.h': 'c',
         '.hpp': 'cpp',
-        '.cs': 'csharp'
+        '.cs': 'csharp',
+        '.kt': 'kotlin',
+        '.kts': 'kotlin',
+        '.swift': 'swift',
+        '.dart': 'dart'
     }
 
     def execute(self, scan_path='.', threshold=3):

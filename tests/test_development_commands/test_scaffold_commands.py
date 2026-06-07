@@ -13,6 +13,10 @@ from qzx.commands.development.scaffold_typescript import MakeScaffProgramTypescr
 from qzx.commands.development.scaffold_php import MakeScaffProgramPhpCommand
 from qzx.commands.development.scaffold_c import MakeScaffProgramCCommand
 from qzx.commands.development.scaffold_cpp import MakeScaffProgramCppCommand
+from qzx.commands.development.scaffold_go import MakeScaffProgramGoCommand
+from qzx.commands.development.scaffold_java import MakeScaffProgramJavaCommand
+from qzx.commands.development.scaffold_kotlin import MakeScaffProgramKotlinCommand
+from qzx.commands.development.scaffold_csharp import MakeScaffProgramCsharpCommand
 
 class TestScaffoldCommands:
     """
@@ -82,3 +86,42 @@ class TestScaffoldCommands:
         assert os.path.isdir(tmp_path / "my_cpp_app")
         assert os.path.isfile(tmp_path / "my_cpp_app" / "CMakeLists.txt")
         assert os.path.isfile(tmp_path / "my_cpp_app" / "src" / "main.cpp")
+
+    def test_scaffold_go(self, tmp_path):
+        cmd = MakeScaffProgramGoCommand()
+        result = cmd.execute("my_go_app", str(tmp_path), with_tests="true")
+        assert result["success"] is True
+        assert os.path.isdir(tmp_path / "my_go_app")
+        assert os.path.isfile(tmp_path / "my_go_app" / "go.mod")
+        assert os.path.isfile(tmp_path / "my_go_app" / "main.go")
+        assert os.path.isfile(tmp_path / "my_go_app" / "main_test.go")
+
+    def test_scaffold_java(self, tmp_path):
+        cmd = MakeScaffProgramJavaCommand()
+        result = cmd.execute("my_java_app", str(tmp_path), with_tests="true")
+        assert result["success"] is True
+        assert os.path.isdir(tmp_path / "my_java_app")
+        assert os.path.isfile(tmp_path / "my_java_app" / "pom.xml")
+        assert os.path.isfile(tmp_path / "my_java_app" / "src" / "main" / "java" / "com" / "example" / "my_java_app" / "App.java")
+        assert os.path.isfile(tmp_path / "my_java_app" / "src" / "test" / "java" / "com" / "example" / "my_java_app" / "AppTest.java")
+
+    def test_scaffold_kotlin(self, tmp_path):
+        cmd = MakeScaffProgramKotlinCommand()
+        result = cmd.execute("my_kotlin_app", str(tmp_path), with_tests="true")
+        assert result["success"] is True
+        assert os.path.isdir(tmp_path / "my_kotlin_app")
+        assert os.path.isfile(tmp_path / "my_kotlin_app" / "build.gradle.kts")
+        assert os.path.isfile(tmp_path / "my_kotlin_app" / "settings.gradle.kts")
+        assert os.path.isfile(tmp_path / "my_kotlin_app" / "src" / "main" / "kotlin" / "com" / "example" / "my_kotlin_app" / "App.kt")
+        assert os.path.isfile(tmp_path / "my_kotlin_app" / "src" / "test" / "kotlin" / "com" / "example" / "my_kotlin_app" / "AppTest.kt")
+
+    def test_scaffold_csharp(self, tmp_path):
+        cmd = MakeScaffProgramCsharpCommand()
+        result = cmd.execute("my_csharp_app", str(tmp_path), with_tests="true")
+        assert result["success"] is True
+        assert os.path.isdir(tmp_path / "my_csharp_app")
+        assert os.path.isfile(tmp_path / "my_csharp_app" / "my_csharp_app.csproj")
+        assert os.path.isfile(tmp_path / "my_csharp_app" / "Program.cs")
+        assert os.path.isfile(tmp_path / "my_csharp_app" / "my_csharp_app.sln")
+        assert os.path.isdir(tmp_path / "my_csharp_app" / "my_csharp_app.Tests")
+        assert os.path.isfile(tmp_path / "my_csharp_app" / "my_csharp_app.Tests" / "ProgramTests.cs")

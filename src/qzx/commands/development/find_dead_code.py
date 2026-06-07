@@ -25,7 +25,7 @@ class FindDeadCodeCommand(CommandBase):
     
     name = "findDeadCode"
     description = "Scans files for declared functions and classes, and identifies those with zero references in other files"
-    category = "dev"
+    category = "development"
     
     parameters = [
         {
@@ -49,7 +49,8 @@ class FindDeadCodeCommand(CommandBase):
     
     SUPPORTED_EXTENSIONS = {
         '.py', '.js', '.jsx', '.ts', '.tsx', '.php',
-        '.rs', '.cpp', '.hpp', '.cc', '.cxx', '.h'
+        '.rs', '.cpp', '.hpp', '.cc', '.cxx', '.h',
+        '.go', '.java', '.kt', '.cs'
     }
     
     def execute(self, scan_path='.'):
@@ -134,6 +135,14 @@ class FindDeadCodeCommand(CommandBase):
                 self._extract_rust_symbols(content, file_path, rel_path, symbols)
             elif ext.lower() in ('.cpp', '.hpp', '.cc', '.cxx', '.h'):
                 self._extract_cpp_symbols(content, file_path, rel_path, symbols)
+            elif ext.lower() == '.go':
+                self._extract_go_symbols(content, file_path, rel_path, symbols)
+            elif ext.lower() == '.java':
+                self._extract_java_symbols(content, file_path, rel_path, symbols)
+            elif ext.lower() == '.kt':
+                self._extract_kotlin_symbols(content, file_path, rel_path, symbols)
+            elif ext.lower() == '.cs':
+                self._extract_csharp_symbols(content, file_path, rel_path, symbols)
                 
         # 4. Check references for each symbol
         dead_symbols = []
@@ -335,6 +344,200 @@ class FindDeadCodeCommand(CommandBase):
                 symbols.append({
                     "name": name,
                     "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+
+    def _extract_go_symbols(self, content, file_path, rel_path, symbols):
+        """Extracts Go function and type definitions using regex"""
+        # Match 'func Name(', 'type Name struct', 'type Name interface', 'type Name func'
+        func_pattern = re.compile(
+            r'^\s*func\s+(?:\([^\)]*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(',
+            re.MULTILINE
+        )
+        type_pattern = re.compile(
+            r'^\s*type\s+([A-Za-z_][A-Za-z0-9_]*)\s+(?:struct|interface|func)',
+            re.MULTILINE
+        )
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, 1):
+            match = func_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_') or name == 'main' or name == 'init':
+                    continue
+                symbols.append({
+                    "name": name,
+                    "type": "function",
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+                continue
+            match = type_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_'):
+                    continue
+                sym_type = "struct"
+                if "interface" in line:
+                    sym_type = "interface"
+                elif "func" in line:
+                    sym_type = "type"
+                symbols.append({
+                    "name": name,
+                    "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+
+    def _extract_java_symbols(self, content, file_path, rel_path, symbols):
+        """Extracts Java class, interface, enum, and method definitions using regex"""
+        class_pattern = re.compile(
+            r'^\s*(?:public\s+|private\s+|protected\s+|abstract\s+|final\s+)?'
+            r'(?:class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)',
+            re.MULTILINE
+        )
+        method_pattern = re.compile(
+            r'^\s*(?:public\s+|private\s+|protected\s+|static\s+|final\s+|abstract\s+)*'
+            r'(?:[A-Za-z_][A-Za-z0-9_<>\[\],\s]*\s+)?'
+            r'([A-Za-z_][A-Za-z0-9_]*)\s*\(',
+            re.MULTILINE
+        )
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, 1):
+            match = class_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_'):
+                    continue
+                sym_type = "class"
+                if "interface" in line:
+                    sym_type = "interface"
+                elif "enum" in line:
+                    sym_type = "enum"
+                elif "record" in line:
+                    sym_type = "record"
+                symbols.append({
+                    "name": name,
+                    "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+                continue
+            match = method_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name in ('if', 'while', 'for', 'switch', 'catch', 'synchronized', 'try', 'main'):
+                    continue
+                if name.startswith('_') or name.lower().startswith('test'):
+                    continue
+                symbols.append({
+                    "name": name,
+                    "type": "method",
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+
+    def _extract_kotlin_symbols(self, content, file_path, rel_path, symbols):
+        """Extracts Kotlin class, interface, object, and function definitions using regex"""
+        class_pattern = re.compile(
+            r'^\s*(?:abstract\s+|sealed\s+|data\s+|open\s+|inner\s+)?'
+            r'(?:class|interface|object|enum\s+class|data\s+class)\s+([A-Za-z_][A-Za-z0-9_]*)',
+            re.MULTILINE
+        )
+        func_pattern = re.compile(
+            r'^\s*(?:private\s+|protected\s+|internal\s+|public\s+)?'
+            r'(?:inline\s+|tailrec\s+|suspend\s+)?fun\s+(?:<[^>]+>\s*)?'
+            r'([A-Za-z_][A-Za-z0-9_]*)\s*\(',
+            re.MULTILINE
+        )
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, 1):
+            match = class_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_'):
+                    continue
+                sym_type = "class"
+                if "interface" in line:
+                    sym_type = "interface"
+                elif "object" in line:
+                    sym_type = "object"
+                elif "enum" in line:
+                    sym_type = "enum"
+                symbols.append({
+                    "name": name,
+                    "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+                continue
+            match = func_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_') or name.lower().startswith('test'):
+                    continue
+                symbols.append({
+                    "name": name,
+                    "type": "function",
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+
+    def _extract_csharp_symbols(self, content, file_path, rel_path, symbols):
+        """Extracts C# class, interface, enum, struct, and method definitions using regex"""
+        class_pattern = re.compile(
+            r'^\s*(?:public\s+|private\s+|protected\s+|internal\s+|abstract\s+|sealed\s+|static\s+|partial\s+)*'
+            r'(?:class|interface|enum|struct|record)\s+([A-Za-z_][A-Za-z0-9_]*)',
+            re.MULTILINE
+        )
+        method_pattern = re.compile(
+            r'^\s*(?:public\s+|private\s+|protected\s+|internal\s+|static\s+|abstract\s+|sealed\s+|override\s+|virtual\s+|async\s+)*'
+            r'(?:[A-Za-z_][A-Za-z0-9_<>\[\],\s]*\s+)?'
+            r'([A-Za-z_][A-Za-z0-9_]*)\s*\(',
+            re.MULTILINE
+        )
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, 1):
+            match = class_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name.startswith('_'):
+                    continue
+                sym_type = "class"
+                if "interface" in line:
+                    sym_type = "interface"
+                elif "enum" in line:
+                    sym_type = "enum"
+                elif "struct" in line:
+                    sym_type = "struct"
+                elif "record" in line:
+                    sym_type = "record"
+                symbols.append({
+                    "name": name,
+                    "type": sym_type,
+                    "file_abs": file_path,
+                    "file_rel": rel_path,
+                    "line_number": idx
+                })
+                continue
+            match = method_pattern.search(line)
+            if match:
+                name = match.group(1).strip()
+                if name in ('if', 'while', 'for', 'foreach', 'switch', 'catch', 'using', 'lock', 'Main'):
+                    continue
+                if name.startswith('_') or name.lower().startswith('test'):
+                    continue
+                symbols.append({
+                    "name": name,
+                    "type": "method",
                     "file_abs": file_path,
                     "file_rel": rel_path,
                     "line_number": idx
