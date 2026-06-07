@@ -1,0 +1,3188 @@
+{
+  "metadata": {
+    "generated_on": "2026-06-06 19:15:36",
+    "generator": "generate_command_json.py"
+  },
+  "categories": {
+    "dev": {
+      "name": "dev",
+      "display_name": "Dev",
+      "commands": [
+        "analyzeComplexity",
+        "compareFiles",
+        "createDocTemplatePython",
+        "findDeadCode",
+        "traceCircularImports",
+        "traceEnvVar"
+      ]
+    },
+    "development": {
+      "name": "development",
+      "display_name": "Development",
+      "commands": [
+        "auditLanguages",
+        "cleanDevCaches",
+        "getGitStatus",
+        "getProjectTree",
+        "scaffoldC",
+        "scaffoldCpp",
+        "scaffoldPython",
+        "scaffoldRust",
+        "scanProject"
+      ]
+    },
+    "file": {
+      "name": "file",
+      "display_name": "File",
+      "commands": [
+        "changePermissions",
+        "compressZip",
+        "copyFile",
+        "countLinesInFile",
+        "createDirectory",
+        "decompressZip",
+        "deleteFile",
+        "detectFileType",
+        "downloadFile",
+        "findBrokenSymlinks",
+        "findDuplicateFiles",
+        "findFiles",
+        "findLargeFiles",
+        "findText",
+        "getFileHash",
+        "getHumanLanguageStats",
+        "getProgrammingLanguageStats",
+        "inspectImage",
+        "isDirectoryEmpty",
+        "isFileBinary",
+        "isFileEmpty",
+        "listFiles",
+        "moveFile",
+        "readFile",
+        "touchFile"
+      ]
+    },
+    "network": {
+      "name": "network",
+      "display_name": "Network",
+      "commands": [
+        "checkDns",
+        "checkSslCertificate",
+        "checkUrlStatus",
+        "getNetworkConfig",
+        "testWebSpeed"
+      ]
+    },
+    "system": {
+      "name": "system",
+      "display_name": "System",
+      "commands": [
+        "checkDependency",
+        "checkSystemPath",
+        "clearScreen",
+        "commandsBridge",
+        "currentDir",
+        "generateContent",
+        "getCommandCount",
+        "getCPULoad",
+        "getCurrentDate",
+        "getCurrentTime",
+        "getCurrentUser",
+        "getDiskInfo",
+        "getDiskName",
+        "getEnvironmentInfo",
+        "getGPULoad",
+        "getRAMInfo",
+        "getSmartValues",
+        "getStartupPrograms",
+        "getToday",
+        "inspectPort",
+        "isAdmin",
+        "killProcess",
+        "listProcesses",
+        "listSystemServices",
+        "runScript",
+        "shell",
+        "terminal",
+        "systemInfo",
+        "term",
+        "terminal",
+        "terminal",
+        "testDiskSpeed",
+        "version",
+        "welcome"
+      ]
+    },
+    "misc": {
+      "name": "misc",
+      "display_name": "Misc",
+      "commands": [
+        "base_command",
+        "base_command"
+      ]
+    }
+  },
+  "commands": {
+    "analyzeComplexity": {
+      "name": "analyzeComplexity",
+      "category": "dev",
+      "description": "Analyzes code complexity metrics for files or projects",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file or directory to analyze",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "Whether to recursively analyze directories: -r/--recursive for unlimited, -rN/--recursiveN for N levels",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "format",
+          "description": "Output format: \"detailed\" or \"summary\"",
+          "required": false,
+          "default": "detailed"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx analyzeComplexity \"main.py\"",
+          "description": "Analyze complexity of a single Python file"
+        },
+        {
+          "command": "qzx analyzeComplexity \"src/components\" -r",
+          "description": "Recursively analyze all code files in a directory"
+        },
+        {
+          "command": "qzx analyzeComplexity \"project/\" -r2 \"summary\"",
+          "description": "Generate a summary report analyzing up to 2 levels deep"
+        }
+      ],
+      "class_doc": "Command to analyze code complexity metrics for development environments\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Analyzes code complexity of files or directories\n\nArgs:\n    file_path: Path to file or directory to analyze\n    recursive: Whether to recursively analyze directories: -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    format: Output format (detailed or summary)\n    \nReturns:\n    Analysis results as string",
+      "module": "qzx.commands.development.analyze_complexity"
+    },
+    "compareFiles": {
+      "name": "compareFiles",
+      "category": "dev",
+      "description": "Compara dos archivos y muestra sus diferencias, útil para IDE",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "file1",
+          "description": "Ruta al primer archivo",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "file2",
+          "description": "Ruta al segundo archivo",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "description": "Modo de comparación: \"full\" (completo), \"summary\" (resumen) o \"percent\" (porcentaje)",
+          "required": false,
+          "default": "full"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx compareFiles \"archivo1.py\" \"archivo2.py\"",
+          "description": "Comparar dos archivos Python y mostrar todas las diferencias"
+        },
+        {
+          "command": "qzx compareFiles \"archivo1.txt\" \"archivo2.txt\" \"summary\"",
+          "description": "Mostrar un resumen de diferencias entre dos archivos de texto"
+        },
+        {
+          "command": "qzx compareFiles \"versión1.js\" \"versión2.js\" \"percent\"",
+          "description": "Mostrar el porcentaje de similitud entre dos archivos JavaScript"
+        }
+      ],
+      "class_doc": "Comando para comparar dos archivos y mostrar sus diferencias\n\nThis version uses the centralized recursive parameter utility.",
+      "execute_doc": "Compara dos archivos y muestra sus diferencias\n\nArgs:\n    file1: Ruta al primer archivo\n    file2: Ruta al segundo archivo\n    mode: Modo de comparación (full, summary, percent)\n    \nReturns:\n    Resultado de la comparación en el formato especificado",
+      "module": "qzx.commands.development.compare_files"
+    },
+    "createDocTemplatePython": {
+      "name": "createDocTemplatePython",
+      "category": "dev",
+      "description": "Creates basic documentation templates for Python code that lacks docstrings",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the Python file to process",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "style",
+          "description": "Documentation style (google, numpy, sphinx)",
+          "required": false,
+          "default": "google"
+        },
+        {
+          "name": "overwrite",
+          "description": "Whether to overwrite existing docstrings",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "preview",
+          "description": "Preview changes without modifying the file",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx CreateDocTemplatePython myfile.py",
+          "description": "Create Google-style documentation templates for myfile.py"
+        },
+        {
+          "command": "qzx CreateDocTemplatePython myfile.py sphinx",
+          "description": "Create Sphinx-style documentation templates for myfile.py"
+        },
+        {
+          "command": "qzx CreateDocTemplatePython myfile.py google true false",
+          "description": "Create Google-style documentation templates, overwriting existing ones"
+        },
+        {
+          "command": "qzx CreateDocTemplatePython myfile.py google false true",
+          "description": "Preview Google-style documentation templates without modifying the file"
+        }
+      ],
+      "class_doc": "Command to generate documentation templates for Python code",
+      "execute_doc": "Generates documentation templates for Python code\n\nArgs:\n    file_path (str): Path to the Python file to process\n    style (str, optional): Documentation style (google, numpy, sphinx)\n    overwrite (bool, optional): Whether to overwrite existing docstrings\n    preview (bool, optional): Preview changes without modifying the file\n    \nReturns:\n    Dictionary with the result of the operation",
+      "module": "qzx.commands.development.create_doc_template_python"
+    },
+    "findDeadCode": {
+      "name": "findDeadCode",
+      "category": "dev",
+      "description": "Scans files for declared functions and classes, and identifies those with zero references in other files",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "scan_path",
+          "description": "Path to scan for files (defaults to current directory)",
+          "required": false,
+          "default": "."
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx findDeadCode",
+          "description": "Scan the current directory for dead code"
+        },
+        {
+          "command": "qzx findDeadCode \"src/\"",
+          "description": "Scan the src/ directory"
+        }
+      ],
+      "class_doc": "Command to identify dead code (unused classes, functions, or exports) in a codebase.",
+      "execute_doc": "Executes dead code detection\n\nArgs:\n    scan_path (str): Path to scan\n    \nReturns:\n    Dictionary with dead code analysis details",
+      "module": "qzx.commands.development.find_dead_code"
+    },
+    "traceCircularImports": {
+      "name": "traceCircularImports",
+      "category": "dev",
+      "description": "Traces module imports recursively and identifies circular import dependencies (loops)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "scan_path",
+          "description": "Path to scan for Python files (defaults to current directory)",
+          "required": false,
+          "default": "."
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx traceCircularImports",
+          "description": "Search for circular imports in the current directory"
+        },
+        {
+          "command": "qzx traceCircularImports \"src/qzx\"",
+          "description": "Search for circular imports specifically inside src/qzx"
+        }
+      ],
+      "class_doc": "Command to detect circular import dependencies in Python projects.",
+      "execute_doc": "Executes circular imports detection\n\nArgs:\n    scan_path (str): Path to scan\n    \nReturns:\n    Dictionary with circular import analysis details",
+      "module": "qzx.commands.development.trace_circular_imports"
+    },
+    "traceEnvVar": {
+      "name": "traceEnvVar",
+      "category": "dev",
+      "description": "Traces usage of an environment variable across code files, .env, and .env.example templates",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "var_name",
+          "description": "Name of the environment variable to search for (e.g. DATABASE_URL, PORT)",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "project_path",
+          "description": "Path to the project root directory (defaults to current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "recursive",
+          "description": "Whether to search directories recursively (defaults to True)",
+          "required": false,
+          "default": true
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx traceEnvVar \"PORT\"",
+          "description": "Trace usage of the PORT environment variable in the current directory"
+        },
+        {
+          "command": "qzx traceEnvVar \"STRIPE_API_KEY\" \"C:/my-project\"",
+          "description": "Trace usage of STRIPE_API_KEY in C:/my-project"
+        }
+      ],
+      "class_doc": "Command to trace environment variable usage across files, templates, and codebases.",
+      "execute_doc": "Executes the trace environment variable diagnostic\n\nArgs:\n    var_name (str): Name of environment variable\n    project_path (str): Path to search\n    recursive (bool/str): Recursive search setting\n    \nReturns:\n    Dictionary with trace diagnostic details",
+      "module": "qzx.commands.development.trace_env_var"
+    },
+    "auditLanguages": {
+      "name": "auditLanguages",
+      "category": "development",
+      "description": "Audits a project workspace for programming languages and alerts on underrepresented ones in QZX",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "scan_path",
+          "description": "Path to scan for programming language files (defaults to current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "threshold",
+          "description": "Minimum file count threshold to analyze a language (default is 3)",
+          "required": false,
+          "default": 3
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx auditLanguages",
+          "description": "Audit languages in the current directory"
+        },
+        {
+          "command": "qzx auditLanguages \"src/\" 5",
+          "description": "Audit languages in the src/ directory with a minimum file count of 5"
+        }
+      ],
+      "class_doc": "Command to audit underrepresented programming languages in a project and trigger alerts.",
+      "execute_doc": "Executes the language representation audit\n\nArgs:\n    scan_path (str): Path to scan\n    threshold (int/str): Minimum file count to trigger audits\n    \nReturns:\n    Dictionary containing audit details and warnings",
+      "module": "qzx.commands.development.audit_languages"
+    },
+    "cleanDevCaches": {
+      "name": "cleanDevCaches",
+      "category": "development",
+      "description": "Scans recursively for heavy development caches/dependencies (node_modules, __pycache__, dist) and purges them",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "scan_path",
+          "description": "Path to start the scan from (defaults to current working directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "dry_run",
+          "description": "If true, only lists files and space saved without deleting anything (true/false)",
+          "required": false,
+          "default": "true"
+        },
+        {
+          "name": "max_depth",
+          "description": "Maximum folder depth to traverse recursively (defaults to 4)",
+          "required": false,
+          "default": "4"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx cleanDevCaches",
+          "description": "Scan the current directory for cache folders (dry run)"
+        },
+        {
+          "command": "qzx cleanDevCaches . false",
+          "description": "Scan the current directory and actually delete found cache folders"
+        }
+      ],
+      "class_doc": "Command to identify and clean up heavy development cache/dependency directories (e.g. node_modules, __pycache__).",
+      "execute_doc": "Executes the cache scanning and cleaning\n\nArgs:\n    scan_path (str): The starting directory path\n    dry_run (str/bool): Whether to skip actual deletion\n    max_depth (str/int): Traversal depth limit\n    \nReturns:\n    Dictionary with results and details",
+      "module": "qzx.commands.development.clean_dev_caches"
+    },
+    "getGitStatus": {
+      "name": "getGitStatus",
+      "category": "development",
+      "description": "Provides a structured summary of the Git repository state (branch, remote, changes, recent commits)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "repo_path",
+          "description": "Path to the directory to scan (defaults to the current working directory)",
+          "required": false,
+          "default": "."
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getGitStatus",
+          "description": "Show git status for the current directory"
+        },
+        {
+          "command": "qzx getGitStatus C:/some/path",
+          "description": "Show git status for the repository at C:/some/path"
+        }
+      ],
+      "class_doc": "Command to retrieve comprehensive, structured information about a Git repository",
+      "execute_doc": "Retrieves Git repository details and status\n\nArgs:\n    repo_path (str): The path to check\n    \nReturns:\n    Dictionary containing Git status data",
+      "module": "qzx.commands.development.get_git_status"
+    },
+    "getProjectTree": {
+      "name": "getProjectTree",
+      "category": "development",
+      "description": "Generates a clean visual directory tree (ASCII and JSON) excluding heavy directories like node_modules",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "dir_path",
+          "description": "Path to the directory to visualize (defaults to current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "max_depth",
+          "description": "Maximum depth level of the tree (defaults to 2)",
+          "required": false,
+          "default": "2"
+        },
+        {
+          "name": "exclude_dirs",
+          "description": "Comma-separated directory names to exclude (defaults to standard caches and configs)",
+          "required": false,
+          "default": ".git,node_modules,__pycache__,.venv,env,dist,build,artifacts,.next,.nuxt,.idea,.vscode"
+        },
+        {
+          "name": "include_files",
+          "description": "Whether to list files as well as directories (true/false)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getProjectTree",
+          "description": "Show directory tree for the current folder up to 2 levels deep"
+        },
+        {
+          "command": "qzx getProjectTree src 3",
+          "description": "Show directory tree for the src folder up to 3 levels deep"
+        },
+        {
+          "command": "qzx getProjectTree . 2 .git,node_modules false",
+          "description": "Show directory tree excluding only .git and node_modules, showing folders only"
+        }
+      ],
+      "class_doc": "Command to visualize a directory structure as a clean text-based tree or JSON model, excluding heavy or private files.",
+      "execute_doc": "Executes directory tree generation\n\nArgs:\n    dir_path (str): The starting directory path\n    max_depth (str/int): Maximum depth to traverse\n    exclude_dirs (str, optional): Commas separated exclude folder list\n    include_files (str/bool): Whether to include files in the tree\n    \nReturns:\n    Dictionary containing ASCII tree text and JSON tree model",
+      "module": "qzx.commands.development.get_project_tree"
+    },
+    "scaffoldC": {
+      "name": "scaffoldC",
+      "category": "development",
+      "description": "Creates a basic scaffolding for a C program",
+      "aliases": [
+        "cScaff",
+        "newC",
+        "createC",
+        "makeScaffProgramC"
+      ],
+      "parameters": [
+        {
+          "name": "project_name",
+          "description": "Name of the C project to create",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "path",
+          "description": "Path where to create the project (default: current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "with_tests",
+          "description": "Whether to include testing scaffolding",
+          "required": false,
+          "default": "true"
+        },
+        {
+          "name": "build_system",
+          "description": "Build system to use (make, cmake, or none)",
+          "required": false,
+          "default": "make"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx makeScaffProgramC my_project",
+          "description": "Creates a new C project with Makefile in the current directory"
+        },
+        {
+          "command": "qzx makeScaffProgramC my_project /path/to/dir true cmake",
+          "description": "Creates a new C project with CMake and tests in the specified directory"
+        },
+        {
+          "command": "qzx cScaff network_tool . false none",
+          "description": "Creates a C project without tests or build system in the current directory"
+        }
+      ],
+      "class_doc": "Command to generate a basic scaffolding for a C program.\nCreates a new C project with standard directory structure and basic files.",
+      "execute_doc": "Creates a basic scaffolding for a C program\n\nArgs:\n    project_name (str): Name of the C project to create\n    path (str): Path where to create the project\n    with_tests (str): Whether to include testing scaffolding\n    build_system (str): Build system to use (make, cmake, or none)\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.development.scaffold_c"
+    },
+    "scaffoldCpp": {
+      "name": "scaffoldCpp",
+      "category": "development",
+      "description": "Creates a basic scaffolding for a C++ program",
+      "aliases": [
+        "cppScaff",
+        "newCpp",
+        "createCpp",
+        "makeScaffProgramCpp"
+      ],
+      "parameters": [
+        {
+          "name": "project_name",
+          "description": "Name of the C++ project to create",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "path",
+          "description": "Path where to create the project (default: current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "with_tests",
+          "description": "Whether to include testing scaffolding (using Catch2)",
+          "required": false,
+          "default": "true"
+        },
+        {
+          "name": "build_system",
+          "description": "Build system to use (make, cmake, or none)",
+          "required": false,
+          "default": "cmake"
+        },
+        {
+          "name": "cpp_standard",
+          "description": "C++ standard to use (11, 14, 17, 20)",
+          "required": false,
+          "default": "17"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx makeScaffProgramCpp my_project",
+          "description": "Creates a new C++ project using CMake in the current directory"
+        },
+        {
+          "command": "qzx makeScaffProgramCpp my_project /path/to/dir true make 20",
+          "description": "Creates a new C++ project using Make, C++20 and tests in the specified directory"
+        },
+        {
+          "command": "qzx cppScaff util_library . false none 17",
+          "description": "Creates a C++ project without tests or build system in the current directory using C++17"
+        }
+      ],
+      "class_doc": "Command to generate a basic scaffolding for a C++ program.\nCreates a new C++ project with standard directory structure and basic files.",
+      "execute_doc": "Creates a basic scaffolding for a C++ program\n\nArgs:\n    project_name (str): Name of the C++ project to create\n    path (str): Path where to create the project\n    with_tests (str): Whether to include testing scaffolding\n    build_system (str): Build system to use (make, cmake, or none)\n    cpp_standard (str): C++ standard to use (11, 14, 17, 20)\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.development.scaffold_cpp"
+    },
+    "scaffoldPython": {
+      "name": "scaffoldPython",
+      "category": "development",
+      "description": "Creates a basic scaffolding for a Python program",
+      "aliases": [
+        "pythonScaff",
+        "newPython",
+        "createPython",
+        "makeScaffProgramPython"
+      ],
+      "parameters": [
+        {
+          "name": "project_name",
+          "description": "Name of the Python project to create",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "path",
+          "description": "Path where to create the project (default: current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "with_tests",
+          "description": "Whether to include test scaffolding (pytest)",
+          "required": false,
+          "default": "true"
+        },
+        {
+          "name": "create_venv",
+          "description": "Whether to create a virtual environment",
+          "required": false,
+          "default": "false"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx makeScaffProgramPython my_project",
+          "description": "Creates a new Python project named \"my_project\" in the current directory"
+        },
+        {
+          "command": "qzx makeScaffProgramPython my_project /path/to/dir true true",
+          "description": "Creates a new Python project with tests and virtual environment in the specified directory"
+        },
+        {
+          "command": "qzx pythonScaff api_service . false",
+          "description": "Creates a new Python project named \"api_service\" without tests in the current directory"
+        }
+      ],
+      "class_doc": "Command to generate a basic scaffolding for a Python program.\nCreates a new Python project with standard directory structure and basic files.",
+      "execute_doc": "Creates a basic scaffolding for a Python program\n\nArgs:\n    project_name (str): Name of the Python project to create\n    path (str): Path where to create the project\n    with_tests (str): Whether to include test scaffolding\n    create_venv (str): Whether to create a virtual environment\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.development.scaffold_python"
+    },
+    "scaffoldRust": {
+      "name": "scaffoldRust",
+      "category": "development",
+      "description": "Creates a basic scaffolding for a Rust program",
+      "aliases": [
+        "rustScaff",
+        "newRust",
+        "createRust",
+        "makeScaffProgramRust"
+      ],
+      "parameters": [
+        {
+          "name": "project_name",
+          "description": "Name of the Rust project to create",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "path",
+          "description": "Path where to create the project (default: current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "binary",
+          "description": "Whether to create a binary application (true) or a library (false)",
+          "required": false,
+          "default": "true"
+        },
+        {
+          "name": "with_tests",
+          "description": "Whether to include test scaffolding",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx makeScaffProgramRust my_project",
+          "description": "Creates a new Rust binary project named \"my_project\" in the current directory"
+        },
+        {
+          "command": "qzx makeScaffProgramRust my_library false",
+          "description": "Creates a new Rust library project named \"my_library\" in the current directory"
+        },
+        {
+          "command": "qzx makeScaffProgramRust my_project /path/to/dir true false",
+          "description": "Creates a new Rust binary project without tests in the specified directory"
+        }
+      ],
+      "class_doc": "Command to generate a basic scaffolding for a Rust program.\nCreates a new Rust project with standard directory structure and basic files.",
+      "execute_doc": "Creates a basic scaffolding for a Rust program\n\nArgs:\n    project_name (str): Name of the Rust project to create\n    path (str): Path where to create the project\n    binary (str): Whether to create a binary application (true) or a library (false)\n    with_tests (str): Whether to include test scaffolding\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.development.scaffold_rust"
+    },
+    "scanProject": {
+      "name": "scanProject",
+      "category": "development",
+      "description": "Scans a project root to identify technologies, scripts, configuration files, and missing environment keys",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "project_path",
+          "description": "Path to the project root directory (defaults to current directory)",
+          "required": false,
+          "default": "."
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx scanProject",
+          "description": "Scan the current workspace directory"
+        },
+        {
+          "command": "qzx scanProject C:/my-projects/app",
+          "description": "Scan the project located at C:/my-projects/app"
+        }
+      ],
+      "class_doc": "Command to inspect and summarize a project workspace, identifying tech stacks, configuration setups, and missing env keys.",
+      "execute_doc": "Scans and diagnoses a project directory\n\nArgs:\n    project_path (str): Path to scan\n    \nReturns:\n    Dictionary with project diagnostic details",
+      "module": "qzx.commands.development.scan_project"
+    },
+    "changePermissions": {
+      "name": "changePermissions",
+      "category": "file",
+      "description": "Changes permissions of a file or directory",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "path",
+          "description": "Path to the file or directory",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "description": "Permission mode in octal (e.g., 755) or string format (e.g., \"a+x\")",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "Whether to apply permissions recursively: -r/--recursive for unlimited, -rN/--recursiveN for N levels",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx changePermissions myfile.txt 644",
+          "description": "Change file permissions to 644 (rw-r--r--)"
+        },
+        {
+          "command": "qzx changePermissions myscript.sh \"a+x\"",
+          "description": "Make a script executable for all users"
+        },
+        {
+          "command": "qzx changePermissions mydir 755 -r",
+          "description": "Change directory permissions recursively"
+        },
+        {
+          "command": "qzx changePermissions mydir 755 -r2",
+          "description": "Change directory permissions up to 2 levels deep"
+        }
+      ],
+      "class_doc": "Command to change file or directory permissions (similar to chmod)\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Changes permissions of a file or directory\n\nArgs:\n    path (str): Path to the file or directory\n    mode (str/int): Permission mode in octal (e.g., 755) or string format (e.g., \"a+x\")\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    \nReturns:\n    Operation result",
+      "module": "qzx.commands.file.change_permissions"
+    },
+    "compressZip": {
+      "name": "compressZip",
+      "category": "file",
+      "description": "Compresses a directory or file into a ZIP archive with custom exclusion rules",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "zip_path",
+          "description": "Target path for the created ZIP archive (e.g. project.zip)",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "source_path",
+          "description": "Local file or directory to compress",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "exclude_patterns",
+          "description": "Comma-separated folders, files, or wildcards to exclude (defaults to standard caches)",
+          "required": false,
+          "default": ".git,node_modules,__pycache__,.venv,env,dist,build"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx compressZip project.zip .",
+          "description": "Compress the current directory into project.zip, excluding standard build folders"
+        },
+        {
+          "command": "qzx compressZip src.zip src",
+          "description": "Compress the src folder into src.zip"
+        }
+      ],
+      "class_doc": "Command to package and compress files/folders into a ZIP archive while filtering unwanted paths.",
+      "execute_doc": "Compresses a file or directory\n\nArgs:\n    zip_path (str): Destination ZIP file path\n    source_path (str): Source directory or file\n    exclude_patterns (str, optional): Exclude rules comma-separated\n    \nReturns:\n    Dictionary with compression results",
+      "module": "qzx.commands.file.compress_zip"
+    },
+    "copyFile": {
+      "name": "copyFile",
+      "category": "file",
+      "description": "Copies a file or directory from source to destination",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "source",
+          "description": "Path to the source file or directory",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "destination",
+          "description": "Path to the destination file or directory",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "For directories: -r/--recursive to copy all contents, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "force",
+          "description": "Whether to overwrite the destination if it exists",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx copyFile source.txt destination.txt",
+          "description": "Copy a file to another file"
+        },
+        {
+          "command": "qzx copyFile myfile.txt backup/myfile.txt",
+          "description": "Copy a file to a directory"
+        },
+        {
+          "command": "qzx copyFile sourcedir destinationdir -r",
+          "description": "Copy a directory recursively (all contents)"
+        },
+        {
+          "command": "qzx copyFile sourcedir destinationdir -r2",
+          "description": "Copy a directory recursively up to 2 levels deep"
+        },
+        {
+          "command": "qzx copyFile sourcedir destinationdir -r true",
+          "description": "Copy a directory recursively and overwrite if exists"
+        }
+      ],
+      "class_doc": "Command to copy a file or directory\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory copy\n-rN, --recursiveN: Enable recursive directory copy up to N levels deep\n\nThis version uses the centralized recursive parameter utility.",
+      "execute_doc": "Copies a file or directory\n\nArgs:\n    source (str): Path to the source file or directory\n    destination (str): Path to the destination file or directory\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    force (bool, optional): Whether to overwrite the destination if it exists\n    \nReturns:\n    Success message or error",
+      "module": "qzx.commands.file.copy_file"
+    },
+    "countLinesInFile": {
+      "name": "countLinesInFile",
+      "category": "file",
+      "description": "Counts the number of lines in files with support for wildcards and recursive searching",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file(s) to count lines in. Supports wildcards like \"*.py\"",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "ignore_empty",
+          "description": "Whether to ignore empty lines when counting",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx countLinesInFile \"script.py\"",
+          "description": "Count the number of lines in a Python script"
+        },
+        {
+          "command": "qzx countLinesInFile \"data/logs.txt\"",
+          "description": "Count the number of lines in a log file"
+        },
+        {
+          "command": "qzx countLinesInFile \"*.py\"",
+          "description": "Count the number of lines in all Python files in the current directory"
+        },
+        {
+          "command": "qzx countLinesInFile \"src/**/*.js\" -r",
+          "description": "Count the number of lines in all JavaScript files in the src directory and its subdirectories"
+        },
+        {
+          "command": "qzx countLinesInFile \"*.txt\" -r2 true",
+          "description": "Count the number of non-empty lines in all text files in the current directory and subdirectories up to 2 levels deep"
+        }
+      ],
+      "class_doc": "Command to count the number of lines in files with support for wildcards and recursive searching\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory search\n-rN, --recursiveN: Enable recursive directory search up to N levels deep\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Counts the number of lines in files with support for wildcards and recursive searching\n\nArgs:\n    file_path: Path to the file(s) to count lines in. Supports wildcards like \"*.py\"\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    ignore_empty: Whether to ignore empty lines when counting\n    \nReturns:\n    Dictionary with line count results or error message",
+      "module": "qzx.commands.file.count_lines_in_file"
+    },
+    "createDirectory": {
+      "name": "createDirectory",
+      "category": "file",
+      "description": "Creates one or more directories at specified paths",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "directory_paths",
+          "description": "One or more paths where directories should be created",
+          "required": true,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx createDirectory \"ProjectFolder\"",
+          "description": "Create a single directory named \"ProjectFolder\""
+        },
+        {
+          "command": "qzx createDirectory \"src/components\" \"src/styles\" \"src/utils\"",
+          "description": "Create multiple directories for a project structure"
+        }
+      ],
+      "class_doc": "Command to create one or more directories at specified paths",
+      "execute_doc": "Creates one or more directories at the specified paths\n\nArgs:\n    *directory_paths: One or more paths where directories should be created\n    \nReturns:\n    String with results of directory creation attempts",
+      "module": "qzx.commands.file.create_directory"
+    },
+    "decompressZip": {
+      "name": "decompressZip",
+      "category": "file",
+      "description": "Extracts all files from a ZIP archive to a destination folder, safely and securely",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "zip_path",
+          "description": "Path to the ZIP file to extract",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "target_path",
+          "description": "Destination directory to extract files into (defaults to current directory)",
+          "required": false,
+          "default": "."
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx decompressZip project.zip",
+          "description": "Extract project.zip into the current directory"
+        },
+        {
+          "command": "qzx decompressZip project.zip C:/extracted-app",
+          "description": "Extract project.zip into C:/extracted-app"
+        }
+      ],
+      "class_doc": "Command to extract ZIP archives, featuring security path verification to block directory traversal attacks.",
+      "execute_doc": "Decompresses a ZIP file\n\nArgs:\n    zip_path (str): ZIP file to read\n    target_path (str): Destination directory\n    \nReturns:\n    Dictionary with decompression results",
+      "module": "qzx.commands.file.decompress_zip"
+    },
+    "deleteFile": {
+      "name": "deleteFile",
+      "category": "file",
+      "description": "Deletes a file or directory from the filesystem",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "target",
+          "description": "Path to the file or directory to delete",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "For directories: -r/--recursive for removal, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "force",
+          "description": "Whether to ignore errors",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx deleteFile myfile.txt",
+          "description": "Delete a file"
+        },
+        {
+          "command": "qzx deleteFile mydir -r",
+          "description": "Delete a directory and its contents recursively"
+        },
+        {
+          "command": "qzx deleteFile mydir -r2",
+          "description": "Delete a directory and contents up to 2 levels deep"
+        },
+        {
+          "command": "qzx deleteFile mydir false true",
+          "description": "Try to delete an empty directory, ignoring errors"
+        }
+      ],
+      "class_doc": "Command to delete a file or directory\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory deletion\n-rN, --recursiveN: Enable recursive directory deletion up to N levels deep\n\nThis version uses the centralized recursive parameter utility.",
+      "execute_doc": "Deletes a file or directory\n\nArgs:\n    target (str): Path to the file or directory to delete\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    force (bool, optional): Whether to ignore errors\n    \nReturns:\n    Operation result",
+      "module": "qzx.commands.file.delete_file"
+    },
+    "detectFileType": {
+      "name": "detectFileType",
+      "category": "file",
+      "description": "Identifies file type based on its magic number (file signature) rather than extension",
+      "aliases": [
+        "wonderFileTypeMagic"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file to analyze",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "detailed_info",
+          "description": "Whether to show detailed MIME type information",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx wonderFileTypeMagic image.jpg",
+          "description": "Identify the real type of image.jpg based on its contents"
+        },
+        {
+          "command": "qzx wonderFileTypeMagic unknown.bin true",
+          "description": "Identify an unknown file with detailed MIME information"
+        }
+      ],
+      "class_doc": "Command to identify file type based on its magic number (file signature)",
+      "execute_doc": "Identifies file type based on its magic number\n\nArgs:\n    file_path (str): Path to the file to analyze\n    detailed_info (bool): Whether to include detailed MIME type information\n    \nReturns:\n    Dictionary with the result of the analysis",
+      "module": "qzx.commands.file.detect_file_type"
+    },
+    "downloadFile": {
+      "name": "downloadFile",
+      "category": "file",
+      "description": "Downloads a file from the Internet (similar to 'wget' or 'curl' in Unix)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "url",
+          "description": "URL of the file to download",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "destination_path",
+          "description": "Path where to save the downloaded file",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "show_progress",
+          "description": "Whether to show download progress",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "timeout",
+          "description": "Maximum wait time in seconds",
+          "required": false,
+          "default": 30
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx downloadFile https://example.com/file.txt downloads/file.txt",
+          "description": "Download a sample file"
+        },
+        {
+          "command": "qzx downloadFile https://example.com/file.zip downloads/file.zip false",
+          "description": "Download a file without showing progress"
+        },
+        {
+          "command": "qzx downloadFile https://example.com/large-file.iso downloads/file.iso true 120",
+          "description": "Download a large file with extended timeout"
+        }
+      ],
+      "class_doc": "Command to download a file from the Internet",
+      "execute_doc": "Downloads a file from the Internet\n\nArgs:\n    url (str): URL of the file to download\n    destination_path (str): Path where to save the downloaded file\n    show_progress (bool, optional): Whether to show download progress\n    timeout (int, optional): Maximum wait time in seconds\n    \nReturns:\n    Operation result",
+      "module": "qzx.commands.file.download_file"
+    },
+    "findBrokenSymlinks": {
+      "name": "findBrokenSymlinks",
+      "category": "file",
+      "description": "Scans directories for broken symbolic links (pointing to nonexistent files or folders)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "folder_path",
+          "description": "Directory to scan (defaults to current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "max_depth",
+          "description": "Maximum depth level to walk directories recursively (defaults to 4)",
+          "required": false,
+          "default": "4"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx findBrokenSymlinks",
+          "description": "Search for broken symlinks in the current directory"
+        },
+        {
+          "command": "qzx findBrokenSymlinks C:/some/path",
+          "description": "Search for broken symlinks in C:/some/path"
+        }
+      ],
+      "class_doc": "Command to identify symbolic links and junctions pointing to nonexistent targets.",
+      "execute_doc": "Scans for broken symlinks\n\nArgs:\n    folder_path (str): Starting folder\n    max_depth (str/int): Folder depth limit\n    \nReturns:\n    Dictionary with list of broken symlinks",
+      "module": "qzx.commands.file.find_broken_symlinks"
+    },
+    "findDuplicateFiles": {
+      "name": "findDuplicateFiles",
+      "category": "file",
+      "description": "Scans a directory for identical/duplicate files by file size matching and MD5 hashing",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "scan_path",
+          "description": "Path to start searching for duplicate files (defaults to current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "min_size_kb",
+          "description": "Minimum file size in KB to consider for duplicates (defaults to 10)",
+          "required": false,
+          "default": "10"
+        },
+        {
+          "name": "max_depth",
+          "description": "Maximum depth level to walk directories recursively (defaults to 4)",
+          "required": false,
+          "default": "4"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx findDuplicateFiles",
+          "description": "Search for duplicates in the current directory (min 10KB)"
+        },
+        {
+          "command": "qzx findDuplicateFiles C:/my-assets 0",
+          "description": "Search for all duplicate files of any size inside C:/my-assets"
+        }
+      ],
+      "class_doc": "Command to recursively identify duplicate files inside a folder to optimize disk usage.",
+      "execute_doc": "Locates duplicate files\n\nArgs:\n    scan_path (str): Root folder to scan\n    min_size_kb (str/int): Size threshold to filter files\n    max_depth (str/int): Folder depth limit\n    \nReturns:\n    Dictionary containing duplicate file lists and disk reclaim details",
+      "module": "qzx.commands.file.find_duplicate_files"
+    },
+    "findFiles": {
+      "name": "findFiles",
+      "category": "file",
+      "description": "Advanced file search with multiple filtering options (like find + grep combined)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "search_path",
+          "description": "Path to start the search from",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "pattern",
+          "description": "File name pattern to search for (supports glob syntax: *.txt, data-???.csv)",
+          "required": false,
+          "default": "*"
+        },
+        {
+          "name": "recursive",
+          "description": "Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": "-r"
+        },
+        {
+          "name": "max_depth",
+          "description": "Maximum directory depth to search (null for unlimited)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "type",
+          "description": "Filter by type: \"f\" (files), \"d\" (directories), or \"l\" (links)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "size",
+          "description": "Filter by size (e.g., +1M for >1MB, -500K for <500KB, 10K for exactly 10KB)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "min_size",
+          "description": "Minimum file size in bytes or with KB/MB/GB suffix",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "max_size",
+          "description": "Maximum file size in bytes or with KB/MB/GB suffix",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "mtime",
+          "description": "Filter by modification time (e.g., +7 for >7 days old, -2 for <2 days old)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "newer_than",
+          "description": "Files newer than specified date (YYYY-MM-DD) or \"today\", \"yesterday\"",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "older_than",
+          "description": "Files older than specified date (YYYY-MM-DD) or \"today\", \"yesterday\"",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "contains",
+          "description": "Only include files containing this text",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "contains_regex",
+          "description": "Only include files matching this regex pattern",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "case_sensitive",
+          "description": "Make content searches case sensitive (true/false)",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "exclude",
+          "description": "Exclude file/directory patterns (comma-separated: *.bak,*.tmp)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "exclude_dir",
+          "description": "Exclude directory patterns (comma-separated: .git,.vscode)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "follow_symlinks",
+          "description": "Follow symbolic links (true/false)",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "sort_by",
+          "description": "Sort by: name, path, size, mtime (modification time), or none",
+          "required": false,
+          "default": "path"
+        },
+        {
+          "name": "reverse_sort",
+          "description": "Reverse the sorting order (true/false)",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "format",
+          "description": "Output format: \"full\" (default), \"name\" (filename only), \"detailed\" (full details), \"json\", \"csv\"",
+          "required": false,
+          "default": "full"
+        },
+        {
+          "name": "limit",
+          "description": "Maximum number of results to return",
+          "required": false,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx findFiles . *.py",
+          "description": "Find all Python files in current directory and subdirectories"
+        },
+        {
+          "command": "qzx findFiles /src *.js false",
+          "description": "Find all JavaScript files in /src without searching subdirectories"
+        },
+        {
+          "command": "qzx findFiles . * true 2 f",
+          "description": "Find all files up to 2 levels deep"
+        },
+        {
+          "command": "qzx findFiles . *.txt null f +1M",
+          "description": "Find all text files larger than 1MB"
+        },
+        {
+          "command": "qzx findFiles . * null null null null null null -7",
+          "description": "Find files modified within the last 7 days"
+        },
+        {
+          "command": "qzx findFiles . *.log null null null null null today null",
+          "description": "Find log files created or modified today"
+        },
+        {
+          "command": "qzx findFiles . *.py null null null null null null null TODO",
+          "description": "Find Python files containing the word \"TODO\""
+        },
+        {
+          "command": "qzx findFiles . * null null null null null null null null \"def\\s+\\w+\"",
+          "description": "Find files containing function definitions using regex"
+        },
+        {
+          "command": "qzx findFiles . * null null null null null null null null null false \"*.tmp,*.bak\"",
+          "description": "Find all files excluding temp and backup files"
+        },
+        {
+          "command": "qzx findFiles . * true null null null null null null null null null null .git,node_modules",
+          "description": "Find all files excluding .git and node_modules directories"
+        }
+      ],
+      "class_doc": "Command for advanced file searching with multiple filtering options\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory search\n-rN, --recursiveN: Enable recursive directory search up to N levels deep\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Advanced file search with multiple filtering options\n\nArgs:\n    search_path (str): Path to start the search from\n    pattern (str): File name pattern to search for (supports glob syntax)\n    recursive: Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep\n    max_depth (int): Maximum directory depth to search (None for unlimited)\n    type (str): Filter by type: \"f\" (files), \"d\" (directories), or \"l\" (links)\n    size (str): Filter by size (e.g., +1M for >1MB, -500K for <500KB)\n    min_size (str): Minimum file size in bytes or with KB/MB/GB suffix\n    max_size (str): Maximum file size in bytes or with KB/MB/GB suffix\n    mtime (str): Filter by modification time (e.g., +7 for >7 days old)\n    newer_than (str): Files newer than specified date (YYYY-MM-DD)\n    older_than (str): Files older than specified date (YYYY-MM-DD)\n    contains (str): Only include files containing this text\n    contains_regex (str): Only include files matching this regex pattern\n    case_sensitive (bool): Make content searches case sensitive\n    exclude (str): Exclude file/directory patterns (comma-separated)\n    exclude_dir (str): Exclude directory patterns (comma-separated)\n    follow_symlinks (bool): Follow symbolic links\n    sort_by (str): Sort by: name, path, size, mtime, or none\n    reverse_sort (bool): Reverse the sorting order\n    format (str): Output format: \"full\", \"name\", \"detailed\", \"json\", \"csv\"\n    limit (int): Maximum number of results to return\n    \nReturns:\n    Search results based on specified format",
+      "module": "qzx.commands.file.find_files"
+    },
+    "findLargeFiles": {
+      "name": "findLargeFiles",
+      "category": "file",
+      "description": "Searches for files with specific extensions that exceed a given size",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "directory",
+          "description": "Base directory to start the search from",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "extension",
+          "description": "File extension to filter by (e.g., \"*.pas\", \"*.txt\")",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "min_size",
+          "description": "Minimum file size in bytes",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": "-r"
+        },
+        {
+          "name": "sort_by",
+          "description": "Sort results by: \"name\", \"size\", \"date\"",
+          "required": false,
+          "default": "size"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx findLargeFiles . *.pas 300",
+          "description": "Find all .pas files in current directory larger than 300 bytes"
+        },
+        {
+          "command": "qzx findLargeFiles src *.py 1024 -r",
+          "description": "Find all .py files in src directory and subdirectories larger than 1KB"
+        },
+        {
+          "command": "qzx findLargeFiles project *.js 5000 false name",
+          "description": "Find all .js files (non-recursive) larger than 5KB, sorted by name"
+        }
+      ],
+      "class_doc": "Command to find files of specified type exceeding a minimum size\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory search\n-rN, --recursiveN: Enable recursive directory search up to N levels deep\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Searches for files matching a pattern that exceed a minimum size\n\nArgs:\n    directory (str): Directory to search in\n    extension (str): File extension to filter by (e.g., 'jpg' or '.jpg')\n    min_size (str): Minimum file size (e.g., '1MB', '500KB')\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    sort_by (str): Sort criteria ('size', 'name', or 'date')\n    \nReturns:\n    Dictionary with search results",
+      "module": "qzx.commands.file.find_large_files"
+    },
+    "findText": {
+      "name": "findText",
+      "category": "file",
+      "description": "Searches for text patterns in files with advanced filtering options",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "pattern",
+          "description": "Text pattern to search for (supports regular expressions)",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "target",
+          "description": "File or directory (or space-separated list of files/directories) to search in",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "regex",
+          "description": "Use regular expressions for pattern matching (true/false)",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "case_sensitive",
+          "description": "Perform case-sensitive search (true/false)",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "file_pattern",
+          "description": "Only search in files matching this pattern (e.g., \"*.py\" or \"*.{py,js}\")",
+          "required": false,
+          "default": "*"
+        },
+        {
+          "name": "context_lines",
+          "description": "Number of lines to show before and after each match",
+          "required": false,
+          "default": 0
+        },
+        {
+          "name": "invert_match",
+          "description": "Show lines that do NOT match the pattern (true/false)",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "count_only",
+          "description": "Only show count of matches per file (true/false)",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "max_matches",
+          "description": "Maximum number of matches to display (0 for unlimited)",
+          "required": false,
+          "default": 0
+        },
+        {
+          "name": "colored",
+          "description": "Highlight matches with color (true/false)",
+          "required": false,
+          "default": true
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx findText \"function\" \"script.js\"",
+          "description": "Find all occurrences of \"function\" in a JavaScript file"
+        },
+        {
+          "command": "qzx findText \"error\" \"logs\" true",
+          "description": "Find all occurrences of \"error\" in all files under logs directory"
+        },
+        {
+          "command": "qzx findText \"def\\s+\\w+\" \"src\" true true",
+          "description": "Find all function definitions in Python files using regex"
+        },
+        {
+          "command": "qzx findText \"WARNING|ERROR\" \"logs\" true true false \"*.log\"",
+          "description": "Find warnings or errors in log files"
+        },
+        {
+          "command": "qzx findText \"TODO\" \"src\" true false true \"*.{py,js,ts}\" 2",
+          "description": "Find TODOs in source files with 2 lines of context"
+        },
+        {
+          "command": "qzx findText \"function\" \"file1.js file2.js lib/utils.js\"",
+          "description": "Find all occurrences of \"function\" in multiple specific files"
+        }
+      ],
+      "class_doc": "Command to search for text patterns in files with advanced options\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory search\n-rN, --recursiveN: Enable recursive directory search up to N levels deep\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Searches for text patterns in files with advanced options\n\nArgs:\n    pattern (str): Text pattern to search for\n    target (str): File or directory to search in (space-separated for multiple)\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    regex (bool): Whether to use regular expressions for pattern matching\n    case_sensitive (bool): Whether the search should be case-sensitive\n    file_pattern (str): Only search in files matching this pattern (e.g., \"*.py\")\n    context_lines (int): Number of lines to show before and after each match\n    invert_match (bool): Show lines that do NOT match the pattern\n    count_only (bool): Only show count of matches per file\n    max_matches (int): Maximum number of matches to display (0 for unlimited)\n    colored (bool): Whether to colorize the output\n    \nReturns:\n    Dictionary with search results",
+      "module": "qzx.commands.file.find_text"
+    },
+    "getFileHash": {
+      "name": "getFileHash",
+      "category": "file",
+      "description": "Calculates cryptographic hashes (MD5, SHA-1, SHA-256) of a file",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file to hash",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "algorithm",
+          "description": "Hash algorithm to use (sha256, sha1, md5)",
+          "required": false,
+          "default": "sha256"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getFileHash file.txt",
+          "description": "Calculate SHA-256 hash for file.txt"
+        },
+        {
+          "command": "qzx getFileHash file.txt md5",
+          "description": "Calculate MD5 hash for file.txt"
+        }
+      ],
+      "class_doc": "Command to calculate cryptographic hash values of files",
+      "execute_doc": "Calculates the hash of a file\n\nArgs:\n    file_path (str): Path to the file\n    algorithm (str, optional): Cryptographic algorithm (sha256, sha1, md5)\n    \nReturns:\n    Dictionary with hash results and metadata",
+      "module": "qzx.commands.file.get_file_hash"
+    },
+    "getHumanLanguageStats": {
+      "name": "getHumanLanguageStats",
+      "category": "file",
+      "description": "Analyzes files to determine the percentage of text in different languages. Improved version using centralized file finder.",
+      "aliases": [
+        "getHumanLanguageStatsFromFile"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file(s) to analyze. Supports wildcards like *.txt",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "ignore_comments",
+          "description": "Whether to ignore code comments when analyzing text. Can use -i or --ignore-comments flag.",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "min_word_length",
+          "description": "Minimum length of words to consider for language detection",
+          "required": false,
+          "default": 4
+        },
+        {
+          "name": "languages",
+          "description": "Comma-separated list of languages to detect (default: all available)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "Whether to search recursively in directories. Can use -r, -R, or --recursive flag.",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "show_files_match",
+          "description": "Whether to show the list of files found. Can use --show_files_match flag.",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getHumanLanguageStatsFromFile myfile.txt",
+          "description": "Analyze language distribution in a text file"
+        },
+        {
+          "command": "qzx getHumanLanguageStatsFromFile code.py -i",
+          "description": "Analyze a Python file, ignoring code comments using flag"
+        },
+        {
+          "command": "qzx getHumanLanguageStatsFromFile \"*.md\" false 3",
+          "description": "Analyze all Markdown files in current directory"
+        },
+        {
+          "command": "qzx getHumanLanguageStatsFromFile \"docs/*.txt\" -i",
+          "description": "Analyze text files in docs directory, ignoring comments"
+        },
+        {
+          "command": "qzx getHumanLanguageStatsFromFile \"src/**/*.py\" -r",
+          "description": "Analyze all Python files recursively in src directory using -r flag"
+        },
+        {
+          "command": "qzx getHumanLanguageStatsFromFile \"**/*.py\" -r -i",
+          "description": "Analyze all Python files recursively, ignoring comments, using flags"
+        },
+        {
+          "command": "qzx getHumanLanguageStatsFromFile \"**/*.py\" -r --show_files_match",
+          "description": "Analyze all Python files recursively and show the list of files found"
+        }
+      ],
+      "class_doc": "Command to analyze a file or multiple files and determine the percentage of text in different languages,\nintelligently filtering out programming code. Supports wildcards and recursive directory search.\n\nSupports flags:\n-r, -R, --recursive: Enable recursive directory search\n-i, --ignore-comments: Ignore code comments when analyzing text\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Execute the command to analyze language statistics in files\n\nArgs:\n    file_path (str): Path to the file(s) to analyze, supporting wildcards\n    ignore_comments (bool): Whether to ignore code comments when analyzing\n    min_word_length (int): Minimum length for words to be considered\n    languages (str): Comma-separated list of languages to detect\n    recursive (bool): Whether to search recursively in directories\n    show_files_match (bool): Whether to show the list of files found\n    \nReturns:\n    dict: Command result with language statistics",
+      "module": "qzx.commands.file.get_human_language_stats"
+    },
+    "getProgrammingLanguageStats": {
+      "name": "getProgrammingLanguageStats",
+      "category": "file",
+      "description": "Analyzes files to determine the programming language and provides statistics about the code. Supports wildcards and recursive directory search.",
+      "aliases": [
+        "getProgrammingLanguageStatsFromFile"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file(s) to analyze. Supports wildcards like *.py",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "detailed",
+          "description": "Whether to provide detailed statistics",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "languages",
+          "description": "Comma-separated list of languages to detect (default: all available)",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getProgrammingLanguageStatsFromFile script.py",
+          "description": "Analyze a Python file to determine language statistics"
+        },
+        {
+          "command": "qzx getProgrammingLanguageStatsFromFile app.js true",
+          "description": "Analyze a JavaScript file with detailed statistics"
+        },
+        {
+          "command": "qzx getProgrammingLanguageStatsFromFile code.cpp false \"cpp,c,python\"",
+          "description": "Analyze a C++ file specifically checking for C++, C and Python patterns"
+        },
+        {
+          "command": "qzx getProgrammingLanguageStatsFromFile \"*.js\" -r",
+          "description": "Analyze all JavaScript files in current directory and all subdirectories"
+        },
+        {
+          "command": "qzx getProgrammingLanguageStatsFromFile \"src/**/*.py\" -r",
+          "description": "Analyze all Python files in src directory and subdirectories with detailed stats"
+        },
+        {
+          "command": "qzx getProgrammingLanguageStatsFromFile \"*.py\" true null -r2",
+          "description": "Analyze all Python files in current directory and up to 2 levels of subdirectories with detailed stats"
+        }
+      ],
+      "class_doc": "Command to identify programming language in one or more files and get code statistics.\nSupports wildcards and recursive directory searching.\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory search\n-rN, --recursiveN: Enable recursive directory search up to N levels deep\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Analyzes one or more files to determine programming language and code statistics.\nSupports wildcards and recursive directory search.\n\nArgs:\n    file_path (str): Path to the file(s) to analyze. Supports wildcards like *.py\n    detailed (bool, optional): Whether to include detailed statistics\n    languages (str, optional): Comma-separated list of languages to detect\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    \nReturns:\n    Dictionary with analysis results for each file and aggregated statistics",
+      "module": "qzx.commands.file.get_programming_language_stats"
+    },
+    "inspectImage": {
+      "name": "inspectImage",
+      "category": "file",
+      "description": "Inspects image dimensions, format, and size natively from headers (supports PNG, JPEG, GIF, BMP)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "image_path",
+          "description": "Path to the image file to inspect",
+          "required": true,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx inspectImage image.png",
+          "description": "Inspect dimensions and format of image.png"
+        }
+      ],
+      "class_doc": "Command to inspect image metadata (format, width, height, size) using native header parsing.",
+      "execute_doc": "Inspects an image file\n\nArgs:\n    image_path (str): File path\n    \nReturns:\n    Dictionary containing image metadata",
+      "module": "qzx.commands.file.inspect_image"
+    },
+    "isDirectoryEmpty": {
+      "name": "isDirectoryEmpty",
+      "category": "file",
+      "description": "Checks if a directory is empty (contains no files or subdirectories)",
+      "aliases": [
+        "wonderIfDirectoryEmpty"
+      ],
+      "parameters": [
+        {
+          "name": "directory_path",
+          "description": "Path to the directory to check",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "include_hidden",
+          "description": "Whether to include hidden files in the check",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx wonderIfDirectoryEmpty /path/to/directory",
+          "description": "Check if /path/to/directory is empty, ignoring hidden files"
+        },
+        {
+          "command": "qzx wonderIfDirectoryEmpty /path/to/directory true",
+          "description": "Check if /path/to/directory is empty, including hidden files"
+        }
+      ],
+      "class_doc": "Command to check if a directory is empty",
+      "execute_doc": "Checks if a directory is empty\n\nArgs:\n    directory_path (str): Path to the directory to check\n    include_hidden (bool, optional): Whether to include hidden files in the check\n    \nReturns:\n    Dictionary with the result of the check",
+      "module": "qzx.commands.file.is_directory_empty"
+    },
+    "isFileBinary": {
+      "name": "isFileBinary",
+      "category": "file",
+      "description": "Analyzes a file to determine if it's binary or plain text",
+      "aliases": [
+        "wonderIfFileIsBinary"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file to analyze",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "sample_size",
+          "description": "Size of the file sample to analyze (in bytes)",
+          "required": false,
+          "default": 8192
+        },
+        {
+          "name": "binary_threshold",
+          "description": "Percentage of non-text bytes required to classify as binary",
+          "required": false,
+          "default": 10
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx wonderIfFileIsBinary script.py",
+          "description": "Check if script.py is a binary file"
+        },
+        {
+          "command": "qzx wonderIfFileIsBinary image.jpg",
+          "description": "Check if image.jpg is a binary file"
+        },
+        {
+          "command": "qzx wonderIfFileIsBinary unknown.dat 4096 5",
+          "description": "Check if unknown.dat is binary, using a 4KB sample and 5% threshold"
+        }
+      ],
+      "class_doc": "Command to check if a file is binary or plain text",
+      "execute_doc": "Checks if a file is binary or plain text\n\nArgs:\n    file_path (str): Path to the file to analyze\n    sample_size (int): Size of the file sample to analyze (in bytes)\n    binary_threshold (int): Percentage of non-text bytes required to classify as binary\n    \nReturns:\n    Dictionary with the result of the analysis",
+      "module": "qzx.commands.file.is_file_binary"
+    },
+    "isFileEmpty": {
+      "name": "isFileEmpty",
+      "category": "file",
+      "description": "Checks if a file is empty (has zero bytes)",
+      "aliases": [
+        "wonderIfFileEmpty"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file to check",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "consider_whitespace",
+          "description": "Whether to consider whitespace-only files as empty",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx wonderIfFileEmpty /path/to/file.txt",
+          "description": "Check if file.txt is completely empty (zero bytes)"
+        },
+        {
+          "command": "qzx wonderIfFileEmpty /path/to/file.txt true",
+          "description": "Check if file.txt is empty or contains only whitespace"
+        }
+      ],
+      "class_doc": "Command to check if a file is empty (has zero bytes)",
+      "execute_doc": "Checks if a file is empty\n\nArgs:\n    file_path (str): Path to the file to check\n    consider_whitespace (bool, optional): Whether to consider whitespace-only files as empty\n    \nReturns:\n    Dictionary with the result of the check",
+      "module": "qzx.commands.file.is_file_empty"
+    },
+    "listFiles": {
+      "name": "listFiles",
+      "category": "file",
+      "description": "Lists files in a directory with support for wildcards and recursive searching",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "directory_path",
+          "description": "Path to the directory to list files from",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "pattern",
+          "description": "File pattern to filter by (e.g., \"*.txt\", \"doc*.pdf\")",
+          "required": false,
+          "default": "*"
+        },
+        {
+          "name": "recursive",
+          "description": "Recursion level: none by default, -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx listFiles",
+          "description": "List all files in the current directory"
+        },
+        {
+          "command": "qzx listFiles C:\\Documents",
+          "description": "List all files in the C:\\Documents directory (Windows)"
+        },
+        {
+          "command": "qzx listFiles /home/user/documents",
+          "description": "List all files in the /home/user/documents directory (Linux/Mac)"
+        },
+        {
+          "command": "qzx listFiles . \"*.py\"",
+          "description": "List all Python files in the current directory"
+        },
+        {
+          "command": "qzx listFiles src \"*.js\" -r",
+          "description": "List all JavaScript files in the src directory and all its subdirectories"
+        },
+        {
+          "command": "qzx listFiles src \"*.js\" -r2",
+          "description": "List all JavaScript files in the src directory and up to 2 levels of subdirectories"
+        }
+      ],
+      "class_doc": "Command to list files in a directory with support for wildcards and recursive searching\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory search\n-rN, --recursiveN: Enable recursive directory search up to N levels deep\n\nThis version uses the centralized recursive file finder utility.",
+      "execute_doc": "Lists files in a directory with support for wildcards and recursive searching\n\nArgs:\n    directory_path (str): Path to the directory to list files from\n    pattern (str): File pattern to filter by (e.g., \"*.txt\", \"doc*.pdf\")\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    \nReturns:\n    Dictionary with the list of files and metadata",
+      "module": "qzx.commands.file.list_files"
+    },
+    "moveFile": {
+      "name": "moveFile",
+      "category": "file",
+      "description": "Moves or renames a file or directory from source to destination",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "source",
+          "description": "Path to the source file or directory",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "destination",
+          "description": "Path to the destination file or directory",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "recursive",
+          "description": "For directories: -r/--recursive to move all contents, -rN/--recursiveN for N levels deep",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "force",
+          "description": "Whether to overwrite the destination if it exists",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx moveFile source.txt destination.txt",
+          "description": "Move a file to another (or rename it)"
+        },
+        {
+          "command": "qzx moveFile myfile.txt archive/myfile.txt",
+          "description": "Move a file to a directory"
+        },
+        {
+          "command": "qzx moveFile sourcedir destinationdir -r",
+          "description": "Move a directory recursively (all contents)"
+        },
+        {
+          "command": "qzx moveFile sourcedir destinationdir -r2",
+          "description": "Move a directory recursively up to 2 levels deep"
+        },
+        {
+          "command": "qzx moveFile sourcedir destinationdir -r true",
+          "description": "Move a directory recursively and overwrite if exists"
+        }
+      ],
+      "class_doc": "Command to move or rename a file or directory\n\nSupports flags:\n-r, -R, --recursive: Enable unlimited recursive directory move\n-rN, --recursiveN: Enable recursive directory move up to N levels deep\n\nThis version uses the centralized recursive parameter utility.",
+      "execute_doc": "Moves or renames a file or directory\n\nArgs:\n    source (str): Path to the source file or directory\n    destination (str): Path to the destination file or directory\n    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels\n    force (bool, optional): Whether to overwrite the destination if it exists\n    \nReturns:\n    Operation result",
+      "module": "qzx.commands.file.move_file"
+    },
+    "readFile": {
+      "name": "readFile",
+      "category": "file",
+      "description": "Reads and displays the content of a file",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file to read",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "max_lines",
+          "description": "Maximum number of lines to read (if not provided, reads the entire file)",
+          "required": false,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx readFile myfile.txt",
+          "description": "Read the entire content of myfile.txt"
+        },
+        {
+          "command": "qzx readFile myfile.txt 10",
+          "description": "Read the first 10 lines of myfile.txt"
+        },
+        {
+          "command": "qzx readFile \"path with spaces/myfile.txt\"",
+          "description": "Read a file with spaces in the path"
+        }
+      ],
+      "class_doc": "Command to read and display the content of a file",
+      "execute_doc": "Reads and displays the content of a file\n\nArgs:\n    file_path (str): Path to the file to read\n    max_lines (int, optional): Maximum number of lines to read. If not provided, reads the entire file.\n    \nReturns:\n    Dictionary with file content and metadata",
+      "module": "qzx.commands.file.read_file"
+    },
+    "touchFile": {
+      "name": "touchFile",
+      "category": "file",
+      "description": "Creates an empty file or updates the timestamp of an existing file",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "path",
+          "description": "Path to the file to create or update",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "create_dirs",
+          "description": "Whether to create parent directories if they do not exist",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "content",
+          "description": "Content to write to the file",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx touchFile newfile.txt",
+          "description": "Create an empty file or update its timestamp"
+        },
+        {
+          "command": "qzx touchFile dir/newfile.txt true",
+          "description": "Create a file and its parent directories if they do not exist"
+        },
+        {
+          "command": "qzx touchFile file.txt false \"Hello World\"",
+          "description": "Create a file with content or update an existing file"
+        }
+      ],
+      "class_doc": "Command to create an empty file or update the timestamp of an existing file",
+      "execute_doc": "Creates an empty file or updates the timestamp of an existing file\n\nArgs:\n    path (str): Path to the file to create or update\n    create_dirs (bool, optional): Whether to create parent directories if they do not exist\n    content (str, optional): Content to write to the file\n    \nReturns:\n    Operation result",
+      "module": "qzx.commands.file.touch_file"
+    },
+    "checkDns": {
+      "name": "checkDns",
+      "category": "network",
+      "description": "Queries A, AAAA, MX, TXT, NS, and CNAME DNS records for a given domain",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "domain",
+          "description": "Domain name to query (e.g. google.com)",
+          "required": true,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx checkDns google.com",
+          "description": "Get all DNS records for google.com"
+        }
+      ],
+      "class_doc": "Command to inspect and return all common DNS records for a specific domain name.",
+      "execute_doc": "Queries DNS records for a domain\n\nArgs:\n    domain (str): Domain to query\n    \nReturns:\n    Dictionary with resolved DNS records",
+      "module": "qzx.commands.network.check_dns"
+    },
+    "checkSslCertificate": {
+      "name": "checkSslCertificate",
+      "category": "network",
+      "description": "Inspects the SSL/TLS certificate of a hostname, checking validity dates and issuers",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "host",
+          "description": "Hostname of the server to check (e.g. google.com)",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "port",
+          "description": "Port number (defaults to 443)",
+          "required": false,
+          "default": "443"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx checkSslCertificate google.com",
+          "description": "Inspect the SSL certificate for google.com on port 443"
+        },
+        {
+          "command": "qzx checkSslCertificate expired.badssl.com 443",
+          "description": "Inspect certificate for expired.badssl.com"
+        }
+      ],
+      "class_doc": "Command to fetch, parse, and analyze the SSL/TLS certificate of a remote server.",
+      "execute_doc": "Retrieves and parses the SSL certificate\n\nArgs:\n    host (str): Remote host name\n    port (str/int): Connection port\n    \nReturns:\n    Dictionary with SSL certificate information",
+      "module": "qzx.commands.network.check_ssl_certificate"
+    },
+    "checkUrlStatus": {
+      "name": "checkUrlStatus",
+      "category": "network",
+      "description": "Pings an HTTP URL, returning its status code, response time, and basic headers",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "url",
+          "description": "Target URL to check (e.g., https://api.github.com)",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "timeout",
+          "description": "Request timeout in seconds (default: 5.0)",
+          "required": false,
+          "default": 5.0
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx checkUrlStatus https://api.github.com",
+          "description": "Verify if GitHub API is accessible and check response times"
+        },
+        {
+          "command": "qzx checkUrlStatus https://httpbin.org/status/404 3.0",
+          "description": "Check a URL with a custom 3-second timeout"
+        }
+      ],
+      "class_doc": "Command to verify connectivity and retrieve metadata for a target URL",
+      "execute_doc": "Executes an HTTP request to check URL status\n\nArgs:\n    url (str): Target URL\n    timeout (float/str, optional): Connection timeout in seconds\n    \nReturns:\n    Dictionary with response metrics, headers, and online status",
+      "module": "qzx.commands.network.check_url_status"
+    },
+    "getNetworkConfig": {
+      "name": "getNetworkConfig",
+      "category": "network",
+      "description": "Displays comprehensive network status (interfaces, local IPs, DNS, public IP, VPN detection)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "check_public",
+          "description": "Whether to fetch public IP and location info (true/false)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getNetworkConfig",
+          "description": "Get full network diagnostics including public IP and VPN status"
+        },
+        {
+          "command": "qzx getNetworkConfig false",
+          "description": "Get local network info only, skipping public IP resolution"
+        }
+      ],
+      "class_doc": "Command to retrieve detailed network status including active interfaces, gateways, public IP, and VPN status.",
+      "execute_doc": "Gathers network configuration info\n\nArgs:\n    check_public (str/bool): Query public IP APIs\n    \nReturns:\n    Dictionary with network configuration details",
+      "module": "qzx.commands.network.get_network_config"
+    },
+    "testWebSpeed": {
+      "name": "testWebSpeed",
+      "category": "network",
+      "description": "Measures internet download speed (Mbps) and HTTP ping latency (ms)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "max_seconds",
+          "description": "Maximum duration of the download test in seconds (defaults to 3)",
+          "required": false,
+          "default": "3"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx testWebSpeed",
+          "description": "Measure connection latency and download throughput"
+        },
+        {
+          "command": "qzx testWebSpeed 5",
+          "description": "Run the speed test for up to 5 seconds"
+        }
+      ],
+      "class_doc": "Command to measure internet connection latency (ping) and active download speed.",
+      "execute_doc": "Executes speed and latency checks\n\nArgs:\n    max_seconds (str/int): Maximum test duration\n    \nReturns:\n    Dictionary with download speed and latency statistics",
+      "module": "qzx.commands.network.test_web_speed"
+    },
+    "checkDependency": {
+      "name": "checkDependency",
+      "category": "system",
+      "description": "Checks if a command-line dependency is installed in the system PATH and retrieves its version",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "dependency",
+          "description": "Name of the executable or dependency to check (e.g., git, node, docker)",
+          "required": true,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx checkDependency git",
+          "description": "Check if Git is installed and retrieve its version"
+        },
+        {
+          "command": "qzx checkDependency node",
+          "description": "Check if Node.js is installed"
+        }
+      ],
+      "class_doc": "Command to check if a dependency is installed and retrieve its version",
+      "execute_doc": "Checks if the dependency is installed\n\nArgs:\n    dependency (str): Name of the dependency/executable to search for\n    \nReturns:\n    Dictionary with installation status, version, and path",
+      "module": "qzx.commands.system.check_dependency"
+    },
+    "checkSystemPath": {
+      "name": "checkSystemPath",
+      "category": "system",
+      "description": "Diagnoses the system PATH variable, lists broken or duplicate folders, and locates all instances of a binary",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "binary_name",
+          "description": "Optional binary name to search for (e.g. python, node, git)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx checkSystemPath",
+          "description": "Inspect system PATH directories for duplicates, errors, and invalid folder paths"
+        },
+        {
+          "command": "qzx checkSystemPath python",
+          "description": "Diagnose PATH and list all physical locations of python executables, in order of execution precedence"
+        }
+      ],
+      "class_doc": "Command to inspect PATH environment variable health, check for invalid or duplicate directories, and resolve command conflicts.",
+      "execute_doc": "Diagnoses PATH and optional binary locations\n\nArgs:\n    binary_name (str, optional): Name of executable to find\n    \nReturns:\n    Dictionary with PATH analysis and executable locations",
+      "module": "qzx.commands.system.check_system_path"
+    },
+    "clearScreen": {
+      "name": "clearScreen",
+      "category": "system",
+      "description": "Clears the terminal screen",
+      "aliases": [
+        "cls",
+        "clear",
+        "clrscr"
+      ],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx ClearScreen",
+          "description": "Clear the terminal screen"
+        },
+        {
+          "command": "qzx cls",
+          "description": "Clear the terminal screen (using alias)"
+        }
+      ],
+      "class_doc": "Command to clear the terminal screen",
+      "execute_doc": "Clear the terminal screen\n\nReturns:\n    Dictionary with the operation result",
+      "module": "qzx.commands.system.clear_screen"
+    },
+    "commandsBridge": {
+      "name": "commandsBridge",
+      "category": "system",
+      "description": "Safely executes system commands with detailed feedback",
+      "aliases": [
+        "bridge",
+        "cmd",
+        "run"
+      ],
+      "parameters": [
+        {
+          "name": "command",
+          "description": "The system command to execute",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "args",
+          "description": "Arguments for the command (can be multiple separate arguments)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx commandsBridge cd /path/to/directory",
+          "description": "Changes the current directory to the specified path"
+        },
+        {
+          "command": "qzx bridge pwd",
+          "description": "Shows the current working directory"
+        },
+        {
+          "command": "qzx cmd ls -la",
+          "description": "Lists files in the current directory with details"
+        },
+        {
+          "command": "qzx run echo \"Hello World\"",
+          "description": "Outputs \"Hello World\" to the console"
+        }
+      ],
+      "class_doc": "Command to serve as a middleware for system commands.\nThis bridge safely handles the execution of system commands, preventing errors from causing problems.",
+      "execute_doc": "Safely executes a system command\n\nArgs:\n    command (str): The command to execute\n    args (str): Arguments for the command\n    \nReturns:\n    Dictionary with the operation results and status",
+      "module": "qzx.commands.system.commands_bridge"
+    },
+    "currentDir": {
+      "name": "currentDir",
+      "category": "system",
+      "description": "Shows the current working directory",
+      "aliases": [
+        "pwd",
+        "cwd",
+        "dir",
+        "where",
+        "location"
+      ],
+      "parameters": [
+        {
+          "name": "full",
+          "description": "Show full path (true) or relative path (false)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx CurrentDir",
+          "description": "Shows the full current working directory"
+        },
+        {
+          "command": "qzx pwd",
+          "description": "Alias that shows the current working directory"
+        },
+        {
+          "command": "qzx dir false",
+          "description": "Shows only the current directory name without the full path"
+        }
+      ],
+      "class_doc": "Command to show the current directory where QZX is running",
+      "execute_doc": "Shows the current directory where QZX is running\n\nArgs:\n    full (str, optional): Show full path ('true') or just the directory name ('false')\n    \nReturns:\n    Dictionary with the operation result and status",
+      "module": "qzx.commands.system.current_dir"
+    },
+    "generateContent": {
+      "name": "generateContent",
+      "category": "system",
+      "description": "Uses Gemini AI to analyze and explain file contents",
+      "aliases": [
+        "explainfile",
+        "aianalyze",
+        "analyzeContent"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "description": "Path to the file to analyze",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "sample_size",
+          "description": "Number of characters to sample from beginning, middle, and end (default: 500)",
+          "required": false,
+          "default": "500"
+        },
+        {
+          "name": "model",
+          "description": "Gemini model to use (default: auto-select from available models)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "custom_prompt",
+          "description": "Custom prompt to send to Gemini (default: uses internal prompt)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx WonderContentGen \"path/to/file.txt\"",
+          "description": "Analyze and explain the content of file.txt using Gemini AI"
+        },
+        {
+          "command": "qzx WonderContentGen \"path/to/file.txt\" 1000",
+          "description": "Explain file content using 1000 characters from each section"
+        },
+        {
+          "command": "qzx WonderContentGen \"path/to/file.txt\" 500 \"gemini-1.5-pro\"",
+          "description": "Use a specific Gemini model for analysis"
+        },
+        {
+          "command": "qzx WonderContentGen \"path/to/file.txt\" 500 \"\" \"What programming language is this?\"",
+          "description": "Ask Gemini a specific question about the file content"
+        }
+      ],
+      "class_doc": "Command to analyze and explain file contents using Gemini AI",
+      "execute_doc": "Analyze and explain file contents using Gemini AI\n\nArgs:\n    file_path (str): Path to the file to analyze\n    sample_size (str): Number of characters to sample from beginning, middle, and end\n    model (str): Gemini model to use (if empty, will auto-select)\n    custom_prompt (str): Custom prompt to send to Gemini\n    \nReturns:\n    Dictionary with the operation result",
+      "module": "qzx.commands.system.generate_content"
+    },
+    "getCommandCount": {
+      "name": "getCommandCount",
+      "category": "system",
+      "description": "Reports the total number of available commands in QZX",
+      "aliases": [
+        "wonderCommandsAmount"
+      ],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx wonderCommandsAmount",
+          "description": "Check how many commands are available in QZX"
+        }
+      ],
+      "class_doc": "Command to check the total number of available commands in QZX",
+      "execute_doc": "Count and report the total number of available commands in QZX\n\nReturns:\n    Dictionary with the count of available commands",
+      "module": "qzx.commands.system.get_command_count"
+    },
+    "getCPULoad": {
+      "name": "getCPULoad",
+      "category": "system",
+      "description": "Gets information about current CPU usage",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "interval",
+          "description": "Time interval (in seconds) to calculate CPU usage",
+          "required": false,
+          "default": 1
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getCPULoad",
+          "description": "Get CPU usage information with 1-second interval"
+        },
+        {
+          "command": "qzx getCPULoad 0.5",
+          "description": "Get CPU usage information with 0.5-second interval"
+        }
+      ],
+      "class_doc": "Command to get CPU load information",
+      "execute_doc": "Gets CPU load information\n\nArgs:\n    interval (float, optional): Time interval (in seconds) to calculate CPU usage.\n                               Defaults to 1 second.\n    \nReturns:\n    Dictionary with CPU load information",
+      "module": "qzx.commands.system.get_cpu_load"
+    },
+    "getCurrentDate": {
+      "name": "getCurrentDate",
+      "category": "system",
+      "description": "Gets the current date in YYYY-MM-DD format",
+      "aliases": [],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx getCurrentDate",
+          "description": "Get the current date in the format YYYY-MM-DD"
+        }
+      ],
+      "class_doc": "Command to get the current date in YYYY-MM-DD format",
+      "execute_doc": "Gets the current date in YYYY-MM-DD format\n\nReturns:\n    Dictionary with the current date information",
+      "module": "qzx.commands.system.get_current_date"
+    },
+    "getCurrentTime": {
+      "name": "getCurrentTime",
+      "category": "system",
+      "description": "Gets the current time in HH-MM-SS-milliseconds format",
+      "aliases": [],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx getCurrentTime",
+          "description": "Get the current time with millisecond precision"
+        }
+      ],
+      "class_doc": "Command to get the current time in HH-MM-SS-milliseconds format",
+      "execute_doc": "Gets the current time in HH-MM-SS-milliseconds format\n\nReturns:\n    Dictionary with the current time information",
+      "module": "qzx.commands.system.get_current_time"
+    },
+    "getCurrentUser": {
+      "name": "getCurrentUser",
+      "category": "system",
+      "description": "Gets information about the currently logged in user",
+      "aliases": [],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx getCurrentUser",
+          "description": "Get detailed information about the currently logged in user"
+        }
+      ],
+      "class_doc": "Command to get information about the currently logged in user",
+      "execute_doc": "Gets information about the currently logged in user\n\nReturns:\n    Dictionary with user information and operation status",
+      "module": "qzx.commands.system.get_current_user"
+    },
+    "getDiskInfo": {
+      "name": "getDiskInfo",
+      "category": "system",
+      "description": "Gets information about disk space usage",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "path",
+          "description": "Path to get disk information from. If not provided, all disks will be shown",
+          "required": false,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getDiskInfo",
+          "description": "Get information about all available disks"
+        },
+        {
+          "command": "qzx getDiskInfo C:",
+          "description": "Get information about the C: drive (Windows)"
+        },
+        {
+          "command": "qzx getDiskInfo /home",
+          "description": "Get information about the /home partition (Linux/Mac)"
+        }
+      ],
+      "class_doc": "Command to get information about disk space usage",
+      "execute_doc": "Gets disk space information for the specified path or all disks\n\nArgs:\n    path (str, optional): Path to get information from. If not provided, all disks will be shown.\n    \nReturns:\n    Dictionary with disk information and success status",
+      "module": "qzx.commands.system.get_disk_info"
+    },
+    "getDiskName": {
+      "name": "getDiskName",
+      "category": "system",
+      "description": "Gets disk name/model information for a disk or all disks",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "disk_path",
+          "description": "Path to the disk to get information for. If not provided, shows information for all disks",
+          "required": false,
+          "default": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getDiskName",
+          "description": "Get information about all disks"
+        },
+        {
+          "command": "qzx getDiskName C:",
+          "description": "Get information about the C: drive (Windows)"
+        },
+        {
+          "command": "qzx getDiskName /dev/sda",
+          "description": "Get information about the /dev/sda disk (Linux)"
+        }
+      ],
+      "class_doc": "Command to get disk name/model information",
+      "execute_doc": "Gets disk name/model information\n\nArgs:\n    disk_path (str, optional): Path to the disk to get information for.\n                              If not provided, shows information for all disks.\n    \nReturns:\n    Dictionary with disk information",
+      "module": "qzx.commands.system.get_disk_name"
+    },
+    "getEnvironmentInfo": {
+      "name": "getEnvironmentInfo",
+      "category": "system",
+      "description": "Displays detailed information about the system environment",
+      "aliases": [
+        "environment",
+        "sysinfo",
+        "systeminfo"
+      ],
+      "parameters": [
+        {
+          "name": "detailed",
+          "description": "Show additional detailed information (true/false)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx WonderMyEnvironment",
+          "description": "Display full system environment information"
+        },
+        {
+          "command": "qzx WonderMyEnvironment false",
+          "description": "Display basic system environment information"
+        }
+      ],
+      "class_doc": "Command to display detailed system environment information",
+      "execute_doc": "Display detailed system environment information\n\nArgs:\n    detailed (str): Whether to show detailed information ('true' or 'false')\n    \nReturns:\n    Dictionary with the operation result",
+      "module": "qzx.commands.system.get_environment_info"
+    },
+    "getGPULoad": {
+      "name": "getGPULoad",
+      "category": "system",
+      "description": "Displays information about GPUs in the system",
+      "aliases": [
+        "gpuload",
+        "gpuinfo",
+        "gpustatus"
+      ],
+      "parameters": [
+        {
+          "name": "detailed",
+          "description": "Show detailed information (true/false)",
+          "required": false,
+          "default": "false"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx GetGPULoad",
+          "description": "Display basic information about the GPUs"
+        },
+        {
+          "command": "qzx GetGPULoad true",
+          "description": "Display detailed information about the GPUs"
+        }
+      ],
+      "class_doc": "Command to get information about GPUs in the system",
+      "execute_doc": "Retrieves information about the GPUs in the system\n\nArgs:\n    detailed (str): Whether to show detailed information (true/false)\n    \nReturns:\n    Dictionary with GPU information and status",
+      "module": "qzx.commands.system.get_gpu_load"
+    },
+    "getRAMInfo": {
+      "name": "getRAMInfo",
+      "category": "system",
+      "description": "Gets detailed information about system RAM usage",
+      "aliases": [],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx getRAMInfo",
+          "description": "Get detailed information about system memory usage"
+        }
+      ],
+      "class_doc": "Command to get information about system RAM",
+      "execute_doc": "Gets information about system RAM\n\nReturns:\n    Dictionary with RAM information",
+      "module": "qzx.commands.system.get_ram_info"
+    },
+    "getSmartValues": {
+      "name": "getSmartValues",
+      "category": "system",
+      "description": "Retrieves disk health information using S.M.A.R.T. technology",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "disk",
+          "description": "Disk identifier (e.g., \"sda\" on Linux, \"PhysicalDrive0\" on Windows)",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "format",
+          "description": "Output format: \"full\" for all data, \"health\" for health summary",
+          "required": false,
+          "default": "health"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx getSmartValues sda",
+          "description": "Get health information for /dev/sda (Linux)"
+        },
+        {
+          "command": "qzx getSmartValues PhysicalDrive0 full",
+          "description": "Get full S.M.A.R.T. data for PhysicalDrive0 (Windows)"
+        }
+      ],
+      "class_doc": "Command to retrieve S.M.A.R.T. disk information and health status",
+      "execute_doc": "Retrieves S.M.A.R.T. disk information\n\nArgs:\n    disk (str): Disk identifier\n    format (str, optional): Output format (\"full\" or \"health\")\n    \nReturns:\n    Operation result with S.M.A.R.T. information",
+      "module": "qzx.commands.system.get_smart_values"
+    },
+    "getStartupPrograms": {
+      "name": "getStartupPrograms",
+      "category": "system",
+      "description": "Lists all startup programs configured to run on system boot or user login",
+      "aliases": [],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx getStartupPrograms",
+          "description": "Retrieve a list of all startup programs and registry triggers"
+        }
+      ],
+      "class_doc": "Command to audit and list all startup programs configured to run on boot or login.",
+      "execute_doc": "Retrieves startup program list\n\nReturns:\n    Dictionary with startup applications details",
+      "module": "qzx.commands.system.get_startup_programs"
+    },
+    "getToday": {
+      "name": "getToday",
+      "category": "system",
+      "description": "Displays detailed information about the current date and time",
+      "aliases": [
+        "today",
+        "now",
+        "datetime",
+        "fecha"
+      ],
+      "parameters": [
+        {
+          "name": "format",
+          "description": "Output format (full, simple, or iso)",
+          "required": false,
+          "default": "full"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx WonderToday",
+          "description": "Display full date and time information"
+        },
+        {
+          "command": "qzx WonderToday simple",
+          "description": "Display date and time in a simple format"
+        },
+        {
+          "command": "qzx WonderToday iso",
+          "description": "Display date and time in ISO format"
+        }
+      ],
+      "class_doc": "Command to display detailed date and time information",
+      "execute_doc": "Display detailed date and time information\n\nArgs:\n    format (str): Output format (full, simple, or iso)\n    \nReturns:\n    Dictionary with the operation result",
+      "module": "qzx.commands.system.get_today"
+    },
+    "inspectPort": {
+      "name": "inspectPort",
+      "category": "system",
+      "description": "Checks if a port is in use, lists details of the process using it, and can optionally terminate it",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "port",
+          "description": "Port number to inspect",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "kill",
+          "description": "Whether to terminate the process utilizing this port (true/false)",
+          "required": false,
+          "default": "false"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx inspectPort 3000",
+          "description": "Check what is listening on port 3000"
+        },
+        {
+          "command": "qzx inspectPort 3000 true",
+          "description": "Check what is listening on port 3000 and terminate that process"
+        }
+      ],
+      "class_doc": "Command to inspect details of a specific port, identifying the process using it, and optionally killing it.",
+      "execute_doc": "Inspects the specified port\n\nArgs:\n    port (int/str): Port to inspect\n    kill (str/bool, optional): Whether to terminate the process using it\n    \nReturns:\n    Dictionary containing port and process details",
+      "module": "qzx.commands.system.inspect_port"
+    },
+    "isAdmin": {
+      "name": "isAdmin",
+      "category": "system",
+      "description": "Checks if the current user has administrative privileges",
+      "aliases": [
+        "wonderIfAdmin"
+      ],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx wonderIfAdmin",
+          "description": "Check if the current user has administrative privileges"
+        }
+      ],
+      "class_doc": "Command to check if the current user has administrative privileges",
+      "execute_doc": "Checks if the current user has administrative privileges\n\nReturns:\n    Dictionary with administrative privilege information and status",
+      "module": "qzx.commands.system.is_admin"
+    },
+    "killProcess": {
+      "name": "killProcess",
+      "category": "system",
+      "description": "Terminates a process by its ID (similar to 'kill' in Unix)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "pid",
+          "description": "Process ID to terminate",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "force",
+          "description": "Whether to force termination (like kill -9)",
+          "required": false,
+          "default": false
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx killProcess 1234",
+          "description": "Terminate the process with PID 1234"
+        },
+        {
+          "command": "qzx killProcess 1234 true",
+          "description": "Force terminate the process with PID 1234"
+        }
+      ],
+      "class_doc": "Command to terminate a process by PID",
+      "execute_doc": "Terminates a process by PID\n\nArgs:\n    pid (int): Process ID to terminate\n    force (bool, optional): Whether to force termination\n    \nReturns:\n    Dictionary with the operation result and status",
+      "module": "qzx.commands.system.kill_process"
+    },
+    "listProcesses": {
+      "name": "listProcesses",
+      "category": "system",
+      "description": "Lists running processes (similar to 'ps' in Unix)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "filter_str",
+          "description": "Optional string to filter process names",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "sort_by",
+          "description": "Field to sort results by (pid, cpu, memory, name)",
+          "required": false,
+          "default": "cpu"
+        },
+        {
+          "name": "limit",
+          "description": "Maximum number of processes to display",
+          "required": false,
+          "default": 0
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx listProcesses",
+          "description": "List all processes"
+        },
+        {
+          "command": "qzx listProcesses python",
+          "description": "List processes containing \"python\" in their name"
+        },
+        {
+          "command": "qzx listProcesses null memory 10",
+          "description": "List the top 10 processes by memory usage"
+        }
+      ],
+      "class_doc": "Command to list running processes",
+      "execute_doc": "Lists running processes\n\nArgs:\n    filter_str (str, optional): Optional string to filter process names\n    sort_by (str, optional): Field to sort results by (pid, cpu, memory, name)\n    limit (int, optional): Maximum number of processes to display\n    \nReturns:\n    Dictionary with the process list and operation status",
+      "module": "qzx.commands.system.list_processes"
+    },
+    "listSystemServices": {
+      "name": "listSystemServices",
+      "category": "system",
+      "description": "Lists system services and their running status (supports Windows and Linux)",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "status",
+          "description": "Filter by service status (running, stopped, all - defaults to all)",
+          "required": false,
+          "default": "all"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx listSystemServices",
+          "description": "List all system services"
+        },
+        {
+          "command": "qzx listSystemServices running",
+          "description": "List only active running system services"
+        }
+      ],
+      "class_doc": "Command to inspect active and stopped system services on the OS.",
+      "execute_doc": "Retrieves system services\n\nArgs:\n    status (str): Status filter (running, stopped, all)\n    \nReturns:\n    Dictionary listing all matching services",
+      "module": "qzx.commands.system.list_system_services"
+    },
+    "runScript": {
+      "name": "runScript",
+      "category": "system",
+      "description": "Executes a script with parameters",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "script_path",
+          "description": "Path to the script to execute",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "args",
+          "description": "Arguments to pass to the script",
+          "required": false,
+          "default": []
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx runScript myscript.py",
+          "description": "Execute a Python script"
+        },
+        {
+          "command": "qzx runScript myscript.py arg1 arg2",
+          "description": "Execute a Python script with arguments"
+        },
+        {
+          "command": "qzx runScript script.sh",
+          "description": "Execute a shell script"
+        }
+      ],
+      "class_doc": "Command to execute a script with parameters",
+      "execute_doc": "Executes a script with parameters\n\nArgs:\n    script_path (str): Path to the script to execute\n    *args: List of arguments to pass to the script\n    \nReturns:\n    Dictionary with the execution results and status",
+      "module": "qzx.commands.system.run_script"
+    },
+    "shell": {
+      "name": "shell",
+      "category": "system",
+      "description": "Launches an interactive shell for QZX commands (alias for Terminal)",
+      "aliases": [
+        "Terminal",
+        "Console",
+        "REPL"
+      ],
+      "parameters": [
+        {
+          "name": "prompt",
+          "description": "Custom prompt for the terminal (default: \"QZX> \")",
+          "required": false,
+          "default": "QZX> "
+        },
+        {
+          "name": "history_file",
+          "description": "Path to history file (default: ~/.qzx_history)",
+          "required": false,
+          "default": "C:\\Users\\alesanGreat/.qzx_history"
+        },
+        {
+          "name": "show_path",
+          "description": "Show path in the prompt (default: true)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx Shell",
+          "description": "Launch the QZX interactive shell with default settings"
+        },
+        {
+          "command": "qzx Shell \"MyQZX> \"",
+          "description": "Launch the QZX shell with a custom prompt"
+        }
+      ],
+      "class_doc": "Shell command - Alias for the Terminal command\nThis is just a compatibility wrapper that redirects to the Terminal command",
+      "execute_doc": "Execute the Shell command by redirecting to Terminal\n\nArgs:\n    *args: Arguments to pass to Terminal\n    **kwargs: Keyword arguments to pass to Terminal\n    \nReturns:\n    Result from the Terminal command",
+      "module": "qzx.commands.system.shell"
+    },
+    "terminal": {
+      "name": "terminal",
+      "category": "system",
+      "description": "Launches an interactive terminal/shell for QZX commands",
+      "aliases": [
+        "terminal",
+        "TERMINAL",
+        "Shell",
+        "shell",
+        "SHELL",
+        "Console",
+        "console",
+        "CONSOLE",
+        "REPL",
+        "repl"
+      ],
+      "parameters": [
+        {
+          "name": "prompt",
+          "description": "Custom prompt for the terminal (default: \"QZX> \")",
+          "required": false,
+          "default": "QZX> "
+        },
+        {
+          "name": "history_file",
+          "description": "Path to history file (default: ~/.qzx_history)",
+          "required": false,
+          "default": "C:\\Users\\alesanGreat/.qzx_history"
+        },
+        {
+          "name": "show_path",
+          "description": "Show path in the prompt (default: true)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx Terminal",
+          "description": "Launch the QZX interactive terminal with default settings"
+        },
+        {
+          "command": "qzx Shell",
+          "description": "Launch the QZX interactive terminal using the Shell alias"
+        },
+        {
+          "command": "qzx Terminal \"MyQZX> \"",
+          "description": "Launch the QZX terminal with a custom prompt"
+        },
+        {
+          "command": "qzx Terminal \"QZX> \" ~/.qzx_history false",
+          "description": "Launch the QZX terminal without showing path in prompt"
+        }
+      ],
+      "class_doc": "Interactive terminal/shell for QZX commands",
+      "execute_doc": "Launch an interactive terminal for QZX commands\n\nArgs:\n    prompt (str, optional): Custom prompt for the terminal\n    history_file (str, optional): Path to history file\n    show_path (str, optional): Whether to show path in prompt ('true' or 'false')\n    \nReturns:\n    Dictionary with the result of the operation",
+      "module": "qzx.commands.system.terminal"
+    },
+    "systemInfo": {
+      "name": "systemInfo",
+      "category": "system",
+      "description": "Gets information about the operating system and environment",
+      "aliases": [],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx systemInfo",
+          "description": "Get detailed information about the system"
+        }
+      ],
+      "class_doc": "Command to get system information",
+      "execute_doc": "Gets system information\n\nReturns:\n    Dictionary with system information",
+      "module": "qzx.commands.system.system_info"
+    },
+    "term": {
+      "name": "term",
+      "category": "system",
+      "description": "Launches an interactive QZX terminal (case-insensitive alias)",
+      "aliases": [
+        "terminal",
+        "Terminal",
+        "TERMINAL",
+        "shell",
+        "Shell",
+        "SHELL",
+        "console",
+        "Console",
+        "CONSOLE",
+        "repl",
+        "REPL",
+        "Repl",
+        "term",
+        "TERM"
+      ],
+      "parameters": [
+        {
+          "name": "prompt",
+          "description": "Custom prompt for the terminal (default: \"QZX> \")",
+          "required": false,
+          "default": "QZX> "
+        },
+        {
+          "name": "history_file",
+          "description": "Path to history file (default: ~/.qzx_history)",
+          "required": false,
+          "default": "C:\\Users\\alesanGreat/.qzx_history"
+        },
+        {
+          "name": "show_path",
+          "description": "Show path in the prompt (default: true)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx term",
+          "description": "Launch the QZX interactive terminal (case-insensitive)"
+        },
+        {
+          "command": "qzx terminal",
+          "description": "Also launches the QZX terminal (lowercase variant)"
+        }
+      ],
+      "class_doc": "Term command - Special alias for Terminal with various case variants\nThis command ensures the terminal can be started regardless of capitalization",
+      "execute_doc": "Execute the Term command by redirecting to Terminal\n\nArgs:\n    *args: Arguments to pass to Terminal\n    **kwargs: Keyword arguments to pass to Terminal\n    \nReturns:\n    Result from the Terminal command",
+      "module": "qzx.commands.system.term"
+    },
+    "testDiskSpeed": {
+      "name": "testDiskSpeed",
+      "category": "system",
+      "description": "Benchmarks sequential write and read speeds (MB/s) of the filesystem at a target path",
+      "aliases": [],
+      "parameters": [
+        {
+          "name": "test_path",
+          "description": "Directory path to benchmark (defaults to current directory)",
+          "required": false,
+          "default": "."
+        },
+        {
+          "name": "size_mb",
+          "description": "Temporary test file size in Megabytes (defaults to 50)",
+          "required": false,
+          "default": "50"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx testDiskSpeed",
+          "description": "Benchmark disk speed in the current folder using a 50MB test file"
+        },
+        {
+          "command": "qzx testDiskSpeed C:/temp 100",
+          "description": "Benchmark disk speed in C:/temp using a 100MB test file"
+        }
+      ],
+      "class_doc": "Command to measure read and write throughput speeds for a target storage directory.",
+      "execute_doc": "Runs read/write benchmark\n\nArgs:\n    test_path (str): Directory to test\n    size_mb (str/int): Test file size in MB\n    \nReturns:\n    Dictionary with read and write MB/s values",
+      "module": "qzx.commands.system.test_disk_speed"
+    },
+    "version": {
+      "name": "version",
+      "category": "system",
+      "description": "Displays the current version of QZX and system information",
+      "aliases": [
+        "qzxVersion"
+      ],
+      "parameters": [],
+      "examples": [
+        {
+          "command": "qzx version",
+          "description": "Display the current version of QZX and system information"
+        }
+      ],
+      "class_doc": "Command to display the current version of QZX",
+      "execute_doc": "Displays the current version of QZX\n\nReturns:\n    Dictionary with version information",
+      "module": "qzx.commands.system.version"
+    },
+    "welcome": {
+      "name": "welcome",
+      "category": "system",
+      "description": "Displays the welcome screen with system information",
+      "aliases": [
+        "welcome",
+        "hello",
+        "hi"
+      ],
+      "parameters": [
+        {
+          "name": "full_info",
+          "description": "Show full system information (true/false)",
+          "required": false,
+          "default": "true"
+        }
+      ],
+      "examples": [
+        {
+          "command": "qzx Welcome",
+          "description": "Display the welcome screen with full system information"
+        },
+        {
+          "command": "qzx Welcome false",
+          "description": "Display the basic welcome screen without detailed information"
+        }
+      ],
+      "class_doc": "Command to display the system welcome information",
+      "execute_doc": "Display the welcome screen with system information\n\nArgs:\n    full_info (str): Whether to show full information ('true' or 'false')\n    \nReturns:\n    Dictionary with the operation result",
+      "module": "qzx.commands.system.welcome"
+    },
+    "base_command": {
+      "name": "base_command",
+      "category": "misc",
+      "description": "Base command",
+      "aliases": [],
+      "parameters": [],
+      "examples": [],
+      "class_doc": "Lista todos los comandos disponibles en QZX, organizados por categoría.\nPermite filtrar comandos por nombre o descripción.",
+      "execute_doc": "Lists all available commands organized by category.\n\nArgs:\n    filter_text (str, optional): Text to filter commands by name or description\n    \nReturns:\n    dict: Dictionary containing list of commands organized by category",
+      "module": "qzx.commands.system.qzx_list_commands"
+    }
+  }
+}
