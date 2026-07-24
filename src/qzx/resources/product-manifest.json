@@ -93,8 +93,8 @@
       "source": "https://pypi.org/pypi/qzx/json",
       "wheel": {
         "filename": "qzx-0.2.2.0.2-py3-none-any.whl",
-        "sha256": "pending-publication-verification",
-        "verified_at": "pending-publication-verification",
+        "sha256": "dbbfd9bf55e140f730c4c4eb70f6500dc640a86523a83e8a7a3b53a3299ce8f7",
+        "verified_at": "2026-07-24",
         "command_names": [
           "about",
           "analyzeComplexity",
