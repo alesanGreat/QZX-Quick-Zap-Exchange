@@ -13,6 +13,8 @@ Published on PyPI as wheel and source distribution.
   `qzx@yumbale.com`.
 - Added the professional tag and GitHub Release workflow, including immutable
   annotated tags and reuse of the exact PyPI artifacts.
+- Restricted source distributions to the public, versioned documentation and
+  excluded local operational material from package artifacts.
 
 ## 0.2.2.0.1 — 2026-07-24
 
