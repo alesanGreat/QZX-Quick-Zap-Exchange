@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://qzx.yumbale.com/en/contact
+    about: Report vulnerabilities privately instead of opening a public issue.
+  - name: QZX documentation
+    url: https://qzx.yumbale.com/en/commands
+    about: Check command availability, parameters, safety, and platform evidence.

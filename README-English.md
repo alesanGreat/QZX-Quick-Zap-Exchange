@@ -7,16 +7,11 @@ second, manually maintained product description.
 
 Use these canonical sources:
 
-- [`README.md`](README.md) — current English project overview and local
-  development status.
-- [`WebsiteQZX/content/product.json`](WebsiteQZX/content/product.json) —
-  product identity, positioning, official URLs, platforms, and output contract.
-- [`WebsiteQZX/content/releases.json`](WebsiteQZX/content/releases.json) —
-  published PyPI version, development version, and verified package snapshot.
-- [`WebsiteQZX/public/data/commands.json`](WebsiteQZX/public/data/commands.json)
-  — generated command catalog, availability, parameters, safety facts, source,
-  and test links.
+- [`README.md`](README.md) — current English project overview and development
+  status.
 - [Official QZX documentation](https://qzx.yumbale.com/en/) — canonical public
   web documentation.
+- [Command catalog](https://qzx.yumbale.com/en/commands) — availability,
+  parameters, safety facts, examples, and compatibility evidence.
 
 PyPI and the current checkout both provide QZX `0.2.2.0.2` alpha.

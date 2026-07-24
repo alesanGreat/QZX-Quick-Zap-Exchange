@@ -67,6 +67,6 @@ node_modules/
 
 # Local logs and credentials
 *.log
-cookies_patreon.json
-qzx-yumbale-email.credential.clixml
-docs/operations/PyPI-Token.txt
+*.credential.*
+*.token
+*.token.*

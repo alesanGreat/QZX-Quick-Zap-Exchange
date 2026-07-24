@@ -1,0 +1,49 @@
+name: Feature request
+description: Propose a focused improvement tied to a real task and verifiable outcome.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the task or friction before proposing an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should a person or AI agent be able to accomplish?
+    validations:
+      required: true
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Platforms
+      multiple: true
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Other or unknown
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and examples
+      description: Existing standards, maintained libraries, native commands, sample structured output, or similar tools.
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety, privacy, and compatibility
+      description: Note mutations, permissions, backups, telemetry, sensitive data, and legacy-platform implications.
+  - type: checkboxes
+    id: openness
+    attributes:
+      label: Open project boundary
+      options:
+        - label: I understand that sponsorship can fund work but does not buy control, private telemetry, or an essential paid-only CLI feature.
+          required: true

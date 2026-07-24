@@ -1,0 +1,58 @@
+name: Bug report
+description: Report a reproducible QZX problem without including secrets or private data.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping QZX improve. For a vulnerability that may put users at risk, stop here and follow SECURITY.md instead.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: This is not a private security vulnerability and contains no credentials, personal data, or sensitive paths.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: QZX version
+      description: Run `qzx version --json` when possible.
+      placeholder: 0.2.2.0.2
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, Python version, shell, architecture, and relevant native tools.
+      placeholder: Windows 11, Python 3.13, PowerShell 7, x86_64
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Use a minimal disposable fixture and redact private paths or data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Include human output and `--json` output when safe and relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Workarounds, frequency, regression range, screenshots, or sanitized logs.

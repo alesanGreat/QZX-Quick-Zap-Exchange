@@ -8,9 +8,5 @@ recursive-include src/qzx/resources *.json
 prune docs
 prune tests
 include docs/philosophy.md
-include docs/structure.md
-include docs/guides/building-great-commands.md
-include docs/policies/versioning.md
 include docs/reference/command-examples.md
 include docs/reference/commands-generated.md
-recursive-include docs/checklists *.csv

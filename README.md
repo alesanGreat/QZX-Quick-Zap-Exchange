@@ -2,6 +2,10 @@
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+[About Alejandro Sánchez](https://qzx.yumbale.com/en/alejandro-sanchez) ·
+[Contact QZX](mailto:qzx@yumbale.com) ·
+[Support the project](https://qzx.yumbale.com/en/donate)
+
 QZX is an open-source Python CLI that gives AI agents, automation, and people
 one documented command vocabulary for supported operations on Windows, Linux,
 and macOS.
@@ -146,7 +150,7 @@ DO_NOT_TRACK=1 qzx Welcome
 ```
 
 An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
-[complete telemetry and deletion policy](docs/telemetry.md).
+[complete telemetry and deletion policy](https://qzx.yumbale.com/en/security).
 
 ## Compatibility evidence
 
@@ -165,23 +169,24 @@ operating system, date, fixture, and exit code on the
 - `src/qzx/resources/product-manifest.json` is the canonical product, release,
   output, compatibility, and telemetry manifest.
 - `src/qzx/commands/` contains command implementations.
-- `scripts/utils/generate_documentation.py` builds every documentation
-  projection from the inspected implementation, wheel inventory, translations,
-  explicit safety policies, captured evidence, and the strict `llms.txt`
-  template.
-- `WebsiteQZX/` contains the server-rendered bilingual public site.
-- `docs/` contains the canonical development, release, production, privacy, and
-  troubleshooting documentation.
-
-Do not change versions, build or publish distributions, create tags, or deploy
-from these instructions alone; those are independent release operations.
+- `tests/` contains the public automated Python test suite.
+- `examples/` contains standalone usage examples.
+- `docs/` contains public product philosophy and generated command references.
+- `.github/` contains the public contribution, funding, issue, and CI
+  configuration.
 
 ## Contributing
 
-Start with [AGENTS.md](AGENTS.md), the
-[command guide](docs/guides/building-great-commands.md), and the
+Start with the [contribution guide](CONTRIBUTING.md) and
 [project philosophy](docs/philosophy.md). Preserve the structured output
 contract, add proportional tests, and keep published and development
 availability explicit.
 
 License: [Apache-2.0](LICENSE). The attribution notice is in [NOTICE](NOTICE).
+See [how to contribute](CONTRIBUTING.md), [how to cite QZX](CITATION.cff),
+the [security policy](SECURITY.md), [QZX Core Guarantee](QZX_CORE_GUARANTEE.md),
+[sponsorship independence policy](SPONSORSHIP.md), and
+[name and trademark policy](TRADEMARKS.md). Project participation and direction
+are documented in the [code of conduct](CODE_OF_CONDUCT.md),
+[governance](GOVERNANCE.md), [authors and credits](AUTHORS.md), and
+[public roadmap](ROADMAP.md).

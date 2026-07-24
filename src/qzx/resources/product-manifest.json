@@ -14,7 +14,11 @@
     },
     "author": {
       "name": "Alejandro Sánchez",
-      "profile_url": "https://www.linkedin.com/in/alesan/"
+      "profile_url": "https://qzx.yumbale.com/en/alejandro-sanchez",
+      "same_as": [
+        "https://github.com/alesanGreat",
+        "https://www.linkedin.com/in/alesan/"
+      ]
     },
     "attribution": "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.",
     "license": "Apache-2.0",
@@ -50,7 +54,7 @@
     "command_catalog": "https://qzx.yumbale.com/en/commands",
     "compatibility": "https://qzx.yumbale.com/en/compatibility",
     "security": "https://qzx.yumbale.com/en/security",
-    "telemetry_policy": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/telemetry.md",
+    "telemetry_policy": "https://qzx.yumbale.com/en/security",
     "package": "https://pypi.org/project/qzx/",
     "package_metadata": "https://pypi.org/pypi/qzx/json",
     "repository": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange",
@@ -295,6 +299,6 @@
     "raw_ip_retention_days": 1825,
     "deletion": "A private deletion request requires the random installation UUID from local telemetry state.",
     "failure_behavior": "Network or storage failures never change the command result.",
-    "policy_url": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/telemetry.md"
+    "policy_url": "https://qzx.yumbale.com/en/security"
   }
 }

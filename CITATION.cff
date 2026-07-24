@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use QZX, please cite the software and its creator."
+title: "QZX — Quick Zap Exchange"
+type: software
+abstract: "A predictable cross-platform command layer for AI agents and automation."
+authors:
+  - family-names: "Sánchez"
+    given-names: "Alejandro"
+    email: "qzx@yumbale.com"
+version: "0.2.2.0.2"
+date-released: "2026-07-24"
+repository-code: "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange"
+url: "https://qzx.yumbale.com/en/"
+license: "Apache-2.0"
+keywords:
+  - "AI agents"
+  - "automation"
+  - "command-line interface"
+  - "cross-platform"
+  - "structured JSON"
