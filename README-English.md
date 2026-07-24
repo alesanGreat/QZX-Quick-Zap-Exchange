@@ -19,6 +19,4 @@ Use these canonical sources:
 - [Official QZX documentation](https://qzx.yumbale.com/en/) — canonical public
   web documentation.
 
-The published package and the development checkout are not interchangeable:
-PyPI currently provides `0.2.2`, while this checkout identifies itself as
-`0.2.2.0.1` alpha.
+PyPI and the current checkout both provide QZX `0.2.2.0.1` alpha.

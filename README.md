@@ -31,19 +31,13 @@ qzx getCurrentDate
 qzx getCurrentDate --json
 ```
 
-PyPI currently publishes QZX `0.2.2`. Its metadata declares Python 3.6 or
-newer. The inspected official wheel contains 54 historical command spellings,
-which normalize to 52 capabilities in the current catalog. The wheel SHA-256
-is `d1f6cf9b5cbc116b4397f9a11b2eb7d4723e6ffb2ea505187946196e459bd378`.
-
-The development checkout is `0.2.2.0.1` and requires Python 3.9 or newer. Its
-generated catalog labels the channel on every command page and calculates the
-current command totals from the discovered implementation.
+PyPI publishes QZX `0.2.2.0.1`, which requires Python 3.9 or newer. This
+checkout matches that published version, and its generated catalog calculates
+the current command totals from the discovered implementation.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Published PyPI wheel | `0.2.2` | `>=3.6` | 54 historical spellings → 52 current capabilities |
-| Development checkout | `0.2.2.0.1` | `>=3.9` | See the generated command catalog |
+| Published package and current checkout | `0.2.2.0.1` | `>=3.9` | See the generated command catalog |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -68,7 +62,7 @@ qzx findFiles examples/qzx_in_action "*.txt" -r --format name --json
 Command lookup is case-insensitive. Documentation uses the current canonical
 lower-camel-case spelling and lists accepted aliases separately.
 
-## Good starting commands in PyPI 0.2.2
+## Good starting commands in PyPI 0.2.2.0.1
 
 These names were verified in the official wheel:
 

@@ -6,3 +6,4 @@ include qzx.bat
 include qzx.sh
 recursive-include src/qzx/resources *.json
 recursive-include docs *.md *.csv
+exclude docs/operations/PyPI-Token.txt

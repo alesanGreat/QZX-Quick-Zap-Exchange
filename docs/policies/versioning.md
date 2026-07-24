@@ -6,13 +6,11 @@ despliegue.
 
 ## Estado de referencia
 
-- Base pública: `0.2.2`.
-- Candidato de desarrollo posterior a esa base: `0.2.2.0.1`.
-- PyPI debe seguir mostrando `0.2.2` hasta que el propietario autorice una nueva
-  publicación.
+- Versión vigente en `main` y publicada en PyPI: `0.2.2.0.1`.
+- Próximo incremento pequeño, cuando Ale lo defina: `0.2.2.0.2`.
 
 Antes de cambiar estos valores, comprueba el estado actual del repositorio y la
-versión pública: esta sección describe el candidato vigente al redactarse la
+versión pública: esta sección describe el estado vigente al redactarse la
 política, no sustituye esa verificación.
 
 ## Rama principal

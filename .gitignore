@@ -69,3 +69,4 @@ node_modules/
 *.log
 cookies_patreon.json
 qzx-yumbale-email.credential.clixml
+docs/operations/PyPI-Token.txt

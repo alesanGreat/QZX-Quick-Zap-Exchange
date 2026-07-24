@@ -3,9 +3,11 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
-## Unreleased — development checkout 0.2.2.0.1
+## 0.2.2.0.1 — 2026-07-24
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+Published on PyPI as wheel and source distribution.
 
 - Changed the project license to Apache-2.0 and added the canonical creator and
   maintainer attribution across the CLI, package metadata, README, and website.
