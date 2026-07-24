@@ -3,6 +3,17 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.2 — 2026-07-24
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+Published on PyPI as wheel and source distribution.
+
+- Corrected the public author and maintainer email in package metadata to
+  `qzx@yumbale.com`.
+- Added the professional tag and GitHub Release workflow, including immutable
+  annotated tags and reuse of the exact PyPI artifacts.
+
 ## 0.2.2.0.1 — 2026-07-24
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

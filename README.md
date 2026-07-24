@@ -31,13 +31,13 @@ qzx getCurrentDate
 qzx getCurrentDate --json
 ```
 
-PyPI publishes QZX `0.2.2.0.1`, which requires Python 3.9 or newer. This
+PyPI publishes QZX `0.2.2.0.2`, which requires Python 3.9 or newer. This
 checkout matches that published version, and its generated catalog calculates
 the current command totals from the discovered implementation.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Published package and current checkout | `0.2.2.0.1` | `>=3.9` | See the generated command catalog |
+| Published package and current checkout | `0.2.2.0.2` | `>=3.9` | See the generated command catalog |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -62,7 +62,7 @@ qzx findFiles examples/qzx_in_action "*.txt" -r --format name --json
 Command lookup is case-insensitive. Documentation uses the current canonical
 lower-camel-case spelling and lists accepted aliases separately.
 
-## Good starting commands in PyPI 0.2.2.0.1
+## Good starting commands in PyPI 0.2.2.0.2
 
 These names were verified in the official wheel:
 

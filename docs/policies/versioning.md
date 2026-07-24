@@ -6,10 +6,9 @@ despliegue.
 
 ## Estado de referencia
 
-- Versión vigente en `main` y publicada en PyPI: `0.2.2.0.1`.
-- Tag y GitHub Release de esa publicación: `v0.2.2.0.1`, apuntando al commit
-  de lanzamiento `41fe020`.
-- Próximo incremento pequeño, cuando Ale lo defina: `0.2.2.0.2`.
+- Versión vigente en `main` y publicada en PyPI: `0.2.2.0.2`.
+- Tag y GitHub Release de esa publicación: `v0.2.2.0.2`.
+- Próximo incremento pequeño, cuando Ale lo defina: `0.2.2.0.3`.
 
 Antes de cambiar estos valores, comprueba el estado actual del repositorio y la
 versión pública: esta sección describe el estado vigente al redactarse la
