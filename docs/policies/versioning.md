@@ -7,6 +7,8 @@ despliegue.
 ## Estado de referencia
 
 - Versión vigente en `main` y publicada en PyPI: `0.2.2.0.1`.
+- Tag y GitHub Release de esa publicación: `v0.2.2.0.1`, apuntando al commit
+  de lanzamiento `41fe020`.
 - Próximo incremento pequeño, cuando Ale lo defina: `0.2.2.0.2`.
 
 Antes de cambiar estos valores, comprueba el estado actual del repositorio y la
@@ -48,6 +50,40 @@ Cuando se autorice un cambio de versión, actualiza como mínimo:
 
 Busca además otras referencias activas y valida el resultado con
 `packaging.version.Version`.
+
+## Qué son el tag y la GitHub Release
+
+- Un **tag** es una etiqueta fija que identifica el commit exacto usado para
+  una versión, por ejemplo `v0.2.2.0.1`. Debe ser anotado, publicarse en GitHub
+  y no moverse ni reutilizarse después.
+- Una **GitHub Release** es la página pública construida sobre ese tag. Contiene
+  las notas del lanzamiento, los enlaces y los mismos artefactos publicados en
+  PyPI, con sus hashes para poder verificar que son idénticos.
+- Una versión Alpha debe marcarse como **Pre-release**. GitHub no permite que
+  una Pre-release lleve simultáneamente la insignia **Latest**; eso no cambia
+  cuál es la versión numéricamente más reciente ni cuál está en `main`.
+
+## Flujo profesional de lanzamiento
+
+Cuando Ale autorice todas las acciones correspondientes, el orden canónico es:
+
+1. Definir expresamente el número de versión y convertirlo en la versión
+   vigente de `main`.
+2. Sincronizar metadatos, documentación y changelog, y comprobar que no haya
+   secretos ni archivos locales en la distribución.
+3. Ejecutar las pruebas, construir wheel y sdist una sola vez y validar ambos
+   con `twine check`.
+4. Crear el commit de lanzamiento y un tag anotado `v<versión>` que apunte
+   exactamente a ese commit.
+5. Subir a PyPI los artefactos ya verificados; no reconstruirlos entre canales.
+6. Crear la GitHub Release desde ese tag y adjuntar exactamente el mismo wheel
+   y sdist, registrando sus hashes.
+7. Instalar desde PyPI sin caché, comprobar la metadata pública y verificar que
+   tag, GitHub Release, PyPI, `main` y documentación muestran la misma versión.
+
+Si se descubre un error después de publicar, no se mueve el tag ni se reemplaza
+el artefacto: se corrige en `main` y se publica una versión nueva cuando Ale
+defina su número.
 
 ## Atribución obligatoria en cada lanzamiento
 
