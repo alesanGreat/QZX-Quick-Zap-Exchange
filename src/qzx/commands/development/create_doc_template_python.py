@@ -25,7 +25,7 @@ class CreateDocTemplatePythonCommand(CommandBase):
     
     name = "createDocTemplatePython"
     description = "Creates basic documentation templates for Python code that lacks docstrings"
-    category = "dev"
+    category = "development"
     
     parameters = [
         {
@@ -784,4 +784,4 @@ class DocstringVisitor(ast.NodeVisitor):
                 docstring += f":var {attr}: Description\n"
         
         docstring += '"""'
-        return docstring 
+        return docstring

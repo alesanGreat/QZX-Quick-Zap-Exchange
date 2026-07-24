@@ -77,22 +77,10 @@ class WelcomeCommand(CommandBase):
             info_level = "detailed" if show_full_info else "basic"
             message = f"QZX Welcome screen ({info_level} view) displayed successfully. Version {qzx_version}."
             
-            # If we're in the terminal, return the message for display
-            if hasattr(self, 'in_terminal') and self.in_terminal:
-                return {
-                    "success": True,
-                    "message": message,
-                    "output": welcome_message,
-                    "info_level": info_level,
-                    "qzx_version": qzx_version
-                }
-            
-            # Otherwise, print the message directly
-            print(welcome_message)
-            
             return {
                 "success": True,
                 "message": message,
+                "output": welcome_message,
                 "welcome_displayed": True,
                 "info_level": info_level,
                 "qzx_version": qzx_version

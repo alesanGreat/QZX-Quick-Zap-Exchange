@@ -24,8 +24,7 @@ class WonderTodayCommand(CommandBase):
     """
     
     name = "getToday"
-    aliases = ["WonderToday"]
-    aliases = ["today", "now", "datetime", "fecha"]
+    aliases = ["WonderToday", "today", "now", "datetime", "fecha"]
     description = "Displays detailed information about the current date and time"
     category = "system"
     
@@ -110,21 +109,12 @@ class WonderTodayCommand(CommandBase):
 """
                 message = "Detailed date and time information displayed successfully."
             
-            # Return the result
-            if hasattr(self, 'in_terminal') and self.in_terminal:
-                return {
-                    "success": True,
-                    "message": message,
-                    "output": formatted_output
-                }
-            
-            # Otherwise, print the message directly
-            print(formatted_output)
-            
-            # Return a structured result
+            # Keep the same rich result for human and JSON presenters. The
+            # shared CLI decides how to render it.
             return {
                 "success": True,
                 "message": message,
+                "output": formatted_output,
                 "date": {
                     "year": now.year,
                     "month": now.month,

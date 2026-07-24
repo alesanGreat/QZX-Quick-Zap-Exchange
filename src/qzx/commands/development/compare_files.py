@@ -25,8 +25,8 @@ class CompareFilesCommand(CommandBase):
     """
     
     name = "compareFiles"
-    description = "Compara dos archivos y muestra sus diferencias, útil para IDE"
-    category = "dev"
+    description = "Compares two files and reports their differences"
+    category = "development"
     
     parameters = [
         {
@@ -245,4 +245,4 @@ class CompareFilesCommand(CommandBase):
             "identical": identical,
             "similarity": similarity,
             "message": f"Similitud entre '{file1}' y '{file2}': {similarity:.2f}%"
-        } 
+        }

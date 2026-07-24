@@ -24,7 +24,7 @@ class TraceEnvVarCommand(CommandBase):
     
     name = "traceEnvVar"
     description = "Traces usage of an environment variable across code files, .env, and .env.example templates"
-    category = "dev"
+    category = "development"
     
     parameters = [
         {
@@ -109,6 +109,9 @@ class TraceEnvVarCommand(CommandBase):
         
         # Regex to match variable name as a full word, potentially in quotes
         pattern = re.compile(r'\b' + re.escape(var_name) + r'\b')
+        sensitive_name = bool(
+            re.search(r"(?:secret|token|password|passwd|api[_-]?key|private[_-]?key)", var_name, re.I)
+        )
         
         # Helper callback for recursive find
         def file_callback(file_path):
@@ -126,8 +129,16 @@ class TraceEnvVarCommand(CommandBase):
                             code_references.append({
                                 "file": rel_path.replace(os.path.sep, '/'),
                                 "line_number": line_num,
-                                "line_content": line.strip(),
-                                "fallback_detected": fallback
+                                "line_content": (
+                                    f"<reference to {var_name} redacted>"
+                                    if sensitive_name
+                                    else line.strip()
+                                ),
+                                "fallback_detected": (
+                                    "<redacted>"
+                                    if sensitive_name and fallback is not None
+                                    else fallback
+                                )
                             })
             except Exception:
                 pass
@@ -203,7 +214,18 @@ class TraceEnvVarCommand(CommandBase):
                             elif len(raw_val) <= 3:
                                 masked_val = "****"
                             else:
-                                masked_val = f"{raw_val[:2]}...{raw_val[-2:]}"
+                                sensitive_name = bool(
+                                    re.search(
+                                        r"(?:secret|token|password|passwd|api[_-]?key|private[_-]?key)",
+                                        var_name,
+                                        re.I,
+                                    )
+                                )
+                                masked_val = (
+                                    "<redacted>"
+                                    if sensitive_name
+                                    else f"{raw_val[:2]}...{raw_val[-2:]}"
+                                )
                             break
         except Exception:
             pass

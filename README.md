@@ -1,220 +1,193 @@
 # QZX — Quick Zap Exchange
 
-> **Unix says: "silence is gold."**
-> For humans reading a terminal, that's elegant.
-> For AI agents, silence is a dead end.
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
-When an AI agent runs a command and gets no output, it doesn't know what happened. Did it succeed? Did it fail silently? It has to run *another* command to verify. Then maybe another. Every silent operation costs tokens, roundtrips, and reasoning cycles — and still leaves room for doubt.
+QZX is an open-source Python CLI that gives AI agents, automation, and people
+one documented command vocabulary for supported operations on Windows, Linux,
+and macOS.
 
-**QZX is built on the opposite principle: verbose is gold.**
+QZX is completely free to use. There are no paid plans or paid features.
+Donations are welcome because they support ongoing development, but they are
+optional and never unlock features or change the product experience.
 
-Every QZX command returns structured JSON with an explicit `success` field, a human-readable message, and rich contextual data — on every platform, every time, without flags or special modes.
+[Website](https://qzx.yumbale.com/en/) ·
+[Command documentation](https://qzx.yumbale.com/en/commands) ·
+[Recorded output](https://qzx.yumbale.com/en/qzx-in-action) ·
+[Compatibility](https://qzx.yumbale.com/en/compatibility) ·
+[Security and telemetry](https://qzx.yumbale.com/en/security) ·
+[Documentación en español](https://qzx.yumbale.com/es/)
 
----
+QZX is a local command interface, not a shell replacement, remote execution
+service, or security sandbox. It reduces platform-specific branches only for
+operations present in the installed command catalog.
 
-## The Problem in Concrete Terms
-
-To get basic system information, an AI agent without QZX needs to:
-
-**On Linux:** `uname -a` + `cat /proc/cpuinfo` + `free -h` + `df -h` — then parse four different text formats.
-
-**On Windows:** `systeminfo` + `wmic cpu get name` + `wmic memorychip get capacity` + `wmic logicaldisk get size,freespace` — then parse four different text formats again, differently.
-
-**On macOS:** `sw_vers` + `sysctl -n machdep.cpu.brand_string` + `vm_stat` + `df -h` — four more, formatted differently from both.
-
-**With QZX, on any platform:**
-
-```bash
-qzx SystemInfo
-```
-
-```json
-{
-  "success": true,
-  "os": "Linux",
-  "os_version": "Ubuntu 22.04.3 LTS",
-  "cpu": "Intel Core i7-12700K",
-  "cpu_cores": 12,
-  "ram_total": "32.0 GB",
-  "ram_available": "18.4 GB",
-  "disk_total": "512.11 GB",
-  "disk_free": "234.7 GB",
-  "message": "System information retrieved successfully."
-}
-```
-
-One command. One schema. Zero ambiguity. Same on Windows, Linux, and macOS.
-
----
-
-## Install
+## Install the published package
 
 ```bash
-pip install qzx
+python -m pip install qzx
+qzx qzxListCommands
+qzx qzxHelp findFiles
+qzx getCurrentDate
+qzx getCurrentDate --json
 ```
 
-Requires Python 3.6+. No mandatory dependencies — `psutil` and `smartmontools` are optional for extended monitoring.
+PyPI currently publishes QZX `0.2.2`. Its metadata declares Python 3.6 or
+newer. The inspected official wheel contains 54 historical command spellings,
+which normalize to 52 capabilities in the current catalog. The wheel SHA-256
+is `d1f6cf9b5cbc116b4397f9a11b2eb7d4723e6ffb2ea505187946196e459bd378`.
 
----
+The development checkout is `0.2.2.0.1` and requires Python 3.9 or newer. Its
+generated catalog labels the channel on every command page and calculates the
+current command totals from the discovered implementation.
 
-## Core Philosophy
+| Source | Version | Python | Command surface |
+|---|---:|---:|---|
+| Published PyPI wheel | `0.2.2` | `>=3.6` | 54 historical spellings → 52 current capabilities |
+| Development checkout | `0.2.2.0.1` | `>=3.9` | See the generated command catalog |
 
-| Unix tradition | QZX for agents |
-|---|---|
-| Silence means success | Explicit `success: true/false` always |
-| Parse text output | Consume structured JSON |
-| Learn per-OS syntax | One syntax everywhere |
-| Chain verification commands | Get full context in one call |
+PyPI is authoritative for what `pip install qzx` installs. The installed
+runtime is authoritative for its own command list.
 
-QZX does not replace the shell. It adds a reliable, AI-friendly layer on top of it — one that treats the agent as a first-class consumer of output, not an afterthought.
+## Output contract
 
----
+Every public command returns an object with at least:
 
-## Every Command Returns Two Outputs
+- `success`: an explicit boolean outcome;
+- `message`: a descriptive human-readable summary;
+- command-specific evidence such as paths, counts, units, versions,
+  diagnostics, causes, or remediation when available.
 
-QZX never forces you to choose between human-readable and machine-readable output.
-
-**stdout** — readable, descriptive, good for logs and terminals.
-**JSON** — structured, consistent schema, good for agents and scripts.
-
-Both. Always. No flags needed.
-
----
-
-## Command Reference
-
-### System Analysis
+The CLI prints `message` by default. Pass `--json` to print the complete
+structured result:
 
 ```bash
-qzx SystemInfo              # OS, CPU, RAM, disk — all at once
-qzx GetRAMInfo              # Detailed memory breakdown
-qzx GetCPULoad              # Per-core usage
-qzx GetDiskInfo             # All mounted volumes
-qzx GetSmartValues "/dev/sda"  # Disk health and temperature
+qzx findFiles examples/qzx_in_action "*.txt" -r --format name
+qzx findFiles examples/qzx_in_action "*.txt" -r --format name --json
 ```
 
-### File System Operations
+Command lookup is case-insensitive. Documentation uses the current canonical
+lower-camel-case spelling and lists accepted aliases separately.
+
+## Good starting commands in PyPI 0.2.2
+
+These names were verified in the official wheel:
 
 ```bash
-qzx CreateDirectory "path/to/folder"
-qzx CopyFile "source.txt" "destination.txt"
-qzx MoveFile "old/path" "new/path"
-qzx DeleteFile "target.txt"
-qzx ChangePermissions "script.sh" "755"
-qzx TouchFile "file.txt"
-qzx ListFiles "."
+qzx version --json
+qzx qzxListCommands --json
+qzx qzxHelp findFiles
+qzx systemInfo --json
+qzx getCurrentDate --json
+qzx findFiles . "*.py" -r --json
+qzx findText "TODO" src -r --json
+qzx getRAMInfo --json
+qzx getDiskInfo --json
+qzx listProcesses "python" --json
 ```
 
-### Search & Analysis
+Before a consequential operation, inspect the installed help and the
+[command reference](https://qzx.yumbale.com/en/commands) for parameters,
+platform availability, native dependencies, mutation classification, backup
+requirements, and preview support.
+
+## Development-only commands
+
+The following examples require the development checkout and must not be
+recommended after only `pip install qzx`:
 
 ```bash
-qzx FindText "ERROR" "logs/app.log"
-qzx FindFiles "src" "*.py" -r
-qzx FindLargeFiles "dist" "*.map" "1MB" -r
-qzx CountLinesInFile "main.py"
+qzx scanProject . --json
+qzx projectDoctor . --json
+qzx repairWorkspace . --json
+qzx systemDoctor --json
+qzx auditRepository . --json
 ```
 
-### Process Management
+Install the checkout for development:
 
 ```bash
-qzx ListProcesses "python"
-qzx KillProcess "12345"
+python -m pip install -e .
+python -m pytest -q
 ```
 
-### Development Tools
+Optional command groups can be installed with
+`python -m pip install "qzx[filetype]"` or
+`python -m pip install "qzx[ai]"`. Some operations also depend on host tools
+such as Git, smartmontools, formatters, or language toolchains.
+
+## Safety model
+
+QZX executes with the permissions of the current user. Commands may mutate or
+delete files, terminate processes, invoke native programs, access the network,
+or require elevated privileges.
+
+In the development checkout, commands marked dangerous must create a restorable
+backup before a real filesystem mutation and abort when the backup fails.
+Preview and read-only modes do not require a backup. Explicit bypasses
+`--dangerously-bypass-approvals-and-sandbox`, `--yolo`, and
+`QZX_SAFETY=YOLO` can skip that QZX backup barrier; they do not bypass
+operating-system permissions or grant user authorization.
+
+Review the [security model](https://qzx.yumbale.com/en/security) before
+delegating mutating commands.
+
+## Pseudonymous CLI telemetry
+
+Telemetry is enabled by default and schedules at most one
+`version_first_run` event per QZX version and random local installation
+identifier. It sends random installation and event UUIDs, QZX/Python/OS
+metadata, architecture, virtual-environment and known-CI flags. The server also
+observes the request IP and receipt time.
+
+It does not send command names, arguments, terminal input, paths, environment
+values, usernames, hostnames, file contents, process lists, or hardware serial
+numbers. Raw IPs are retained for 1,825 days. Network or storage failures never
+change a command result.
+
+Disable telemetry with either:
 
 ```bash
-qzx RunScript "build.py" "--env=prod"
-qzx GetCurrentDate
-qzx GetCurrentTime
-qzx qzxVersion
+QZX_TELEMETRY=0 qzx Welcome
+DO_NOT_TRACK=1 qzx Welcome
 ```
 
-42 verified commands. All tested. All returning structured JSON.
+An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
+[complete telemetry and deletion policy](docs/telemetry.md).
 
----
+## Compatibility evidence
 
-## Real Agent Workflows
+The project targets Windows, Linux, and macOS. Targeting a platform is not the
+same as proving every command on it. The repository workflow is configured for
+Python 3.9–3.13 across `windows-latest`, `ubuntu-latest`, and `macos-latest`;
+the documentation does not claim a successful hosted run without a public run
+URL.
 
-### Autonomous DevOps Pipeline
+Complete local stdout snapshots identify their QZX version, Python version,
+operating system, date, fixture, and exit code on the
+[QZX in action](https://qzx.yumbale.com/en/qzx-in-action) page.
 
-```bash
-qzx SystemInfo > "build_environment.json"
-qzx CreateDirectory "Deployment/$(qzx GetCurrentDate)"
-qzx RunScript "build.py" "--env=prod" "--optimize"
-qzx FindLargeFiles "dist" "*.map" "1MB" -r > "large_files.log"
-```
+## Repository structure
 
-The agent knows at every step whether the operation succeeded — without a single verification roundtrip.
+- `src/qzx/resources/product-manifest.json` is the canonical product, release,
+  output, compatibility, and telemetry manifest.
+- `src/qzx/commands/` contains command implementations.
+- `scripts/utils/generate_documentation.py` builds every documentation
+  projection from the inspected implementation, wheel inventory, translations,
+  explicit safety policies, captured evidence, and the strict `llms.txt`
+  template.
+- `WebsiteQZX/` contains the server-rendered bilingual public site.
+- `docs/` contains the canonical development, release, production, privacy, and
+  troubleshooting documentation.
 
-### System Health Check
-
-```bash
-qzx GetSmartValues "/dev/sda" > "disk_health.json"
-qzx GetCPULoad | jq '.cores[] | select(.usage > 80)'
-qzx FindText "OOM|SEGV|FATAL" "/var/log/syslog" -r
-```
-
-### Cross-Platform Project Setup
-
-```bash
-qzx CreateDirectory "src/components" "src/utils" "src/styles" "tests"
-qzx TouchFile "src/.gitkeep" ".github/workflows/.gitkeep"
-qzx RunScript "setup_env.py" "--with-dependencies"
-```
-
-Identical commands. Any OS. Agent doesn't need to know which one.
-
----
-
-## Extending QZX
-
-Adding a command takes minutes:
-
-```python
-from qzx.core.command_base import CommandBase
-
-class MyCommand(CommandBase):
-    name = "myCommand"
-    description = "What it does"
-    category = "development"
-
-    def execute(self, param1, param2):
-        return {
-            "success": True,
-            "result": f"{param1}, {param2}",
-            "message": "Operation completed successfully."
-        }
-```
-
-Drop it in `src/qzx/commands/` under the right category. The loader discovers it automatically.
-
----
-
-## Status
-
-**v0.02 — Alpha**
-
-Alpha means the API may still evolve. It does not mean untested — all 42 commands have unit tests passing in green across platforms. Use in production at your own judgment; the foundations are solid.
-
----
+Do not change versions, build or publish distributions, create tags, or deploy
+from these instructions alone; those are independent release operations.
 
 ## Contributing
 
-```bash
-git clone https://github.com/alesanGreat/QZX-Quick-Zap-Exchange.git
-cd QZX-Quick-Zap-Exchange
-pip install -e .
-```
+Start with [AGENTS.md](AGENTS.md), the
+[command guide](docs/guides/building-great-commands.md), and the
+[project philosophy](docs/philosophy.md). Preserve the structured output
+contract, add proportional tests, and keep published and development
+availability explicit.
 
-Fork → branch → PR. Tests required for new commands.
-
----
-
-## License
-
-MIT — use it, build on it, integrate it.
-
----
-
-*QZX — because an agent that can't trust its own tool output isn't autonomous. It's just expensive.*
+License: [Apache-2.0](LICENSE). The attribution notice is in [NOTICE](NOTICE).

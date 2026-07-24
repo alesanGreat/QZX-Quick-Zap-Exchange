@@ -24,7 +24,7 @@ class TraceCircularImportsCommand(CommandBase):
     
     name = "traceCircularImports"
     description = "Traces module imports recursively and identifies circular import dependencies (loops)"
-    category = "dev"
+    category = "development"
     
     parameters = [
         {

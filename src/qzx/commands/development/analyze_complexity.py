@@ -11,10 +11,6 @@ import re
 import math
 import ast
 import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
@@ -28,7 +24,7 @@ class AnalyzeComplexityCommand(CommandBase):
     
     name = "analyzeComplexity"
     description = "Analyzes code complexity metrics for files or projects"
-    category = "dev"
+    category = "development"
     
     parameters = [
         {
@@ -98,26 +94,25 @@ class AnalyzeComplexityCommand(CommandBase):
         """
         # Check if path exists
         if not os.path.exists(file_path):
-            return f"Error: Path '{file_path}' does not exist"
+            return {
+                "success": False,
+                "error_code": "path_not_found",
+                "error": f"Path '{file_path}' does not exist.",
+                "message": "Check the analysis path and try again.",
+            }
         
         results = []
         total_files = 0
         analyzed_files = 0
         
         # Process flags in command arguments if they exist
-        import sys
         args = sys.argv
         recursive_flags = ['-r', '-R', '--recursive']
         recursive_found = any(flag in args for flag in recursive_flags)
         
-        # Parse recursive parameter - convert string flags
-        if isinstance(recursive, str):
-            recursive = parse_recursive_parameter(recursive)
-        elif recursive_found:
+        if recursive_found and recursive is False:
             recursive = True
-        elif recursive is True:
-            # Boolean True means unlimited recursion
-            recursive = None
+        recursive = parse_recursive_parameter(recursive)
         
         # Process a single file
         if os.path.isfile(file_path):
@@ -139,24 +134,42 @@ class AnalyzeComplexityCommand(CommandBase):
                     results.append(analysis)
                 return True
             
-            # Create a filter function to only process supported file types
-            def file_filter(path):
-                _, ext = os.path.splitext(path)
-                return ext.lower() in self.SUPPORTED_EXTENSIONS
-            
-            # Use the centralized find_files function
-            find_files(
-                file_path,
+            for found_path in find_files(
+                file_path_pattern=file_path,
                 recursive=recursive,
-                file_callback=analyze_callback,
-                file_filter=file_filter
-            )
+                file_type="f",
+            ):
+                if os.path.splitext(found_path)[1].lower() in self.SUPPORTED_EXTENSIONS:
+                    analyze_callback(found_path)
         
         # Format and return results
         if not results:
-            return f"No analyzable files found in '{file_path}'"
+            return {
+                "success": True,
+                "message": f"No supported source files were found in '{file_path}'.",
+                "details": {
+                    "path": os.path.abspath(file_path),
+                    "files_seen": total_files,
+                    "files_analyzed": 0,
+                    "supported_extensions": sorted(self.SUPPORTED_EXTENSIONS),
+                },
+            }
         
-        return self._format_results(results, total_files, analyzed_files, format)
+        report = self._format_results(results, total_files, analyzed_files, format)
+        return {
+            "success": True,
+            "message": (
+                f"Analyzed {analyzed_files} of {total_files} supported source file(s)."
+            ),
+            "report": report,
+            "details": {
+                "path": os.path.abspath(file_path),
+                "files_seen": total_files,
+                "files_analyzed": analyzed_files,
+                "format": format,
+                "analyses": results,
+            },
+        }
     
     def _analyze_file(self, file_path):
         """
@@ -215,6 +228,7 @@ class AnalyzeComplexityCommand(CommandBase):
             Dict with language-specific metrics
         """
         metrics = {
+            'line_count': content.count('\n') + 1,
             'comment_count': 0,
             'function_count': 0,
             'class_count': 0,
@@ -830,4 +844,4 @@ class AnalyzeComplexityCommand(CommandBase):
             if high / len(results) > 0.3:
                 output.append("- Consider a code quality review process for complex components")
         
-        return "\n".join(output) 
+        return "\n".join(output)

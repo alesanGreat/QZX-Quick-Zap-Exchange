@@ -24,18 +24,22 @@ class InspectPortCommand(CommandBase):
     name = "inspectPort"
     description = "Checks if a port is in use, lists details of the process using it, and can optionally terminate it"
     category = "system"
+    requires_explicit_approval = True
+    approval_when_parameter = "kill"
     
     parameters = [
         {
             'name': 'port',
             'description': 'Port number to inspect',
-            'required': True
+            'required': True,
+            'type': 'int'
         },
         {
             'name': 'kill',
             'description': 'Whether to terminate the process utilizing this port (true/false)',
             'required': False,
-            'default': 'false'
+            'default': False,
+            'type': 'bool'
         }
     ]
     
@@ -45,12 +49,12 @@ class InspectPortCommand(CommandBase):
             'description': 'Check what is listening on port 3000'
         },
         {
-            'command': 'qzx inspectPort 3000 true',
-            'description': 'Check what is listening on port 3000 and terminate that process'
+            'command': 'qzx inspectPort 3000 true --yolo',
+            'description': 'Terminate the process when no restorable filesystem target exists'
         }
     ]
     
-    def execute(self, port, kill='false'):
+    def execute(self, port, kill=False):
         """
         Inspects the specified port
         
@@ -369,9 +373,3 @@ class InspectPortCommand(CommandBase):
                 "message": f"Fallback inspection failed for port {port_num}: {str(e)}"
             }
             
-    def _format_bytes(self, size):
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if size < 1024.0 or unit == 'TB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"

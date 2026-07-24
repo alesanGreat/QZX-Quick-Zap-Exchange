@@ -5,12 +5,6 @@
 WonderCommandsAmount Command - Reports the total number of available commands in QZX
 """
 
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 from qzx.core.command_base import CommandBase
 from qzx.core.command_loader import CommandLoader
 
@@ -42,14 +36,20 @@ class WonderCommandsAmountCommand(CommandBase):
         """
         try:
             loaded_commands = CommandLoader().discover_commands()
-            command_instances = {}
-            alias_count = 0
-
-            for registered_name, command_class in loaded_commands.items():
-                instance = command_class()
-                command_instances[command_class.__name__] = instance
-                if registered_name.lower() != instance.name.lower():
-                    alias_count += 1
+            command_instances = {
+                command_class: command_class()
+                for command_class in set(loaded_commands.values())
+            }
+            canonical_names = {
+                instance.name.lower() for instance in command_instances.values()
+            }
+            aliases = {
+                alias.lower()
+                for instance in command_instances.values()
+                for alias in getattr(instance, "aliases", [])
+                if alias.lower() not in canonical_names
+            }
+            alias_count = len(aliases)
 
             command_count = len(command_instances)
             command_list = sorted(
@@ -69,7 +69,11 @@ class WonderCommandsAmountCommand(CommandBase):
                 "total_count": command_count + alias_count,
                 "categories": categories,
                 "commands": command_list,
-                "message": f"QZX has {command_count} commands and {alias_count} aliases (total: {command_count + alias_count} commands)"
+                "message": (
+                    f"QZX has {command_count} canonical commands and "
+                    f"{alias_count} aliases "
+                    f"({command_count + alias_count} registered invocations)"
+                )
             }
             
             if len(categories) > 0:

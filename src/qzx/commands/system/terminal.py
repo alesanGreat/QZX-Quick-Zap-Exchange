@@ -8,7 +8,9 @@ Terminal/Shell Command - Interactive shell for executing QZX commands
 import os
 import sys
 import cmd
+import contextlib
 import platform
+import shlex
 
 # Use appropriate readline implementation based on platform
 try:
@@ -16,15 +18,11 @@ try:
         try:
             import pyreadline3 as readline
         except ImportError:
-            # Fallback if pyreadline3 is not installed
-            print("Warning: pyreadline3 module not found. Command history and editing will be limited.")
-            print("Install it with: pip install pyreadline3")
             readline = None
     else:
         # Unix/Linux/Mac
         import readline
 except ImportError:
-    print("Warning: readline module not found. Command history and editing will be limited.")
     readline = None
 
 from pathlib import Path
@@ -44,7 +42,7 @@ class QZXTerminalCommand(CommandBase):
     """
     
     name = "terminal"
-    aliases = ["terminal", "TERMINAL", "Shell", "shell", "SHELL", "Console", "console", "CONSOLE", "REPL", "repl"]
+    aliases = ["term", "shell", "console", "repl"]
     description = "Launches an interactive terminal/shell for QZX commands"
     category = "system"
     
@@ -57,15 +55,16 @@ class QZXTerminalCommand(CommandBase):
         },
         {
             'name': 'history_file',
-            'description': 'Path to history file (default: ~/.qzx_history)',
+            'description': 'Optional path to a persistent history file (disabled by default)',
             'required': False,
-            'default': os.path.expanduser('~/.qzx_history')
+            'default': None
         },
         {
             'name': 'show_path',
             'description': 'Show path in the prompt (default: true)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         }
     ]
     
@@ -83,8 +82,8 @@ class QZXTerminalCommand(CommandBase):
             'description': 'Launch the QZX terminal with a custom prompt'
         },
         {
-            'command': 'qzx Terminal "QZX> " ~/.qzx_history false',
-            'description': 'Launch the QZX terminal without showing path in prompt'
+            'command': 'qzx Terminal "QZX> " --history_file ~/.qzx_history --show_path false',
+            'description': 'Opt in to persistent history and hide the path'
         }
     ]
     
@@ -100,9 +99,6 @@ class QZXTerminalCommand(CommandBase):
         Returns:
             Dictionary with the result of the operation
         """
-        # Debug output - to see what's happening
-        print(f"Terminal.execute called with args: {args}, kwargs: {kwargs}")
-        
         try:
             # Parse arguments
             prompt = 'QZX> '
@@ -125,16 +121,9 @@ class QZXTerminalCommand(CommandBase):
             if 'show_path' in kwargs and kwargs['show_path']:
                 show_path = kwargs['show_path']
             
-            # Set default history file
-            if not history_file:
-                history_file = os.path.expanduser('~/.qzx_history')
-            
             # Convert show_path to boolean
             if isinstance(show_path, str):
                 show_path = show_path.lower() in ('true', 'yes', 'y', '1', 't')
-            
-            # Debug output
-            print(f"Starting Terminal with prompt='{prompt}', history_file='{history_file}', show_path='{show_path}'")
             
             # Initialize the QZXTerminal
             terminal = QZXTerminal(prompt, history_file, show_path)
@@ -148,12 +137,10 @@ class QZXTerminalCommand(CommandBase):
             }
             
         except Exception as e:
-            print(f"Error in Terminal.execute: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return {
                 "success": False,
-                "error": f"Error in QZX Terminal: {str(e)}"
+                "error": f"Error in QZX Terminal: {str(e)}",
+                "message": "The interactive QZX terminal could not be started."
             }
 
 
@@ -162,7 +149,7 @@ class QZXTerminal(cmd.Cmd):
     Interactive terminal for QZX commands using the cmd module
     """
     
-    def __init__(self, prompt='QZX> ', history_file='~/.qzx_history', show_path=True):
+    def __init__(self, prompt='QZX> ', history_file=None, show_path=True):
         """
         Initialize the QZX Terminal
         
@@ -174,7 +161,7 @@ class QZXTerminal(cmd.Cmd):
         super().__init__()
         self.base_prompt = prompt
         self.show_path = show_path
-        self.history_file = os.path.expanduser(history_file)
+        self.history_file = os.path.expanduser(history_file) if history_file else None
         self.command_loader = CommandLoader()
         self.commands = self.command_loader.discover_commands()
         
@@ -185,7 +172,7 @@ class QZXTerminal(cmd.Cmd):
         self._update_prompt()
         
         # Load command history (only if readline is available)
-        if readline:
+        if readline and self.history_file:
             self._load_history()
         
         # Create welcome screen generator
@@ -208,7 +195,7 @@ class QZXTerminal(cmd.Cmd):
     def _load_history(self):
         """Load command history from file (if readline is available)"""
         try:
-            if readline and os.path.exists(self.history_file):
+            if readline and self.history_file and os.path.exists(self.history_file):
                 readline.read_history_file(self.history_file)
         except Exception as e:
             print(f"Error loading history: {e}")
@@ -216,7 +203,7 @@ class QZXTerminal(cmd.Cmd):
     def _save_history(self):
         """Save command history to file (if readline is available)"""
         try:
-            if readline:
+            if readline and self.history_file:
                 readline.write_history_file(self.history_file)
         except Exception as e:
             print(f"Error saving history: {e}")
@@ -228,7 +215,7 @@ class QZXTerminal(cmd.Cmd):
         except KeyboardInterrupt:
             print("\nInterrupted")
         finally:
-            if readline:
+            if readline and self.history_file:
                 self._save_history()
             print("\nExiting QZX Terminal. Goodbye!")
     
@@ -251,7 +238,11 @@ class QZXTerminal(cmd.Cmd):
     
     def default(self, line):
         """Execute QZX command"""
-        parts = line.split()
+        try:
+            parts = shlex.split(line, posix=(os.name != "nt"))
+        except ValueError as exc:
+            print(f"Invalid command line: {exc}")
+            return
         if not parts:
             return
         
@@ -288,38 +279,41 @@ class QZXTerminal(cmd.Cmd):
         try:
             cmd_obj = self.commands.get(command.lower())
             if cmd_obj:
+                from qzx.cli import (
+                    _capture_process_stdout,
+                    _parse_cli_request,
+                    _print_json,
+                    _render_human,
+                )
+
+                json_output, _command_name, args = _parse_cli_request(
+                    [command, *args]
+                )
+
                 # Instantiate the command
                 cmd_instance = cmd_obj()
                 
-                # Mark that this command is running inside terminal
-                cmd_instance.in_terminal = True
-                
-                # Parse arguments (simplified version)
-                parsed_args = {}
-                for i, param in enumerate(cmd_instance.parameters):
-                    if i < len(args):
-                        param_name = param['name']
-                        parsed_args[param_name] = args[i]
-                
-                # Execute the command
-                result = cmd_instance.execute(**parsed_args)
-                
-                # Display the result
-                if isinstance(result, dict):
-                    if result.get("success") is False:
-                        print(f"Error: {result.get('error', 'Unknown error')}")
-                    else:
-                        # First check for formatted output for terminal
-                        output = result.get("output", "")
-                        if output:
-                            print(output)
-                        else:
-                            # Otherwise show regular message
-                            message = result.get("message", "")
-                            if message:
-                                print(message)
+                # Use the same parser, approval gates, and result contract as
+                # the regular CLI.
+                stdout_context = (
+                    _capture_process_stdout()
+                    if json_output
+                    else contextlib.nullcontext()
+                )
+                with stdout_context as captured_stdout:
+                    result = cmd_instance.invoke(args)
+
+                if json_output:
+                    progress_output = (
+                        captured_stdout.getvalue()
+                        if captured_stdout
+                        else ""
+                    )
+                    if progress_output:
+                        print(progress_output, file=sys.stderr, end="")
+                    _print_json(result)
                 else:
-                    print(result)
+                    print(_render_human(result))
                 
                 # Update prompt in case directory changed
                 self._update_prompt()
@@ -416,4 +410,4 @@ class QZXTerminal(cmd.Cmd):
                 
                 print()
             else:
-                print(f"No help available for unknown command: {arg}") 
+                print(f"No help available for unknown command: {arg}")

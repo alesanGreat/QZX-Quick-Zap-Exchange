@@ -24,6 +24,7 @@ class CompressZipCommand(CommandBase):
     name = "compressZip"
     description = "Compresses a directory or file into a ZIP archive with custom exclusion rules"
     category = "file"
+    _byte_units = ("B", "KB", "MB", "GB")
     
     parameters = [
         {
@@ -181,9 +182,3 @@ class CompressZipCommand(CommandBase):
                 "message": f"Failed to compress ZIP archive: {str(e)}"
             }
             
-    def _format_bytes(self, size):
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024.0 or unit == 'GB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"

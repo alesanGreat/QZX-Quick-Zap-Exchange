@@ -6,9 +6,13 @@ WonderFileTypeMagic Command - Identifies file type based on its magic number (fi
 """
 
 import os
-import magic
 import sys
 from pathlib import Path
+
+try:
+    import magic
+except ImportError:  # Optional dependency; discovery must remain side-effect free.
+    magic = None
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -24,6 +28,7 @@ class WonderFileTypeMagicCommand(CommandBase):
     aliases = ["wonderFileTypeMagic"]
     description = "Identifies file type based on its magic number (file signature) rather than extension"
     category = "file"
+    _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
     
     parameters = [
         {
@@ -62,6 +67,17 @@ class WonderFileTypeMagicCommand(CommandBase):
             Dictionary with the result of the analysis
         """
         try:
+            if magic is None:
+                return {
+                    "success": False,
+                    "error_code": "missing_dependency",
+                    "error": "python-magic is not installed.",
+                    "message": "Install QZX with the filetype extra to use detectFileType.",
+                    "details": {
+                        "remediation": "pip install 'qzx[filetype]'",
+                        "dependency": "python-magic",
+                    },
+                }
             # Handle string conversion for detailed_info parameter
             if isinstance(detailed_info, str):
                 detailed_info = detailed_info.lower() in ['true', 'yes', '1', 't', 'y']
@@ -143,22 +159,6 @@ class WonderFileTypeMagicCommand(CommandBase):
                 "file_path": file_path,
                 "error": str(e)
             }
-    
-    def _format_bytes(self, size):
-        """
-        Format bytes to human-readable size
-        
-        Args:
-            size (int): Size in bytes
-            
-        Returns:
-            str: Human-readable size string
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
-            if size < 1024.0 or unit == 'PB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"
     
     def _get_common_extensions_for_mime(self, mime_type):
         """

@@ -24,6 +24,7 @@ class RunScriptCommand(CommandBase):
     name = "runScript"
     description = "Executes a script with parameters"
     category = "system"
+    requires_explicit_approval = True
     
     parameters = [
         {
@@ -42,16 +43,16 @@ class RunScriptCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx runScript myscript.py',
-            'description': 'Execute a Python script'
+            'command': 'qzx runScript myscript.py --yolo',
+            'description': 'Execute a Python script when its mutation targets cannot be determined'
         },
         {
-            'command': 'qzx runScript myscript.py arg1 arg2',
-            'description': 'Execute a Python script with arguments'
+            'command': 'qzx runScript myscript.py arg1 arg2 --yolo',
+            'description': 'Execute with arguments when mutation targets cannot be determined'
         },
         {
-            'command': 'qzx runScript script.sh',
-            'description': 'Execute a shell script'
+            'command': 'qzx runScript script.sh --dangerously-bypass-approvals-and-sandbox',
+            'description': 'Execute a shell script without a safety backup'
         }
     ]
     
@@ -115,6 +116,7 @@ class RunScriptCommand(CommandBase):
                 cmd, 
                 capture_output=True, 
                 text=True,
+                timeout=300,
                 check=False
             )
             

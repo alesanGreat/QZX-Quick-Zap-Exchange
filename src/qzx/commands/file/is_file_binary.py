@@ -25,6 +25,7 @@ class WonderIfFileIsBinaryCommand(CommandBase):
     aliases = ["wonderIfFileIsBinary"]
     description = "Analyzes a file to determine if it's binary or plain text"
     category = "file"
+    _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
     
     parameters = [
         {
@@ -187,22 +188,6 @@ class WonderIfFileIsBinaryCommand(CommandBase):
                 "file_path": file_path,
                 "error": str(e)
             }
-    
-    def _format_bytes(self, size):
-        """
-        Format bytes to human-readable size
-        
-        Args:
-            size (int): Size in bytes
-            
-        Returns:
-            str: Human-readable size string
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
-            if size < 1024.0 or unit == 'PB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"
     
     def _guess_mime_type(self, file_path, content, is_binary):
         """

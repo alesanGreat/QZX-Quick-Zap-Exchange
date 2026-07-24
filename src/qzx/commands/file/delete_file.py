@@ -1,229 +1,257 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-DeleteFile Command - Deletes a file or directory
-Using the centralized recursive parameter utility
-"""
+"""Delete a filesystem entry with preview-first safety controls."""
 
 import os
 import shutil
-import re
-import sys
 from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import parse_recursive_parameter
 
+
 class DeleteFileCommand(CommandBase):
-    """
-    Command to delete a file or directory
-    
-    Supports flags:
-    -r, -R, --recursive: Enable unlimited recursive directory deletion
-    -rN, --recursiveN: Enable recursive directory deletion up to N levels deep
-    
-    This version uses the centralized recursive parameter utility.
-    """
-    
+    """Delete a file, symlink, or directory after a safety backup."""
+
     name = "deleteFile"
-    description = "Deletes a file or directory from the filesystem"
+    description = "Previews or deletes a file or directory from the filesystem"
     category = "file"
-    
+    requires_explicit_approval = True
+    backup_target_parameter = "target"
+
     parameters = [
         {
-            'name': 'target',
-            'description': 'Path to the file or directory to delete',
-            'required': True
+            "name": "target",
+            "description": "Path to the file, symlink, or directory",
+            "required": True,
+            "type": "str",
         },
         {
-            'name': 'recursive',
-            'description': 'For directories: -r/--recursive for removal, -rN/--recursiveN for N levels deep',
-            'required': False,
-            'default': None
+            "name": "recursive",
+            "description": "Use true/-r for all descendants or a positive integer for limited depth",
+            "required": False,
+            "default": False,
         },
         {
-            'name': 'force',
-            'description': 'Whether to ignore errors',
-            'required': False,
-            'default': False
-        }
+            "name": "force",
+            "description": "Continue a limited-depth deletion after individual errors",
+            "required": False,
+            "default": False,
+            "type": "bool",
+        },
+        {
+            "name": "dry_run",
+            "description": "Preview the operation without deleting anything",
+            "required": False,
+            "default": True,
+            "type": "bool",
+        },
+        {
+            "name": "apply",
+            "description": "Explicitly authorize deletion; required together with dry_run=false",
+            "required": False,
+            "default": False,
+            "type": "bool",
+        },
+        {
+            "name": "allow_unsafe",
+            "description": "Allow deleting protected locations such as the current or home directory",
+            "required": False,
+            "default": False,
+            "type": "bool",
+        },
     ]
-    
+
     examples = [
         {
-            'command': 'qzx deleteFile myfile.txt',
-            'description': 'Delete a file'
+            "command": "qzx deleteFile myfile.txt",
+            "description": "Preview deletion of a file (default behavior)",
         },
         {
-            'command': 'qzx deleteFile mydir -r',
-            'description': 'Delete a directory and its contents recursively'
+            "command": "qzx deleteFile mydir --recursive true",
+            "description": "Preview recursive deletion of a directory",
         },
         {
-            'command': 'qzx deleteFile mydir -r2',
-            'description': 'Delete a directory and contents up to 2 levels deep'
+            "command": "qzx deleteFile mydir --recursive true --dry_run false --apply",
+            "description": "Back up and delete a directory and all descendants",
         },
-        {
-            'command': 'qzx deleteFile mydir false true',
-            'description': 'Try to delete an empty directory, ignoring errors'
-        }
     ]
-    
-    def execute(self, target, recursive=None, force=False):
-        """
-        Deletes a file or directory
-        
-        Args:
-            target (str): Path to the file or directory to delete
-            recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels
-            force (bool, optional): Whether to ignore errors
-            
-        Returns:
-            Operation result
-        """
-        try:
-            # Process flags in command arguments if they exist
-            import sys
-            args = sys.argv
-            recursive_flags = ['-r', '-R', '--recursive']
-            recursive_found = any(flag in args for flag in recursive_flags)
-            
-            # Convert force parameter to boolean if it's a string
-            if isinstance(force, str):
-                force = force.lower() in ('true', 'yes', 'y', '1')
-            
-            # Parse recursive parameter - convert string flags or handle boolean
-            if isinstance(recursive, str):
-                recursive = parse_recursive_parameter(recursive)
-            elif recursive_found:
-                recursive = True
-            
-            # Check if target exists
-            if not os.path.exists(target):
-                if force:
-                    return {
-                        "success": True,
-                        "warning": f"Target '{target}' does not exist, but force=True so continuing"
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "error": f"Target '{target}' does not exist"
-                    }
-            
-            # Get a descriptive recursion string for the result message
-            recursion_message = ""
-            if recursive is True or recursive is None:
-                recursion_message = " (including all contents)"
-            elif isinstance(recursive, int) and recursive > 0:
-                recursion_message = f" (including contents up to {recursive} level{'s' if recursive > 1 else ''})"
-            
-            # Prepare the result
-            result = {
-                "target": os.path.abspath(target),
-                "type": "directory" if os.path.isdir(target) else "file",
-                "recursive": recursive,
-                "force": force,
-                "success": True
-            }
-            
-            # Handle deletion based on target type and recursion depth
-            if os.path.isfile(target):
-                # For files, just delete
-                os.remove(target)
-                result["message"] = f"File '{target}' has been deleted"
-            elif os.path.isdir(target):
-                if recursive == 0 or recursive is False:
-                    # Try to delete empty directory
-                    try:
-                        os.rmdir(target)
-                        result["message"] = f"Empty directory '{target}' has been deleted"
-                    except OSError as e:
-                        if force:
-                            result["warning"] = f"Could not delete directory '{target}', but force=True so continuing: {str(e)}"
-                        else:
-                            return {
-                                "success": False,
-                                "error": f"Could not delete directory '{target}'. Is it empty? Error: {str(e)}"
-                            }
-                elif recursive is True or recursive is None:
-                    # Full recursive delete
-                    try:
-                        shutil.rmtree(target)
-                        result["message"] = f"Directory '{target}' and all its contents have been deleted"
-                    except OSError as e:
-                        if force:
-                            result["warning"] = f"Error during recursive deletion of '{target}', but force=True so continuing: {str(e)}"
-                        else:
-                            return {
-                                "success": False,
-                                "error": f"Error during recursive deletion of '{target}': {str(e)}"
-                            }
-                else:
-                    # Limited depth delete
-                    errors = []
-                    for root, dirs, files in os.walk(target, topdown=False):
-                        # Calculate current depth relative to target
-                        rel_path = os.path.relpath(root, target)
-                        current_depth = 0 if rel_path == '.' else rel_path.count(os.sep) + 1
-                        
-                        # Skip if depth exceeds the limit
-                        if current_depth > recursive:
-                            continue
-                        
-                        # Delete files at this level
-                        for file in files:
-                            try:
-                                os.remove(os.path.join(root, file))
-                            except OSError as e:
-                                errors.append(f"Error deleting file '{os.path.join(root, file)}': {str(e)}")
-                        
-                        # Try to delete this directory if it's empty
-                        try:
-                            os.rmdir(root)
-                        except OSError as e:
-                            errors.append(f"Error deleting directory '{root}': {str(e)}")
-                    
-                    # Handle errors
-                    if errors:
-                        if force:
-                            result["warning"] = f"Some errors occurred during deletion with depth={recursive}, but force=True so continuing"
-                            result["errors"] = errors
-                        else:
-                            return {
-                                "success": False,
-                                "error": f"Errors occurred during deletion with depth={recursive}",
-                                "errors": errors
-                            }
-                    else:
-                        result["message"] = f"Directory '{target}' and contents up to depth {recursive} have been deleted"
-            
-            return result
-        except Exception as e:
-            if force:
-                return {
-                    "success": True,
-                    "warning": f"Error during deletion of '{target}', but force=True so continuing: {str(e)}"
-                }
+
+    @staticmethod
+    def _as_bool(value):
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+    @staticmethod
+    def _protected_paths():
+        protected = {
+            Path.cwd().resolve(),
+            Path.home().resolve(),
+        }
+        current = Path.cwd().resolve()
+        protected.add(Path(current.anchor).resolve())
+        return protected
+
+    def validate_safety_backup_target(self, target, values):
+        """Reject impossible or protected targets before creating an archive."""
+        target_path = Path(target).expanduser()
+        resolved_target = target_path.resolve(strict=False)
+        details = {"target": str(resolved_target)}
+        if not os.path.lexists(target_path):
             return {
                 "success": False,
-                "error": str(e)
+                "error_code": "target_not_found",
+                "error": f"Target '{target}' does not exist.",
+                "message": "Nothing was backed up or deleted.",
+                "details": details,
             }
-    
-    def _format_bytes(self, bytes_value):
-        """
-        Formatea bytes a un formato legible
-        
-        Args:
-            bytes_value (int): Bytes para formatear
-            
-        Returns:
-            str: Cadena formateada con la unidad apropiada
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if bytes_value < 1024 or unit == 'TB':
-                return f"{bytes_value:.2f} {unit}"
-            bytes_value /= 1024 
+        if resolved_target.anchor == str(resolved_target):
+            return {
+                "success": False,
+                "error_code": "protected_path",
+                "error": f"Refusing to delete filesystem root '{resolved_target}'.",
+                "message": "Filesystem roots can never be deleted by deleteFile.",
+                "details": details,
+            }
+        if (
+            resolved_target in self._protected_paths()
+            and not self._as_bool(values.get("allow_unsafe", False))
+        ):
+            return {
+                "success": False,
+                "error_code": "protected_path",
+                "error": f"Refusing to delete protected path '{resolved_target}'.",
+                "message": "Use allow_unsafe=true only after verifying the exact target.",
+                "details": details,
+            }
+        return None
+
+    def execute(
+        self,
+        target,
+        recursive=False,
+        force=False,
+        dry_run=True,
+        apply=False,
+        allow_unsafe=False,
+    ):
+        force = self._as_bool(force)
+        dry_run = self._as_bool(dry_run)
+        apply = self._as_bool(apply)
+        allow_unsafe = self._as_bool(allow_unsafe)
+
+        if isinstance(recursive, str):
+            parsed_recursive = parse_recursive_parameter(recursive)
+            recursive = False if parsed_recursive is None else parsed_recursive
+
+        target_path = Path(target).expanduser()
+        resolved_target = target_path.resolve(strict=False)
+        exists = os.path.lexists(target_path)
+        target_type = (
+            "symlink"
+            if target_path.is_symlink()
+            else "directory"
+            if target_path.is_dir()
+            else "file"
+        )
+
+        details = {
+            "target": str(resolved_target),
+            "type": target_type,
+            "recursive": recursive,
+            "force": force,
+            "dry_run_mode": dry_run or not apply,
+            "apply_requested": apply,
+        }
+
+        if not exists:
+            return {
+                "success": False,
+                "error_code": "target_not_found",
+                "error": f"Target '{target}' does not exist.",
+                "message": "Nothing was deleted because the target does not exist.",
+                "details": details,
+            }
+
+        if resolved_target.anchor == str(resolved_target):
+            return {
+                "success": False,
+                "error_code": "protected_path",
+                "error": f"Refusing to delete filesystem root '{resolved_target}'.",
+                "message": "Filesystem roots can never be deleted by deleteFile.",
+                "details": details,
+            }
+
+        if resolved_target in self._protected_paths() and not allow_unsafe:
+            return {
+                "success": False,
+                "error_code": "protected_path",
+                "error": f"Refusing to delete protected path '{resolved_target}'.",
+                "message": "Use allow_unsafe=true only after verifying the exact target.",
+                "details": details,
+            }
+
+        if dry_run or not apply:
+            return {
+                "success": True,
+                "message": (
+                    f"Preview only: '{resolved_target}' was not deleted. "
+                    "Pass --dry_run false --apply to authorize the operation."
+                ),
+                "details": details,
+            }
+
+        try:
+            if target_path.is_symlink() or target_path.is_file():
+                target_path.unlink()
+            elif target_path.is_dir():
+                if recursive is True:
+                    shutil.rmtree(target_path)
+                elif isinstance(recursive, int) and not isinstance(recursive, bool) and recursive > 0:
+                    errors = self._delete_to_depth(target_path, recursive)
+                    if errors:
+                        return {
+                            "success": False,
+                            "error_code": "partial_delete",
+                            "error": f"Deletion completed with {len(errors)} error(s).",
+                            "message": "The requested limited-depth deletion was only partially completed.",
+                            "details": {**details, "errors": errors},
+                        }
+                else:
+                    target_path.rmdir()
+
+            return {
+                "success": True,
+                "message": f"Deleted {target_type} '{resolved_target}'.",
+                "details": {**details, "dry_run_mode": False},
+            }
+        except Exception as exc:
+            return {
+                "success": False,
+                "error_code": "delete_failed",
+                "error": str(exc),
+                "message": f"Could not delete '{resolved_target}'.",
+                "details": details,
+            }
+
+    @staticmethod
+    def _delete_to_depth(target_path, maximum_depth):
+        errors = []
+        for root, _dirs, files in os.walk(target_path, topdown=False):
+            relative = Path(root).relative_to(target_path)
+            depth = len(relative.parts)
+            if depth > maximum_depth:
+                continue
+            for filename in files:
+                file_path = Path(root) / filename
+                try:
+                    file_path.unlink()
+                except OSError as exc:
+                    errors.append({"path": str(file_path), "error": str(exc)})
+            try:
+                Path(root).rmdir()
+            except OSError as exc:
+                errors.append({"path": str(root), "error": str(exc)})
+        return errors

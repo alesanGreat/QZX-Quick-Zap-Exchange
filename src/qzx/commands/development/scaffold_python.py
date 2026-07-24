@@ -8,10 +8,13 @@ MakeScaffProgramPython Command - Creates a basic scaffolding for a Python progra
 import os
 import shutil
 import subprocess
-import datetime
 import sys
 
 from qzx.core.command_base import CommandBase
+from qzx.commands.development._scaffold_utils import (
+    normalize_project_name,
+    prepare_scaffold_project,
+)
 
 class MakeScaffProgramPythonCommand(CommandBase):
     """
@@ -87,47 +90,21 @@ class MakeScaffProgramPythonCommand(CommandBase):
                 create_venv = create_venv.lower() in ('true', 'yes', 'y', '1', 't')
             
             # Normalize and validate project name (convert spaces to underscores, etc.)
-            project_name = self._normalize_project_name(project_name)
-            if not project_name:
-                return {
-                    "success": False,
-                    "error": "Invalid project name",
-                    "message": "Project name cannot be empty and must contain valid characters (letters, numbers, underscores)."
-                }
-            
-            # Ensure path exists
-            if not os.path.exists(path):
-                return {
-                    "success": False,
-                    "error": f"Path does not exist: {path}",
-                    "message": f"Cannot create project: the specified path '{path}' does not exist."
-                }
-            
-            # Determine full project path
-            project_path = os.path.join(path, project_name)
-            
-            # Check if project directory already exists
-            if os.path.exists(project_path):
-                return {
-                    "success": False,
-                    "error": f"Project directory already exists: {project_path}",
-                    "message": f"Cannot create project: directory '{project_path}' already exists."
-                }
-            
-            # Initialize result dictionary
-            result = {
-                "success": True,
-                "project_name": project_name,
-                "project_path": project_path,
-                "with_tests": with_tests,
-                "create_venv": create_venv,
-                "files_created": [],
-                "timestamp": datetime.datetime.now().isoformat(),
-            }
-            
-            # Create project directory
-            os.makedirs(project_path)
-            result["files_created"].append(project_path)
+            project_name = normalize_project_name(
+                project_name,
+                leading_prefix="py_",
+            )
+            result = prepare_scaffold_project(
+                project_name,
+                path,
+                {
+                    "with_tests": with_tests,
+                    "create_venv": create_venv,
+                },
+            )
+            if not result["success"]:
+                return result
+            project_path = result["project_path"]
             
             # Create standard Python project structure
             self._create_package_directory(project_path, project_name, result)
@@ -177,25 +154,6 @@ class MakeScaffProgramPythonCommand(CommandBase):
                 "message": f"Failed to create Python project scaffolding: {str(e)}",
                 "project_name": project_name
             }
-    
-    def _normalize_project_name(self, name):
-        """
-        Normalize project name to follow Python naming conventions
-        
-        Args:
-            name (str): Raw project name
-            
-        Returns:
-            str: Normalized project name
-        """
-        # Replace spaces and hyphens with underscores
-        normalized = name.replace(' ', '_').replace('-', '_')
-        # Remove invalid characters
-        normalized = ''.join(c for c in normalized if c.isalnum() or c == '_')
-        # Ensure the name starts with a letter or underscore (Python convention)
-        if normalized and not (normalized[0].isalpha() or normalized[0] == '_'):
-            normalized = 'py_' + normalized
-        return normalized.lower()
     
     def _create_package_directory(self, project_path, project_name, result):
         """

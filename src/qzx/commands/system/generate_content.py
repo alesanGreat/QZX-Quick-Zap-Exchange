@@ -10,51 +10,18 @@ import sys
 import json
 import time
 from pathlib import Path
-import subprocess
 
-# Function to check and install required dependencies
-def check_and_install_dependencies():
-    required_packages = ['python-dotenv', 'requests']
-    missing_packages = []
-    
-    for package in required_packages:
-        try:
-            # Verify if the package is installed using pip
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "show", package],
-                capture_output=True,
-                text=True
-            )
-            if result.returncode != 0:
-                missing_packages.append(package)
-        except Exception:
-            missing_packages.append(package)
-    
-    if missing_packages:
-        print(f"Installing required dependencies: {', '.join(missing_packages)}")
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing_packages)
-            print("Dependencies installed successfully.")
-            return True
-        except Exception as e:
-            print(f"Error installing dependencies: {str(e)}")
-            print("Please install them manually with:")
-            print(f"pip install {' '.join(missing_packages)}")
-            return False
-    return True
-
-# Try to install dependencies if missing
-dependencies_ok = check_and_install_dependencies()
-
-# Import dependencies after installation check
 try:
     import requests
+except ImportError:
+    requests = None
+
+try:
     from dotenv import load_dotenv
-    from qzx.core.command_base import CommandBase
-except ImportError as e:
-    print(f"Error importing required modules: {str(e)}")
-    print("Please ensure all dependencies are installed.")
-    sys.exit(1)
+except ImportError:
+    load_dotenv = None
+
+from qzx.core.command_base import CommandBase
 
 class WonderContentGenCommand(CommandBase):
     """
@@ -62,8 +29,12 @@ class WonderContentGenCommand(CommandBase):
     """
     
     name = "generateContent"
-    aliases = ["WonderContentGen"]
-    aliases = ["explainfile", "aianalyze", "analyzeContent"]
+    aliases = [
+        "WonderContentGen",
+        "explainfile",
+        "aianalyze",
+        "analyzeContent",
+    ]
     description = "Uses Gemini AI to analyze and explain file contents"
     category = "system"
     
@@ -77,7 +48,8 @@ class WonderContentGenCommand(CommandBase):
             'name': 'sample_size',
             'description': 'Number of characters to sample from beginning, middle, and end (default: 500)',
             'required': False,
-            'default': '500'
+            'default': 500,
+            'type': 'int'
         },
         {
             'name': 'model',
@@ -122,7 +94,7 @@ class WonderContentGenCommand(CommandBase):
         "gemini-pro-latest"
     ]
     
-    def execute(self, file_path, sample_size="500", model="", custom_prompt=""):
+    def execute(self, file_path, sample_size=500, model="", custom_prompt=""):
         """
         Analyze and explain file contents using Gemini AI
         
@@ -136,18 +108,25 @@ class WonderContentGenCommand(CommandBase):
             Dictionary with the operation result
         """
         try:
-            # Ensure dependencies are installed
-            if not dependencies_ok:
+            if requests is None:
                 return {
                     "success": False,
-                    "error": "Missing dependencies",
-                    "message": "Required dependencies are missing and could not be installed automatically. Please install python-dotenv and requests manually."
+                    "error": "Missing optional dependency: requests",
+                    "error_code": "missing_dependency",
+                    "message": (
+                        "generateContent requires the optional AI dependencies. "
+                        "Install them explicitly with 'pip install qzx[ai]'."
+                    ),
+                    "details": {
+                        "missing": ["requests"],
+                        "remediation": "pip install qzx[ai]",
+                    },
                 }
                 
             # Convert sample_size to integer
             try:
                 sample_size = int(sample_size)
-            except ValueError:
+            except (TypeError, ValueError):
                 sample_size = 500
                 
             if sample_size < 10:
@@ -201,50 +180,27 @@ class WonderContentGenCommand(CommandBase):
                 if not selected_model and available_models:
                     selected_model = available_models[0].get('name', '').split('/')[-1]
             else:
-                # The user specified a model, check if it's available
-                is_available = self._is_model_available(api_key, selected_model)
-                if not is_available:
-                    print(f"The specified model '{selected_model}' is not available. Looking for alternatives...")
-                    # If the specified model is not available, get the list of models
-                    available_models = self._list_gemini_models(api_key)
-                    
-                    if available_models:
-                        print("\nAvailable Gemini models:")
-                        for i, model_info in enumerate(available_models):
-                            model_name = model_info.get('name', '').split('/')[-1]
-                            display_name = model_info.get('displayName', 'Unknown')
-                            print(f"  {i+1}. {model_name} - {display_name}")
-                        
-                        # Try to find a similar model
-                        for model_info in available_models:
-                            model_name = model_info.get('name', '').split('/')[-1]
-                            if selected_model in model_name:
-                                selected_model = model_name
-                                print(f"Using similar model: {selected_model}")
-                                break
-                        
-                        # If we didn't find a similar model, use one of the defaults
-                        if selected_model == model:
-                            for default_model in self.DEFAULT_MODELS:
-                                for model_info in available_models:
-                                    model_name = model_info.get('name', '').split('/')[-1]
-                                    if default_model == model_name:
-                                        selected_model = model_name
-                                        print(f"Using default model: {selected_model}")
-                                        break
-                                if selected_model != model:
-                                    break
-                            
-                            # If we still don't have a model, use the first one in the list
-                            if selected_model == model and available_models:
-                                selected_model = available_models[0].get('name', '').split('/')[-1]
-                                print(f"Using first available model: {selected_model}")
-                    else:
-                        return {
-                            "success": False,
-                            "error": "Failed to retrieve Gemini models",
-                            "message": "Could not get a list of available Gemini models. Please check your API key and try again."
-                        }
+                # Validate a requested model with the read-only models endpoint.
+                # The previous implementation sent a generation request merely
+                # to probe availability, which could consume quota.
+                available_models = self._list_gemini_models(api_key)
+                available_names = {
+                    item.get("name", "").split("/")[-1]
+                    for item in available_models
+                }
+                if selected_model not in available_names:
+                    return {
+                        "success": False,
+                        "error": "Requested Gemini model is not available",
+                        "error_code": "model_not_available",
+                        "message": (
+                            "Gemini model '{}' is not available for this API key."
+                        ).format(selected_model),
+                        "details": {
+                            "requested_model": selected_model,
+                            "available_models": sorted(available_names),
+                        },
+                    }
             
             if not selected_model:
                 return {
@@ -329,21 +285,24 @@ Here are the samples:
                 }
                 
             print("Content analysis generated successfully!")
-            
-            # Display the analysis result to the user
-            print("\n=== CONTENT ANALYSIS ===")
-            print(response)
-            print("========================\n")
                 
             # Return the result
             return {
                 "success": True,
-                "message": "File content analysis generated successfully.",
+                "message": (
+                    "File content analysis generated successfully using {}. "
+                    "A sample of {} characters per section was sent to Gemini."
+                ).format(selected_model, sample_size),
                 "explanation": response,
                 "file_path": file_path,
                 "file_size": file_size,
                 "sample_size": sample_size,
-                "model_used": selected_model
+                "model_used": selected_model,
+                "external_service": {
+                    "provider": "Google Gemini",
+                    "content_shared": True,
+                    "sampled_characters_per_section": sample_size,
+                },
             }
             
         except Exception as e:
@@ -362,7 +321,7 @@ Here are the samples:
         # If not found, try loading from .env file
         if not api_key:
             # Try from current directory
-            if os.path.isfile('.env'):
+            if load_dotenv is not None and os.path.isfile('.env'):
                 load_dotenv('.env')
                 api_key = os.environ.get('GEMINI_API_TOKEN')
             
@@ -372,7 +331,7 @@ Here are the samples:
                 project_root = Path(__file__).resolve().parents[2]
                 env_path = project_root / '.env'
                 
-                if env_path.is_file():
+                if load_dotenv is not None and env_path.is_file():
                     load_dotenv(env_path)
                     api_key = os.environ.get('GEMINI_API_TOKEN')
         
@@ -389,7 +348,7 @@ Here are the samples:
                 "Content-Type": "application/json"
             }
             
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
             
             # Check if request was successful
             if response.status_code == 200:
@@ -443,7 +402,7 @@ Here are the samples:
                 "Content-Type": "application/json"
             }
             
-            response = requests.post(url, headers=headers, json=payload)
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
             
             # Check if request was successful
             if response.status_code == 200:
@@ -466,25 +425,22 @@ Here are the samples:
             return None
 
     def _is_model_available(self, api_key, model):
-        """Check if a model is available"""
+        """Check availability without issuing a generation request."""
         try:
-            # Gemini API URL
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
             
             # Make API request
             headers = {
                 "Content-Type": "application/json"
             }
             
-            response = requests.post(url, headers=headers, json={"contents": [{"parts": [""]}]})
-            
-            # Check if request was successful
-            if response.status_code == 200:
-                return True
-            else:
-                print(f"Warning: Model '{model}' did not respond correctly. Please check your API key and try again.")
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code != 200:
                 return False
-                
-        except Exception as e:
-            print(f"Error calling is model available API: {str(e)}")
+            requested_name = model if model.startswith("models/") else f"models/{model}"
+            return any(
+                item.get("name") == requested_name
+                for item in response.json().get("models", [])
+            )
+        except Exception:
             return False 

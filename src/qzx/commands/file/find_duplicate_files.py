@@ -23,6 +23,7 @@ class FindDuplicateFilesCommand(CommandBase):
     name = "findDuplicateFiles"
     description = "Scans a directory for identical/duplicate files by file size matching and MD5 hashing"
     category = "file"
+    _byte_units = ("B", "KB", "MB", "GB")
     
     parameters = [
         {
@@ -206,9 +207,3 @@ class FindDuplicateFilesCommand(CommandBase):
         except Exception:
             return None
             
-    def _format_bytes(self, size):
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024.0 or unit == 'GB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"

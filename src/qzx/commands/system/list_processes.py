@@ -242,17 +242,3 @@ class ListProcessesCommand(CommandBase):
                 "message": f"Failed to list processes: {str(e)}"
             }
     
-    def _format_bytes(self, bytes_value):
-        """
-        Format bytes to human-readable format
-        
-        Args:
-            bytes_value (int): Bytes to format
-            
-        Returns:
-            str: Formatted string with appropriate unit
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if bytes_value < 1024 or unit == 'TB':
-                return f"{bytes_value:.2f} {unit}"
-            bytes_value /= 1024 

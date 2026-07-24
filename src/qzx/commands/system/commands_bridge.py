@@ -1,447 +1,297 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-CommandsBridge Command - Acts as a middleware for system commands to safely handle execution
-"""
+"""Constrained bridge for a small allowlist of diagnostic system commands."""
 
-import os
-import sys
-import subprocess
-import shlex
 import datetime
+import os
 import platform
+import shutil
+import subprocess
 from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
+
 class CommandsBridgeCommand(CommandBase):
-    """
-    Command to serve as a middleware for system commands.
-    This bridge safely handles the execution of system commands, preventing errors from causing problems.
-    """
-    
+    """Execute diagnostic commands without invoking a shell."""
+
     name = "commandsBridge"
     aliases = ["bridge", "cmd", "run"]
-    description = "Safely executes system commands with detailed feedback"
+    description = "Executes allowlisted diagnostic system commands with bounded output"
     category = "system"
-    
+
     parameters = [
         {
-            'name': 'command',
-            'description': 'The system command to execute',
-            'required': True
+            "name": "command",
+            "description": "Allowlisted diagnostic command to execute",
+            "required": True,
+            "type": "str",
         },
         {
-            'name': 'args',
-            'description': 'Arguments for the command (can be multiple separate arguments)',
-            'required': False,
-            'default': ''
-        }
+            "name": "args",
+            "description": "Arguments passed directly to the command without shell expansion",
+            "required": False,
+            "default": [],
+            "type": "str",
+            "is_variadic": True,
+        },
     ]
-    
+
     examples = [
         {
-            'command': 'qzx commandsBridge cd /path/to/directory',
-            'description': 'Changes the current directory to the specified path'
+            "command": "qzx commandsBridge pwd",
+            "description": "Shows the current working directory",
         },
         {
-            'command': 'qzx bridge pwd',
-            'description': 'Shows the current working directory'
+            "command": "qzx bridge whoami",
+            "description": "Shows the current operating-system user",
         },
         {
-            'command': 'qzx cmd ls -la',
-            'description': 'Lists files in the current directory with details'
+            "command": "qzx cmd ping 127.0.0.1",
+            "description": "Runs a local network diagnostic",
         },
         {
-            'command': 'qzx run echo "Hello World"',
-            'description': 'Outputs "Hello World" to the console'
-        }
+            "command": "qzx run hostname",
+            "description": "Shows the current host name",
+        },
     ]
-    
-    # List of safe commands to execute
-    SAFE_COMMANDS = [
-        # Navigation commands
-        'cd', 'pwd', 'ls', 'dir',
-        
-        # User information commands
-        'who', 'whoami', 'id', 'groups',
-        
-        # System information commands
-        'ps', 'top', 'free', 'df', 'du', 'uname', 'hostname',
-        
-        # File operations (non-destructive)
-        'cp', 'mv', 'mkdir', 'touch', 'cat', 'more', 'less', 'head', 'tail',
-        
-        # Text operations
-        'grep', 'awk', 'sed', 'wc', 'sort', 'uniq', 'cut', 'tr', 'echo',
-        
-        # Network commands
-        'ping', 'ifconfig', 'ip', 'netstat', 'ss', 'nslookup', 'host',
-        
-        # Process commands (read-only)
-        'jobs', 'bg', 'fg', 'nohup',
-        
-        # File analysis
-        'file', 'stat', 'find', 'locate', 'which', 'type',
-        
-        # Date and time
-        'date', 'cal', 'uptime',
-        
-        # Development tools
-        'git', 'npm', 'pip', 'python',
-        
-        # Others
-        'clear', 'history', 'man', 'env', 'printenv'
-    ]
-    
-    # Commands that involve destructive operations - require confirmation
-    CAUTION_COMMANDS = [
-        'rm', 'rmdir', 'kill', 'pkill', 'chmod', 'chown', 'dd', 'mkfs',
-        'shred', 'shutdown', 'reboot', 'halt', 'poweroff', 'format',
-        'fdisk', 'mkswap', 'swapoff', 'swapon'
-    ]
-    
-    # Built-in commands that need special handling
-    BUILTIN_COMMANDS = {
-        'cd': '_handle_cd',
-        'exit': '_handle_exit',
-        'pwd': '_handle_pwd',
-        'clear': '_handle_clear',
+
+    SAFE_COMMANDS = {
+        "cal",
+        "date",
+        "df",
+        "du",
+        "file",
+        "free",
+        "groups",
+        "head",
+        "host",
+        "hostname",
+        "id",
+        "ifconfig",
+        "ip",
+        "ipconfig",
+        "locate",
+        "netstat",
+        "nslookup",
+        "ping",
+        "printenv",
+        "ps",
+        "ss",
+        "stat",
+        "systeminfo",
+        "tail",
+        "tasklist",
+        "type",
+        "uname",
+        "uptime",
+        "wc",
+        "where",
+        "which",
+        "who",
+        "whoami",
     }
-    
-    def execute(self, command, args=''):
-        """
-        Safely executes a system command
-        
-        Args:
-            command (str): The command to execute
-            args (str): Arguments for the command
-            
-        Returns:
-            Dictionary with the operation results and status
-        """
-        try:
-            start_time = datetime.datetime.now()
-            os_info = platform.system()
-            
-            # Prepare the command string
-            if args:
-                full_command = f"{command} {args}"
-            else:
-                full_command = command
-            
-            # Initialize result with basic information
-            result = {
+    BLOCKED_COMMANDS = {
+        "bash",
+        "chmod",
+        "chown",
+        "cmd",
+        "cp",
+        "dd",
+        "del",
+        "fdisk",
+        "format",
+        "git",
+        "kill",
+        "mkfs",
+        "mkdir",
+        "mv",
+        "npm",
+        "perl",
+        "pip",
+        "pkill",
+        "powershell",
+        "pwsh",
+        "python",
+        "reboot",
+        "ren",
+        "rm",
+        "rmdir",
+        "ruby",
+        "sc",
+        "sh",
+        "shutdown",
+        "start",
+        "sudo",
+        "systemctl",
+        "touch",
+        "wsl",
+    }
+    TIMEOUT_SECONDS = 30
+    MAX_OUTPUT_CHARS = 200_000
+
+    def execute(self, command, *args):
+        command_name = str(command).strip().lower()
+        argument_list = [str(value) for value in args]
+        started_at = datetime.datetime.now(datetime.timezone.utc)
+        command_details = {
+            "name": command_name,
+            "args": argument_list,
+            "os": platform.system(),
+            "started_at": started_at.isoformat(),
+            "shell": False,
+            "timeout_seconds": self.TIMEOUT_SECONDS,
+        }
+
+        if command_name == "pwd":
+            current = str(Path.cwd())
+            return {
                 "success": True,
-                "command": {
-                    "name": command,
-                    "args": args,
-                    "full_command": full_command,
-                    "os": os_info,
-                    "datetime": start_time.isoformat(),
-                },
+                "message": f"Current working directory: {current}",
+                "stdout": current,
+                "details": {"command": command_details, "directory": current},
             }
-            
-            # Check if it's a built-in command that needs special handling
-            if command in self.BUILTIN_COMMANDS:
-                handler_method = getattr(self, self.BUILTIN_COMMANDS[command])
-                return handler_method(args, result)
-            
-            # Verify if the command is safe to execute
-            if command not in self.SAFE_COMMANDS and command not in self.CAUTION_COMMANDS:
-                result.update({
-                    "success": False,
-                    "error": f"Unrecognized or potentially unsafe command: {command}",
-                    "message": f"The command '{command}' is not in the list of recognized commands. If you're sure it's safe, you may need to execute it directly."
-                })
-                return result
-            
-            # Extra warning for caution commands
-            if command in self.CAUTION_COMMANDS:
-                result["warning"] = f"'{command}' is a destructive operation that could cause data loss or system issues."
-            
-            # Execute the command
-            try:
-                # Split command and args for subprocess
-                cmd_parts = shlex.split(full_command)
-                
-                # Check if the command exists in the system
-                if not self._command_exists(command):
-                    result.update({
-                        "success": False,
-                        "error": f"Command not found: {command}",
-                        "message": f"The command '{command}' was not found on your system. Make sure it's installed and available in your PATH."
-                    })
-                    return result
-                
-                # Run the command and capture output
-                process = subprocess.run(
-                    cmd_parts,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    shell=False,  # More secure to use shell=False
-                    check=False   # Don't raise exception on non-zero exit
-                )
-                
-                # Process completed, calculate duration
-                end_time = datetime.datetime.now()
-                duration = (end_time - start_time).total_seconds()
-                
-                # Add outputs and execution info to result
-                result.update({
-                    "success": process.returncode == 0,
-                    "exit_code": process.returncode,
-                    "stdout": process.stdout,
-                    "stderr": process.stderr,
-                    "duration_seconds": duration,
-                })
-                
-                # Create a user-friendly message
-                if process.returncode == 0:
-                    message = f"Successfully executed '{command}' with exit code 0."
-                else:
-                    message = f"Command '{command}' failed with exit code {process.returncode}."
-                    if process.stderr:
-                        message += f" Error: {process.stderr}"
-                
-                result["message"] = message
-                return result
-                
-            except FileNotFoundError:
-                result.update({
-                    "success": False,
-                    "error": f"Command not found: {command}",
-                    "message": f"The command '{command}' was not found on the system."
-                })
-                return result
-                
-        except Exception as e:
+
+        if command_name == "cd":
+            return self._change_directory(argument_list, command_details)
+
+        if command_name == "clear":
+            return {
+                "success": True,
+                "message": "Clear was acknowledged; no terminal escape sequences were emitted.",
+                "details": {"command": command_details, "simulated": True},
+            }
+
+        if command_name == "exit":
+            return {
+                "success": True,
+                "message": "Exit was acknowledged but the QZX process was not terminated.",
+                "details": {"command": command_details, "simulated": True},
+            }
+
+        if command_name in self.BLOCKED_COMMANDS:
             return {
                 "success": False,
-                "error": f"Error executing command: {str(e)}",
-                "message": f"Failed to execute command: {str(e)}",
-                "command": command,
-                "args": args
+                "error_code": "command_blocked",
+                "error": f"Command '{command_name}' can mutate state or execute arbitrary code.",
+                "message": "commandsBridge only permits bounded diagnostic commands.",
+                "details": {"command": command_details},
             }
-    
-    def _command_exists(self, command):
-        """
-        Check if a command exists on the system
-        
-        Args:
-            command (str): Command to check
-            
-        Returns:
-            bool: True if command exists, False otherwise
-        """
-        if os.name == 'nt':  # Windows
-            # On Windows, use where.exe to find command
-            try:
-                subprocess.run(
-                    ["where", command],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    check=False
-                )
-                return True
-            except:
-                return False
-        else:  # Unix-like
-            # On Unix-like systems, use which to find command
-            try:
-                subprocess.run(
-                    ["which", command],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    check=False
-                )
-                return True
-            except:
-                return False
-    
-    def _handle_cd(self, args, result):
-        """
-        Special handler for the cd command
-        
-        Args:
-            args (str): Directory to change to
-            result (dict): Current result dictionary
-            
-        Returns:
-            dict: Updated result dictionary
-        """
-        try:
-            # Get the target directory
-            if not args:
-                # Default to home directory if no args
-                target_dir = os.path.expanduser("~")
-            else:
-                target_dir = os.path.expanduser(args)
-            
-            # Save original directory
-            original_dir = os.getcwd()
-            
-            # Try to change directory
-            os.chdir(target_dir)
-            
-            # Update result with success info
-            result.update({
-                "success": True,
-                "directory": {
-                    "previous": original_dir,
-                    "current": os.getcwd(),
-                    "is_home": os.getcwd() == os.path.expanduser("~"),
-                    "name": os.path.basename(os.getcwd()),
-                    "parent": os.path.dirname(os.getcwd()),
+
+        if command_name not in self.SAFE_COMMANDS:
+            return {
+                "success": False,
+                "error_code": "command_not_allowlisted",
+                "error": f"Command '{command_name}' is not in the diagnostic allowlist.",
+                "message": "Use a dedicated QZX command or execute the system tool directly after review.",
+                "details": {
+                    "command": command_details,
+                    "allowed_commands": sorted(self.SAFE_COMMANDS),
                 },
-                "message": f"Changed directory from '{original_dir}' to '{os.getcwd()}'."
-            })
-            
-            # Add home-relative path if applicable
-            home_dir = os.path.expanduser("~")
-            if os.getcwd().startswith(home_dir) and os.getcwd() != home_dir:
-                relative_to_home = "~" + os.getcwd()[len(home_dir):]
-                result["directory"]["relative_to_home"] = relative_to_home
-            
-            return result
-            
-        except FileNotFoundError:
-            result.update({
+            }
+
+        executable = shutil.which(command_name)
+        if executable is None:
+            return {
                 "success": False,
-                "error": f"Directory not found: {args}",
-                "message": f"The directory '{args}' does not exist."
-            })
-            return result
-        except PermissionError:
-            result.update({
-                "success": False,
-                "error": f"Permission denied: {args}",
-                "message": f"You don't have permission to access the directory '{args}'."
-            })
-            return result
-        except Exception as e:
-            result.update({
-                "success": False,
-                "error": f"Error changing directory: {str(e)}",
-                "message": f"Failed to change directory: {str(e)}"
-            })
-            return result
-    
-    def _handle_pwd(self, args, result):
-        """
-        Special handler for the pwd command
-        
-        Args:
-            args (str): Arguments (usually empty for pwd)
-            result (dict): Current result dictionary
-            
-        Returns:
-            dict: Updated result dictionary
-        """
+                "error_code": "command_not_found",
+                "error": f"Command '{command_name}' was not found in PATH.",
+                "message": "Install the diagnostic tool or choose one available on this platform.",
+                "details": {"command": command_details},
+            }
+
         try:
-            current_dir = os.getcwd()
-            home_dir = os.path.expanduser("~")
-            
-            # Update result with success info
-            result.update({
-                "success": True,
-                "directory": {
-                    "current": current_dir,
-                    "is_home": current_dir == home_dir,
-                    "is_root": current_dir == '/' or (os.name == 'nt' and len(current_dir) == 3 and current_dir[1] == ':'),
-                    "parent": os.path.dirname(current_dir),
-                    "name": os.path.basename(current_dir),
+            process = subprocess.run(
+                [executable, *argument_list],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False,
+                timeout=self.TIMEOUT_SECONDS,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            return {
+                "success": False,
+                "error_code": "command_timeout",
+                "error": f"Command exceeded {self.TIMEOUT_SECONDS} seconds.",
+                "message": "The diagnostic command was terminated after reaching its time limit.",
+                "details": {
+                    "command": command_details,
+                    "stdout": self._bounded(exc.stdout or ""),
+                    "stderr": self._bounded(exc.stderr or ""),
                 },
-                "stdout": current_dir,
-                "message": f"Current working directory: {current_dir}"
-            })
-            
-            # Add home-relative path if applicable
-            if current_dir.startswith(home_dir) and current_dir != home_dir:
-                relative_to_home = "~" + current_dir[len(home_dir):]
-                result["directory"]["relative_to_home"] = relative_to_home
-                result["message"] += f" (~ {relative_to_home})"
-            
-            return result
-            
-        except Exception as e:
-            result.update({
+            }
+        except OSError as exc:
+            return {
                 "success": False,
-                "error": f"Error getting current directory: {str(e)}",
-                "message": f"Failed to get current directory: {str(e)}"
-            })
-            return result
-    
-    def _handle_exit(self, args, result):
-        """
-        Special handler for the exit command
-        
-        Args:
-            args (str): Exit code (optional)
-            result (dict): Current result dictionary
-            
-        Returns:
-            dict: Updated result dictionary with exit information
-        """
+                "error_code": "command_execution_failed",
+                "error": str(exc),
+                "message": f"Could not start diagnostic command '{command_name}'.",
+                "details": {"command": command_details},
+            }
+
+        duration = (datetime.datetime.now(datetime.timezone.utc) - started_at).total_seconds()
+        success = process.returncode == 0
+        return {
+            "success": success,
+            "message": (
+                f"Diagnostic command '{command_name}' completed successfully."
+                if success
+                else f"Diagnostic command '{command_name}' exited with code {process.returncode}."
+            ),
+            "error": None if success else self._bounded(process.stderr.strip() or "Non-zero exit status."),
+            "stdout": self._bounded(process.stdout),
+            "stderr": self._bounded(process.stderr),
+            "details": {
+                "command": command_details,
+                "exit_code": process.returncode,
+                "duration_seconds": duration,
+                "output_truncated": (
+                    len(process.stdout) > self.MAX_OUTPUT_CHARS
+                    or len(process.stderr) > self.MAX_OUTPUT_CHARS
+                ),
+            },
+        }
+
+    def _change_directory(self, arguments, command_details):
+        if len(arguments) > 1:
+            return {
+                "success": False,
+                "error_code": "usage_error",
+                "error": "cd accepts at most one directory.",
+                "message": "Quote directory paths containing spaces.",
+                "details": {"command": command_details},
+            }
+        target = Path(arguments[0]).expanduser() if arguments else Path.home()
         try:
-            # Parse exit code if provided
-            exit_code = 0
-            if args:
-                try:
-                    exit_code = int(args)
-                except ValueError:
-                    result.update({
-                        "success": False,
-                        "error": f"Invalid exit code: {args}",
-                        "message": f"The exit code must be an integer. Using default exit code 0."
-                    })
-            
-            # Update result with exit info
-            result.update({
-                "success": True,
-                "exit_code": exit_code,
-                "message": f"Process would exit with code {exit_code}. Note: In the QZX framework, the 'exit' command is simulated and won't actually terminate the process."
-            })
-            
-            return result
-            
-        except Exception as e:
-            result.update({
+            previous = Path.cwd()
+            os.chdir(target)
+            current = Path.cwd()
+        except (FileNotFoundError, NotADirectoryError, PermissionError, OSError) as exc:
+            return {
                 "success": False,
-                "error": f"Error processing exit command: {str(e)}",
-                "message": f"Failed to process exit command: {str(e)}"
-            })
-            return result
-    
-    def _handle_clear(self, args, result):
-        """
-        Special handler for the clear command
-        
-        Args:
-            args (str): Arguments (usually empty for clear)
-            result (dict): Current result dictionary
-            
-        Returns:
-            dict: Updated result dictionary
-        """
-        try:
-            # We can't directly clear the console, so we'll just simulate it
-            result.update({
-                "success": True,
-                "message": "Clear command received. In the QZX framework, this command is simulated and will provide feedback rather than actually clearing the console."
-            })
-            
-            return result
-            
-        except Exception as e:
-            result.update({
-                "success": False,
-                "error": f"Error processing clear command: {str(e)}",
-                "message": f"Failed to process clear command: {str(e)}"
-            })
-            return result 
+                "error_code": "change_directory_failed",
+                "error": str(exc),
+                "message": f"Could not change directory to '{target}'.",
+                "details": {"command": command_details},
+            }
+        return {
+            "success": True,
+            "message": f"Changed directory from '{previous}' to '{current}'.",
+            "details": {
+                "command": command_details,
+                "previous_directory": str(previous),
+                "current_directory": str(current),
+            },
+        }
+
+    @classmethod
+    def _bounded(cls, value):
+        if isinstance(value, bytes):
+            value = value.decode(errors="replace")
+        text = str(value)
+        if len(text) <= cls.MAX_OUTPUT_CHARS:
+            return text
+        return text[: cls.MAX_OUTPUT_CHARS] + "\n… output truncated by QZX …"

@@ -24,6 +24,7 @@ class TestWebSpeedCommand(CommandBase):
     name = "testWebSpeed"
     description = "Measures internet download speed (Mbps) and HTTP ping latency (ms)"
     category = "network"
+    _byte_units = ("B", "KB", "MB", "GB")
     
     parameters = [
         {
@@ -155,9 +156,3 @@ class TestWebSpeedCommand(CommandBase):
             "message": msg
         }
         
-    def _format_bytes(self, size):
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024.0 or unit == 'GB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"

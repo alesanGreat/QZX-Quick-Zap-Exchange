@@ -23,6 +23,7 @@ class WonderIfFileEmptyCommand(CommandBase):
     aliases = ["wonderIfFileEmpty"]
     description = "Checks if a file is empty (has zero bytes)"
     category = "file"
+    _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
     
     parameters = [
         {
@@ -132,18 +133,3 @@ class WonderIfFileEmptyCommand(CommandBase):
                 "error": str(e)
             }
     
-    def _format_bytes(self, size):
-        """
-        Format bytes to human-readable size
-        
-        Args:
-            size (int): Size in bytes
-            
-        Returns:
-            str: Human-readable size string
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
-            if size < 1024.0 or unit == 'PB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}" 

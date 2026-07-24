@@ -25,8 +25,7 @@ class WonderMyEnvironmentCommand(CommandBase):
     """
     
     name = "getEnvironmentInfo"
-    aliases = ["WonderMyEnvironment"]
-    aliases = ["environment", "sysinfo", "systeminfo"]
+    aliases = ["WonderMyEnvironment", "environment", "sysinfo"]
     description = "Displays detailed information about the system environment"
     category = "system"
     
@@ -128,20 +127,10 @@ DETECTED GPUs:
 """
             print("Environment analysis complete!")
             
-            # If we're in the terminal, return the message for display
-            if hasattr(self, 'in_terminal') and self.in_terminal:
-                return {
-                    "success": True,
-                    "message": "System environment information displayed successfully.",
-                    "output": environment_info
-                }
-            
-            # Otherwise, print the message directly
-            print(environment_info)
-            
             return {
                 "success": True,
                 "message": "System environment information displayed successfully.",
+                "output": environment_info,
                 "system_info": welcome_manager.system_info
             }
             
@@ -151,4 +140,4 @@ DETECTED GPUs:
                 "success": False,
                 "error": error_message,
                 "message": f"Failed to display system environment information: {str(e)}"
-            } 
+            }

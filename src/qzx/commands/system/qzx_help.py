@@ -5,12 +5,6 @@
 qzxHelp - Muestra la ayuda para un comando específico o la ayuda general del sistema.
 """
 
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 from qzx.core.command_base import CommandBase
 from qzx.core.command_loader import CommandLoader
 
@@ -20,30 +14,31 @@ class qzxHelp(CommandBase):
     Proporciona información detallada sobre el uso, parámetros y ejemplos de comandos.
     """
     
+    name = "qzxHelp"
+    description = "Shows help for a command"
+    category = "system"
+    aliases = ["help"]
+    parameters = [
+        {
+            "name": "command",
+            "description": "Name of the command to get help for",
+            "required": False,
+            "default": None
+        }
+    ]
+    examples = [
+        {
+            "command": "qzx qzxHelp",
+            "description": "Shows general help information"
+        },
+        {
+            "command": "qzx help readFile",
+            "description": "Shows detailed help for the readFile command"
+        }
+    ]
+
     def __init__(self):
         super().__init__()
-        self.name = "qzxHelp"
-        self.description = "Show help for a command"
-        self.category = "system"
-        self.aliases = ["help"]
-        self.parameters = [
-            {
-                "name": "command",
-                "description": "Name of the command to get help for",
-                "required": False,
-                "default": None
-            }
-        ]
-        self.examples = [
-            {
-                "command": "qzxHelp",
-                "description": "Shows general help information"
-            },
-            {
-                "command": "help readFile",
-                "description": "Shows detailed help for the readFile command"
-            }
-        ]
         self.command_loader = CommandLoader()
     
     def execute(self, command=None):
@@ -59,14 +54,23 @@ class qzxHelp(CommandBase):
         if not command:
             # General help - list all commands
             help_text = """QZX Help:
-            
-Usage: qzx <command> [arguments]
 
-Commands:
-- To see a list of all available commands: qzx list
-- To get help on a specific command: qzx help <command>
-- To see system information: qzx WonderMyEnvironment
-- To display this welcome message: qzx Welcome (or just qzx)
+Usage: qzx <command> [arguments] [--json]
+
+Output:
+- Without --json: a clear terminal presentation with the summary and useful data.
+- With --json: one complete structured object on stdout.
+- Every public result contains boolean success and descriptive message fields.
+
+Discovery:
+- List the commands in this installation: qzx list --json
+- Inspect one command: qzx help <command> --json
+- Identify this installation: qzx version --json
+
+Naming:
+- Command lookup is case-insensitive.
+- Documentation uses each command's canonical lowerCamelCase spelling.
+- Accepted aliases appear in command-specific help and the public catalog.
 """
             
             return {
@@ -96,4 +100,4 @@ Commands:
             "success": False,
             "error": f"Command not found: {command}",
             "message": f"Command not found: {command}"
-        } 
+        }

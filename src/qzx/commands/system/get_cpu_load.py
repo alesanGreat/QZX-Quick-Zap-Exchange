@@ -28,7 +28,8 @@ class GetCPULoadCommand(CommandBase):
             'name': 'interval',
             'description': 'Time interval (in seconds) to calculate CPU usage',
             'required': False,
-            'default': 1
+            'default': 1.0,
+            'type': 'float'
         }
     ]
     

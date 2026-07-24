@@ -432,18 +432,18 @@ class FindFilesCommand(CommandBase):
             # Preparar mensaje para el resultado
             recursion_message = ""
             if recursive is True:
-                recursion_message = " (buscando recursivamente)"
+                recursion_message = " (recursive)"
             elif isinstance(recursive, int) and recursive > 0:
-                recursion_message = f" (buscando hasta {recursive} niveles de profundidad)"
+                recursion_message = f" (up to {recursive} levels deep)"
             
             if len(results) == 0:
-                message = f"No se encontraron archivos coincidentes en '{search_path}'{recursion_message}"
+                message = f"No matching items found in '{search_path}'{recursion_message}"
             else:
-                message = f"Se encontraron {len(results)} elementos en '{search_path}'{recursion_message}"
+                message = f"Found {len(results)} items in '{search_path}'{recursion_message}"
                 
                 # Formatear a tamaño legible
                 total_size_readable = self._format_bytes(total_size)
-                message += f", tamaño total: {total_size_readable}"
+                message += f", total size: {total_size_readable}"
             
             # Formatear resultados según el formato solicitado
             formatted_results = self._format_results(results, format)
@@ -859,21 +859,6 @@ class FindFilesCommand(CommandBase):
             return formatted
         
         return results
-    
-    def _format_bytes(self, bytes_value):
-        """
-        Format bytes to a readable form
-        
-        Args:
-            bytes_value (int): Bytes to format
-            
-        Returns:
-            str: Formatted string with appropriate unit
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if bytes_value < 1024 or unit == 'TB':
-                return f"{bytes_value:.2f} {unit}"
-            bytes_value /= 1024 
     
     def _sort_results(self, results, sort_by, reverse_sort):
         """

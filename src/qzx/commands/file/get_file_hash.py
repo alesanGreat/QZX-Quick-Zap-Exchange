@@ -120,18 +120,3 @@ class GetFileHashCommand(CommandBase):
                 "message": f"Failed to calculate file hash: {str(e)}"
             }
             
-    def _format_bytes(self, size):
-        """
-        Format bytes to human-readable size
-        
-        Args:
-            size (int): Size in bytes
-            
-        Returns:
-            str: Human-readable size string
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if size < 1024.0 or unit == 'TB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"

@@ -22,29 +22,32 @@ class KillProcessCommand(CommandBase):
     name = "killProcess"
     description = "Terminates a process by its ID (similar to 'kill' in Unix)"
     category = "system"
+    requires_explicit_approval = True
     
     parameters = [
         {
             'name': 'pid',
             'description': 'Process ID to terminate',
-            'required': True
+            'required': True,
+            'type': 'int'
         },
         {
             'name': 'force',
             'description': 'Whether to force termination (like kill -9)',
             'required': False,
-            'default': False
+            'default': False,
+            'type': 'bool'
         }
     ]
     
     examples = [
         {
-            'command': 'qzx killProcess 1234',
-            'description': 'Terminate the process with PID 1234'
+            'command': 'qzx killProcess 1234 --yolo',
+            'description': 'Terminate PID 1234 when no restorable filesystem target exists'
         },
         {
-            'command': 'qzx killProcess 1234 true',
-            'description': 'Force terminate the process with PID 1234'
+            'command': 'qzx killProcess 1234 true --dangerously-bypass-approvals-and-sandbox',
+            'description': 'Force terminate PID 1234 without a safety backup'
         }
     ]
     
@@ -180,17 +183,3 @@ class KillProcessCommand(CommandBase):
                 "message": f"Failed to terminate process {pid}: {str(e)}"
             }
     
-    def _format_bytes(self, bytes_value):
-        """
-        Format bytes to human-readable format
-        
-        Args:
-            bytes_value (int): Bytes to format
-            
-        Returns:
-            str: Formatted string with appropriate unit
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if bytes_value < 1024 or unit == 'TB':
-                return f"{bytes_value:.2f} {unit}"
-            bytes_value /= 1024 

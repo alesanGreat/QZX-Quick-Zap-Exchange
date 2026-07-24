@@ -5,12 +5,6 @@
 qzxListCommands - Lista todos los comandos disponibles organizados por categoría.
 """
 
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 from qzx.core.command_base import CommandBase
 from qzx.core.command_loader import CommandLoader
 
@@ -20,30 +14,31 @@ class qzxListCommands(CommandBase):
     Permite filtrar comandos por nombre o descripción.
     """
     
+    name = "qzxListCommands"
+    description = "Lists all available commands organized by category"
+    category = "system"
+    aliases = ["list", "ListCommands"]
+    parameters = [
+        {
+            "name": "filter_text",
+            "description": "Optional text to filter commands by name or description",
+            "required": False,
+            "default": None
+        }
+    ]
+    examples = [
+        {
+            "command": "qzx qzxListCommands",
+            "description": "Lists all available commands organized by category"
+        },
+        {
+            "command": "qzx list file",
+            "description": "Lists all commands containing 'file' in their name or description"
+        }
+    ]
+
     def __init__(self):
         super().__init__()
-        self.name = "qzxListCommands"
-        self.description = "Lists all available commands organized by category"
-        self.category = "system"
-        self.aliases = ["list", "ListCommands"]
-        self.parameters = [
-            {
-                "name": "filter_text",
-                "description": "Optional text to filter commands by name or description",
-                "required": False,
-                "default": None
-            }
-        ]
-        self.examples = [
-            {
-                "command": "qzxListCommands",
-                "description": "Lists all available commands organized by category"
-            },
-            {
-                "command": "list file",
-                "description": "Lists all commands containing 'file' in their name or description"
-            }
-        ]
         self.command_loader = CommandLoader()
     
     def execute(self, filter_text=None):
@@ -63,51 +58,31 @@ class qzxListCommands(CommandBase):
         alias_category = 'alias'
         categories[alias_category] = []
         
-        # Track original commands to identify aliases
-        original_commands = {}
-        command_instances = {}
-        
         # Get all commands from command loader
         all_commands = self.command_loader.get_all_commands()
-        
-        # First pass: identify and store original commands
-        for name, cmd_class in all_commands.items():
-            # Instantiate the command once
-            if cmd_class not in command_instances:
-                command_instances[cmd_class] = cmd_class()
-                
-            cmd_instance = command_instances[cmd_class]
-            original_name = cmd_instance.name
-            
-            # Store mapping of original command name to its command class
-            if original_name == name:
-                original_commands[original_name] = cmd_class
-        
-        # Second pass: categorize commands
-        for name, cmd_class in all_commands.items():
-            cmd_instance = command_instances[cmd_class]
-            original_name = cmd_instance.name
-            category = cmd_instance.category
-            description = cmd_instance.description
-            
-            # Initialize the category if it doesn't exist
-            if category not in categories:
-                categories[category] = []
-            
-            # If this is the original command name, add to its proper category
-            if name == original_name:
-                categories[category].append((name, description))
-            # Otherwise, it's an alias, add to the alias category with reference to original
-            elif name.lower() == original_name.lower():
-                # Skip duplicate lowercase aliases
-                continue
-            else:
-                # It's an actual alias, add it to alias category with reference to its original command
-                categories[alias_category].append((name, f"Alias for {original_name}: {description}"))
-        
-        # Add special commands
-        categories['system'] = categories.get('system', [])
-        categories['system'].append(('qzxHelp', 'Show help for a command'))
+        command_instances = [
+            command_class() for command_class in set(all_commands.values())
+        ]
+        canonical_names = {
+            instance.name.lower() for instance in command_instances
+        }
+        seen_aliases = set()
+
+        for instance in command_instances:
+            categories.setdefault(instance.category, []).append(
+                (instance.name, instance.description)
+            )
+            for alias in getattr(instance, "aliases", []):
+                alias_key = alias.lower()
+                if alias_key in canonical_names or alias_key in seen_aliases:
+                    continue
+                seen_aliases.add(alias_key)
+                categories[alias_category].append(
+                    (
+                        alias,
+                        f"Alias for {instance.name}: {instance.description}",
+                    )
+                )
         
         # Apply filter if provided
         if filter_text:
@@ -159,4 +134,4 @@ class qzxListCommands(CommandBase):
                 category: [{"name": name, "description": desc} for name, desc in commands]
                 for category, commands in categories.items()
             }
-        } 
+        }

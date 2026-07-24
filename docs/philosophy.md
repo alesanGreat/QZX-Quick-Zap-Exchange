@@ -143,11 +143,25 @@ QZX's `CurrentDir` command returns:
   "directory_name": "documents",
   "parent_directory": "/home/user",
   "home_relative_path": "~/documents",
-  "message": "Current directory: /home/user/documents (relative to home: ~/documents)"
+  "contents": {
+    "scope": "current_level",
+    "entry_count": 15,
+    "file_count": 11,
+    "directory_count": 4,
+    "symlink_count": 0,
+    "hidden_count": 2,
+    "is_empty": false,
+    "immediate_files_size_bytes": 245760,
+    "immediate_files_size_formatted": "240.00 KiB",
+    "scan_complete": true
+  },
+  "message": "Current directory: /home/user/documents. At this level: 11 files, 4 directories, 0 symbolic links, 0 other entries (15 total). Home-relative path: ~/documents."
 }
 ```
 
-This provides both AI and users with complete context about the directory structure.
+This gives both AI and users immediate directory context without requiring a
+second listing command. Optional `--size` and `--details` arguments add a
+single-pass recursive inventory when that extra filesystem work is useful.
 
 ### Example 2: Administrative Status
 

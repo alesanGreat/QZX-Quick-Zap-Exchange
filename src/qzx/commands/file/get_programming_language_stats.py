@@ -33,6 +33,7 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
     aliases = ["getProgrammingLanguageStatsFromFile"]
     description = "Analyzes files to determine the programming language and provides statistics about the code. Supports wildcards and recursive directory search."
     category = "file"
+    _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
     
     parameters = [
         {
@@ -948,18 +949,3 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
         else:
             return "Difficult to Maintain"
     
-    def _format_bytes(self, size):
-        """
-        Format bytes to human-readable size
-        
-        Args:
-            size (int): Size in bytes
-            
-        Returns:
-            str: Human-readable size string
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
-            if size < 1024.0 or unit == 'PB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}" 

@@ -7,7 +7,6 @@ MakeScaffProgramKotlin Command - Creates a basic scaffolding for a Kotlin progra
 
 import os
 import subprocess
-import datetime
 import sys
 from pathlib import Path
 
@@ -15,6 +14,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
+from qzx.commands.development._scaffold_utils import (
+    normalize_project_name,
+    prepare_scaffold_project,
+)
 
 
 class MakeScaffProgramKotlinCommand(CommandBase):
@@ -67,41 +70,18 @@ class MakeScaffProgramKotlinCommand(CommandBase):
             if isinstance(with_tests, str):
                 with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
 
-            project_name = self._normalize_project_name(project_name)
-            if not project_name:
-                return {
-                    "success": False,
-                    "error": "Invalid project name",
-                    "message": "Project name cannot be empty and must contain valid characters (letters, numbers, underscores)."
-                }
-
-            if not os.path.exists(path):
-                return {
-                    "success": False,
-                    "error": f"Path does not exist: {path}",
-                    "message": f"Cannot create project: the specified path '{path}' does not exist."
-                }
-
-            project_path = os.path.join(path, project_name)
-
-            if os.path.exists(project_path):
-                return {
-                    "success": False,
-                    "error": f"Project directory already exists: {project_path}",
-                    "message": f"Cannot create project: directory '{project_path}' already exists."
-                }
-
-            result = {
-                "success": True,
-                "project_name": project_name,
-                "project_path": project_path,
-                "with_tests": with_tests,
-                "files_created": [],
-                "timestamp": datetime.datetime.now().isoformat(),
-            }
-
-            os.makedirs(project_path)
-            result["files_created"].append(project_path)
+            project_name = normalize_project_name(
+                project_name,
+                leading_prefix="kt_",
+            )
+            result = prepare_scaffold_project(
+                project_name,
+                path,
+                {"with_tests": with_tests},
+            )
+            if not result["success"]:
+                return result
+            project_path = result["project_path"]
 
             package_path = f"com/example/{project_name}"
             package_dir_path = package_path.replace('/', os.sep)
@@ -137,13 +117,6 @@ class MakeScaffProgramKotlinCommand(CommandBase):
                 "message": f"Failed to create Kotlin project scaffolding: {str(e)}",
                 "project_name": project_name
             }
-
-    def _normalize_project_name(self, name):
-        normalized = name.replace(' ', '_').replace('-', '_')
-        normalized = ''.join(c for c in normalized if c.isalnum() or c == '_')
-        if normalized and not (normalized[0].isalpha() or normalized[0] == '_'):
-            normalized = 'kt_' + normalized
-        return normalized.lower()
 
     def _create_settings_gradle(self, project_path, project_name, result):
         settings_path = os.path.join(project_path, 'settings.gradle.kts')

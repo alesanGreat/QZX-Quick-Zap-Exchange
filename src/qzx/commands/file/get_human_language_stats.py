@@ -349,7 +349,9 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
         if len(files_found) == 0:
             print(f"No files found matching '{file_path}'")
             return {
+                "success": False,
                 "status": "error",
+                "error": f"No files found matching '{file_path}'",
                 "message": f"No files found matching '{file_path}'"
             }
         
@@ -367,9 +369,6 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
             try:
                 stats = self._analyze_file(file_path, ignore_comments, min_word_length, selected_function_words)
                 file_stats[file_path] = stats
-                
-                # Display results for this file
-                self._print_file_stats(file_path, stats)
             except Exception as e:
                 print(f"Error processing file {file_path}: {str(e)}")
                 file_stats[file_path] = {"error": str(e)}
@@ -377,13 +376,11 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
         # Aggregate stats across all files
         aggregated_stats = self._aggregate_stats(file_stats)
         
-        print("\nAggregated statistics across all files:")
-        for lang, percentage in aggregated_stats["languages"].items():
-            print(f"  {lang}: {percentage:.2f}%")
-        
         # Return complete results
         return {
+            "success": True,
             "status": "success",
+            "message": f"Analyzed human-language content in {processed_files} file(s).",
             "files_processed": processed_files,
             "files_found": total_files,
             "file_stats": file_stats,

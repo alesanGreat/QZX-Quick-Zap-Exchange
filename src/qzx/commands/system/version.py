@@ -6,15 +6,11 @@ Version Command - Displays the current version of QZX
 """
 
 import platform
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.command_loader import CommandLoader
 from qzx import __version__
+from qzx.identity import product_identity
 
 class QZXVersionCommand(CommandBase):
     """
@@ -22,7 +18,7 @@ class QZXVersionCommand(CommandBase):
     """
     
     name = "version"
-    aliases = ["qzxVersion"]
+    aliases = ["qzxVersion", "--version"]
     description = "Displays the current version of QZX and system information"
     category = "system"
     
@@ -32,6 +28,10 @@ class QZXVersionCommand(CommandBase):
         {
             'command': 'qzx version',
             'description': 'Display the current version of QZX and system information'
+        },
+        {
+            'command': 'qzx --version',
+            'description': 'Display the current version using the global version flag'
         }
     ]
     
@@ -45,6 +45,7 @@ class QZXVersionCommand(CommandBase):
         try:
             # Get the version from the main QZX class
             qzx_version = __version__
+            identity = product_identity()
             
             # Gather additional system information
             system_info = {
@@ -61,10 +62,8 @@ class QZXVersionCommand(CommandBase):
             qzx_info = {}
             try:
                 commands = CommandLoader().discover_commands()
-                qzx_info["command_count"] = len(
-                    {command.__name__ for command in commands.values()}
-                )
-            except:
+                qzx_info["command_count"] = len(set(commands.values()))
+            except Exception:
                 # Ignore errors in getting installation info
                 pass
             
@@ -82,6 +81,8 @@ class QZXVersionCommand(CommandBase):
                 "success": True,
                 "message": message,
                 "version": qzx_version,
+                "attribution": identity["attribution"],
+                "license": identity["license"],
                 "system_info": system_info,
                 "qzx_info": qzx_info
             }

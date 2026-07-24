@@ -3,7 +3,17 @@
 
 """QZX - Quick Zap Exchange."""
 
-__version__ = "0.2.2"
+import json
+from importlib import resources
+
+
+def _development_version():
+    manifest = resources.files("qzx.resources").joinpath("product-manifest.json")
+    with manifest.open("r", encoding="utf-8") as handle:
+        return json.load(handle)["channels"]["development"]["version"]
+
+
+__version__ = _development_version()
 
 
 def main():

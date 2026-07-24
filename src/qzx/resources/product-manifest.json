@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "product": {
+    "name": "QZX",
+    "full_name": "QZX — Quick Zap Exchange",
+    "legal_name": "QZX - Quick Zap Exchange",
+    "tagline": {
+      "en": "A predictable cross-platform command layer for AI agents",
+      "es": "Una capa de comandos multiplataforma predecible para agentes de IA"
+    },
+    "description": {
+      "en": "QZX is a completely free and open-source Python CLI. It gives AI agents and automation one documented command vocabulary for supported operations on Windows, Linux, and macOS, with explicit success or failure and optional structured JSON output.",
+      "es": "QZX es una CLI Python totalmente gratis y de código abierto. Ofrece a agentes de IA y automatizaciones un vocabulario documentado para operaciones compatibles en Windows, Linux y macOS, con éxito o error explícito y salida JSON estructurada opcional."
+    },
+    "author": {
+      "name": "Alejandro Sánchez",
+      "profile_url": "https://www.linkedin.com/in/alesan/"
+    },
+    "attribution": "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.",
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "platforms": [
+      "Windows",
+      "Linux",
+      "macOS"
+    ],
+    "pricing": {
+      "free_to_use": true,
+      "paid_plans": false,
+      "paid_features": false,
+      "statement": {
+        "en": "QZX is completely free to use. There are no paid plans or paid features.",
+        "es": "QZX es totalmente gratis. No hay planes ni funciones de pago."
+      },
+      "donations": {
+        "welcome": true,
+        "optional": true,
+        "purpose": {
+          "en": "Donations support QZX's ongoing development.",
+          "es": "Las donaciones apoyan el desarrollo continuo de QZX."
+        },
+        "change_product_experience": false
+      }
+    }
+  },
+  "urls": {
+    "site_origin": "https://qzx.yumbale.com",
+    "documentation_en": "https://qzx.yumbale.com/en/",
+    "documentation_es": "https://qzx.yumbale.com/es/",
+    "command_catalog": "https://qzx.yumbale.com/en/commands",
+    "compatibility": "https://qzx.yumbale.com/en/compatibility",
+    "security": "https://qzx.yumbale.com/en/security",
+    "telemetry_policy": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/telemetry.md",
+    "package": "https://pypi.org/project/qzx/",
+    "package_metadata": "https://pypi.org/pypi/qzx/json",
+    "repository": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange",
+    "repository_branch": "main",
+    "issues": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues",
+    "changelog": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/CHANGELOG.md"
+  },
+  "output_contract": {
+    "default_output": "human_message",
+    "human": "The CLI prints the descriptive message by default.",
+    "machine": {
+      "flag": "--json",
+      "media_type": "application/json",
+      "description": "Pass --json to print one complete structured result to stdout."
+    },
+    "required_fields": [
+      "success",
+      "message"
+    ],
+    "exit_codes": {
+      "success": 0,
+      "failure": 1,
+      "usage_error": 2,
+      "command_not_found": 127
+    }
+  },
+  "command_naming": {
+    "canonical_style": "lowerCamelCase",
+    "case_sensitive": false,
+    "aliases_supported": true,
+    "documentation_rule": "Use the current canonical lowerCamelCase spelling in examples and list accepted aliases separately."
+  },
+  "channels": {
+    "published": {
+      "version": "0.2.2",
+      "status": "Alpha",
+      "channel": "Published package",
+      "released_at": "2025-03-18",
+      "requires_python": ">=3.6",
+      "source": "https://pypi.org/pypi/qzx/json",
+      "wheel": {
+        "filename": "qzx-0.2.2-py3-none-any.whl",
+        "sha256": "d1f6cf9b5cbc116b4397f9a11b2eb7d4723e6ffb2ea505187946196e459bd378",
+        "verified_at": "2026-07-23",
+        "command_names": [
+          "analyzeComplexity",
+          "changePermissions",
+          "ClearScreen",
+          "commandsBridge",
+          "compareFiles",
+          "copyFile",
+          "countLinesInFile",
+          "createDirectory",
+          "CreateDocTemplatePython",
+          "CurrentDir",
+          "deleteFile",
+          "downloadFile",
+          "findFiles",
+          "findLargeFiles",
+          "findText",
+          "getCPULoad",
+          "getCurrentDate",
+          "getCurrentTime",
+          "getCurrentUser",
+          "getDiskInfo",
+          "getDiskName",
+          "GetGPULoad",
+          "getHumanLanguageStatsFromFile",
+          "getProgrammingLanguageStatsFromFile",
+          "getRAMInfo",
+          "getSmartValues",
+          "killProcess",
+          "listFiles",
+          "listProcesses",
+          "makeScaffProgramC",
+          "makeScaffProgramCpp",
+          "makeScaffProgramPython",
+          "makeScaffProgramRust",
+          "moveFile",
+          "qzxHelp",
+          "qzxListCommands",
+          "qzxVersion",
+          "readFile",
+          "runScript",
+          "Shell",
+          "systemInfo",
+          "Term",
+          "Terminal",
+          "touchFile",
+          "Welcome",
+          "wonderCommandsAmount",
+          "WonderContentGen",
+          "wonderFileTypeMagic",
+          "wonderIfAdmin",
+          "wonderIfDirectoryEmpty",
+          "wonderIfFileEmpty",
+          "wonderIfFileIsBinary",
+          "WonderMyEnvironment",
+          "WonderToday"
+        ]
+      }
+    },
+    "development": {
+      "version": "0.2.2.0.1",
+      "status": "Alpha",
+      "channel": "Development documentation",
+      "requires_python": ">=3.9",
+      "source": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange"
+    }
+  },
+  "compatibility": {
+    "declared_platforms": [
+      "Windows",
+      "Linux",
+      "macOS"
+    ],
+    "ci": {
+      "configured": true,
+      "workflow": ".github/workflows/test.yml",
+      "matrix": [
+        {
+          "os": "windows-latest",
+          "python": "3.9"
+        },
+        {
+          "os": "windows-latest",
+          "python": "3.10"
+        },
+        {
+          "os": "windows-latest",
+          "python": "3.11"
+        },
+        {
+          "os": "windows-latest",
+          "python": "3.12"
+        },
+        {
+          "os": "windows-latest",
+          "python": "3.13"
+        },
+        {
+          "os": "ubuntu-latest",
+          "python": "3.9"
+        },
+        {
+          "os": "ubuntu-latest",
+          "python": "3.10"
+        },
+        {
+          "os": "ubuntu-latest",
+          "python": "3.11"
+        },
+        {
+          "os": "ubuntu-latest",
+          "python": "3.12"
+        },
+        {
+          "os": "ubuntu-latest",
+          "python": "3.13"
+        },
+        {
+          "os": "macos-latest",
+          "python": "3.9"
+        },
+        {
+          "os": "macos-latest",
+          "python": "3.10"
+        },
+        {
+          "os": "macos-latest",
+          "python": "3.11"
+        },
+        {
+          "os": "macos-latest",
+          "python": "3.12"
+        },
+        {
+          "os": "macos-latest",
+          "python": "3.13"
+        }
+      ],
+      "public_result_status": "not_asserted",
+      "claim": "A public cross-platform workflow is configured; this manifest does not claim a successful hosted run until a public run URL is recorded."
+    }
+  },
+  "documentation": {
+    "channel": "development",
+    "repository_branch": "main",
+    "snapshot_date": "2026-07-23",
+    "source_revision_environment_variable": "QZX_DOCS_COMMIT",
+    "exact_revision_fallback": "A deterministic SHA-256 digest of command source files is embedded in the generated command catalog when Git metadata is unavailable."
+  },
+  "telemetry": {
+    "enabled_by_default": true,
+    "event": "version_first_run",
+    "endpoint": "https://qzx.yumbale.com/api/v1/telemetry",
+    "maximum_frequency": "one event per QZX version and local installation identifier",
+    "opt_out": [
+      "QZX_TELEMETRY=0",
+      "DO_NOT_TRACK=1"
+    ],
+    "explicit_enable_precedence": "QZX_TELEMETRY=1 enables telemetry even when DO_NOT_TRACK=1 is present.",
+    "raw_ip_retention_days": 1825,
+    "deletion": "A private deletion request requires the random installation UUID from local telemetry state.",
+    "failure_behavior": "Network or storage failures never change the command result.",
+    "policy_url": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/telemetry.md"
+  }
+}

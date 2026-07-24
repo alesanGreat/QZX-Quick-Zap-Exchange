@@ -66,10 +66,22 @@ class ReadFileCommand(CommandBase):
         try:
             # Check if file exists
             if not os.path.exists(file_path):
-                return f"Error: File '{file_path}' not found"
+                return {
+                    "success": False,
+                    "error_code": "file_not_found",
+                    "error": f"File '{file_path}' was not found.",
+                    "message": "Check the path and try again.",
+                    "details": {"path": os.path.abspath(file_path)},
+                }
             
             if not os.path.isfile(file_path):
-                return f"Error: '{file_path}' is not a file"
+                return {
+                    "success": False,
+                    "error_code": "not_a_file",
+                    "error": f"'{file_path}' is not a regular file.",
+                    "message": "readFile accepts files, not directories.",
+                    "details": {"path": os.path.abspath(file_path)},
+                }
             
             # Get absolute path for display
             abs_path = os.path.abspath(file_path)
@@ -98,8 +110,20 @@ class ReadFileCommand(CommandBase):
                     # Try to convert max_lines to an integer
                     try:
                         max_lines = int(max_lines)
-                    except ValueError:
-                        return f"Error: max_lines must be an integer, got '{max_lines}'"
+                    except (TypeError, ValueError):
+                        return {
+                            "success": False,
+                            "error_code": "invalid_max_lines",
+                            "error": f"max_lines must be an integer, got '{max_lines}'.",
+                            "message": "Provide a non-negative integer line limit.",
+                        }
+                    if max_lines < 0:
+                        return {
+                            "success": False,
+                            "error_code": "invalid_max_lines",
+                            "error": "max_lines cannot be negative.",
+                            "message": "Provide a non-negative integer line limit.",
+                        }
                     
                     # Read specified number of lines
                     lines = []
@@ -123,21 +147,20 @@ class ReadFileCommand(CommandBase):
             if result["read_complete"]:
                 result["total_lines"] = result["content"].count('\n') + (1 if result["content"] and not result["content"].endswith('\n') else 0)
             
-            return result
+            return {
+                "success": True,
+                "message": (
+                    f"Read {result.get('lines_read', result.get('total_lines', 0))} "
+                    f"line(s) from '{abs_path}'."
+                ),
+                "content": result["content"],
+                "details": result,
+            }
         except Exception as e:
-            return f"Error reading file: {str(e)}"
+            return {
+                "success": False,
+                "error_code": "read_failed",
+                "error": str(e),
+                "message": f"Could not read '{file_path}'.",
+            }
     
-    def _format_bytes(self, bytes_value):
-        """
-        Format bytes to human-readable format
-        
-        Args:
-            bytes_value (int): Bytes to format
-            
-        Returns:
-            str: Formatted string with appropriate unit
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if bytes_value < 1024 or unit == 'TB':
-                return f"{bytes_value:.2f} {unit}"
-            bytes_value /= 1024 

@@ -7,10 +7,8 @@ QZX Command Loader - Handles loading commands from various modules
 
 import importlib
 import inspect
-import os
 import pkgutil
 import re
-import subprocess
 import sys
 from .command_base import CommandBase
 
@@ -25,13 +23,12 @@ class CommandLoader:
         """
         self.commands = {}
         self.command_modules = {}
-        self.command_packages = [
-            "qzx.commands.file",
-            "qzx.commands.system",
-            "qzx.commands.development",
-            "qzx.commands.network",
-        ]
-        # Track modules we've already tried to install to avoid repeated attempts
+        self.command_packages = []
+        self.load_errors = {}
+        self.registration_warnings = []
+        self._discovered = False
+        # Retained for backwards-compatible diagnostics. Runtime installation
+        # is intentionally disabled.
         self.attempted_installs = set()
     
     def discover_commands(self):
@@ -41,12 +38,26 @@ class CommandLoader:
         Returns:
             Dict of commands mapped by their names (lowercase)
         """
+        if self._discovered:
+            return self.commands
+
+        commands_package = importlib.import_module("qzx.commands")
+        self.command_packages = sorted(
+            module.name
+            for module in pkgutil.iter_modules(
+                commands_package.__path__,
+                commands_package.__name__ + ".",
+            )
+            if module.ispkg and not module.name.rsplit(".", 1)[-1].startswith("_")
+        )
+
         for package_name in self.command_packages:
             package = importlib.import_module(package_name)
             for module in pkgutil.iter_modules(package.__path__):
                 if not module.ispkg and not module.name.startswith("_"):
                     self._load_command_from_module(f"{package_name}.{module.name}")
-        
+
+        self._discovered = True
         return self.commands
     
     def _try_install_module(self, module_name):
@@ -59,38 +70,11 @@ class CommandLoader:
         Returns:
             bool: True if installation was successful, False otherwise
         """
-        # Skip if we've already tried to install this module
-        if module_name in self.attempted_installs:
-            return False
-            
+        # Installing packages while merely listing or executing another command
+        # is unsafe and makes startup nondeterministic. Optional dependencies
+        # must be installed explicitly by the user or through package extras.
         self.attempted_installs.add(module_name)
-        
-        try:
-            print(f"Attempting to install missing module: {module_name}")
-            
-            # Special case for 'magic' module on Windows
-            package_name = module_name
-            if module_name == 'magic' and os.name == 'nt':  # 'nt' is Windows
-                package_name = 'python-magic-bin'
-                print(f"Detected Windows OS, will install '{package_name}' instead of '{module_name}'")
-            
-            # Use subprocess to run pip install
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", package_name],
-                capture_output=True,
-                text=True,
-                check=False  # Don't raise error on non-zero exit
-            )
-            
-            if result.returncode == 0:
-                print(f"Successfully installed module: {package_name}")
-                return True
-            else:
-                print(f"Failed to install module {package_name}: {result.stderr}")
-                return False
-        except Exception as e:
-            print(f"Error while trying to install {module_name}: {str(e)}")
-            return False
+        return False
     
     def _extract_missing_module_name(self, error_message):
         """
@@ -125,7 +109,8 @@ class CommandLoader:
                 # Check if it's a class that inherits from CommandBase and is not CommandBase itself
                 if (inspect.isclass(obj) and 
                     issubclass(obj, CommandBase) and 
-                    obj is not CommandBase):
+                    obj is not CommandBase and
+                    obj.__module__ == module.__name__):
                     
                     # Instantiate the command
                     command_instance = obj()
@@ -133,6 +118,18 @@ class CommandLoader:
                     # Get the command name and ensure it's lowercase for case-insensitive lookup
                     command_name = command_instance.name.lower()
                     
+                    existing = self.commands.get(command_name)
+                    if existing is not None and existing is not obj:
+                        warning = (
+                            "Duplicate canonical command '{}': {} conflicts with {}"
+                        ).format(
+                            command_instance.name,
+                            obj.__module__,
+                            existing.__module__,
+                        )
+                        self.registration_warnings.append(warning)
+                        continue
+
                     # Register the command by its lowercase name
                     self.commands[command_name] = obj
                     
@@ -140,62 +137,54 @@ class CommandLoader:
                     if hasattr(command_instance, 'aliases') and command_instance.aliases:
                         for alias in command_instance.aliases:
                             alias_lower = alias.lower()
-                            # Register each alias pointing to the same command class
+                            if alias_lower == command_name:
+                                continue
+                            # Never let an alias replace a command registered earlier.
+                            existing_alias = self.commands.get(alias_lower)
+                            if existing_alias is not None and existing_alias is not obj:
+                                self.registration_warnings.append(
+                                    "Alias '{}' from {} conflicts with {}".format(
+                                        alias,
+                                        obj.__module__,
+                                        existing_alias.__module__,
+                                    )
+                                )
+                                continue
                             self.commands[alias_lower] = obj
                             # Solo mostrar mensaje de alias si se solicita (--verbose o similar)
                             if len(sys.argv) > 2 and '--verbose' in sys.argv:
                                 print(f"Registered alias: {alias_lower} -> {command_name} ({module_name})")
-                    
-                    # Also register with original capitalization for backward compatibility
-                    # but only if it's different from the lowercase version
-                    if command_instance.name != command_name:
-                        self.commands[command_instance.name] = obj
                     
                     # Print registration info solo en modo verbose
                     if len(sys.argv) > 2 and '--verbose' in sys.argv:
                         print(f"Registered command: {command_name} ({module_name})")
         except ImportError as e:
             error_msg = str(e)
-            print(f"Import error loading module {module_name}: {error_msg}")
+            self.load_errors[module_name] = {
+                "type": "ImportError",
+                "message": error_msg,
+                "missing_dependency": self._extract_missing_module_name(error_msg),
+            }
             
-            # Try to extract the missing module name
-            missing_module = self._extract_missing_module_name(error_msg)
-            if missing_module:
-                # Attempt to install the missing module
-                if self._try_install_module(missing_module):
-                    # If installation succeeded, try importing again
-                    try:
-                        # Import the module
-                        module = importlib.import_module(module_name)
-                        self.command_modules[module_name] = module
-                        
-                        print(f"Successfully loaded module {module_name} after installing dependency")
-                        
-                        # Now try to register the commands again
-                        for name, obj in inspect.getmembers(module):
-                            if (inspect.isclass(obj) and 
-                                issubclass(obj, CommandBase) and 
-                                obj is not CommandBase):
-                                
-                                # Instantiate the command
-                                command_instance = obj()
-                                
-                                # Get command name and register
-                                command_name = command_instance.name.lower()
-                                self.commands[command_name] = obj
-                                
-                                # Also register with original capitalization
-                                if command_instance.name != command_name:
-                                    self.commands[command_instance.name] = obj
-                                
-                                # Handle aliases
-                                if hasattr(command_instance, 'aliases') and command_instance.aliases:
-                                    for alias in command_instance.aliases:
-                                        self.commands[alias.lower()] = obj
-                    except Exception as retry_error:
-                        print(f"Failed to load module {module_name} even after installing dependency: {str(retry_error)}")
+            if "--verbose" in sys.argv:
+                print(
+                    "Import error loading module {}: {}".format(
+                        module_name,
+                        error_msg,
+                    ),
+                    file=sys.stderr,
+                )
         except Exception as e:
-            print(f"Error loading module {module_name}: {str(e)}")
+            self.load_errors[module_name] = {
+                "type": type(e).__name__,
+                "message": str(e),
+                "missing_dependency": None,
+            }
+            if "--verbose" in sys.argv:
+                print(
+                    "Error loading module {}: {}".format(module_name, str(e)),
+                    file=sys.stderr,
+                )
     
     def get_command(self, command_name):
         """
@@ -207,6 +196,9 @@ class CommandLoader:
         Returns:
             Command instance or None if not found
         """
+        if not self.commands:
+            self.discover_commands()
+
         # Always convert to lowercase to ensure case-insensitivity
         command_name = command_name.lower() if command_name else ""
         
@@ -214,6 +206,12 @@ class CommandLoader:
         if command_class:
             return command_class()
         return None
+
+    def get_all_commands(self):
+        """Return all registered commands, discovering them on first use."""
+        if not self.commands:
+            self.discover_commands()
+        return self.commands
     
     def list_commands(self):
         """
@@ -222,29 +220,15 @@ class CommandLoader:
         Returns:
             List of (command_name, description, category) tuples
         """
-        result = []
-        
-        # Track which commands we've already added to avoid duplicates
-        processed_commands = set()
-        
-        for name, cmd_class in self.commands.items():
-            # Create an instance to get its properties
-            cmd_instance = cmd_class()
-            
-            # Use a unique identifier for the command (class name)
-            cmd_identifier = cmd_instance.__class__.__name__
-            
-            # Skip if we've already processed this command class
-            if cmd_identifier in processed_commands:
-                continue
-            
-            # Skip lowercase duplicates (if original capitalization exists)
-            original_name = cmd_instance.name
-            if name != original_name and name.lower() == original_name.lower():
-                continue
-            
-            processed_commands.add(cmd_identifier)
-            result.append((original_name, cmd_instance.description, cmd_instance.category))
+        if not self.commands:
+            self.discover_commands()
+
+        result = [
+            (instance.name, instance.description, instance.category)
+            for instance in (
+                command_class() for command_class in set(self.commands.values())
+            )
+        ]
         
         # Sort by category and then by name
         return sorted(result, key=lambda x: (x[2], x[0])) 

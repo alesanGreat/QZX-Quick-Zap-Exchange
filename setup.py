@@ -1,8 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import platform
+import json
+from pathlib import Path
+
 from setuptools import find_packages, setup
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+PRODUCT_MANIFEST_PATH = (
+    PROJECT_ROOT / "src" / "qzx" / "resources" / "product-manifest.json"
+)
+with PRODUCT_MANIFEST_PATH.open("r", encoding="utf-8") as manifest_file:
+    PRODUCT_MANIFEST = json.load(manifest_file)
+
+DEVELOPMENT_CHANNEL = PRODUCT_MANIFEST["channels"]["development"]
+PRODUCT_URLS = PRODUCT_MANIFEST["urls"]
 
 # Leer README desde el directorio actual
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -11,41 +24,82 @@ with open("README.md", "r", encoding="utf-8") as fh:
 # Dependencias específicas de la plataforma
 install_requires = [
     "psutil",  # Para información del sistema
+    "chardet",  # Detección de codificación en isFileBinary
+    "colorama",  # Colores portables en findText
+    "pyreadline3; platform_system == 'Windows'",
 ]
-
-# En Windows, agregar pyreadline3
-if platform.system() == "Windows":
-    install_requires.append("pyreadline3")
 
 # Determinar dependencias condicionales
 extras_require = {
     'win': ['python-magic-bin'],  # Para Windows
     'unix': ['python-magic'],      # Para Unix/Linux/Mac
+    'filetype': [
+        "python-magic-bin; platform_system == 'Windows'",
+        "python-magic; platform_system != 'Windows'",
+    ],
+    'ai': ['requests', 'python-dotenv'],
 }
 
 setup(
     name="qzx",
-    version="0.2.2",
+    version=DEVELOPMENT_CHANNEL["version"],
     author="Alejandro Sánchez",
     author_email="alesangreat@gmail.com",
-    description="QZX - Quick Zap Exchange - Command line tool for automating common tasks across platforms",
+    maintainer="Alejandro Sánchez",
+    maintainer_email="alesangreat@gmail.com",
+    license_expression="Apache-2.0",
+    license_files=["LICENSE", "NOTICE"],
+    description="Predictable cross-platform commands and structured JSON for AI agents and automation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/alesanGreat/QZX-Quick-Zap-Exchange",
+    url=PRODUCT_URLS["site_origin"] + "/",
+    project_urls={
+        "Documentation": PRODUCT_URLS["documentation_en"],
+        "Spanish Documentation": PRODUCT_URLS["documentation_es"],
+        "Command Catalog": PRODUCT_URLS["command_catalog"],
+        "Compatibility": PRODUCT_URLS["compatibility"],
+        "Security": PRODUCT_URLS["security"],
+        "Telemetry Policy": PRODUCT_URLS["telemetry_policy"],
+        "Source": PRODUCT_URLS["repository"],
+        "Issues": PRODUCT_URLS["issues"],
+        "Changelog": PRODUCT_URLS["changelog"],
+        "Funding": PRODUCT_URLS["site_origin"] + "/en/donate",
+    },
+    keywords=[
+        "ai-agents",
+        "automation",
+        "cli",
+        "cross-platform",
+        "devops",
+        "structured-json",
+        "system-administration",
+    ],
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     package_data={
         "qzx": [
+            "resources/product-manifest.json",
             "resources/function_words/*.json",
             "resources/programming_languages/*.json",
         ],
     },
     classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
+        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Operating System :: OS Independent",
+        "Topic :: Software Development",
+        "Topic :: System :: Systems Administration",
+        "Topic :: Utilities",
     ],
-    python_requires=">=3.6",
+    python_requires=DEVELOPMENT_CHANNEL["requires_python"],
     install_requires=install_requires,
     extras_require=extras_require,
     entry_points={

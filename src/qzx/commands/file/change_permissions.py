@@ -10,10 +10,6 @@ import os
 import platform
 import stat
 import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
@@ -28,6 +24,8 @@ class ChangePermissionsCommand(CommandBase):
     name = "changePermissions"
     description = "Changes permissions of a file or directory"
     category = "file"
+    requires_explicit_approval = True
+    backup_target_parameter = "path"
     
     parameters = [
         {
@@ -81,16 +79,13 @@ class ChangePermissionsCommand(CommandBase):
         """
         try:
             # Process flags in command arguments if they exist
-            import sys
             args = sys.argv
             recursive_flags = ['-r', '-R', '--recursive']
             recursive_found = any(flag in args for flag in recursive_flags)
             
-            # Parse recursive parameter - convert string flags or handle boolean
-            if isinstance(recursive, str):
-                recursive = parse_recursive_parameter(recursive)
-            elif recursive_found:
+            if recursive_found and recursive is False:
                 recursive = True
+            recursive = parse_recursive_parameter(recursive)
             
             # Check if path exists
             if not os.path.exists(path):
@@ -169,14 +164,14 @@ class ChangePermissionsCommand(CommandBase):
                         result["warnings"].append(f"Failed to change permissions for '{dir_path}': {str(e)}")
                         return True
                 
-                # Find and process all files and directories
-                find_files(
-                    path,
+                for _ in find_files(
+                    file_path_pattern=path,
                     recursive=recursive,
-                    file_callback=file_callback,
-                    dir_callback=dir_callback,
-                    include_dirs=True
-                )
+                    file_type=None,
+                    on_file_found=file_callback,
+                    on_dir_found=dir_callback,
+                ):
+                    pass
                 
                 result["message"] = f"Changed permissions of '{path}' and its contents to {result['mode']} (recursive)"
                 result["items_modified"] = count
@@ -230,4 +225,4 @@ class ChangePermissionsCommand(CommandBase):
             str: Symbolic permission string
         """
         # This would require more complex implementation
-        return f"0{oct(mode)[2:]}" 
+        return f"0{oct(mode)[2:]}"

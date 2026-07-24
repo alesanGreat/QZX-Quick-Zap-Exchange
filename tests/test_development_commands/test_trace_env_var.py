@@ -74,10 +74,11 @@ class TestTraceEnvVarCommand:
         result_secret = self.command.execute("SECRET_KEY", str(tmp_path))
         assert result_secret["success"] is True
         assert result_secret["env_files_diagnostics"][".env"]["defined"] is True
-        assert result_secret["env_files_diagnostics"][".env"]["masked_value"] == "su...ey"
+        assert result_secret["env_files_diagnostics"][".env"]["masked_value"] == "<redacted>"
         assert result_secret["references_count"] == 1
         assert result_secret["references"][0]["file"] == "app.py"
         assert result_secret["references"][0]["line_number"] == 4
+        assert result_secret["references"][0]["line_content"] == "<reference to SECRET_KEY redacted>"
 
     def test_trace_php_fallback(self, tmp_path):
         """Test tracing environment variables in PHP files with fallbacks"""

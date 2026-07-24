@@ -4,6 +4,163 @@
 
 This document provides practical guidelines and patterns for developing QZX commands that follow the "Verbose is Gold" philosophy. While [philosophy.md](../philosophy.md) explains the *why* behind our approach, this document focuses on the *how* to implement it effectively.
 
+## Repository integration
+
+- Derive every public command from `CommandBase` and place its module under
+  `src/qzx/commands/<category>/`.
+- `CommandLoader` discovers command modules dynamically. Do not add a parallel
+  manual registry.
+- Keep `name`, aliases, description, category, parameters, examples, docstrings,
+  and success/error responses aligned with the implementation.
+- Every public command must have one explicit record in
+  `WebsiteQZX/content/command-policies.json`. The schema records mutation,
+  native execution, network, privilege and external-data facts as booleans;
+  absence never means “safe”. Generation fails when a discovered command is
+  missing, an obsolete command remains, a field has the wrong type, external
+  data is marked without network use, or a high-risk implementation is
+  described as read-only.
+- Every policy review is bound to the command's transitive implementation
+  digest in `WebsiteQZX/content/command-policy-reviews.json`. Changing the
+  command, shared invocation path, or a local runtime dependency makes that
+  review stale and blocks generation. After reviewing the current
+  implementation, record the decision explicitly with:
+
+  ```powershell
+  python scripts\utils\record_command_reviews.py --scope policy --command commandName --note "What was reviewed" --apply
+  ```
+
+- The canonical English command summary comes from the class. Each published
+  localized summary has a matching source digest in
+  `WebsiteQZX/content/command-translation-reviews.json`; changing the English
+  summary blocks generation until the translation is reviewed and recorded
+  with the same utility using `--scope translation`.
+- The website build regenerates all documentation projections before
+  compiling, so adding a command never requires creating a PHP page by hand.
+  From the repository root, run:
+
+  ```powershell
+  python scripts\utils\generate_documentation.py
+  ```
+
+- The unified entry updates product/release projections, the command catalog,
+  the Markdown reference and `public/llms.txt` rendered from
+  `content/llms_template.txt`. It avoids rewriting unchanged outputs. Validate
+  freshness without changing files with:
+
+  ```powershell
+  python scripts\utils\generate_documentation.py --check
+  ```
+
+  The lower-level generators remain directly executable for focused debugging,
+  but CI, `pnpm run build` and the production deployer enforce the unified
+  projection set. A deploy using `--skip-build` remains blocked when any output
+  is stale.
+- `llms_template.txt` accepts only the bracketed uppercase keys declared by its
+  generator, such as `[DOCUMENTED_COMMAND_COUNT]`. Unknown, missing or unused
+  placeholders fail closed; edit the template prose, never `public/llms.txt`.
+- Result contracts are derived conservatively from the explicit top-level
+  dictionaries returned by `execute()`. A command may override `result_schema`
+  when dynamic construction needs a narrower, intentional JSON Schema. The
+  generator always adds the shared `success` and `message` requirements.
+  Captured stdout is validated against this implementation-backed contract; it
+  is an example, never the source of the schema.
+- Captured stdout under
+  `WebsiteQZX/content/command-evidence.json` carries the implementation digest
+  of its command. If the command or a transitive local runtime dependency
+  changes, generation fails until that command is executed again and its
+  evidence is recaptured. Never update the digest merely to silence the check.
+  Reproduce the maintained safe fixtures with:
+
+  ```powershell
+  python scripts\utils\capture_command_evidence.py --apply
+  ```
+
+  Commands without a capture expose a truthful workflow status:
+  deterministic local candidate, isolated mutation, platform matrix,
+  privileged/manual, or external/manual. Do not execute network, privileged,
+  or dangerous evidence automatically merely to raise a coverage number.
+- Run focused behavioral tests plus the applicable loader and generated-
+  documentation checks. Inspect the generated changes instead of assuming that
+  successful generation means the catalog is correct.
+- Discovery must be read-only and deterministic. Never install a dependency,
+  contact a service, or terminate the process while importing a command module.
+  Optional libraries belong in package extras and must produce a structured
+  `missing_dependency` result when absent.
+
+## Public invocation contract
+
+`CommandBase.invoke()` is the only public CLI dispatch path. It accepts both
+positional values and metadata-backed named options:
+
+```text
+qzx commandName value
+qzx commandName --param1 value
+qzx commandName --param1=value --json
+```
+
+Declare `type` (`str`, `int`, `float`, or `bool`) in parameter metadata whenever
+the default does not express it unambiguously. Mark a final repeated parameter
+with `is_variadic: True`. Every published example must start with `qzx`, name a
+registered command or alias, and parse successfully.
+
+The CLI writes one JSON document to stdout in `--json` mode; incidental progress
+belongs on stderr. Exit status is `0` for success, `2` for usage errors, `127`
+for an unknown command, and `1` for other failures.
+
+The default terminal presentation is generated from that same structured
+result. Put the natural-language summary in `message`; expose a complete
+command-specific text view in `output`, `content`, or `report` when a generic
+field-by-field presentation would be less useful. Do not print dictionaries or
+serialized JSON for human users. Progress may be printed while a command runs:
+the CLI preserves it on the terminal and redirects it to stderr in `--json`
+mode, including output emitted by child processes. The interactive `terminal`
+command uses the same presenters for commands launched inside its session.
+Never make the structured data poorer merely to simplify the human
+presentation.
+
+High-risk commands set the historically named
+`requires_explicit_approval = True`. Preview and read-only modes do not create
+archives. Before an actual mutation, `CommandBase.invoke()` creates a
+fail-closed safety backup; a backup error prevents command execution. A
+filesystem command must also set `backup_target_parameter` to the parameter
+whose file or directory will be protected. Commands without a filesystem
+target cannot create a meaningful recovery archive and require an explicit
+bypass flag before execution.
+
+The conspicuous flag `--dangerously-bypass-approvals-and-sandbox`, or its short
+alias `--yolo`, executes without that safety backup. Setting
+`QZX_SAFETY=YOLO` provides the same bypass globally for every high-risk command
+in the process; matching is case-insensitive and ignores surrounding
+whitespace. For commands with `dry_run`, either bypass also selects live
+execution; for commands with `apply`, it sets `apply=true`. For dangerous
+operations without a restorable path, a bypass is the required explicit
+authorization. These controls affect QZX only: they do not disable
+operating-system permissions, container isolation, or external service
+protections. Remove `QZX_SAFETY` from the environment after its narrowly
+intended use.
+
+Safety-backup configuration:
+
+- Destination: `QZX_BACKUPS_PATH`, defaulting to `~/QZX-Backups`.
+- Format: `QZX_BACKUPS_FORMAT=ZIP|TAR.GZ|TAR`; the default is `ZIP`.
+- Compression: `QZX_BACKUPS_COMPRESSION=store|fastest|fast|normal|maximum` or
+  a numeric level from `0` to `9`. Aliases `none` and `uncompressed` map to
+  `store`; `default` and `balanced` map to `normal`; `max`, `best`, and
+  `optimal` map to `maximum`. The default is `fastest`; plain `TAR` is always
+  stored without compression.
+
+Archive names use
+`QZX-Backup-YYMMDDHHMMSS-[last 30 sanitized absolute-path characters]-[QZX command]`
+plus `.zip`, `.tar.gz`, or `.tar`. The structured result exposes the archive
+path, protected source, format, effective compression, and byte size under
+`meta.safety_backup`. Every archive contains
+`__qzx_backup_manifest__.json`; if the target does not exist yet, the archive
+still records that pre-operation state in its manifest.
+
+Archives can contain the same sensitive information as their source. Protect
+`QZX_BACKUPS_PATH`, monitor disk consumption, and remove archives only under an
+explicit retention policy; QZX does not silently expire them.
+
 ## Basic Structure of a QZX Command
 
 Every QZX command should follow this basic structure:
@@ -33,6 +190,7 @@ class CommandNameCommand(CommandBase):
             'name': 'param1',
             'description': 'Detailed description of the parameter',
             'required': True|False,
+            'type': 'str',
             'default': 'default_value'  # Optional if required is False
         },
         # More parameters...
@@ -107,18 +265,14 @@ Follow these patterns for common values:
 
 Always include both the numeric value and a human-readable representation:
 
-```python
-def _format_bytes(self, bytes_value):
-    """Format bytes to human-readable format"""
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if bytes_value < 1024 or unit == 'TB':
-            return f"{bytes_value:.2f} {unit}"
-        bytes_value /= 1024
+All commands inherit the standard formatter from `CommandBase`; do not copy it
+into individual command classes:
 
+```python
 # Usage in result
 result["disk_space"] = {
     "total_bytes": 1073741824,
-    "total_formatted": "1.00 GB"
+    "total_formatted": self._format_bytes(1073741824),
 }
 ```
 
@@ -290,6 +444,20 @@ def execute(self):
             "message": f"Could not gather system information: {str(e)}"
         }
 ```
+
+## Scaffold command helpers
+
+Language-specific scaffold commands keep their templates and toolchain logic
+in their own modules, but share the mechanics that must behave consistently:
+
+- `_scaffold_utils.normalize_project_name()` applies each ecosystem's
+  separator, casing and leading-character rules.
+- `_scaffold_utils.prepare_scaffold_project()` validates the destination,
+  creates the project root and initializes the standard structured result.
+
+Do not replace the language modules with a generic template engine merely to
+reduce line count. Share stable mechanics; keep ecosystem-specific generation
+explicit.
 
 ## Advanced Patterns
 

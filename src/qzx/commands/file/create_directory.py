@@ -27,7 +27,9 @@ class CreateDirectoryCommand(CommandBase):
         {
             'name': 'directory_paths',
             'description': 'One or more paths where directories should be created',
-            'required': True
+            'required': True,
+            'type': 'str',
+            'is_variadic': True
         }
     ]
     
@@ -50,10 +52,15 @@ class CreateDirectoryCommand(CommandBase):
             *directory_paths: One or more paths where directories should be created
             
         Returns:
-            String with results of directory creation attempts
+            Structured operation result
         """
         if not directory_paths:
-            return "Error: No directory paths provided"
+            return {
+                "success": False,
+                "error_code": "missing_argument",
+                "error": "No directory paths were provided.",
+                "message": "Provide at least one directory path to create."
+            }
         
         results = []
         success_count = 0
@@ -66,5 +73,15 @@ class CreateDirectoryCommand(CommandBase):
             except Exception as e:
                 results.append(f"✗ Error creating directory '{path}': {str(e)}")
         
-        summary = f"Created {success_count} of {len(directory_paths)} directories"
-        return f"{summary}\n" + "\n".join(results) 
+        failed_count = len(directory_paths) - success_count
+        summary = f"Created {success_count} of {len(directory_paths)} directories."
+        return {
+            "success": failed_count == 0,
+            "message": summary,
+            "details": {
+                "requested": len(directory_paths),
+                "created": success_count,
+                "failed": failed_count,
+                "results": results
+            }
+        }

@@ -23,6 +23,7 @@ class InspectImageCommand(CommandBase):
     name = "inspectImage"
     description = "Inspects image dimensions, format, and size natively from headers (supports PNG, JPEG, GIF, BMP)"
     category = "file"
+    _byte_units = ("B", "KB", "MB")
     
     parameters = [
         {
@@ -218,9 +219,3 @@ class InspectImageCommand(CommandBase):
             pass
         return None
         
-    def _format_bytes(self, size):
-        for unit in ['B', 'KB', 'MB']:
-            if size < 1024.0 or unit == 'MB':
-                break
-            size /= 1024.0
-        return f"{size:.2f} {unit}"

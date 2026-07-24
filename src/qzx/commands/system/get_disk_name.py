@@ -25,6 +25,7 @@ class GetDiskNameCommand(CommandBase):
     name = "getDiskName"
     description = "Gets disk name/model information for a disk or all disks"
     category = "system"
+    _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
     
     parameters = [
         {
@@ -72,7 +73,13 @@ class GetDiskNameCommand(CommandBase):
             if disk_path:
                 # Check if disk exists
                 if not os.path.exists(disk_path):
-                    return f"Error: Disk path '{disk_path}' does not exist"
+                    return {
+                        "success": False,
+                        "error_code": "disk_path_not_found",
+                        "error": f"Disk path '{disk_path}' does not exist.",
+                        "message": "Check the disk path and try again.",
+                        "details": {"disk_path": os.path.abspath(disk_path)},
+                    }
                 
                 disk_info = self._get_disk_info(disk_path, os_type)
                 if disk_info:
@@ -182,11 +189,42 @@ class GetDiskNameCommand(CommandBase):
                             result["disks"].append(disk_info)
                 
                 else:
-                    return f"Error: Unsupported operating system: {os_type}"
-            
+                    return {
+                        "success": False,
+                        "error_code": "unsupported_operating_system",
+                        "error": f"Unsupported operating system: {os_type}",
+                        "message": (
+                            "getDiskName currently supports Windows, Linux, "
+                            "and macOS."
+                        ),
+                    }
+
+            result["success"] = True
+            logical_count = len(result["disks"])
+            physical_count = len(result.get("physical_disks", []))
+            if disk_path:
+                result["message"] = (
+                    f"Collected disk information for '{disk_path}'. "
+                    f"Found {logical_count} matching disk record(s)."
+                )
+            else:
+                result["message"] = (
+                    f"Collected disk information on {os_type}: "
+                    f"{logical_count} mounted disk record(s)"
+                )
+                if physical_count:
+                    result["message"] += (
+                        f" and {physical_count} physical disk record(s)"
+                    )
+                result["message"] += "."
             return result
         except Exception as e:
-            return f"Error getting disk name information: {str(e)}"
+            return {
+                "success": False,
+                "error_code": "disk_inspection_failed",
+                "error": f"{type(e).__name__}: {str(e)}",
+                "message": f"Could not collect disk information: {str(e)}",
+            }
     
     def _get_disk_info(self, disk_path, os_type):
         """
@@ -295,17 +333,3 @@ class GetDiskNameCommand(CommandBase):
         except:
             return None
     
-    def _format_bytes(self, bytes_value):
-        """
-        Format bytes to human-readable format
-        
-        Args:
-            bytes_value (int): Bytes to format
-            
-        Returns:
-            str: Formatted string with appropriate unit
-        """
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
-            if bytes_value < 1024 or unit == 'PB':
-                return f"{bytes_value:.2f} {unit}"
-            bytes_value /= 1024 

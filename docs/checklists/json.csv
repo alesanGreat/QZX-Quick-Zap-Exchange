@@ -1,102 +1,99 @@
-# Documentation of JSON Output Capability
-# This checklist tracks which commands properly implement the natural English and JSON output formats
-# 
-# STATUS LEGEND:
-# VERIFIED: Command has been manually tested and confirmed to work with both output formats
-# PENDING: Command expected to work but needs manual verification
-# FAILED: Command does not properly implement one or both output formats
-#
-# IMPORTANT NOTE ON COMMAND ORGANIZATION:
-# The system now displays commands in two ways:
-# 1. Primary commands: Shown in their respective categories (SYSTEM, FILE, DEV)
-# 2. Alias commands: Shown in a separate ALIAS category with reference to their original command
-#
-# All commands marked as PENDING need manual verification by running:
-# 1. python -m qzx command_name (for natural language output)
-# 2. python -m qzx command_name --json (for JSON output)
-#
-Command Name,Category,Natural English Output,JSON Output,Status,Notes
-getCurrentTime,system,✓,✓,VERIFIED,"Output shows time in natural language by default, shows full data structure with JSON flag"
-list,system,✓,✓,VERIFIED,"Shows categorized command list in readable format, returns full structure with JSON"
-help,system,✓,✓,VERIFIED,"Shows help in natural language, returns detailed command structure with JSON"
-systemInfo,system,✓,✓,VERIFIED,"Shows system information in readable format, structured data with JSON flag"
-getCurrentUser,system,✓,✓,VERIFIED,"Shows user information in readable format, full details with JSON"
-listFiles,file,✓,✓,VERIFIED,"Lists files in natural language, returns complete array in JSON format"
-getCurrentDate,system,✓,✓,VERIFIED,"Shows date in natural format, structured with JSON flag"
-wonderIfFileIsBinary,file,✓,✓,VERIFIED,"File type in natural language, detailed analysis with JSON"
-qzxVersion,system,✓,✓,VERIFIED,"Version info in natural language, detailed with JSON"
-wonderCommandsAmount,system,✓,✓,VERIFIED,"Command count in natural language, detailed with JSON"
-CurrentDir,system,✓,✓,VERIFIED,"Directory path in natural language, full details with JSON"
-getRAMInfo,system,✓,✓,VERIFIED,"Memory information in natural language, full metrics with JSON"
-getDiskInfo,system,✓,✓,VERIFIED,"Disk space in human readable format, detailed metrics with JSON"
-findFiles,file,✓,✓,VERIFIED,"File search results in readable format, full details with JSON"
-readFile,file,✓,✓,VERIFIED,"File contents in natural presentation, structured with JSON flag"
-wonderIfFileEmpty,file,✓,✓,VERIFIED,"File status in natural language, detailed with JSON"
-wonderIfDirectoryEmpty,file,✓,✓,VERIFIED,"Directory status in natural language, detailed with JSON"
-getCPULoad,system,✓,✓,VERIFIED,"Shows CPU information in readable format, detailed metrics with JSON"
-countLinesInFile,file,✓,✓,VERIFIED,"Line counts in readable format, full statistics with JSON"
-listProcesses,system,✓,✓,VERIFIED,"Process list in readable format, full details with JSON"
-Welcome,system,✓,✓,VERIFIED,"Welcome message in natural language, rich data with JSON flag"
-findText,file,✓,✓,VERIFIED,"Search results in readable format, structured with JSON flag"
-runScript,system,✓,✓,VERIFIED,"Script execution results in natural language, detailed status with JSON"
-killProcess,system,✓,✓,VERIFIED,"Status messages in natural language, detailed result with JSON"
-getGPULoad,system,✓,✓,VERIFIED,"GPU information in readable format, detailed metrics with JSON"
-copyFile,file,✓,✓,VERIFIED,"Copy status in natural language, detailed result with JSON"
-moveFile,file,✓,✓,VERIFIED,"Move status in natural language, detailed result with JSON"
-deleteFile,file,✓,✓,VERIFIED,"Deletion status in natural language, detailed result with JSON"
-createDirectory,file,✓,✓,VERIFIED,"Creation status in natural language, detailed result with JSON"
-touchFile,file,✓,✓,VERIFIED,"Touch status in natural language, detailed result with JSON"
-Terminal,system,✓,✓,VERIFIED,"Interactive mode in natural language, status with JSON flag"
-wonderIfAdmin,system,✓,✓,VERIFIED,"Admin status in natural language, detailed with JSON flag"
-analyzeComplexity,dev,✓,✓,VERIFIED,"Complexity metrics in readable format, detailed with JSON"
-findLargeFiles,file,✓,✓,VERIFIED,"Large file list in readable format, full details with JSON"
-commandsBridge,system,✓,✓,VERIFIED,"Command execution results in natural language, detailed with JSON"
-getDiskName,system,✓,✓,VERIFIED,"Disk name in natural language, detailed with JSON flag"
-getSmartValues,system,✓,✓,VERIFIED,"SMART values in readable format, detailed with JSON flag"
-downloadFile,file,✓,✓,VERIFIED,"Download status in natural language, detailed with JSON flag"
-changePermissions,file,✓,✓,VERIFIED,"Permission change status in natural language, detailed with JSON flag"
-getHumanLanguageStatsFromFile,file,✓,✓,VERIFIED,"Analyzes files to determine text languages, detailed with JSON flag"
-getProgrammingLanguageStatsFromFile,file,✓,✓,VERIFIED,"Analyzes programming language stats, detailed with JSON flag"
-compareFiles,dev,✓,✓,VERIFIED,"Compara archivos y muestra diferencias, detailed with JSON flag"
-CreateDocTemplatePython,dev,✓,✓,VERIFIED,"Creates documentation templates for Python, detailed with JSON flag"
-wonderFileTypeMagic,file,✓,✓,VERIFIED,"Identifies file type using magic numbers/signatures, detailed with JSON flag"
-
-#
-# VERIFICATION PROCESS:
-# To change a command's status from PENDING to VERIFIED:
-# 1. Test the command with both normal output and --json flag
-# 2. Verify natural language output is clear and in English when no flag is used
-# 3. Verify JSON output is valid and complete when using the --json flag
-# 4. Update this file with the results
-#
-# COMMAND ORGANIZATION:
-# - Primary commands are now displayed in their respective categories (SYSTEM, FILE, DEV)
-# - Alias commands are now displayed in a separate ALIAS category
-# - Each alias shows which original command it refers to
-# - This eliminates confusion while still maintaining backward compatibility
-#
-# AUTO-INSTALL CAPABILITY:
-# - The system now automatically attempts to install missing Python modules
-# - This includes dependencies required by the commands (e.g., chardet for wonderIfFileIsBinary)
-# - The auto-installation is triggered when a module import fails
-# - This makes the system more robust and user-friendly
-#
-# Last verification date: May 10, 2024
-# Total unique commands: 42
-# Verified commands: 42 (100%)
-# Pending verification: 0 (0%)
-# Failed commands: 0 (0%)
-#
-# CONCLUSION:
-# Based on our verification so far, all commands are correctly implementing both output formats:
-# 1. Natural English output when no format is specified
-# 2. JSON output when the --json flag is used
-# 
-# The modifications we made to the system to handle JSON output and format it appropriately
-# are working correctly across all verified commands. We expect the remaining commands 
-# to work correctly as well, since they all use the same command base class.
-#
-# PATTERN DETECTED:
-# Our testing has verified that commands across multiple categories (System, File, Dev) all
-# properly handle both output formats. This strongly suggests that all commands inherit and
-# use the common format_result method in CommandBase, and therefore all should behave consistently. 
+# QZX public output-contract inventory
+# GENERATED: registered and covered by the shared invoke/JSON contract.
+# COMMAND_TEST: also has a command-specific automated test module.
+# This inventory does not claim that every external side effect was manually exercised.
+Command Name,Category,Natural Output,JSON Output,Status,Evidence
+analyzeComplexity,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+auditLanguages,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_audit_languages.py
+auditRepository,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_audit_repository.py
+bootstrapProject,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_bootstrap_project.py
+cleanDevCaches,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_clean_dev_caches.py
+compareFiles,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+createDocTemplatePython,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+deployProject,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_deploy_project.py
+findDeadCode,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_find_dead_code.py
+formatCode,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_format_code.py
+getGitStatus,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_get_git_status.py
+getProjectTree,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_get_project_tree.py
+projectDoctor,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_project_doctor.py
+releaseProject,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_release_project.py
+scaffoldC,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldCpp,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldCsharp,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldGo,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldJava,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldJavascript,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldKotlin,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldPhp,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldPython,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldRust,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scaffoldTypescript,development,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+scanProject,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_scan_project.py
+traceCircularImports,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_trace_circular_imports.py
+traceEnvVar,development,shared renderer,single-document contract,COMMAND_TEST,tests/test_development_commands/test_trace_env_var.py
+changePermissions,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+compressZip,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_compress_zip.py
+copyFile,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+countLinesInFile,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+createDirectory,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+decompressZip,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_decompress_zip.py
+deleteFile,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+detectFileType,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+downloadFile,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+findBrokenSymlinks,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_find_broken_symlinks.py
+findDuplicateFiles,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_find_duplicate_files.py
+findFiles,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_find_files.py
+findLargeFiles,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+findText,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_find_text.py
+getFileHash,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_get_file_hash.py
+getHumanLanguageStats,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getProgrammingLanguageStats,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+inspectImage,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_inspect_image.py
+isDirectoryEmpty,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+isFileBinary,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+isFileEmpty,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_is_file_empty.py
+listFiles,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+moveFile,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+readFile,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+repairWorkspace,file,shared renderer,single-document contract,COMMAND_TEST,tests/test_file_commands/test_repair_workspace.py
+touchFile,file,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+checkDns,network,shared renderer,single-document contract,COMMAND_TEST,tests/test_network_commands/test_check_dns.py
+checkSslCertificate,network,shared renderer,single-document contract,COMMAND_TEST,tests/test_network_commands/test_check_ssl_certificate.py
+checkUrlStatus,network,shared renderer,single-document contract,COMMAND_TEST,tests/test_network_commands/test_check_url_status.py
+getNetworkConfig,network,shared renderer,single-document contract,COMMAND_TEST,tests/test_network_commands/test_get_network_config.py
+testWebSpeed,network,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+about,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+checkDependency,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_check_dependency.py
+checkSystemPath,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_check_system_path.py
+clearScreen,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+commandsBridge,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+currentDir,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_current_dir.py
+generateContent,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getCommandCount,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getCPULoad,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getCurrentDate,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getCurrentTime,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getCurrentUser,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_get_current_user.py
+getDiskInfo,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getDiskName,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getEnvironmentInfo,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getGPULoad,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getRAMInfo,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getSmartValues,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+getStartupPrograms,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_get_startup_programs.py
+getToday,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+inspectPort,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_inspect_port.py
+isAdmin,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+killProcess,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+listProcesses,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+listSystemServices,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_list_system_services.py
+qzxHelp,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+qzxListCommands,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+runScript,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+systemDoctor,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_system_doctor.py
+systemInfo,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+terminal,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_terminal.py
+testDiskSpeed,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+version,system,shared renderer,single-document contract,COMMAND_TEST,tests/test_system_commands/test_version.py
+welcome,system,shared renderer,single-document contract,GENERATED,tests/test_cli_contract.py
+# Total unique commands: 93
