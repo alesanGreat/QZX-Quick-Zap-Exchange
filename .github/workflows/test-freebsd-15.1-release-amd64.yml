@@ -73,6 +73,14 @@ jobs:
         shell: freebsd-15-1-release-amd64 {0}
         run: python3.13 -m pip install pytest -e .
 
-      - name: Run QZX test suite | FreeBSD 15.1-RELEASE amd64
+      - name: Run real system integration | FreeBSD 15.1-RELEASE amd64
         shell: freebsd-15-1-release-amd64 {0}
-        run: python3.13 -m pytest -q
+        run: >-
+          python3.13 -m pytest -q
+          tests/integration/test_real_system_dependencies.py
+
+      - name: Run remaining QZX test suite | FreeBSD 15.1-RELEASE amd64
+        shell: freebsd-15-1-release-amd64 {0}
+        run: >-
+          python3.13 -m pytest -q
+          --ignore=tests/integration/test_real_system_dependencies.py

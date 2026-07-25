@@ -78,6 +78,14 @@ jobs:
         run: >-
           python3.13 -m pip install --break-system-packages pytest -e .
 
-      - name: Run QZX test suite | OmniOS r151054 LTS x86_64
+      - name: Run real system integration | OmniOS r151054 LTS x86_64
         shell: omnios-r151054-lts-x86-64 {0}
-        run: python3.13 -m pytest -q
+        run: >-
+          python3.13 -m pytest -q
+          tests/integration/test_real_system_dependencies.py
+
+      - name: Run remaining QZX test suite | OmniOS r151054 LTS x86_64
+        shell: omnios-r151054-lts-x86-64 {0}
+        run: >-
+          python3.13 -m pytest -q
+          --ignore=tests/integration/test_real_system_dependencies.py

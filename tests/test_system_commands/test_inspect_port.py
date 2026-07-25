@@ -44,9 +44,13 @@ class TestInspectPortCommand:
         assert result["success"] is True
         mock_fallback.assert_called_once_with(3000, False)
         
+    @patch(
+        "qzx.commands.system.inspect_port.platform.system",
+        return_value="Linux",
+    )
     @patch("psutil.net_connections")
-    def test_port_free(self, mock_net_conns):
-        """Test with a port that is currently free"""
+    def test_port_free(self, mock_net_conns, _mock_system):
+        """Unit-test the psutil result mapping with a free port."""
         # Return connections on other ports
         conn1 = MagicMock()
         conn1.laddr.port = 8080
@@ -61,10 +65,16 @@ class TestInspectPortCommand:
         assert result["killed"] is False
         assert "free" in result["message"]
         
+    @patch(
+        "qzx.commands.system.inspect_port.platform.system",
+        return_value="Linux",
+    )
     @patch("psutil.Process")
     @patch("psutil.net_connections")
-    def test_port_in_use_inspect_only(self, mock_net_conns, mock_process_class):
-        """Test inspecting a port in use without killing the process"""
+    def test_port_in_use_inspect_only(
+        self, mock_net_conns, mock_process_class, _mock_system
+    ):
+        """Unit-test psutil result mapping without terminating the process."""
         # Connection on target port
         conn = MagicMock()
         conn.laddr.port = 3000
@@ -106,10 +116,16 @@ class TestInspectPortCommand:
         # Ensure process was NOT killed
         mock_proc.kill.assert_not_called()
         
+    @patch(
+        "qzx.commands.system.inspect_port.platform.system",
+        return_value="Linux",
+    )
     @patch("psutil.Process")
     @patch("psutil.net_connections")
-    def test_port_in_use_and_kill(self, mock_net_conns, mock_process_class):
-        """Test inspecting a port in use and successfully terminating the process"""
+    def test_port_in_use_and_kill(
+        self, mock_net_conns, mock_process_class, _mock_system
+    ):
+        """Unit-test mapping when the simulated process is terminated."""
         # Connection on target port
         conn = MagicMock()
         conn.laddr.port = 3000

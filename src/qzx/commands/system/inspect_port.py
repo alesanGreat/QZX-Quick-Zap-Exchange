@@ -225,7 +225,9 @@ class InspectPortCommand(CommandBase):
             
     def _execute_fallback(self, port_num, kill_process):
         """Fallback implementation using subprocess command line tools if psutil fails/lacks permission"""
-        is_windows = platform.system().lower() == "windows"
+        system_name = platform.system().lower()
+        is_windows = system_name == "windows"
+        is_sunos = system_name == "sunos"
         pids = set()
         
         try:
@@ -253,6 +255,77 @@ class InspectPortCommand(CommandBase):
                                     pids.add(int(pid_str))
                                 except ValueError:
                                     pass
+            elif is_sunos:
+                # netstat is part of SunOS and remains safe when psutil's
+                # native system-wide connection enumeration is not.
+                res = subprocess.run(
+                    ["netstat", "-an", "-P", "tcp"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False
+                )
+                if res.returncode != 0:
+                    error = res.stderr.strip() or "netstat returned no diagnostics"
+                    return {
+                        "success": False,
+                        "port": port_num,
+                        "in_use": None,
+                        "killed": False,
+                        "error": error,
+                        "message": (
+                            f"Could not inspect port {port_num} with SunOS "
+                            f"netstat: {error}"
+                        )
+                    }
+
+                port_suffixes = (f".{port_num}", f":{port_num}")
+                in_use = any(
+                    len(parts) >= 2
+                    and parts[-1].upper() in ("LISTEN", "LISTENING")
+                    and parts[0].endswith(port_suffixes)
+                    for line in res.stdout.splitlines()
+                    if (parts := line.split())
+                )
+
+                if not in_use:
+                    return {
+                        "success": True,
+                        "port": port_num,
+                        "in_use": False,
+                        "killed": False,
+                        "message": f"Port {port_num} is free."
+                    }
+
+                limitation = (
+                    "SunOS netstat confirms the listening port but does not "
+                    "expose its owning PID in this mode."
+                )
+                if kill_process:
+                    return {
+                        "success": False,
+                        "port": port_num,
+                        "in_use": True,
+                        "killed": False,
+                        "processes": [],
+                        "error": limitation,
+                        "message": (
+                            f"Port {port_num} is in use, but QZX cannot safely "
+                            f"terminate its process: {limitation}"
+                        )
+                    }
+
+                return {
+                    "success": True,
+                    "port": port_num,
+                    "in_use": True,
+                    "killed": False,
+                    "processes": [],
+                    "limitations": [limitation],
+                    "message": (
+                        f"Port {port_num} is in use. {limitation}"
+                    )
+                }
             else:
                 # Linux/macOS fallback using lsof -t
                 res = subprocess.run(

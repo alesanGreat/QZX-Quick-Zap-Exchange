@@ -50,5 +50,8 @@ jobs:
           "
               apk add --no-cache build-base linux-headers
               python -m pip install pytest -e .
-              python -m pytest -q
+              python -m pytest -q \
+                tests/integration/test_real_system_dependencies.py
+              python -m pytest -q \
+                --ignore=tests/integration/test_real_system_dependencies.py
             '

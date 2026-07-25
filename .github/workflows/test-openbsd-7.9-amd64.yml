@@ -63,6 +63,14 @@ jobs:
         run: >-
           python3.13 -m pip install --break-system-packages pytest -e .
 
-      - name: Run QZX test suite | OpenBSD 7.9 amd64
+      - name: Run real system integration | OpenBSD 7.9 amd64
         shell: openbsd-7-9-amd64 {0}
-        run: python3.13 -m pytest -q
+        run: >-
+          python3.13 -m pytest -q
+          tests/integration/test_real_system_dependencies.py
+
+      - name: Run remaining QZX test suite | OpenBSD 7.9 amd64
+        shell: openbsd-7-9-amd64 {0}
+        run: >-
+          python3.13 -m pytest -q
+          --ignore=tests/integration/test_real_system_dependencies.py

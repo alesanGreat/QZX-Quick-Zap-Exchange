@@ -82,6 +82,14 @@ jobs:
             --no-deps \
             -e .
 
-      - name: Run QZX test suite | Oracle Solaris 11.4 CBE x86_64
+      - name: Run real system integration | Oracle Solaris 11.4 CBE x86_64
         shell: oracle-solaris-11-4-cbe-x86-64 {0}
-        run: python3.13 -m pytest -q
+        run: >-
+          python3.13 -m pytest -q
+          tests/integration/test_real_system_dependencies.py
+
+      - name: Run remaining QZX test suite | Oracle Solaris 11.4 CBE x86_64
+        shell: oracle-solaris-11-4-cbe-x86-64 {0}
+        run: >-
+          python3.13 -m pytest -q
+          --ignore=tests/integration/test_real_system_dependencies.py
