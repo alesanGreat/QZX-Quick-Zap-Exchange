@@ -46,3 +46,30 @@ def test_packaging_and_ci_read_the_canonical_policy():
         )
     assert 'python: ["3.13"]' in workflow
     assert "target-version = ['py313']" in pyproject
+
+
+def test_freebsd_15_1_release_amd64_workflow_is_explicit():
+    workflow_path = (
+        PROJECT_ROOT
+        / ".github"
+        / "workflows"
+        / "test-freebsd-15.1-release-amd64.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert workflow.startswith(
+        "name: QZX tests | FreeBSD 15.1-RELEASE amd64 | CPython 3.13\n"
+    )
+    assert (
+        "name: QZX test suite | FreeBSD 15.1-RELEASE amd64 | CPython 3.13"
+        in workflow
+    )
+    assert "test-freebsd-15-1-release-amd64:" in workflow
+    assert 'release: "15.1"' in workflow
+    assert "arch: x86_64" in workflow
+    assert 'test "$machine_arch" = "amd64"' in workflow
+    assert "freebsd-version -u" in workflow
+    assert (
+        "vmactions/freebsd-vm@77ed28d336d03fe19a3f4f7266c1d2c4714dd79d"
+        in workflow
+    )

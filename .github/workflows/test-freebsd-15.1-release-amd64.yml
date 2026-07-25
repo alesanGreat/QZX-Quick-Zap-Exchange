@@ -1,0 +1,78 @@
+name: QZX tests | FreeBSD 15.1-RELEASE amd64 | CPython 3.13
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-freebsd-15-1-release-amd64:
+    name: QZX test suite | FreeBSD 15.1-RELEASE amd64 | CPython 3.13
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QZX_TELEMETRY: "0"
+    steps:
+      - name: Check out QZX | FreeBSD 15.1-RELEASE amd64
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Start VM | FreeBSD 15.1-RELEASE amd64
+        id: start-freebsd-15-1-release-amd64
+        uses: vmactions/freebsd-vm@77ed28d336d03fe19a3f4f7266c1d2c4714dd79d # v1.5.2
+        with:
+          release: "15.1"
+          # The action calls this x86_64; FreeBSD reports the architecture as amd64.
+          arch: x86_64
+          usesh: true
+          sync: rsync
+          copyback: false
+          custom-shell-name: freebsd-15-1-release-amd64
+          envs: QZX_TELEMETRY
+          cache-after-prepare: true
+          prepare: |
+            set -eu
+            pkg install -y ca_root_nss python313
+            fetch -o /tmp/get-pip.py \
+              https://raw.githubusercontent.com/pypa/get-pip/3b73145063be545b649ad9ca83ea8da5fc915a4f/public/get-pip.py
+            python3.13 /tmp/get-pip.py
+            rm /tmp/get-pip.py
+
+      - name: Verify platform | FreeBSD 15.1-RELEASE amd64
+        shell: freebsd-15-1-release-amd64 {0}
+        run: |
+          set -eu
+          freebsd_release="$(freebsd-version -u)"
+          machine_arch="$(uname -m)"
+          printf 'FreeBSD release: %s\nArchitecture: %s\n' \
+            "$freebsd_release" "$machine_arch"
+          case "$freebsd_release" in
+            15.1-RELEASE*) ;;
+            *)
+              printf 'Expected FreeBSD 15.1-RELEASE, got %s\n' \
+                "$freebsd_release" >&2
+              exit 1
+              ;;
+          esac
+          test "$machine_arch" = "amd64"
+          python3.13 - <<'PY'
+          import platform
+          import sysconfig
+
+          print(f"Python: {platform.python_implementation()} {platform.python_version()}")
+          assert platform.python_implementation() == "CPython"
+          assert platform.python_version().startswith("3.13.")
+          assert sysconfig.get_config_var("Py_GIL_DISABLED") != 1
+          PY
+
+      - name: Install QZX and tests | FreeBSD 15.1-RELEASE amd64
+        shell: freebsd-15-1-release-amd64 {0}
+        run: python3.13 -m pip install pytest -e .
+
+      - name: Run QZX test suite | FreeBSD 15.1-RELEASE amd64
+        shell: freebsd-15-1-release-amd64 {0}
+        run: python3.13 -m pytest -q

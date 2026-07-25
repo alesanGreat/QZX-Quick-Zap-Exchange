@@ -159,12 +159,14 @@ An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
 ## Compatibility evidence
 
 The project targets Windows, Linux, and macOS. Targeting a platform is not the
-same as proving every command on it. The repository workflow concentrates on
-standard CPython 3.13 across `windows-latest`, `ubuntu-latest`, and
-`macos-latest`; the documentation does not claim a successful hosted run
-without a public run URL. Experimental free-threaded CPython builds, PyPy,
-other implementations, and other Python series remain outside the certified
-matrix even if QZX happens to run on them.
+same as proving every command on it. The primary repository workflow
+concentrates on standard CPython 3.13 across `windows-latest`,
+`ubuntu-latest`, and `macos-latest`. A separate, explicitly named
+`FreeBSD 15.1-RELEASE amd64` workflow exercises the same suite with standard
+CPython 3.13. The documentation does not claim a successful hosted run without
+a public run URL. Experimental free-threaded CPython builds, PyPy, other
+implementations, and other Python series remain outside the certified matrix
+even if QZX happens to run on them.
 
 Complete local stdout snapshots identify their QZX version, Python version,
 operating system, date, fixture, and exit code on the
