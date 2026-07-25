@@ -35,13 +35,17 @@ qzx getCurrentDate
 qzx getCurrentDate --json
 ```
 
-PyPI publishes QZX `0.2.2.0.2`, which requires Python 3.9 or newer. This
-checkout matches that published version, and its generated catalog calculates
-the current command totals from the discovered implementation.
+PyPI publishes QZX `0.2.2.0.2` with its historical Python `>=3.9` metadata.
+The current checkout adopts Python `>=3.13` for future distributions.
+
+QZX supports the standard CPython 3.13.x build. Other Python versions or
+implementations may work, but experimental free-threaded CPython builds, PyPy,
+and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Published package and current checkout | `0.2.2.0.2` | `>=3.9` | See the generated command catalog |
+| Published package | `0.2.2.0.2` | `>=3.9` (historical metadata) | Capabilities reconciled with the official wheel |
+| Current checkout | `0.2.2.0.2` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -155,10 +159,12 @@ An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
 ## Compatibility evidence
 
 The project targets Windows, Linux, and macOS. Targeting a platform is not the
-same as proving every command on it. The repository workflow is configured for
-Python 3.9–3.13 across `windows-latest`, `ubuntu-latest`, and `macos-latest`;
-the documentation does not claim a successful hosted run without a public run
-URL.
+same as proving every command on it. The repository workflow concentrates on
+standard CPython 3.13 across `windows-latest`, `ubuntu-latest`, and
+`macos-latest`; the documentation does not claim a successful hosted run
+without a public run URL. Experimental free-threaded CPython builds, PyPy,
+other implementations, and other Python series remain outside the certified
+matrix even if QZX happens to run on them.
 
 Complete local stdout snapshots identify their QZX version, Python version,
 operating system, date, fixture, and exit code on the

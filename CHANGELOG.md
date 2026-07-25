@@ -3,6 +3,18 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## Unreleased
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Adopted the standard CPython 3.13.x build as QZX's certified Python runtime
+  and concentrated the cross-platform test matrix on Python 3.13.
+- Set future distribution metadata to `Requires-Python: >=3.13`. Experimental
+  free-threaded CPython builds, PyPy, other implementations, and other Python
+  series may work but are not certified.
+- Preserved the immutable `>=3.9` metadata of the already published PyPI
+  `0.2.2.0.2` artifacts as a clearly labelled historical fact.
+
 ## 0.2.2.0.2 — 2026-07-24
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

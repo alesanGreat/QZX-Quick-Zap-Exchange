@@ -6,6 +6,8 @@ Tests for the TestDiskSpeed command
 """
 
 import os
+from unittest.mock import patch
+
 from qzx.commands.system.test_disk_speed import TestDiskSpeedCommand
 
 class TestDiskSpeedCommandSuite:
@@ -35,7 +37,11 @@ class TestDiskSpeedCommandSuite:
     def test_speed_benchmark_success(self, tmp_path):
         """Test executing disk read/write speed test benchmark successfully"""
         # Run benchmark with a small 2MB file to keep tests fast
-        result = self.command.execute(str(tmp_path), size_mb=2)
+        with patch(
+            "qzx.commands.system.test_disk_speed.time.perf_counter",
+            side_effect=[1.0, 1.0004, 2.0, 2.0002],
+        ):
+            result = self.command.execute(str(tmp_path), size_mb=2)
         
         assert result["success"] is True
         assert result["test_directory"] == os.path.abspath(str(tmp_path))
@@ -43,8 +49,8 @@ class TestDiskSpeedCommandSuite:
         
         assert result["write_speed_mbs"] > 0
         assert result["read_speed_mbs"] > 0
-        assert result["write_duration_seconds"] > 0
-        assert result["read_duration_seconds"] > 0
+        assert 0 < result["write_duration_seconds"] < 0.001
+        assert 0 < result["read_duration_seconds"] < 0.001
         
         # Verify cleanup
         temp_file = tmp_path / "qzx_speedtest_temp.bin"

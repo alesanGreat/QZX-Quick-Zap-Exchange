@@ -5,8 +5,6 @@
 Tests for the TestWebSpeed command
 """
 
-import time
-import urllib.request
 from unittest.mock import patch, MagicMock
 from qzx.commands.network.test_web_speed import TestWebSpeedCommand
 
@@ -40,12 +38,21 @@ class TestWebSpeedCommandSuite:
             download_conn
         ]
         
-        result = self.command.execute(max_seconds=5)
+        with patch(
+            "qzx.commands.network.test_web_speed.time.perf_counter",
+            side_effect=[0.0, 0.01, 1.0, 1.02, 2.0, 2.03, 3.0, 3.5],
+        ):
+            result = self.command.execute(max_seconds=5)
         
         assert result["success"] is True
         assert result["latency_ms"]["average"] is not None
         assert result["download_speed_mbps"] > 0
+        assert (
+            f"({result['download_speed_mbs']:.2f} MB/s)"
+            in result["message"]
+        )
         assert result["test_details"]["bytes_downloaded"] == 1048576
+        assert result["test_details"]["duration_seconds"] == 0.5
         assert "Internet Speed Test Results" in result["message"]
         
     @patch("urllib.request.urlopen")

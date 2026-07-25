@@ -22,13 +22,19 @@ a descriptive `message`.
 
 ## Development and verification
 
-Use the global Python installation and an editable checkout:
+Use a standard global CPython 3.13.x installation and an editable checkout:
 
 ```powershell
 python -m pip install --editable .
 python -c "import qzx; print(qzx.__file__)"
 python -m pytest -q
 ```
+
+QZX concentrates its compatibility tests on the standard CPython 3.13.x
+build. Other Python versions or implementations may work, but experimental
+free-threaded CPython builds, PyPy, and other implementations are not
+certified. Compatibility reports from those runtimes are welcome when they
+identify the exact implementation, version, and build.
 
 Run the real command as well as proportional automated tests. For website
 changes, use the separate website workspace and its own contribution process;

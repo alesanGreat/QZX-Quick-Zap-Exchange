@@ -15,7 +15,8 @@ body:
     id: environment
     attributes:
       label: Exact environment
-      description: OS edition and version, Python, architecture, shell, and relevant dependencies.
+      description: OS edition and version, exact Python implementation/version/build, architecture, shell, and relevant dependencies. State whether CPython is a standard or free-threaded build.
+      placeholder: Ubuntu 24.04, standard CPython 3.13.12, Bash 5.2, x86_64
     validations:
       required: true
   - type: input

@@ -200,7 +200,7 @@
       "version": "0.2.2.0.2",
       "status": "Alpha",
       "channel": "Development documentation",
-      "requires_python": ">=3.9",
+      "requires_python": ">=3.13",
       "source": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange"
     }
   },
@@ -210,65 +210,25 @@
       "Linux",
       "macOS"
     ],
+    "python": {
+      "certified_runtime": "CPython 3.13.x",
+      "certified_build": "standard",
+      "statement": {
+        "en": "QZX supports the standard CPython 3.13.x build. Other Python versions or implementations may work, but experimental free-threaded CPython builds, PyPy, and other implementations are not certified.",
+        "es": "QZX soporta la compilación estándar de CPython 3.13.x. Otras versiones o implementaciones de Python pueden funcionar, pero las compilaciones experimentales free-threaded de CPython, PyPy y las demás implementaciones no están certificadas."
+      }
+    },
     "ci": {
       "configured": true,
       "workflow": ".github/workflows/test.yml",
       "matrix": [
         {
           "os": "windows-latest",
-          "python": "3.9"
-        },
-        {
-          "os": "windows-latest",
-          "python": "3.10"
-        },
-        {
-          "os": "windows-latest",
-          "python": "3.11"
-        },
-        {
-          "os": "windows-latest",
-          "python": "3.12"
-        },
-        {
-          "os": "windows-latest",
           "python": "3.13"
         },
         {
           "os": "ubuntu-latest",
-          "python": "3.9"
-        },
-        {
-          "os": "ubuntu-latest",
-          "python": "3.10"
-        },
-        {
-          "os": "ubuntu-latest",
-          "python": "3.11"
-        },
-        {
-          "os": "ubuntu-latest",
-          "python": "3.12"
-        },
-        {
-          "os": "ubuntu-latest",
           "python": "3.13"
-        },
-        {
-          "os": "macos-latest",
-          "python": "3.9"
-        },
-        {
-          "os": "macos-latest",
-          "python": "3.10"
-        },
-        {
-          "os": "macos-latest",
-          "python": "3.11"
-        },
-        {
-          "os": "macos-latest",
-          "python": "3.12"
         },
         {
           "os": "macos-latest",
