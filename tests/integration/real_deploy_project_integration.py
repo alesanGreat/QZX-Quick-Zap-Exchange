@@ -130,7 +130,6 @@ def _command_arguments(config, source, health_url, restart_cmd=None):
     ]
     if restart_cmd:
         arguments.extend(["--restart_cmd", restart_cmd])
-    arguments.append("--apply")
     return arguments
 
 
