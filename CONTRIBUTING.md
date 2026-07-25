@@ -40,6 +40,14 @@ Run the real command as well as proportional automated tests. For website
 changes, use the separate website workspace and its own contribution process;
 the website source is intentionally not part of this repository.
 
+Mocks are limited to harmless, deterministic assertions about QZX-owned logic.
+They must not stand in for an operating system, kernel, permission, process,
+filesystem, shell, network, native utility, or native dependency when claiming
+compatibility. A mocked test may verify isolated control flow, including a
+safety barrier around a destructive operation, but it proves neither the real
+operation nor the platform integration. See the
+[test evidence policy](tests/README.md) before adding or reviewing tests.
+
 Keep changes focused. Preserve unrelated comments, documentation, and local
 work, and do not include generated or machine-local artifacts.
 

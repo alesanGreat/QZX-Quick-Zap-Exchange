@@ -169,6 +169,11 @@ does not claim a successful hosted run without a public run URL. Experimental
 free-threaded CPython builds, PyPy, other implementations, and other Python
 series remain outside the certified matrix even if QZX happens to run on them.
 
+Mocked unit tests are not compatibility evidence. Platform claims require
+real-system tests that exercise the installed native dependencies and QZX's
+public interface; the distinction and review rules are documented in the
+[test evidence policy](tests/README.md).
+
 Complete local stdout snapshots identify their QZX version, Python version,
 operating system, date, fixture, and exit code on the
 [QZX in action](https://qzx.yumbale.com/en/qzx-in-action) page.
