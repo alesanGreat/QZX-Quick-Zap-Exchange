@@ -70,8 +70,17 @@ jobs:
 
       - name: Install QZX | Oracle Solaris 11.4 CBE x86_64
         shell: oracle-solaris-11-4-cbe-x86-64 {0}
-        run: >-
-          python3.13 -m pip install --break-system-packages --no-deps -e .
+        run: |
+          set -eu
+          python3.13 -m pip install \
+            --break-system-packages \
+            --ignore-installed \
+            chardet colorama
+          python3.13 -c 'import chardet, colorama, psutil'
+          python3.13 -m pip install \
+            --break-system-packages \
+            --no-deps \
+            -e .
 
       - name: Run QZX test suite | Oracle Solaris 11.4 CBE x86_64
         shell: oracle-solaris-11-4-cbe-x86-64 {0}
