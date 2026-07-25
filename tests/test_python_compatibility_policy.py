@@ -1,13 +1,21 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = PROJECT_ROOT / "src" / "qzx" / "resources" / "product-manifest.json"
+TEST_ENVIRONMENTS_PATH = (
+    PROJECT_ROOT / "src" / "qzx" / "resources" / "test-environments.json"
+)
 
 
 def test_python_compatibility_policy_is_consistent():
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    test_environments = json.loads(
+        TEST_ENVIRONMENTS_PATH.read_text(encoding="utf-8")
+    )
     development = manifest["channels"]["development"]
     compatibility = manifest["compatibility"]
     python_policy = compatibility["python"]
@@ -19,14 +27,46 @@ def test_python_compatibility_policy_is_consistent():
     assert "PyPy" in python_policy["statement"]["en"]
     assert "free-threaded" in python_policy["statement"]["es"]
     assert "PyPy" in python_policy["statement"]["es"]
-    assert {
-        (entry["os"], entry["python"])
-        for entry in compatibility["ci"]["matrix"]
-    } == {
-        ("windows-latest", "3.13"),
-        ("ubuntu-latest", "3.13"),
-        ("macos-latest", "3.13"),
+    assert compatibility["ci"] == {
+        "test_environments_source": "src/qzx/resources/test-environments.json"
     }
+    assert test_environments["runtime"] == {
+        "implementation": "CPython",
+        "version": "3.13",
+        "build": "standard",
+        "display": {
+            "en": "the standard CPython 3.13 build",
+            "es": "la compilación estándar de CPython 3.13",
+        },
+    }
+    assert {
+        environment["id"] for environment in test_environments["environments"]
+    } == {
+        "windows",
+        "ubuntu",
+        "macos",
+        "alpine-linux",
+        "freebsd",
+        "openbsd",
+        "omnios",
+        "oracle-solaris",
+    }
+
+
+def test_test_environment_source_matches_workflows_and_readme():
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "sync_test_environments.py"),
+            "--check",
+        ],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_packaging_and_ci_read_the_canonical_policy():

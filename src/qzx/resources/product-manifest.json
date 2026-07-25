@@ -219,24 +219,7 @@
       }
     },
     "ci": {
-      "configured": true,
-      "workflow": ".github/workflows/test.yml",
-      "matrix": [
-        {
-          "os": "windows-latest",
-          "python": "3.13"
-        },
-        {
-          "os": "ubuntu-latest",
-          "python": "3.13"
-        },
-        {
-          "os": "macos-latest",
-          "python": "3.13"
-        }
-      ],
-      "public_result_status": "not_asserted",
-      "claim": "A public cross-platform workflow is configured; this manifest does not claim a successful hosted run until a public run URL is recorded."
+      "test_environments_source": "src/qzx/resources/test-environments.json"
     }
   },
   "documentation": {

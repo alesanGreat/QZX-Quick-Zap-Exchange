@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -17,9 +18,25 @@ with PRODUCT_MANIFEST_PATH.open("r", encoding="utf-8") as manifest_file:
 DEVELOPMENT_CHANNEL = PRODUCT_MANIFEST["channels"]["development"]
 PRODUCT_URLS = PRODUCT_MANIFEST["urls"]
 
-# Leer README desde el directorio actual
+TEST_ENVIRONMENT_SYNC_PATH = PROJECT_ROOT / "scripts" / "sync_test_environments.py"
+test_environment_spec = importlib.util.spec_from_file_location(
+    "qzx_test_environment_sync",
+    TEST_ENVIRONMENT_SYNC_PATH,
+)
+if test_environment_spec is None or test_environment_spec.loader is None:
+    raise RuntimeError("Unable to load the QZX test-environment synchronizer.")
+test_environment_sync = importlib.util.module_from_spec(test_environment_spec)
+test_environment_spec.loader.exec_module(test_environment_sync)
+test_environment_manifest = test_environment_sync.load_manifest()
+test_environment_sync.validate_manifest(
+    test_environment_manifest,
+    validate_workflows=False,
+)
 with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+    long_description = test_environment_sync.render_readme_content(
+        fh.read(),
+        test_environment_manifest,
+    )
 
 # Dependencias específicas de la plataforma
 install_requires = [
@@ -79,6 +96,7 @@ setup(
     package_data={
         "qzx": [
             "resources/product-manifest.json",
+            "resources/test-environments.json",
             "resources/function_words/*.json",
             "resources/programming_languages/*.json",
         ],

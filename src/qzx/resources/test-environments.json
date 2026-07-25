@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "runtime": {
+    "implementation": "CPython",
+    "version": "3.13",
+    "build": "standard",
+    "display": {
+      "en": "the standard CPython 3.13 build",
+      "es": "la compilación estándar de CPython 3.13"
+    }
+  },
+  "summary_templates": {
+    "en": "QZX's automated tests are based on {platforms}, using {python}.",
+    "es": "Las pruebas automatizadas de QZX se basan en {platforms}, con {python}."
+  },
+  "scope_notes": {
+    "en": "QZX is Alpha software. This list identifies the environments used by the test matrix; it does not report run outcomes or guarantee compatibility.",
+    "es": "QZX es software Alpha. Esta lista identifica los entornos usados por la matriz de pruebas; no informa resultados de ejecuciones ni garantiza compatibilidad."
+  },
+  "environments": [
+    {
+      "id": "windows",
+      "name": {
+        "en": "Microsoft Windows Server",
+        "es": "Microsoft Windows Server"
+      },
+      "version": "2025 (10.0.26100)",
+      "architecture": "x64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "windows-latest"
+        }
+      ]
+    },
+    {
+      "id": "ubuntu",
+      "name": {
+        "en": "Ubuntu",
+        "es": "Ubuntu"
+      },
+      "version": "24.04.4",
+      "architecture": "x64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "ubuntu-latest"
+        },
+        {
+          "path": ".github/workflows/test-real-deploy-project-ubuntu-24.04-amd64.yml",
+          "target": "ubuntu-24.04"
+        },
+        {
+          "path": ".github/workflows/test-real-format-code-ubuntu-24.04-amd64.yml",
+          "target": "ubuntu-24.04"
+        }
+      ]
+    },
+    {
+      "id": "macos",
+      "name": {
+        "en": "macOS",
+        "es": "macOS"
+      },
+      "version": "26.4 (25E246)",
+      "architecture": "arm64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "macos-latest"
+        }
+      ]
+    },
+    {
+      "id": "alpine-linux",
+      "name": {
+        "en": "Alpine Linux",
+        "es": "Alpine Linux"
+      },
+      "version": "3.24.1",
+      "architecture": "x86_64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test-alpine-linux-3.24.1-amd64.yml",
+          "target": "Alpine Linux 3.24.1 amd64"
+        }
+      ]
+    },
+    {
+      "id": "freebsd",
+      "name": {
+        "en": "FreeBSD",
+        "es": "FreeBSD"
+      },
+      "version": "15.1-RELEASE",
+      "architecture": "amd64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test-freebsd-15.1-release-amd64.yml",
+          "target": "FreeBSD 15.1-RELEASE amd64"
+        }
+      ]
+    },
+    {
+      "id": "openbsd",
+      "name": {
+        "en": "OpenBSD",
+        "es": "OpenBSD"
+      },
+      "version": "7.9",
+      "architecture": "amd64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test-openbsd-7.9-amd64.yml",
+          "target": "OpenBSD 7.9 amd64"
+        }
+      ]
+    },
+    {
+      "id": "omnios",
+      "name": {
+        "en": "OmniOS",
+        "es": "OmniOS"
+      },
+      "version": "r151054 LTS",
+      "architecture": "x86_64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test-omnios-r151054-lts-x86_64.yml",
+          "target": "OmniOS r151054 LTS x86_64"
+        }
+      ]
+    },
+    {
+      "id": "oracle-solaris",
+      "name": {
+        "en": "Oracle Solaris",
+        "es": "Oracle Solaris"
+      },
+      "version": "11.4 CBE",
+      "architecture": "x86_64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test-oracle-solaris-11.4-cbe-x86_64.yml",
+          "target": "Oracle Solaris 11.4 CBE x86_64"
+        }
+      ]
+    }
+  ]
+}

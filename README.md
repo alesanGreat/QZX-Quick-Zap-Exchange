@@ -158,16 +158,13 @@ An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
 
 ## Compatibility evidence
 
-The project targets Windows, Linux, and macOS. Targeting a platform is not the
-same as proving every command on it. The primary repository workflow
-concentrates on standard CPython 3.13 across `windows-latest`,
-`ubuntu-latest`, and `macos-latest`. Separate workflows with explicit names run
-the same suite on `FreeBSD 15.1-RELEASE amd64`,
-`Alpine Linux 3.24.1 amd64`, `OmniOS r151054 LTS x86_64`,
-`OpenBSD 7.9 amd64`, and `Oracle Solaris 11.4 CBE x86_64`. The documentation
-does not claim a successful hosted run without a public run URL. Experimental
-free-threaded CPython builds, PyPy, other implementations, and other Python
-series remain outside the certified matrix even if QZX happens to run on them.
+<!-- BEGIN GENERATED TEST ENVIRONMENTS -->
+
+QZX's automated tests are based on Microsoft Windows Server 2025 (10.0.26100) (x64), Ubuntu 24.04.4 (x64), macOS 26.4 (25E246) (arm64), Alpine Linux 3.24.1 (x86_64), FreeBSD 15.1-RELEASE (amd64), OpenBSD 7.9 (amd64), OmniOS r151054 LTS (x86_64), and Oracle Solaris 11.4 CBE (x86_64), using the standard CPython 3.13 build.
+
+QZX is Alpha software. This list identifies the environments used by the test matrix; it does not report run outcomes or guarantee compatibility.
+
+<!-- END GENERATED TEST ENVIRONMENTS -->
 
 Mocked unit tests are not compatibility evidence. Platform claims require
 real-system tests that exercise the installed native dependencies and QZX's
@@ -181,7 +178,10 @@ operating system, date, fixture, and exit code on the
 ## Repository structure
 
 - `src/qzx/resources/product-manifest.json` is the canonical product, release,
-  output, compatibility, and telemetry manifest.
+  output, Python-policy, and telemetry manifest.
+- `src/qzx/resources/test-environments.json` is the result-neutral source for
+  the operating systems, versions, architectures, and runtime used by the
+  automated test matrix.
 - `src/qzx/commands/` contains command implementations.
 - `tests/` contains the public automated Python test suite.
 - `examples/` contains standalone usage examples.
