@@ -1,0 +1,54 @@
+name: QZX tests | Alpine Linux 3.24.1 amd64 | CPython 3.13
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-alpine-linux-3-24-1-amd64:
+    name: QZX test suite | Alpine Linux 3.24.1 amd64 | CPython 3.13
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      QZX_TELEMETRY: "0"
+      ALPINE_LINUX_3_24_1_AMD64_IMAGE: >-
+        python:3.13.14-alpine3.24@sha256:c25cd44f45df1279a2cba589e67dfcd9db04647ea483b117a7de8b1a99bdfb23
+    steps:
+      - name: Check out QZX | Alpine Linux 3.24.1 amd64
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Run QZX test suite | Alpine Linux 3.24.1 amd64
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --env QZX_TELEMETRY \
+            --volume "${GITHUB_WORKSPACE}:/workspace" \
+            --workdir /workspace \
+            "${ALPINE_LINUX_3_24_1_AMD64_IMAGE}" \
+            sh -euxc '
+              alpine_release="$(cat /etc/alpine-release)"
+              machine_arch="$(uname -m)"
+              printf "Alpine Linux release: %s\nArchitecture: %s\n" \
+                "$alpine_release" "$machine_arch"
+              test "$alpine_release" = "3.24.1"
+              test "$machine_arch" = "x86_64"
+              python -c "
+          import platform
+          import sysconfig
+
+          print(f\"Python: {platform.python_implementation()} {platform.python_version()}\")
+          assert platform.python_implementation() == \"CPython\"
+          assert platform.python_version().startswith(\"3.13.\")
+          assert sysconfig.get_config_var(\"Py_GIL_DISABLED\") != 1
+          "
+              apk add --no-cache build-base linux-headers
+              python -m pip install pytest -e .
+              python -m pytest -q
+            '

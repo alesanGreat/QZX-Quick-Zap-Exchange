@@ -1,0 +1,78 @@
+name: QZX tests | Oracle Solaris 11.4 CBE x86_64 | CPython 3.13
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-oracle-solaris-11-4-cbe-x86-64:
+    name: QZX test suite | Oracle Solaris 11.4 CBE x86_64 | CPython 3.13
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QZX_TELEMETRY: "0"
+    steps:
+      - name: Check out QZX | Oracle Solaris 11.4 CBE x86_64
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Start VM | Oracle Solaris 11.4 CBE x86_64
+        id: start-oracle-solaris-11-4-cbe-x86-64
+        uses: vmactions/solaris-vm@315163f088b66e55bbcc45928bd224d4973b2312 # v1.3.8
+        with:
+          # 11.4-gcc is Oracle Solaris 11.4 CBE with the GCC toolchain.
+          release: "11.4-gcc"
+          arch: x86_64
+          usesh: true
+          sync: rsync
+          copyback: false
+          custom-shell-name: oracle-solaris-11-4-cbe-x86-64
+          envs: QZX_TELEMETRY
+          cache-after-prepare: true
+          prepare: |
+            set -eu
+            pkg install --accept \
+              runtime/python-313 \
+              library/python/pip-313 \
+              library/python/psutil-313 \
+              library/python/chardet-313 \
+              library/python/colorama-313 \
+              library/python/pytest-313 || {
+                status=$?
+                test "$status" -eq 4
+              }
+
+      - name: Verify platform | Oracle Solaris 11.4 CBE x86_64
+        shell: oracle-solaris-11-4-cbe-x86-64 {0}
+        run: |
+          set -eu
+          kernel_name="$(uname -s)"
+          kernel_arch="$(isainfo -k)"
+          cat /etc/release
+          pkg publisher solaris
+          grep -q 'Oracle Solaris 11.4' /etc/release
+          test "$kernel_name" = "SunOS"
+          test "$kernel_arch" = "amd64"
+          python3.13 - <<'PY'
+          import platform
+          import sysconfig
+
+          print(f"Python: {platform.python_implementation()} {platform.python_version()}")
+          assert platform.python_implementation() == "CPython"
+          assert platform.python_version().startswith("3.13.")
+          assert sysconfig.get_config_var("Py_GIL_DISABLED") != 1
+          PY
+
+      - name: Install QZX | Oracle Solaris 11.4 CBE x86_64
+        shell: oracle-solaris-11-4-cbe-x86-64 {0}
+        run: >-
+          python3.13 -m pip install --break-system-packages --no-deps -e .
+
+      - name: Run QZX test suite | Oracle Solaris 11.4 CBE x86_64
+        shell: oracle-solaris-11-4-cbe-x86-64 {0}
+        run: python3.13 -m pytest -q

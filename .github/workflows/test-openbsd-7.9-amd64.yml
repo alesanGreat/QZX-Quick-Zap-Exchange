@@ -1,0 +1,68 @@
+name: QZX tests | OpenBSD 7.9 amd64 | CPython 3.13
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-openbsd-7-9-amd64:
+    name: QZX test suite | OpenBSD 7.9 amd64 | CPython 3.13
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QZX_TELEMETRY: "0"
+    steps:
+      - name: Check out QZX | OpenBSD 7.9 amd64
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Start VM | OpenBSD 7.9 amd64
+        id: start-openbsd-7-9-amd64
+        uses: vmactions/openbsd-vm@c941015845c0f0c429676840963dc63b226d4f69 # v1.4.5
+        with:
+          release: "7.9"
+          # The action calls this x86_64; OpenBSD reports the architecture as amd64.
+          arch: x86_64
+          usesh: true
+          sync: rsync
+          copyback: false
+          custom-shell-name: openbsd-7-9-amd64
+          envs: QZX_TELEMETRY
+          cache-after-prepare: true
+          prepare: |
+            set -eu
+            pkg_add python%3.13 py3-pip py3-psutil py3-chardet py3-colorama
+
+      - name: Verify platform | OpenBSD 7.9 amd64
+        shell: openbsd-7-9-amd64 {0}
+        run: |
+          set -eu
+          openbsd_release="$(uname -r)"
+          machine_arch="$(uname -m)"
+          printf 'OpenBSD release: %s\nArchitecture: %s\n' \
+            "$openbsd_release" "$machine_arch"
+          test "$openbsd_release" = "7.9"
+          test "$machine_arch" = "amd64"
+          python3.13 - <<'PY'
+          import platform
+          import sysconfig
+
+          print(f"Python: {platform.python_implementation()} {platform.python_version()}")
+          assert platform.python_implementation() == "CPython"
+          assert platform.python_version().startswith("3.13.")
+          assert sysconfig.get_config_var("Py_GIL_DISABLED") != 1
+          PY
+
+      - name: Install QZX and tests | OpenBSD 7.9 amd64
+        shell: openbsd-7-9-amd64 {0}
+        run: >-
+          python3.13 -m pip install --break-system-packages pytest -e .
+
+      - name: Run QZX test suite | OpenBSD 7.9 amd64
+        shell: openbsd-7-9-amd64 {0}
+        run: python3.13 -m pytest -q
