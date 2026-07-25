@@ -1,0 +1,65 @@
+name: QZX formatCode real native tools | Ubuntu 24.04 amd64 | CPython 3.13
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-real-format-code-ubuntu-24-04-amd64:
+    name: Real formatCode native tools | Ubuntu 24.04 amd64 | CPython 3.13
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      QZX_TELEMETRY: "0"
+    steps:
+      - name: Check out QZX | Ubuntu 24.04 amd64
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install CPython 3.13 | Ubuntu 24.04 amd64
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install every declared real formatter | Ubuntu 24.04 amd64
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang-format \
+            curl \
+            golang-go \
+            nodejs \
+            npm \
+            php-cli \
+            rustfmt
+          python -m pip install \
+            black==26.5.1 \
+            pytest \
+            -e .
+          sudo npm install --global prettier@3.6.2
+          curl --fail --location --silent --show-error \
+            https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/releases/download/v3.95.1/php-cs-fixer.phar \
+            --output "${RUNNER_TEMP}/php-cs-fixer"
+          chmod +x "${RUNNER_TEMP}/php-cs-fixer"
+          sudo mv "${RUNNER_TEMP}/php-cs-fixer" /usr/local/bin/php-cs-fixer
+
+          black --version
+          prettier --version
+          rustfmt --version
+          gofmt </dev/null >/dev/null
+          php-cs-fixer --version
+          clang-format --version
+
+      - name: Run real formatCode integrations | Ubuntu 24.04 amd64
+        shell: bash
+        run: >-
+          python -m pytest -q
+          tests/integration/real_format_code_integration.py

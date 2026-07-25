@@ -8,7 +8,6 @@ Tests for the CheckSystemPath command
 import os
 import platform
 import stat
-from unittest.mock import patch
 from qzx.commands.system.check_system_path import CheckSystemPathCommand
 
 
@@ -21,14 +20,16 @@ class TestCheckSystemPathCommand:
         """Setup for each test"""
         self.command = CheckSystemPathCommand()
 
-    def test_empty_path_env(self):
+    def test_empty_path_env(self, monkeypatch):
         """Test with empty or unset PATH environment variable"""
-        with patch.dict(os.environ, {"PATH": ""}):
-            result = self.command.execute()
-            assert result["success"] is False
-            assert "empty" in result["error"]
+        monkeypatch.setenv("PATH", "")
 
-    def test_path_health_analysis(self, tmp_path):
+        result = self.command.execute()
+
+        assert result["success"] is False
+        assert "empty" in result["error"]
+
+    def test_path_health_analysis(self, tmp_path, monkeypatch):
         """Test analysis classification of valid, broken, and duplicate entries in PATH"""
         # Create valid directories
         dir1 = tmp_path / "valid1"
@@ -52,8 +53,8 @@ class TestCheckSystemPathCommand:
             [str(dir1), str(dir1), str(broken1), str(dir2), str(some_file), str(dir2)]
         )
 
-        with patch.dict(os.environ, {"PATH": fake_path}):
-            result = self.command.execute()
+        monkeypatch.setenv("PATH", fake_path)
+        result = self.command.execute()
 
         assert result["success"] is True
         summary = result["path_summary"]
@@ -73,7 +74,7 @@ class TestCheckSystemPathCommand:
         assert str(some_file) in broken_paths
         assert "is a file" in broken_paths[str(some_file)]["reason"]
 
-    def test_binary_resolution_search(self, tmp_path):
+    def test_binary_resolution_search(self, tmp_path, monkeypatch):
         """Test locating binary executables on the PATH in order of precedence"""
         is_windows = platform.system().lower() == "windows"
         path_sep = ";" if is_windows else ":"
@@ -101,8 +102,8 @@ class TestCheckSystemPathCommand:
 
         fake_path = path_sep.join([str(dir1), str(dir2)])
 
-        with patch.dict(os.environ, {"PATH": fake_path}):
-            result = self.command.execute(binary_name=bin_name)
+        monkeypatch.setenv("PATH", fake_path)
+        result = self.command.execute(binary_name=bin_name)
 
         assert result["success"] is True
         assert result["binary_searched"] == bin_name
@@ -119,13 +120,13 @@ class TestCheckSystemPathCommand:
         assert "First choice" in result["message"]
         assert "Shadowed" in result["message"]
 
-    def test_binary_not_found(self, tmp_path):
+    def test_binary_not_found(self, tmp_path, monkeypatch):
         """Test search when binary is not present in PATH"""
         dir1 = tmp_path / "dir1"
         dir1.mkdir()
 
-        with patch.dict(os.environ, {"PATH": str(dir1)}):
-            result = self.command.execute(binary_name="nonexistent_binary_abc")
+        monkeypatch.setenv("PATH", str(dir1))
+        result = self.command.execute(binary_name="nonexistent_binary_abc")
 
         assert result["success"] is True
         assert len(result["binary_matches"]) == 0

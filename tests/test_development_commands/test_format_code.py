@@ -6,6 +6,7 @@ Tests for the formatCode command
 """
 
 import os
+import shutil
 from qzx.commands.development.format_code import FormatCodeCommand
 
 
@@ -55,19 +56,32 @@ class TestFormatCodeCommand:
         assert result["total_files"] == 0
         assert "No supported source files" in result["message"]
 
-    def test_detect_python_file(self, tmp_path):
-        """Test formatting a single Python file is attempted"""
+    def test_python_formatter_boundary_reports_the_real_result(self, tmp_path):
+        """Never turn an unavailable real formatter into a false success."""
         file_path = tmp_path / "script.py"
-        file_path.write_text("x=1\n")
+        original = "def greet( name:str)->str:\n return 'hello '+name\n"
+        file_path.write_text(original)
+
         result = self.command.execute(str(file_path))
+
         assert result["success"] is True
         assert result["total_files"] == 1
-        # The file should be recognized as Python
-        if result["formatted_count"] == 0 and result["failed_count"] == 1:
-            # black may not be installed; that's an acceptable environment gap
-            assert result["failed"][0]["language"] == "python"
-        else:
+        if shutil.which("black"):
+            assert result["all_succeeded"] is True
             assert result["formatted_count"] == 1
+            assert result["failed_count"] == 0
+            assert result["unavailable_tools"] == []
+            assert file_path.read_text() != original
+        else:
+            assert result["all_succeeded"] is False
+            assert result["formatted_count"] == 0
+            assert result["failed_count"] == 1
+            assert result["unavailable_tools"] == ["black"]
+            assert result["failed"][0]["language"] == "python"
+            assert "not installed or not on PATH" in (
+                result["failed"][0]["reason"]
+            )
+            assert file_path.read_text() == original
 
     def test_detect_multiple_languages_in_directory(self, tmp_path):
         """Test collecting files of multiple languages in a directory"""

@@ -335,31 +335,21 @@ def test_legacy_error_text_is_normalized_as_failure():
     assert result["error_code"] == "legacy_unstructured_error"
 
 
-def test_get_disk_name_returns_a_descriptive_structured_success(monkeypatch):
-    command = GetDiskNameCommand()
-    monkeypatch.setattr(
-        "qzx.commands.system.get_disk_name.platform.system",
-        lambda: "Windows",
-    )
-    monkeypatch.setattr(
-        "qzx.commands.system.get_disk_name.os.path.exists",
-        lambda _path: True,
-    )
-    monkeypatch.setattr(
-        command,
-        "_get_disk_info",
-        lambda disk_path, _os_type: {
-            "path": disk_path,
-            "total": 1024,
-            "total_readable": "1.00 KB",
-        },
-    )
+def test_get_disk_name_reports_the_real_current_filesystem():
+    disk_path = Path.cwd().anchor or os.path.abspath(os.sep)
 
-    result = command.invoke(["X:\\"])
+    result = GetDiskNameCommand().invoke([disk_path])
 
     assert result["success"] is True
-    assert "X:\\" in result["message"]
-    assert result["disks"][0]["total_readable"] == "1.00 KB"
+    assert disk_path in result["message"]
+    assert result["disks"]
+    disk = result["disks"][0]
+    assert disk["path"] == disk_path
+    assert disk["total"] > 0
+    assert disk["used"] >= 0
+    assert disk["free"] >= 0
+    assert disk["total"] >= disk["free"]
+    assert disk["total_readable"]
 
 
 def test_every_public_command_uses_the_shared_dual_output_contract():

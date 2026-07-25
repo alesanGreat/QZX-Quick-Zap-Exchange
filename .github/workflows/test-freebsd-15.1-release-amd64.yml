@@ -36,7 +36,7 @@ jobs:
           cache-after-prepare: true
           prepare: |
             set -eu
-            pkg install -y ca_root_nss python313
+            pkg install -y bind-tools ca_root_nss python313
             fetch -o /tmp/get-pip.py \
               https://raw.githubusercontent.com/pypa/get-pip/3b73145063be545b649ad9ca83ea8da5fc915a4f/public/get-pip.py
             python3.13 /tmp/get-pip.py

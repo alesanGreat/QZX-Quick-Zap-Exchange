@@ -59,6 +59,23 @@ system integration. It exercises the installed `psutil`, runs public
 The explicitly named Unix workflows run this layer separately before the
 remaining suite so the source of a failure is visible.
 
+`integration/real_deploy_project_integration.py` is intentionally run by the
+clearly named
+`QZX deployProject real integration | Ubuntu 24.04 amd64 | CPython 3.13`
+workflow. It starts an isolated localhost SSH daemon and uses real `ssh`,
+`rsync`, `tar`, filesystem mutations, an HTTP health endpoint, remote backup,
+service restart, and rollback. The ordinary dry-run test proves only preview
+behavior; only this dedicated integration may certify that deployment and
+rollback work.
+
+`integration/real_format_code_integration.py` is run by
+`QZX formatCode real native tools | Ubuntu 24.04 amd64 | CPython 3.13`.
+It installs and invokes the real Black, Prettier, rustfmt, gofmt,
+PHP-CS-Fixer, and clang-format executables, verifies an observable rewrite for
+every declared language, and then asks each formatter to confirm that its
+result is clean. A unit test that merely reports a missing executable does not
+count as formatting evidence.
+
 ## Review questions
 
 Before accepting a mocked test, answer:
@@ -73,6 +90,14 @@ Before accepting a mocked test, answer:
 
 If questions 1, 2, or 5 cannot be answered yes, or question 3 can be answered
 yes, the mock is in the wrong layer.
+
+The suite enforces this direction with `test_test_evidence_policy.py`.
+Runtime patching (`unittest.mock` and `monkeypatch.setattr`) and silent
+skip/xfail calls are rejected. A harmless deterministic double can still be
+passed explicitly through a QZX-owned dependency-injection point, as the
+telemetry transport tests do. Environment setup, temporary working
+directories, and real controlled resources remain valid because they configure
+the test; they do not fabricate the dependency's answer.
 
 ## Fixtures
 

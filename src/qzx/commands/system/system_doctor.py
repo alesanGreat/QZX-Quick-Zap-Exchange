@@ -168,43 +168,77 @@ class SystemDoctorCommand(CommandBase):
         if not quick:
             try:
                 results["smart"] = self._check_smart()
-                if isinstance(results["smart"], dict) and results["smart"].get("status") == "available":
-                    for drive in results["smart"].get("drives", []):
-                        status = drive.get("health_status")
-                        disk_label = drive.get("disk")
-                        if status == "FAILED":
-                            issues.append(("Disk SMART Failure", f"Physical drive '{disk_label}' is reporting SMART Failure status!", "high"))
-                        elif status == "WARNING":
-                            issues.append(("Disk SMART Warning", f"Physical drive '{disk_label}' has SMART health warnings!", "medium"))
+                issues.extend(self._smart_issues(results["smart"]))
             except Exception as e:
                 results["smart"] = {"error": str(e)}
                 
         # Calculate health score (0-100)
-        score = 100
-        for title, msg, severity in issues:
-            if severity == "high":
-                score -= 20
-            elif severity == "medium":
-                score -= 10
-            elif severity == "low":
-                score -= 5
-        results["health_score"] = max(0, min(100, score))
-        
-        # Generate recommendations
-        recommendations = []
-        for title, msg, severity in issues:
-            recommendations.append({
-                "title": title,
-                "description": msg,
-                "severity": severity
-            })
-        results["recommendations"] = recommendations
+        (
+            results["health_score"],
+            results["recommendations"],
+        ) = self._score_issues(issues)
         
         return {
             "success": True,
             "message": "System diagnostic completed successfully.",
             "details": results
         }
+
+    @staticmethod
+    def _smart_issues(smart_result):
+        """Map normalized SMART results to deterministic diagnostic issues."""
+
+        issues = []
+        if not isinstance(smart_result, dict):
+            return issues
+        if smart_result.get("status") != "available":
+            return issues
+
+        for drive in smart_result.get("drives", []):
+            status = drive.get("health_status")
+            disk_label = drive.get("disk")
+            if status == "FAILED":
+                issues.append(
+                    (
+                        "Disk SMART Failure",
+                        (
+                            f"Physical drive '{disk_label}' is reporting "
+                            "SMART Failure status!"
+                        ),
+                        "high",
+                    )
+                )
+            elif status == "WARNING":
+                issues.append(
+                    (
+                        "Disk SMART Warning",
+                        (
+                            f"Physical drive '{disk_label}' has SMART "
+                            "health warnings!"
+                        ),
+                        "medium",
+                    )
+                )
+        return issues
+
+    @staticmethod
+    def _score_issues(issues):
+        """Calculate the score and recommendations from normalized issues."""
+
+        deductions = {"high": 20, "medium": 10, "low": 5}
+        score = 100 - sum(
+            deductions.get(severity, 0)
+            for _title, _message, severity in issues
+        )
+        recommendations = [
+            {
+                "title": title,
+                "description": message,
+                "severity": severity,
+            }
+            for title, message, severity in issues
+        ]
+        return max(0, min(100, score)), recommendations
         
     def _check_cpu(self, quick):
         info = {

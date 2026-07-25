@@ -1,125 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Tests for the GetStartupPrograms command
-"""
+"""Real-filesystem tests for startup-program discovery."""
 
-import sys
-import os
-from unittest.mock import patch, MagicMock
+import platform
+
 from qzx.commands.system.get_startup_programs import GetStartupProgramsCommand
 
 
-class TestGetStartupProgramsCommand:
-    """
-    Tests for the GetStartupPrograms command
-    """
+def test_execute_reads_the_real_platform_startup_sources():
+    result = GetStartupProgramsCommand().execute()
 
-    def setup_method(self):
-        """Setup for each test"""
-        self.command = GetStartupProgramsCommand()
+    assert result["success"] is True
+    assert result["os"] == platform.system()
+    assert result["total_startup_programs"] == len(result["startup_programs"])
+    assert isinstance(result["errors"], list)
+    for item in result["startup_programs"]:
+        assert item["name"]
+        assert item["command"]
+        assert item["source"]
+        assert item["type"] in {"registry", "directory", "desktop_file"}
 
-    @patch("platform.system")
-    @patch("os.path.exists")
-    @patch("os.path.isdir")
-    @patch("os.path.isfile")
-    @patch("os.listdir")
-    def test_windows_startup_programs(
-        self, mock_listdir, mock_isfile, mock_isdir, mock_exists, mock_system
-    ):
-        """Test retrieving startup items on Windows including Registry mock and Startup directory scanning"""
-        mock_system.return_value = "Windows"
-        mock_isdir.return_value = True
-        mock_isfile.return_value = True
 
-        # 1. Setup mock directories
-        # os.path.exists will return True for the directories we look for, False for others
-        def side_effect_exists(path):
-            return "Startup" in path
+def test_desktop_entry_parser_reads_a_real_file(tmp_path):
+    desktop_file = tmp_path / "qzx-test.desktop"
+    desktop_file.write_text(
+        "[Desktop Entry]\nName=QZX Test App\nExec=qzx version\n",
+        encoding="utf-8",
+    )
 
-        mock_exists.side_effect = side_effect_exists
+    name, command = GetStartupProgramsCommand()._parse_desktop_file(
+        desktop_file
+    )
 
-        # listdir returns one mock shortcut file
-        mock_listdir.return_value = ["shortcut.lnk"]
-
-        # 2. Mock winreg
-        mock_winreg = MagicMock()
-        mock_key = MagicMock()
-
-        # OpenKey returns the mock key
-        mock_winreg.OpenKey.return_value.__enter__.return_value = mock_key
-        # QueryInfoKey returns (num_subkeys, num_values, last_modified)
-        mock_winreg.QueryInfoKey.return_value = (0, 1, 0)
-        # EnumValue returns (name, value, type)
-        mock_winreg.EnumValue.return_value = (
-            "OneDrive",
-            "C:\\OneDrive.exe /background",
-            1,
-        )
-
-        # Inject mock winreg into sys.modules
-        windows_environment = {
-            "USERPROFILE": "C:\\Users\\QZXTest",
-            "ProgramData": "C:\\ProgramData",
-        }
-        with (
-            patch.dict(sys.modules, {"winreg": mock_winreg}),
-            patch.dict(os.environ, windows_environment),
-        ):
-            result = self.command.execute()
-
-        assert result["success"] is True
-        assert result["os"] == "Windows"
-        assert (
-            result["total_startup_programs"] == 5
-        )  # 3 Registry keys + 2 Startup Folders
-
-        # Verify details
-        items = result["startup_programs"]
-        reg_item = [i for i in items if i["type"] == "registry"][0]
-        assert reg_item["name"] == "OneDrive"
-        assert "OneDrive.exe" in reg_item["command"]
-
-        dir_item = [i for i in items if i["type"] == "directory"][0]
-        assert dir_item["name"] == "shortcut.lnk"
-
-    @patch("platform.system")
-    @patch("os.path.exists")
-    @patch("os.path.isdir")
-    @patch("os.path.isfile")
-    @patch("os.listdir")
-    @patch("builtins.open")
-    def test_unix_autostart_programs(
-        self, mock_open, mock_listdir, mock_isfile, mock_isdir, mock_exists, mock_system
-    ):
-        """Test autostart parsing on Linux/Unix systems including .desktop file scanning"""
-        mock_system.return_value = "Linux"
-        mock_isdir.return_value = True
-        mock_isfile.return_value = True
-
-        # Directories exist
-        def side_effect_exists(path):
-            return "autostart" in path
-
-        mock_exists.side_effect = side_effect_exists
-
-        mock_listdir.return_value = ["app.desktop"]
-
-        # Mock file read for .desktop parser
-        mock_file = MagicMock()
-        mock_file.__enter__.return_value = ["Name=My App", "Exec=my-app --run"]
-        mock_open.return_value = mock_file
-
-        with patch.dict(os.environ, {"HOME": "/home/user"}):
-            result = self.command.execute()
-
-        assert result["success"] is True
-        assert result["os"] == "Linux"
-        # 2 locations scanned (User autostart + System autostart), both have app.desktop
-        assert result["total_startup_programs"] == 2
-
-        item = result["startup_programs"][0]
-        assert item["name"] == "My App"
-        assert item["command"] == "my-app --run"
-        assert item["type"] == "desktop_file"
+    assert name == "QZX Test App"
+    assert command == "qzx version"

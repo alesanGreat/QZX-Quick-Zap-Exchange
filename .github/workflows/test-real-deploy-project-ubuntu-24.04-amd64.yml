@@ -1,0 +1,108 @@
+name: QZX deployProject real integration | Ubuntu 24.04 amd64 | CPython 3.13
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-real-deploy-project-ubuntu-24-04-amd64:
+    name: Real deployProject over SSH | Ubuntu 24.04 amd64 | CPython 3.13
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      QZX_TELEMETRY: "0"
+      QZX_REAL_DEPLOY_PORT: "22222"
+    steps:
+      - name: Check out QZX | Ubuntu 24.04 amd64
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install CPython 3.13 | Ubuntu 24.04 amd64
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install real SSH and rsync deployment tools | Ubuntu 24.04 amd64
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes openssh-server rsync
+          python -m pip install --upgrade pip pytest -e .
+
+      - name: Start isolated real SSH target | Ubuntu 24.04 amd64
+        shell: bash
+        run: |
+          set -euo pipefail
+          deploy_root="${RUNNER_TEMP}/qzx-real-deploy"
+          mkdir -p "${deploy_root}/target" "${HOME}/.ssh"
+          sudo install -d -m 755 /run/sshd
+          chmod 700 "${HOME}/.ssh"
+
+          ssh-keygen -q -t ed25519 -N "" \
+            -f "${deploy_root}/client-key"
+          ssh-keygen -q -t ed25519 -N "" \
+            -f "${deploy_root}/host-key"
+          cp "${deploy_root}/client-key.pub" \
+            "${deploy_root}/authorized_keys"
+          chmod 600 \
+            "${deploy_root}/client-key" \
+            "${deploy_root}/authorized_keys" \
+            "${deploy_root}/host-key"
+
+          runner_user="$(id -un)"
+          cat >"${deploy_root}/sshd_config" <<EOF
+          Port ${QZX_REAL_DEPLOY_PORT}
+          ListenAddress 127.0.0.1
+          HostKey ${deploy_root}/host-key
+          PidFile ${deploy_root}/sshd.pid
+          AuthorizedKeysFile ${deploy_root}/authorized_keys
+          PubkeyAuthentication yes
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+          UsePAM no
+          PermitRootLogin no
+          StrictModes no
+          AllowUsers ${runner_user}
+          LogLevel VERBOSE
+          Subsystem sftp internal-sftp
+          EOF
+
+          sudo /usr/sbin/sshd \
+            -f "${deploy_root}/sshd_config" \
+            -E "${deploy_root}/sshd.log"
+          ssh-keyscan -p "${QZX_REAL_DEPLOY_PORT}" 127.0.0.1 \
+            >>"${HOME}/.ssh/known_hosts" 2>/dev/null
+          chmod 600 "${HOME}/.ssh/known_hosts"
+
+          ssh -p "${QZX_REAL_DEPLOY_PORT}" \
+            -i "${deploy_root}/client-key" \
+            "${runner_user}@127.0.0.1" true
+
+          {
+            echo "QZX_REAL_DEPLOY_HOST=${runner_user}@127.0.0.1"
+            echo "QZX_REAL_DEPLOY_SSH_KEY=${deploy_root}/client-key"
+            echo "QZX_REAL_DEPLOY_TARGET_ROOT=${deploy_root}/target"
+            echo "QZX_REAL_DEPLOY_SSHD_PID=${deploy_root}/sshd.pid"
+          } >>"${GITHUB_ENV}"
+
+      - name: Run real deployProject deployment and rollback | Ubuntu 24.04 amd64
+        shell: bash
+        run: >-
+          python -m pytest -q
+          tests/integration/real_deploy_project_integration.py
+
+      - name: Stop isolated real SSH target | Ubuntu 24.04 amd64
+        if: always()
+        shell: bash
+        run: |
+          if test -n "${QZX_REAL_DEPLOY_SSHD_PID:-}" \
+            && test -f "${QZX_REAL_DEPLOY_SSHD_PID}"; then
+            sudo kill "$(cat "${QZX_REAL_DEPLOY_SSHD_PID}")" || true
+          fi

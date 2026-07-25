@@ -5,8 +5,6 @@
 Test for the CountLinesInFile command
 """
 
-from unittest.mock import mock_open, patch
-
 from qzx.commands.file.count_lines_in_file import CountLinesInFileCommand
 
 class TestCountLinesInFileCommand:
@@ -70,60 +68,37 @@ class TestCountLinesInFileCommand:
 
         assert set(result) == {str(root_file.resolve()), str(nested_file.resolve())}
     
-    def test_count_lines(self):
-        """Test counting lines in files"""
-        # File with normal and empty lines
-        file_content = "Line 1\nLine 2\n\nLine 4\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Count all lines
-            total_lines, non_empty, success, error = self.command._count_lines("test.txt", ignore_empty=False)
-            assert total_lines == 4
-            assert non_empty == 3
-            assert success is True
-            assert error is None
-            
-            # Count only non-empty lines
-            total_lines, non_empty, success, error = self.command._count_lines("test.txt", ignore_empty=True)
-            assert total_lines == 3
-            assert non_empty == 3
-            assert success is True
-            assert error is None
-    
-    @patch("qzx.commands.file.count_lines_in_file.CountLinesInFileCommand._find_files")
-    @patch("qzx.commands.file.count_lines_in_file.CountLinesInFileCommand._count_lines")
-    def test_execute(self, mock_count_lines, mock_find_files):
-        """Test the complete execution of the command"""
-        # Configure mocks
-        mock_find_files.return_value = ["file1.txt", "file2.py"]
-        
-        # Simulate line counting for each file
-        def count_lines_side_effect(file_path, ignore_empty):
-            if file_path == "file1.txt":
-                return (5, 4, True, None)
-            elif file_path == "file2.py":
-                return (10, 8, True, None)
-            return (0, 0, False, "Error")
-        
-        mock_count_lines.side_effect = count_lines_side_effect
-        
-        # Execute the command
-        result = self.command.execute("*.txt", recursive="-r2")
-        
-        # Verify result
+    def test_count_lines_reads_a_real_file(self, tmp_path):
+        file_path = tmp_path / "test.txt"
+        file_path.write_text("Line 1\nLine 2\n\nLine 4\n", encoding="utf-8")
+
+        total_lines, non_empty, success, error = self.command._count_lines(
+            str(file_path), ignore_empty=False
+        )
+        assert (total_lines, non_empty, success, error) == (4, 3, True, None)
+
+        total_lines, non_empty, success, error = self.command._count_lines(
+            str(file_path), ignore_empty=True
+        )
+        assert (total_lines, non_empty, success, error) == (3, 3, True, None)
+
+    def test_execute_counts_real_matching_files(self, tmp_path):
+        file1 = tmp_path / "file1.txt"
+        file2 = tmp_path / "file2.txt"
+        ignored = tmp_path / "ignored.py"
+        file1.write_text("1\n2\n\n4\n5\n", encoding="utf-8")
+        file2.write_text("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n", encoding="utf-8")
+        ignored.write_text("not counted\n", encoding="utf-8")
+
+        result = self.command.execute(
+            str(tmp_path / "*.txt"), recursive="-r2"
+        )
+
         assert result["success"] is True
         assert result["total_lines"] == 15
-        assert result["total_non_empty_lines"] == 12
-        assert result["total_empty_lines"] == 3
+        assert result["total_non_empty_lines"] == 14
+        assert result["total_empty_lines"] == 1
         assert result["files_analyzed"] == 2
-        assert result["file_pattern"] == "*.txt"
+        assert result["file_pattern"] == str(tmp_path / "*.txt")
         assert result["recursive"] == 2
-        
-        # Verify that the correct files were found
-        mock_find_files.assert_called_once_with("*.txt", "-r2")
-        
-        # Verify extension statistics
-        assert ".txt" in result["extension_stats"]
-        assert ".py" in result["extension_stats"]
-        assert result["extension_stats"][".txt"] == 5
-        assert result["extension_stats"][".py"] == 10
+        assert result["extension_stats"] == {".txt": 15}

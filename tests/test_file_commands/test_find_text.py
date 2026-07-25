@@ -1,186 +1,108 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Test for the FindText command
-"""
+"""Real-filesystem tests for findText."""
 
-import os
 import re
+
 import pytest
-from unittest.mock import patch, mock_open, Mock
+
 from qzx.commands.file.find_text import FindTextCommand
 
-class TestFindTextCommand:
-    """
-    Tests for the FindText command
-    """
-    
-    def setup_method(self):
-        """Setup for each test"""
-        self.command = FindTextCommand()
-    
-    def test_parse_recursive_parameter(self):
-        """Test interpretation of the recursive parameter"""
-        # No recursion
-        assert self.command._parse_recursive_parameter(None) == 0
-        
-        # Unlimited recursion
-        assert self.command._parse_recursive_parameter("-r") is None
-        assert self.command._parse_recursive_parameter("--recursive") is None
-        
-        # Specific depth recursion
-        assert self.command._parse_recursive_parameter("-r3") == 3
-        assert self.command._parse_recursive_parameter("--recursive2") == 2
-        
-        # Unrecognized format
-        assert self.command._parse_recursive_parameter("invalid") == 0
-    
-    def test_search_file_simple(self):
-        """Test searching a file with simple pattern"""
-        file_content = "Line 1: test\nLine 2: example\nLine 3: test example\nLine 4\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Test simple search
-            result = self.command._search_file(
-                "test.txt", "test", False, True, 0, False, False, False
-            )
-            
-            assert result["matches"] == 2
-            assert len(result["lines"]) == 2
-            assert result["lines"][0]["line_num"] == 1
-            assert result["lines"][1]["line_num"] == 3
-    
-    def test_search_file_regex(self):
-        """Test searching a file with regex pattern"""
-        file_content = "Line 1: test\nLine 2: example\nLine 3: test example\nLine 4\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Test regex search
-            result = self.command._search_file(
-                "test.txt", re.compile(r"Line \d:"), True, True, 0, False, False, False
-            )
-            
-            assert result["matches"] == 3
-            assert len(result["lines"]) == 3
-            assert result["lines"][0]["line_num"] == 1
-            assert result["lines"][1]["line_num"] == 2
-            assert result["lines"][2]["line_num"] == 3
-    
-    def test_search_file_case_insensitive(self):
-        """Test case-insensitive search"""
-        file_content = "Line 1: TEST\nLine 2: test\nLine 3: Test\nLine 4\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Test case insensitive
-            result = self.command._search_file(
-                "test.txt", "test", False, False, 0, False, False, False
-            )
-            
-            assert result["matches"] == 3
-            assert len(result["lines"]) == 3
-    
-    def test_search_file_with_context(self):
-        """Test searching with context lines"""
-        file_content = "Line 1\nLine 2: test\nLine 3\nLine 4\nLine 5: test\nLine 6\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Test with context
-            result = self.command._search_file(
-                "test.txt", "test", False, True, 1, False, False, False
-            )
-            
-            assert result["matches"] == 2
-            assert len(result["lines"]) == 6  # 2 matches + 4 context lines
-            
-            # Check context lines
-            assert result["lines"][0]["line_num"] == 1
-            assert not result["lines"][0]["is_match"]
-            assert result["lines"][1]["line_num"] == 2
-            assert result["lines"][1]["is_match"]
-            assert result["lines"][2]["line_num"] == 3
-            assert not result["lines"][2]["is_match"]
-    
-    def test_search_file_invert_match(self):
-        """Test inverting match results"""
-        file_content = "Line 1: test\nLine 2: example\nLine 3: test\nLine 4\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Test invert match
-            result = self.command._search_file(
-                "test.txt", "test", False, True, 0, True, False, False
-            )
-            
-            assert result["matches"] == 2  # Lines without "test"
-            assert len(result["lines"]) == 2
-            assert result["lines"][0]["line_num"] == 2
-            assert result["lines"][1]["line_num"] == 4
-    
-    def test_search_file_count_only(self):
-        """Test count-only mode"""
-        file_content = "Line 1: test\nLine 2: example\nLine 3: test\nLine 4\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Test count only
-            result = self.command._search_file(
-                "test.txt", "test", False, True, 0, False, True, False
-            )
-            
-            assert result["matches"] == 2
-            assert "lines" not in result
-    
-    @patch('os.path.isfile')
-    @patch('os.path.isdir')
-    @patch('os.walk')
-    def test_execute_single_file(self, mock_walk, mock_isdir, mock_isfile):
-        """Test executing search on a single file"""
-        mock_isfile.return_value = True
-        mock_isdir.return_value = False
-        
-        file_content = "Line 1: test\nLine 2: example\nLine 3: test\nLine 4\n"
-        
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Execute command on a single file
-            result = self.command.execute("test", "test.txt")
-            
-            assert result["success"] is True
-            assert result["pattern"] == "test"
-            assert result["target"] == "test.txt"
-            assert result["files_searched"] == 1
-            assert result["files_with_matches"] == 1
-            assert result["total_matches"] == 2
-    
-    @patch('os.path.isfile')
-    @patch('os.path.isdir')
-    @patch('os.walk')
-    @patch('fnmatch.fnmatch')
-    def test_execute_directory(self, mock_fnmatch, mock_walk, mock_isdir, mock_isfile):
-        """Test executing search on a directory"""
-        mock_isfile.side_effect = lambda path: not path.endswith('dir')
-        mock_isdir.side_effect = lambda path: path.endswith('dir')
-        
-        # Configure walk to return files
-        mock_walk.return_value = [
-            ("test_dir", [], ["file1.txt", "file2.py"])
-        ]
-        
-        # Configure fnmatch to match all files
-        mock_fnmatch.return_value = True
-        
-        # Mock the _search_file method to return controlled results
-        with patch.object(self.command, '_search_file') as mock_search_file:
-            mock_search_file.side_effect = [
-                {"file": "test_dir/file1.txt", "matches": 3, "lines": [{"line_num": 1, "content": "test", "is_match": True}]},
-                {"file": "test_dir/file2.py", "matches": 2, "lines": [{"line_num": 1, "content": "test", "is_match": True}]}
-            ]
-            
-            # Execute command on a directory
-            result = self.command.execute("test", "test_dir", recursive="-r")
-            
-            assert result["success"] is True
-            assert result["pattern"] == "test"
-            assert result["target"] == "test_dir"
-            assert result["recursive"] == "unlimited"
-            assert result["files_searched"] == 2
-            assert result["files_with_matches"] == 2
-            assert result["total_matches"] == 5
+
+@pytest.fixture
+def text_file(tmp_path):
+    path = tmp_path / "sample.txt"
+    path.write_text(
+        "Line 1: TEST\n"
+        "Line 2: example\n"
+        "Line 3: test example\n"
+        "Line 4\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_parse_recursive_parameter():
+    command = FindTextCommand()
+    assert command._parse_recursive_parameter(None) == 0
+    assert command._parse_recursive_parameter("-r") is None
+    assert command._parse_recursive_parameter("--recursive") is None
+    assert command._parse_recursive_parameter("-r3") == 3
+    assert command._parse_recursive_parameter("--recursive2") == 2
+    assert command._parse_recursive_parameter("invalid") == 0
+
+
+def test_search_file_uses_real_content_for_text_regex_and_case(text_file):
+    command = FindTextCommand()
+
+    exact = command._search_file(
+        str(text_file), "test", False, True, 0, False, False, False
+    )
+    insensitive = command._search_file(
+        str(text_file), "test", False, False, 0, False, False, False
+    )
+    regex = command._search_file(
+        str(text_file),
+        re.compile(r"Line \d:"),
+        True,
+        True,
+        0,
+        False,
+        False,
+        False,
+    )
+
+    assert exact["matches"] == 1
+    assert insensitive["matches"] == 2
+    assert regex["matches"] == 3
+
+
+def test_search_file_context_inversion_and_count_use_real_lines(text_file):
+    command = FindTextCommand()
+
+    context = command._search_file(
+        str(text_file), "example", False, True, 1, False, False, False
+    )
+    inverted = command._search_file(
+        str(text_file), "example", False, True, 0, True, False, False
+    )
+    count = command._search_file(
+        str(text_file), "example", False, True, 0, False, True, False
+    )
+
+    assert context["matches"] == 2
+    assert {line["line_num"] for line in context["lines"]} == {1, 2, 3, 4}
+    assert inverted["matches"] == 2
+    assert [line["line_num"] for line in inverted["lines"]] == [1, 4]
+    assert count["matches"] == 2
+    assert "lines" not in count
+
+
+def test_execute_searches_real_file_and_recursive_directory(tmp_path):
+    first = tmp_path / "first.txt"
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    second = nested / "second.py"
+    ignored = nested / "ignored.md"
+    first.write_text("needle\nnone\nneedle\n", encoding="utf-8")
+    second.write_text("needle\n", encoding="utf-8")
+    ignored.write_text("needle\n", encoding="utf-8")
+
+    single = FindTextCommand().execute("needle", str(first), colored=False)
+    recursive = FindTextCommand().execute(
+        "needle",
+        str(tmp_path),
+        recursive="-r",
+        file_pattern="*.py",
+        colored=False,
+    )
+
+    assert single["success"] is True
+    assert single["files_searched"] == 1
+    assert single["total_matches"] == 2
+    assert recursive["success"] is True
+    assert recursive["recursive"] == "unlimited"
+    assert recursive["files_searched"] == 1
+    assert recursive["files_with_matches"] == 1
+    assert recursive["total_matches"] == 1

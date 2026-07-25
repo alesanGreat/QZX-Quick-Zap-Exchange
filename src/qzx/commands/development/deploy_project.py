@@ -9,6 +9,7 @@ import os
 import sys
 import subprocess
 import shutil
+import shlex
 import urllib.request
 import time
 from pathlib import Path
@@ -123,6 +124,7 @@ class DeployProjectCommand(CommandBase):
         results = {
             "build": "skipped",
             "backup_taken": "skipped",
+            "remote_backup_path": None,
             "synced": "skipped",
             "permissions_set": "skipped",
             "service_restarted": "skipped",
@@ -159,7 +161,10 @@ class DeployProjectCommand(CommandBase):
         # 2. Remote Backup
         backup_name = f"backup_{int(time.time())}.tar.gz"
         remote_backup_path = f"/tmp/{backup_name}"
-        backup_cmd = f"tar -czf {remote_backup_path} -C {target_path} . 2>/dev/null || true"
+        backup_cmd = (
+            f"tar -czf {shlex.quote(remote_backup_path)} "
+            f"-C {shlex.quote(target_path)} ."
+        )
         
         if dry_run:
             results["backup_taken"] = "dry_run"
@@ -176,10 +181,35 @@ class DeployProjectCommand(CommandBase):
                 )
                 if res.returncode == 0:
                     results["backup_taken"] = f"success: {remote_backup_path}"
+                    results["remote_backup_path"] = remote_backup_path
                 else:
-                    results["backup_taken"] = "failed_or_empty_folder"
+                    results["backup_taken"] = f"failed: {res.stderr.strip()}"
+                    return {
+                        "success": False,
+                        "error": (
+                            "Remote backup failed; deployment was aborted "
+                            "before synchronization."
+                        ),
+                        "message": (
+                            "The remote target was not changed because its "
+                            "backup could not be created."
+                        ),
+                        "details": results,
+                    }
             except Exception as e:
                 results["backup_taken"] = f"failed: {e}"
+                return {
+                    "success": False,
+                    "error": (
+                        "Remote backup failed; deployment was aborted "
+                        f"before synchronization: {e}"
+                    ),
+                    "message": (
+                        "The remote target was not changed because its "
+                        "backup could not be created."
+                    ),
+                    "details": results,
+                }
                 
         # 3. Synchronization (using rsync/scp)
         sync_cmd = ["rsync", "-avz", "--delete"]
@@ -219,21 +249,27 @@ class DeployProjectCommand(CommandBase):
                 }
                 
         # 4. Set Permissions
-        perm_cmd = f"chmod -R 755 {target_path} 2>/dev/null || true"
+        perm_cmd = f"chmod -R 755 -- {shlex.quote(target_path)}"
         if dry_run:
             results["permissions_set"] = "dry_run"
         else:
             try:
-                subprocess.run(
+                permission_result = subprocess.run(
                     ["ssh"] + ssh_opts + [target_host, perm_cmd],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
+                    text=True,
                     timeout=10,
                     check=False
                 )
-                results["permissions_set"] = "success"
-            except:
-                results["permissions_set"] = "failed"
+                if permission_result.returncode == 0:
+                    results["permissions_set"] = "success"
+                else:
+                    results["permissions_set"] = (
+                        "failed: " + permission_result.stderr.strip()
+                    )
+            except Exception as e:
+                results["permissions_set"] = f"failed: {e}"
                 
         # 5. Restart Service
         if restart_cmd:
@@ -278,9 +314,19 @@ class DeployProjectCommand(CommandBase):
                     results["health_check"] = "failed"
                     
         # 7. Automatic Rollback if Health Check failed
-        if not health_passed and not dry_run and "success:" in results["backup_taken"]:
+        if (
+            not health_passed
+            and not dry_run
+            and results["backup_taken"].startswith("success:")
+        ):
             # Rollback: tar -xzf backup -C target_path
-            rollback_cmd = f"rm -rf {target_path}/* && tar -xzf {remote_backup_path} -C {target_path}"
+            quoted_target = shlex.quote(target_path)
+            rollback_cmd = (
+                f"find {quoted_target} -mindepth 1 -maxdepth 1 "
+                "-exec rm -rf -- {} + "
+                f"&& tar -xzf {shlex.quote(remote_backup_path)} "
+                f"-C {quoted_target}"
+            )
             try:
                 res = subprocess.run(
                     ["ssh"] + ssh_opts + [target_host, rollback_cmd],
@@ -310,11 +356,33 @@ class DeployProjectCommand(CommandBase):
                 except:
                     pass
                     
+            rollback_succeeded = results["rollback_executed"] == "success"
             return {
                 "success": False,
-                "error": "Health check failed. Automatic rollback executed.",
-                "message": "Deployment failed health checks. Rollback completed.",
+                "error": (
+                    "Health check failed. Automatic rollback "
+                    + ("completed." if rollback_succeeded else "failed.")
+                ),
+                "message": (
+                    "Deployment failed health checks. "
+                    + (
+                        "The previous deployment was restored."
+                        if rollback_succeeded
+                        else "Manual recovery is required."
+                    )
+                ),
                 "details": results
+            }
+
+        if not health_passed and not dry_run:
+            return {
+                "success": False,
+                "error": "Health check failed and no usable backup was available.",
+                "message": (
+                    "Deployment failed health checks. Manual recovery is "
+                    "required because automatic rollback was unavailable."
+                ),
+                "details": results,
             }
             
         summary_msg = "Project deployed successfully."

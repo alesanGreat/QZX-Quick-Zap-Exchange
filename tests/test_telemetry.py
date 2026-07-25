@@ -1,4 +1,5 @@
 import json
+import platform
 import uuid
 
 from qzx import telemetry
@@ -38,18 +39,7 @@ def test_telemetry_honours_do_not_track(tmp_path):
     assert status["details"]["reason"] == "disabled"
 
 
-def test_payload_contains_only_the_documented_allow_list(monkeypatch):
-    monkeypatch.setattr(telemetry.platform, "system", lambda: "Windows")
-    monkeypatch.setattr(telemetry.platform, "release", lambda: "11")
-    monkeypatch.setattr(telemetry.platform, "version", lambda: "10.0.26100")
-    monkeypatch.setattr(telemetry.platform, "machine", lambda: "AMD64")
-    monkeypatch.setattr(telemetry.platform, "python_version", lambda: "3.13.5")
-    monkeypatch.setattr(
-        telemetry.platform,
-        "python_implementation",
-        lambda: "CPython",
-    )
-
+def test_payload_contains_only_the_documented_real_environment_allow_list():
     event = telemetry.build_event(
         "0.2.3",
         "9c148b7f-93fb-45d2-ae22-34e017d27e39",
@@ -57,18 +47,33 @@ def test_payload_contains_only_the_documented_allow_list(monkeypatch):
         environ={"CI": "true"},
     )
 
+    assert set(event) == {
+        "schema_version",
+        "event",
+        "event_id",
+        "installation_id",
+        "qzx_version",
+        "python_version",
+        "python_implementation",
+        "os_name",
+        "os_release",
+        "os_kernel",
+        "architecture",
+        "virtual_environment",
+        "ci",
+    }
     assert event == {
         "schema_version": 1,
         "event": "version_first_run",
         "event_id": "98412369-135d-4dce-9440-605139e5296e",
         "installation_id": "9c148b7f-93fb-45d2-ae22-34e017d27e39",
         "qzx_version": "0.2.3",
-        "python_version": "3.13.5",
-        "python_implementation": "CPython",
-        "os_name": "windows",
-        "os_release": "11",
-        "os_kernel": "10.0.26100",
-        "architecture": "AMD64",
+        "python_version": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "os_name": telemetry._normalise_os_name(platform.system()),
+        "os_release": telemetry._os_details()[1],
+        "os_kernel": telemetry._os_details()[2],
+        "architecture": platform.machine() or "unknown",
         "virtual_environment": telemetry._is_virtual_environment(),
         "ci": True,
     }
