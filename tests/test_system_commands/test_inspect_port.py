@@ -23,6 +23,26 @@ class TestInspectPortCommand:
         result = self.command.execute("not_a_port")
         assert result["success"] is False
         assert "Port must be an integer" in result["error"]
+
+    @patch.object(InspectPortCommand, "_execute_fallback")
+    @patch("qzx.commands.system.inspect_port.platform.system")
+    def test_sunos_uses_fallback_before_psutil_net_connections(
+        self, mock_system, mock_fallback
+    ):
+        """SunOS uses a recoverable fallback instead of the fatal native API."""
+        mock_system.return_value = "SunOS"
+        mock_fallback.return_value = {
+            "success": True,
+            "port": 3000,
+            "in_use": False,
+            "killed": False,
+            "message": "Port 3000 is free.",
+        }
+
+        result = self.command.execute(3000)
+
+        assert result["success"] is True
+        mock_fallback.assert_called_once_with(3000, False)
         
     @patch("psutil.net_connections")
     def test_port_free(self, mock_net_conns):

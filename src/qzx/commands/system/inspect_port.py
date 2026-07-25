@@ -85,6 +85,12 @@ class InspectPortCommand(CommandBase):
             import psutil
         except ImportError:
             return self._execute_fallback(port_num, kill_process)
+
+        # psutil.net_connections can abort the entire interpreter on SunOS,
+        # which cannot be recovered with try/except. Use the command-line
+        # fallback there so inspectPort returns a structured result.
+        if platform.system().lower() == "sunos":
+            return self._execute_fallback(port_num, kill_process)
             
         try:
             # Look for active connections on the target port

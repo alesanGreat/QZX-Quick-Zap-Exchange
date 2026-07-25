@@ -44,6 +44,21 @@ class TestSystemDoctorCommand:
         result_str_false = self.command.execute(quick="false")
         assert result_str_false["success"] is True
 
+    @patch("qzx.commands.system.system_doctor.psutil.net_connections")
+    @patch("qzx.commands.system.system_doctor.platform.system")
+    def test_system_doctor_avoids_psutil_port_enumeration_on_sunos(
+        self, mock_system, mock_net_connections
+    ):
+        """SunOS must not call a native psutil API that can abort Python."""
+        mock_system.return_value = "SunOS"
+
+        result = self.command._check_ports()
+
+        assert result["status"] == "not_available"
+        assert result["listening"] == []
+        assert "SunOS" in result["reason"]
+        mock_net_connections.assert_not_called()
+
     def test_system_doctor_smart_integration(self):
         """Test SMART health check integration with health_score and issues"""
         # Mock all system checks so the health score is deterministic (base = 100)

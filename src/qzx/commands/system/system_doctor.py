@@ -463,7 +463,8 @@ class SystemDoctorCommand(CommandBase):
         
     def _check_ports(self):
         ports = []
-        if psutil:
+        system_name = platform.system().lower()
+        if psutil and system_name != "sunos":
             try:
                 conns = psutil.net_connections(kind='inet')
                 for c in conns:
@@ -476,10 +477,22 @@ class SystemDoctorCommand(CommandBase):
                         })
             except:
                 pass
+        elif system_name == "sunos":
+            # The Solaris psutil implementation can abort the interpreter
+            # inside its native net_connections call, so an exception handler
+            # cannot make that API safe here.
+            return {
+                "status": "not_available",
+                "listening": [],
+                "reason": (
+                    "System-wide listening-port enumeration is unavailable "
+                    "through psutil on SunOS."
+                )
+            }
         else:
             # fallback to netstat
             try:
-                if platform.system() == "Windows":
+                if system_name == "windows":
                     cmd = ["netstat", "-ano"]
                     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace', check=False)
                     for line in res.stdout.split("\n"):
