@@ -114,6 +114,11 @@ class FindBrokenSymlinksCommand(CommandBase):
                             target = "unknown"
                             try:
                                 target = os.readlink(path)
+                                if os.name == "nt":
+                                    if target.startswith("\\\\?\\UNC\\"):
+                                        target = "\\\\" + target[8:]
+                                    elif target.startswith("\\\\?\\"):
+                                        target = target[4:]
                             except Exception:
                                 pass
                                 

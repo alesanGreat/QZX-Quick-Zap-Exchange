@@ -7,6 +7,7 @@ server, filesystem mutations, backup creation, and rollback are all real.
 
 import os
 from pathlib import Path
+import base64
 import shlex
 import socket
 import subprocess
@@ -30,6 +31,38 @@ def _required_environment(name):
     return value
 
 
+def _run_ssh(config, remote_command, check=True):
+    return subprocess.run(
+        [
+            "ssh",
+            "-p",
+            config["port"],
+            "-i",
+            str(config["ssh_key"]),
+            config["host"],
+            remote_command,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=15,
+        check=check,
+    )
+
+
+def _write_remote_file(config, path, content):
+    encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    _run_ssh(
+        config,
+        (
+            f"printf %s {shlex.quote(encoded)} | base64 -d > "
+            f"{shlex.quote(str(path))}"
+        ),
+    )
+
+
 @pytest.fixture
 def deployment_environment(tmp_path, monkeypatch):
     host = _required_environment("QZX_REAL_DEPLOY_HOST")
@@ -37,7 +70,6 @@ def deployment_environment(tmp_path, monkeypatch):
     ssh_key = Path(_required_environment("QZX_REAL_DEPLOY_SSH_KEY"))
     target_root = Path(_required_environment("QZX_REAL_DEPLOY_TARGET_ROOT"))
     target = target_root / uuid.uuid4().hex
-    target.mkdir(parents=True)
 
     backup_directory = tmp_path / "qzx-safety-backups"
     monkeypatch.delenv("QZX_SAFETY", raising=False)
@@ -51,20 +83,30 @@ def deployment_environment(tmp_path, monkeypatch):
         "target": target,
         "backup_directory": backup_directory,
     }
+    _run_ssh(config, f"mkdir -p {shlex.quote(str(target))}")
     try:
         yield config
     finally:
         pid_path = target / ".http-server.pid"
         if pid_path.exists():
-            try:
-                os.kill(int(pid_path.read_text(encoding="utf-8").strip()), 15)
-            except (OSError, ValueError):
-                pass
-        for archive in Path("/tmp").glob("backup_*.tar.gz"):
-            try:
-                archive.unlink()
-            except OSError:
-                pass
+            _run_ssh(
+                config,
+                (
+                    f"kill $(cat {shlex.quote(str(pid_path))}) "
+                    "2>/dev/null || true"
+                ),
+                check=False,
+            )
+        _run_ssh(
+            config,
+            f"rm -rf -- {shlex.quote(str(target))}",
+            check=False,
+        )
+        _run_ssh(
+            config,
+            "rm -f -- /tmp/backup_*.tar.gz",
+            check=False,
+        )
 
 
 def _command_arguments(config, source, health_url, restart_cmd=None):
@@ -121,9 +163,10 @@ def test_real_ssh_deployment_backup_sync_restart_and_health_check(
         "real QZX deployment\n",
         encoding="utf-8",
     )
-    (config["target"] / "old-release.txt").write_text(
+    _write_remote_file(
+        config,
+        config["target"] / "old-release.txt",
         "previous deployment\n",
-        encoding="utf-8",
     )
 
     health_port = _unused_local_port()
@@ -180,13 +223,15 @@ def test_real_failed_health_check_restores_every_previous_remote_file(
         "must be rolled back\n",
         encoding="utf-8",
     )
-    (config["target"] / "stable-release.txt").write_text(
+    _write_remote_file(
+        config,
+        config["target"] / "stable-release.txt",
         "known good deployment\n",
-        encoding="utf-8",
     )
-    (config["target"] / ".stable-hidden").write_text(
+    _write_remote_file(
+        config,
+        config["target"] / ".stable-hidden",
         "hidden state\n",
-        encoding="utf-8",
     )
     closed_port = _unused_local_port()
 

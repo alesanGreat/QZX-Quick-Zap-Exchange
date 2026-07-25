@@ -108,8 +108,20 @@ class FormatCodeCommand(CommandBase):
         'php': {
             'extensions': {'.php'},
             'tool': 'php-cs-fixer',
-            'args': ['php-cs-fixer', 'fix'],
-            'check_args': ['php-cs-fixer', 'fix', '--dry-run', '--diff'],
+            'args': [
+                'php-cs-fixer',
+                'fix',
+                '--rules=@PER-CS',
+                '--using-cache=no',
+            ],
+            'check_args': [
+                'php-cs-fixer',
+                'fix',
+                '--dry-run',
+                '--diff',
+                '--rules=@PER-CS',
+                '--using-cache=no',
+            ],
             'fallback': None,
         },
         'c': {

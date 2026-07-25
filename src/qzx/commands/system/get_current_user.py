@@ -85,8 +85,32 @@ class GetCurrentUserCommand(CommandBase):
                 
                 # Get the user's processes count and memory usage
                 try:
-                    user_processes = [p for p in psutil.process_iter(['username', 'memory_info']) 
-                                      if hasattr(p, 'info') and p.info.get('username') == result["username"]]
+                    def normalized_username(username):
+                        if not username:
+                            return ""
+                        return (
+                            str(username)
+                            .replace("/", "\\")
+                            .rsplit("\\", 1)[-1]
+                            .casefold()
+                        )
+
+                    current_usernames = {
+                        normalized_username(result["username"]),
+                        normalized_username(result.get("user_id")),
+                    }
+                    current_usernames.discard("")
+                    user_processes = [
+                        process
+                        for process in psutil.process_iter(
+                            ["username", "memory_info"]
+                        )
+                        if hasattr(process, "info")
+                        and normalized_username(
+                            process.info.get("username")
+                        )
+                        in current_usernames
+                    ]
                     
                     result["processes"] = {
                         "count": len(user_processes),

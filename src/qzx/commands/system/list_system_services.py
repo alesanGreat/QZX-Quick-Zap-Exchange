@@ -255,7 +255,7 @@ class ListSystemServicesCommand(CommandBase):
         services = []
         for name in sorted(os.listdir(init_directory)):
             script = os.path.join(init_directory, name)
-            if not os.path.isfile(script):
+            if not os.path.isfile(script) or not os.access(script, os.X_OK):
                 continue
             result = self._run([script, "status"], timeout=3)
             services.append(

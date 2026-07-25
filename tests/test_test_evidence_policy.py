@@ -7,6 +7,18 @@ from pathlib import Path
 TEST_ROOT = Path(__file__).resolve().parent
 
 
+def _dotted_name(node):
+    """Return a dotted call name such as ``pytest.mark.skipif``."""
+
+    parts = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+    return ".".join(reversed(parts))
+
+
 def test_suite_does_not_runtime_patch_dependencies_or_skip_evidence():
     """Runtime patching and silent skips require redesign, not an exception."""
 
@@ -37,21 +49,23 @@ def test_suite_does_not_runtime_patch_dependencies_or_skip_evidence():
                         )
             elif isinstance(node, ast.Call):
                 called = node.func
-                if (
-                    isinstance(called, ast.Attribute)
-                    and called.attr == "setattr"
-                    and isinstance(called.value, ast.Name)
-                    and called.value.id == "monkeypatch"
-                ):
+                dotted_name = _dotted_name(called)
+                if dotted_name == "monkeypatch.setattr":
                     violations.append(
                         f"{test_file}:{node.lineno}: monkeypatch.setattr"
                     )
-                if (
-                    isinstance(called, ast.Attribute)
-                    and called.attr in {"skip", "skipif", "xfail"}
-                    and isinstance(called.value, ast.Name)
-                    and called.value.id in {"pytest", "unittest"}
-                ):
+                if dotted_name in {
+                    "pytest.skip",
+                    "pytest.skipif",
+                    "pytest.xfail",
+                    "pytest.mark.skip",
+                    "pytest.mark.skipif",
+                    "pytest.mark.xfail",
+                    "unittest.skip",
+                    "unittest.skipIf",
+                    "unittest.skipUnless",
+                    "unittest.expectedFailure",
+                }:
                     violations.append(
                         f"{test_file}:{node.lineno}: silent skip/xfail"
                     )

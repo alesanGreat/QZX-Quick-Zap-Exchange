@@ -10,6 +10,7 @@ import sys
 import socket
 import subprocess
 import platform
+import ipaddress
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -99,7 +100,7 @@ class CheckDnsCommand(CommandBase):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    timeout=5,
+                    timeout=10,
                     check=False
                 )
                 
@@ -150,8 +151,17 @@ class CheckDnsCommand(CommandBase):
             if "non-authoritative" in line.lower() or "answer:" in line.lower():
                 data_started = True
                 continue
-            if line.startswith("Server:") or line.startswith("Address:"):
-                # Ensure we don't capture local resolver address
+            if line.startswith("Server:"):
+                # Ensure we don't capture the local resolver name.
+                continue
+            if (
+                not data_started
+                and (
+                    line.startswith("Address:")
+                    or line.startswith("Addresses:")
+                )
+            ):
+                # Ensure we don't capture the local resolver address.
                 continue
                 
             # Simple line checks
@@ -179,13 +189,21 @@ class CheckDnsCommand(CommandBase):
                     if len(parts) == 2:
                         records.append(parts[1].strip())
             elif record_type in ("A", "AAAA"):
-                # Parse standard address line, e.g. "Address: 142.251.163.100" or just "142.251.163.100"
-                if line.startswith("Address:") or line.startswith("Addresses:"):
-                    addr = line.split(":", 1)[1].strip()
-                    if addr and not addr.startswith("::") and not addr.startswith("0.0.0.0"):
-                        records.extend([a.strip() for a in addr.split() if a.strip()])
-                elif data_started and (line.replace(".", "").isdigit() or ":" in line):
-                    # Direct address line
-                    records.extend([a.strip() for a in line.split() if a.strip()])
+                if not data_started:
+                    continue
+                expected_version = 4 if record_type == "A" else 6
+                address_text = line
+                if line.startswith("Address:") or line.startswith(
+                    "Addresses:"
+                ):
+                    address_text = line.split(":", 1)[1]
+                for token in address_text.replace(",", " ").split():
+                    candidate = token.strip("[]()")
+                    try:
+                        parsed_address = ipaddress.ip_address(candidate)
+                    except ValueError:
+                        continue
+                    if parsed_address.version == expected_version:
+                        records.append(str(parsed_address))
                     
         return records

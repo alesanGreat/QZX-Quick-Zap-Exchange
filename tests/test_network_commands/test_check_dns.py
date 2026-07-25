@@ -15,11 +15,11 @@ class TestCheckDnsCommand:
         assert result["success"] is False
         assert "must not be empty" in result["error"]
 
-    def test_google_dns_records_are_really_resolved(self):
-        result = self.command.execute("google.com")
+    def test_example_dns_records_are_really_resolved(self):
+        result = self.command.execute("example.com")
 
         assert result["success"] is True
-        assert result["domain"] == "google.com"
+        assert result["domain"] == "example.com"
         assert result["errors"] == []
 
         records = result["records"]

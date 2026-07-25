@@ -41,35 +41,42 @@ jobs:
         run: |
           set -euo pipefail
           deploy_root="${RUNNER_TEMP}/qzx-real-deploy"
-          mkdir -p "${deploy_root}/target" "${HOME}/.ssh"
+          deploy_user="qzxdeploytest"
+          target_root="/tmp/qzx-real-deploy-target"
+          mkdir -p "${deploy_root}" "${HOME}/.ssh"
           sudo install -d -m 755 /run/sshd
           chmod 700 "${HOME}/.ssh"
+          sudo useradd --create-home --shell /bin/bash "${deploy_user}"
+          sudo passwd --delete "${deploy_user}"
+          sudo install -d -o "${deploy_user}" -g "${deploy_user}" \
+            -m 755 "${target_root}"
 
           ssh-keygen -q -t ed25519 -N "" \
             -f "${deploy_root}/client-key"
           ssh-keygen -q -t ed25519 -N "" \
             -f "${deploy_root}/host-key"
-          cp "${deploy_root}/client-key.pub" \
-            "${deploy_root}/authorized_keys"
+          sudo install -d -o "${deploy_user}" -g "${deploy_user}" \
+            -m 700 "/home/${deploy_user}/.ssh"
+          sudo install -o "${deploy_user}" -g "${deploy_user}" \
+            -m 600 "${deploy_root}/client-key.pub" \
+            "/home/${deploy_user}/.ssh/authorized_keys"
           chmod 600 \
             "${deploy_root}/client-key" \
-            "${deploy_root}/authorized_keys" \
             "${deploy_root}/host-key"
 
-          runner_user="$(id -un)"
           cat >"${deploy_root}/sshd_config" <<EOF
           Port ${QZX_REAL_DEPLOY_PORT}
           ListenAddress 127.0.0.1
           HostKey ${deploy_root}/host-key
           PidFile ${deploy_root}/sshd.pid
-          AuthorizedKeysFile ${deploy_root}/authorized_keys
+          AuthorizedKeysFile .ssh/authorized_keys
           PubkeyAuthentication yes
           PasswordAuthentication no
           KbdInteractiveAuthentication no
-          UsePAM no
+          UsePAM yes
           PermitRootLogin no
           StrictModes no
-          AllowUsers ${runner_user}
+          AllowUsers ${deploy_user}
           LogLevel VERBOSE
           Subsystem sftp internal-sftp
           EOF
@@ -83,12 +90,12 @@ jobs:
 
           ssh -p "${QZX_REAL_DEPLOY_PORT}" \
             -i "${deploy_root}/client-key" \
-            "${runner_user}@127.0.0.1" true
+            "${deploy_user}@127.0.0.1" true
 
           {
-            echo "QZX_REAL_DEPLOY_HOST=${runner_user}@127.0.0.1"
+            echo "QZX_REAL_DEPLOY_HOST=${deploy_user}@127.0.0.1"
             echo "QZX_REAL_DEPLOY_SSH_KEY=${deploy_root}/client-key"
-            echo "QZX_REAL_DEPLOY_TARGET_ROOT=${deploy_root}/target"
+            echo "QZX_REAL_DEPLOY_TARGET_ROOT=${target_root}"
             echo "QZX_REAL_DEPLOY_SSHD_PID=${deploy_root}/sshd.pid"
           } >>"${GITHUB_ENV}"
 
