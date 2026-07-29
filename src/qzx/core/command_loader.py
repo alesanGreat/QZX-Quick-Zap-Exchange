@@ -12,6 +12,7 @@ import re
 import sys
 from .command_base import CommandBase
 from .command_lifecycle import (
+    CommandLifecycleError,
     command_maturity,
     validate_lifecycle_inventory,
 )
@@ -61,12 +62,34 @@ class CommandLoader:
                 if not module.ispkg and not module.name.startswith("_"):
                     self._load_command_from_module(f"{package_name}.{module.name}")
 
-        validate_lifecycle_inventory(
-            command_class.name
-            for command_class in set(self.commands.values())
-        )
+        try:
+            validate_lifecycle_inventory(
+                command_class.name
+                for command_class in set(self.commands.values())
+            )
+        except CommandLifecycleError as exc:
+            if not self.load_errors:
+                raise
+            raise self._lifecycle_error_with_load_context(exc) from exc
         self._discovered = True
         return self.commands
+
+    def _lifecycle_error_with_load_context(self, lifecycle_error):
+        """Attach suppressed module import failures to inventory errors."""
+        failures = "; ".join(
+            "{} [{}]: {}".format(
+                module_name,
+                details["type"],
+                details["message"],
+            )
+            for module_name, details in sorted(self.load_errors.items())
+        )
+        return CommandLifecycleError(
+            "{} Command modules that failed to load: {}.".format(
+                lifecycle_error,
+                failures or "none recorded",
+            )
+        )
     
     def _try_install_module(self, module_name):
         """

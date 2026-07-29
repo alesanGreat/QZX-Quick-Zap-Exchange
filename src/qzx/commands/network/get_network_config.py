@@ -15,7 +15,6 @@ import urllib.request
 import json
 from pathlib import Path
 
-import dns.resolver
 import psutil
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -65,6 +64,16 @@ class GetNetworkConfigCommand(CommandBase):
             timeout=5,
             check=False,
         )
+
+    @staticmethod
+    def _system_name():
+        """Return the host operating-system family."""
+        return platform.system()
+
+    @staticmethod
+    def _open_url(request, timeout):
+        """Open a public network-information endpoint."""
+        return urllib.request.urlopen(request, timeout=timeout)
 
     @staticmethod
     def _collect_interfaces():
@@ -121,7 +130,12 @@ class GetNetworkConfigCommand(CommandBase):
 
     @staticmethod
     def _configured_dns_servers():
-        """Read configured resolvers without parsing localized command output."""
+        """Read configured resolvers without making command discovery depend on DNS."""
+        # Import lazily because resolver backends can be unavailable on otherwise
+        # supported Unix variants. Local interface diagnostics must remain usable,
+        # and execute() already falls back to /etc/resolv.conf when this fails.
+        import dns.resolver
+
         resolver = dns.resolver.Resolver(configure=True)
         return list(dict.fromkeys(str(server) for server in resolver.nameservers))
 
@@ -135,7 +149,7 @@ class GetNetworkConfigCommand(CommandBase):
         Returns:
             Dictionary with network configuration details
         """
-        is_windows = platform.system().lower() == "windows"
+        is_windows = self._system_name().lower() == "windows"
         
         resolve_pub = self._parse_bool(check_public)
         if resolve_pub is None:
@@ -234,7 +248,7 @@ class GetNetworkConfigCommand(CommandBase):
                     "https://ipinfo.io/json",
                     headers={"User-Agent": "QZX Network Client"}
                 )
-                with urllib.request.urlopen(req, timeout=4) as response:
+                with self._open_url(req, timeout=4) as response:
                     data = json.loads(response.read().decode("utf-8"))
                     public_info["ip"] = data.get("ip", "unknown")
                     public_info["country"] = data.get("country", "unknown")
@@ -248,7 +262,7 @@ class GetNetworkConfigCommand(CommandBase):
                         "https://api.ipify.org?format=json",
                         headers={"User-Agent": "QZX Network Client"}
                     )
-                    with urllib.request.urlopen(req, timeout=3) as response:
+                    with self._open_url(req, timeout=3) as response:
                         data = json.loads(response.read().decode("utf-8"))
                         public_info["ip"] = data.get("ip", "unknown")
                 except Exception:

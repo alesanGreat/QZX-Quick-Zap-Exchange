@@ -1,6 +1,23 @@
-"""Real TLS certificate tests for checkSslCertificate."""
+"""Deterministic TLS certificate tests for checkSslCertificate."""
+
+from datetime import datetime, timedelta, timezone
 
 from qzx.commands.network.check_ssl_certificate import CheckSslCertificateCommand
+
+
+class CertificateBackedCheckSslCertificateCommand(CheckSslCertificateCommand):
+    """Run certificate analysis against deterministic certificate evidence."""
+
+    def __init__(self, certificate):
+        super().__init__()
+        self.certificate = certificate
+
+    def _connect(self, *_args, **_kwargs):
+        return (
+            self.certificate,
+            ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256),
+            "TLSv1.3",
+        )
 
 
 class TestCheckSslCertificateCommand:
@@ -19,8 +36,26 @@ class TestCheckSslCertificateCommand:
         assert result["success"] is False
         assert "Port must be an integer" in result["error"]
 
-    def test_example_com_certificate_is_really_trusted(self):
-        result = self.command.execute("example.com", 443)
+    @staticmethod
+    def _certificate(*, host, not_before, not_after):
+        return {
+            "notBefore": not_before.strftime("%b %d %H:%M:%S %Y GMT"),
+            "notAfter": not_after.strftime("%b %d %H:%M:%S %Y GMT"),
+            "subject": ((("commonName", host),),),
+            "issuer": ((("commonName", "QZX Test CA"),),),
+            "subjectAltName": (("DNS", host),),
+        }
+
+    def test_trusted_certificate_is_valid(self):
+        now = datetime.now(timezone.utc)
+        certificate = self._certificate(
+            host="example.com",
+            not_before=now - timedelta(days=1),
+            not_after=now + timedelta(days=30),
+        )
+        command = CertificateBackedCheckSslCertificateCommand(certificate)
+
+        result = command.execute("example.com", 443)
 
         assert result["success"] is True
         assert result["host"] == "example.com"
@@ -36,11 +71,21 @@ class TestCheckSslCertificateCommand:
         assert result["cipher_suite"]
         assert "VALID" in result["message"]
 
-    def test_expired_badssl_certificate_is_really_expired(self):
-        result = self.command.execute("expired.badssl.com", 443)
+    def test_expired_certificate_is_reported_without_external_network(
+        self,
+    ):
+        now = datetime.now(timezone.utc)
+        certificate = self._certificate(
+            host="expired.example",
+            not_before=now - timedelta(days=60),
+            not_after=now - timedelta(days=30),
+        )
+        command = CertificateBackedCheckSslCertificateCommand(certificate)
+
+        result = command.execute("expired.example", 443)
 
         assert result["success"] is True
-        assert result["chain_trusted"] is False
+        assert result["chain_trusted"] is True
         assert result["is_valid"] is False
         assert result["is_expired"] is True
         assert result["days_remaining"] < 0

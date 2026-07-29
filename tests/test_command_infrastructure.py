@@ -7,6 +7,7 @@ from qzx.commands.system.qzx_list_commands import qzxListCommands
 from qzx.commands.system.get_command_count import WonderCommandsAmountCommand
 from qzx.commands.system.version import QZXVersionCommand
 from qzx.core.command_loader import CommandLoader
+from qzx.core.command_lifecycle import CommandLifecycleError
 
 
 def test_command_loader_discovers_commands_on_first_lookup():
@@ -17,6 +18,25 @@ def test_command_loader_discovers_commands_on_first_lookup():
     assert command is not None
     assert command.name == "version"
     assert loader.get_all_commands()
+
+
+def test_lifecycle_inventory_error_preserves_module_import_cause():
+    loader = CommandLoader()
+    loader.load_errors = {
+        "qzx.commands.network.get_network_config": {
+            "type": "ImportError",
+            "message": "resolver backend unavailable",
+            "missing_dependency": None,
+        }
+    }
+
+    error = loader._lifecycle_error_with_load_context(
+        CommandLifecycleError("obsolete: getNetworkConfig")
+    )
+
+    assert "obsolete: getNetworkConfig" in str(error)
+    assert "qzx.commands.network.get_network_config [ImportError]" in str(error)
+    assert "resolver backend unavailable" in str(error)
 
 
 def test_help_and_command_list_use_lazy_discovery():

@@ -3,7 +3,7 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
-## 0.2.2.0.3 — 2026-07-29
+## 0.2.2.0.4 — 2026-07-29
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
@@ -35,6 +35,22 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   `0.2.2.0.2` artifacts as a clearly labelled historical fact.
 - Added maintained dependencies for language detection, portable ignore rules,
   and structured DNS queries.
+- Kept `getNetworkConfig` discoverable on Unix variants whose DNS resolver
+  backend cannot be imported at startup; DNS inspection now degrades locally
+  instead of making the whole QZX command inventory unavailable.
+- Removed live third-party TLS endpoints from the deterministic unit suite so
+  provider outages cannot produce false release failures.
+- Improved lifecycle inventory failures with the exact command modules and
+  import errors that caused an incomplete runtime inventory.
+
+## 0.2.2.0.3 — 2026-07-29 (not distributed)
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+This pre-publication validation tag was not uploaded to PyPI or published as a
+GitHub Release. Cross-platform checks exposed a Solaris command-discovery
+failure and a nondeterministic external TLS test, so the immutable tag was
+superseded by `0.2.2.0.4`.
 
 ## 0.2.2.0.2 — 2026-07-24
 

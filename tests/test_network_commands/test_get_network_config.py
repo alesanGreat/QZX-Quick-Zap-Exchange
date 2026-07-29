@@ -4,10 +4,77 @@
 """Real-network tests for getNetworkConfig."""
 
 import ipaddress
+import json
 import socket
 import sys
+from types import SimpleNamespace
 
 from qzx.commands.network.get_network_config import GetNetworkConfigCommand
+
+
+class FakeResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return json.dumps(
+            {
+                "ip": "203.0.113.10",
+                "country": "CO",
+                "region": "Bogota",
+                "city": "Bogota",
+                "org": "QZX Test Network",
+            }
+        ).encode("utf-8")
+
+
+class ProviderBackedNetworkConfigCommand(GetNetworkConfigCommand):
+    """Use a deterministic public-network provider response."""
+
+    @staticmethod
+    def _open_url(_request, timeout):
+        assert timeout == 4
+        return FakeResponse()
+
+
+class ResolverFallbackNetworkConfigCommand(GetNetworkConfigCommand):
+    """Exercise the Unix resolver fallback through explicit fake boundaries."""
+
+    @staticmethod
+    def _system_name():
+        return "Linux"
+
+    @staticmethod
+    def _collect_interfaces():
+        return (
+            {
+                "eth0": {
+                    "ipv4": ["192.0.2.10"],
+                    "ipv6": [],
+                    "description": "eth0",
+                    "mac": "",
+                    "is_up": True,
+                    "speed_mbps": 1000,
+                    "mtu": 1500,
+                }
+            },
+            [],
+        )
+
+    @staticmethod
+    def _configured_dns_servers():
+        raise ImportError("resolver unavailable")
+
+    @staticmethod
+    def _run_system_command(_command):
+        return SimpleNamespace(returncode=1, stdout="", stderr="")
+
+    @staticmethod
+    def _parse_resolv_conf():
+        return ["192.0.2.53"]
 
 
 def test_local_network_config_comes_from_the_real_host():
@@ -34,12 +101,25 @@ def test_local_network_config_comes_from_the_real_host():
     assert result["public"] is None
 
 
-def test_public_network_lookup_returns_a_real_public_ip():
-    result = GetNetworkConfigCommand().execute(check_public=True)
+def test_public_network_lookup_returns_structured_provider_data():
+    result = ProviderBackedNetworkConfigCommand().execute(check_public=True)
 
     assert result["success"] is True
-    ipaddress.ip_address(result["public"]["ip"])
-    assert result["public"]["country"] != "unknown"
+    assert result["public"] == {
+        "ip": "203.0.113.10",
+        "country": "CO",
+        "region": "Bogota",
+        "city": "Bogota",
+        "isp": "QZX Test Network",
+    }
+
+
+def test_resolver_backend_failure_degrades_to_resolv_conf():
+    result = ResolverFallbackNetworkConfigCommand().execute(check_public=False)
+
+    assert result["success"] is True
+    assert result["interfaces"]["eth0"]["ipv4"] == ["192.0.2.10"]
+    assert result["dns_servers"] == ["192.0.2.53"]
 
 
 def test_native_network_output_decodes_problematic_bytes_without_crashing():

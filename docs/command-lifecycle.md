@@ -106,11 +106,11 @@ the exact command-to-stage map it shipped.
 Python package pre-release identifiers follow the standard ordering:
 
 ```text
-0.2.2.0.3.dev1
-0.2.2.0.3a1
-0.2.2.0.3b1
-0.2.2.0.3rc1
-0.2.2.0.3
+0.2.2.0.4.dev1
+0.2.2.0.4a1
+0.2.2.0.4b1
+0.2.2.0.4rc1
+0.2.2.0.4
 ```
 
 Changing a command stage does not itself authorize changing the package
