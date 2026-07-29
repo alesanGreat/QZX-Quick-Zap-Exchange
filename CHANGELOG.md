@@ -42,6 +42,12 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   provider outages cannot produce false release failures.
 - Improved lifecycle inventory failures with the exact command modules and
   import errors that caused an incomplete runtime inventory.
+- Synchronized the exceptional Oracle Solaris `--no-deps` test installation
+  with every applicable QZX dependency and added a regression check against
+  future packaging drift.
+- Made the macOS/Linux `inspectPort` fallback re-check TCP and UDP ownership
+  after a controlled termination, returning an evidence-backed boolean
+  `port_cleared` instead of an unnecessary unknown state.
 
 ## 0.2.2.0.3 — 2026-07-29 (not distributed)
 

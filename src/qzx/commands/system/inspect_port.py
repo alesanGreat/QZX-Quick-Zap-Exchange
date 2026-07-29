@@ -78,6 +78,11 @@ class InspectPortCommand(CommandBase):
             )
         }
     ]
+
+    @staticmethod
+    def _system_name():
+        """Return the host operating-system family."""
+        return platform.system()
     
     def execute(self, port, kill=False, expected_pid=None):
         """
@@ -165,7 +170,7 @@ class InspectPortCommand(CommandBase):
         # psutil.net_connections can abort the entire interpreter on SunOS,
         # which cannot be recovered with try/except. Use the command-line
         # fallback there so inspectPort returns a structured result.
-        if platform.system().lower() == "sunos":
+        if self._system_name().lower() == "sunos":
             return self._execute_fallback(
                 port_num,
                 kill_process,
@@ -520,9 +525,42 @@ class InspectPortCommand(CommandBase):
             check=False,
         )
 
+    def _lsof_listener_pids(self, port_num):
+        """Return listener PIDs and whether both TCP and UDP checks ran."""
+        pids = set()
+        errors = []
+        commands = (
+            [
+                "lsof",
+                "-nP",
+                "-t",
+                f"-iTCP:{port_num}",
+                "-sTCP:LISTEN",
+            ],
+            ["lsof", "-nP", "-t", f"-iUDP:{port_num}"],
+        )
+        for command in commands:
+            result = self._subprocess_text(command)
+            if result.returncode not in (0, 1):
+                errors.append(
+                    result.stderr.strip()
+                    or "{} exited with code {}".format(
+                        command[0],
+                        result.returncode,
+                    )
+                )
+                continue
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    try:
+                        pids.add(int(line.strip()))
+                    except ValueError:
+                        continue
+        return pids, not errors, errors
+
     def _execute_fallback(self, port_num, kill_process, expected_pid=None):
         """Fallback implementation using subprocess command line tools if psutil fails/lacks permission"""
-        system_name = platform.system().lower()
+        system_name = self._system_name().lower()
         is_windows = system_name == "windows"
         is_sunos = system_name == "sunos"
         pids = set()
@@ -621,24 +659,22 @@ class InspectPortCommand(CommandBase):
                 }
             else:
                 # Linux/macOS fallback: listeners and bound UDP sockets only.
-                commands = (
-                    [
-                        "lsof",
-                        "-nP",
-                        "-t",
-                        f"-iTCP:{port_num}",
-                        "-sTCP:LISTEN",
-                    ],
-                    ["lsof", "-nP", "-t", f"-iUDP:{port_num}"],
+                pids, inspection_available, inspection_errors = (
+                    self._lsof_listener_pids(port_num)
                 )
-                for command in commands:
-                    res = self._subprocess_text(command)
-                    if res.returncode == 0:
-                        for line in res.stdout.splitlines():
-                            try:
-                                pids.add(int(line.strip()))
-                            except ValueError:
-                                pass
+                if not inspection_available:
+                    error = "; ".join(inspection_errors)
+                    return {
+                        "success": False,
+                        "port": port_num,
+                        "in_use": None,
+                        "killed": False,
+                        "error": error,
+                        "message": (
+                            f"Could not inspect port {port_num} with lsof: "
+                            f"{error}"
+                        ),
+                    }
                             
             if not pids:
                 return {
@@ -718,21 +754,47 @@ class InspectPortCommand(CommandBase):
             
             if kill_process:
                 if len(killed_pids) == len(pids):
+                    port_cleared = None
+                    remaining_pids = None
+                    if not is_windows:
+                        (
+                            remaining,
+                            verification_available,
+                            _verification_errors,
+                        ) = self._lsof_listener_pids(port_num)
+                        if verification_available:
+                            remaining_pids = sorted(remaining)
+                            port_cleared = not remaining
+
+                    if port_cleared is True:
+                        message = (
+                            f"Terminated selected processes: {proc_names_str} "
+                            f"(PIDs: {in_use_pids_str}) and verified that port "
+                            f"{port_num} is clear."
+                        )
+                    elif port_cleared is False:
+                        message = (
+                            f"Terminated selected processes: {proc_names_str} "
+                            f"(PIDs: {in_use_pids_str}), but port {port_num} "
+                            f"still has listener PID(s) {remaining_pids}."
+                        )
+                    else:
+                        message = (
+                            f"Terminated selected processes: {proc_names_str} "
+                            f"(PIDs: {in_use_pids_str}). Re-inspect port "
+                            f"{port_num} because fallback verification is "
+                            "unavailable."
+                        )
                     return {
                         "success": True,
                         "port": port_num,
                         "in_use": True,
                         "killed": True,
                         "killed_pids": killed_pids,
-                        "port_cleared": None,
-                        "remaining_pids": None,
+                        "port_cleared": port_cleared,
+                        "remaining_pids": remaining_pids,
                         "processes": processes_info,
-                        "message": (
-                            f"Terminated selected processes: {proc_names_str} "
-                            f"(PIDs: {in_use_pids_str}). Re-inspect port "
-                            f"{port_num} because fallback verification is "
-                            "unavailable."
-                        )
+                        "message": message,
                     }
                 else:
                     return {

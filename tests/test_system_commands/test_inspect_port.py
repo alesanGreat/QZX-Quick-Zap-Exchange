@@ -11,6 +11,29 @@ import sys
 from qzx.commands.system.inspect_port import InspectPortCommand
 
 
+class DarwinFallbackInspectPortCommand(InspectPortCommand):
+    """Exercise the macOS lsof fallback with deterministic native evidence."""
+
+    def __init__(self, listener_pid):
+        super().__init__()
+        self.listener_pid = listener_pid
+        self.terminated = False
+
+    @staticmethod
+    def _system_name():
+        return "Darwin"
+
+    def _subprocess_text(self, command):
+        if command[0] == "kill":
+            self.terminated = True
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[0] == "lsof" and "-sTCP:LISTEN" in command:
+            stdout = "" if self.terminated else f"{self.listener_pid}\n"
+            returncode = 1 if self.terminated else 0
+            return subprocess.CompletedProcess(command, returncode, stdout, "")
+        return subprocess.CompletedProcess(command, 1, "", "")
+
+
 def test_invalid_port_type():
     result = InspectPortCommand().execute("not_a_port")
     assert result["success"] is False
@@ -106,3 +129,20 @@ def test_kill_operates_only_on_a_controlled_real_child_process():
         if child.poll() is None:
             child.terminate()
             child.wait(timeout=5)
+
+
+def test_macos_fallback_verifies_port_after_controlled_termination():
+    command = DarwinFallbackInspectPortCommand(listener_pid=424242)
+
+    result = command._execute_fallback(
+        54321,
+        kill_process=True,
+        expected_pid=424242,
+    )
+
+    assert result["success"] is True
+    assert result["killed"] is True
+    assert result["killed_pids"] == [424242]
+    assert result["port_cleared"] is True
+    assert result["remaining_pids"] == []
+    assert "verified that port 54321 is clear" in result["message"]

@@ -1,4 +1,6 @@
+import ast
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -169,3 +171,38 @@ def test_additional_distribution_workflow_names_are_explicit():
         )
         assert job_id in workflow
         assert pinned_runtime in workflow
+
+
+def test_oracle_solaris_no_deps_install_covers_package_dependencies():
+    """Keep the exceptional --no-deps workflow aligned with setup.py."""
+    setup_source = (PROJECT_ROOT / "setup.py").read_text(encoding="utf-8")
+    setup_tree = ast.parse(setup_source)
+    install_requires = None
+    for node in setup_tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if any(
+            isinstance(target, ast.Name) and target.id == "install_requires"
+            for target in node.targets
+        ):
+            install_requires = ast.literal_eval(node.value)
+            break
+
+    assert install_requires is not None
+    workflow = (
+        PROJECT_ROOT
+        / ".github"
+        / "workflows"
+        / "test-oracle-solaris-11.4-cbe-x86_64.yml"
+    ).read_text(encoding="utf-8").lower()
+    applicable_names = {
+        re.match(r"[a-z0-9_.-]+", requirement, re.IGNORECASE).group(0).lower()
+        for requirement in install_requires
+        if "platform_system == 'Windows'" not in requirement
+    }
+
+    missing = sorted(name for name in applicable_names if name not in workflow)
+    assert missing == [], (
+        "The Oracle Solaris --no-deps workflow omits package dependencies: "
+        + ", ".join(missing)
+    )
