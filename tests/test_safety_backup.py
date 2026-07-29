@@ -18,6 +18,7 @@ from qzx.core.safety_backup import create_safety_backup
 
 
 class FileMutationFixtureCommand(CommandBase):
+    maturity = "alpha"
     name = "fileMutationFixture"
     description = "Test-only filesystem mutation"
     requires_explicit_approval = True
@@ -38,6 +39,7 @@ class FileMutationFixtureCommand(CommandBase):
 
 
 class NonFilesystemMutationFixtureCommand(CommandBase):
+    maturity = "alpha"
     name = "nonFilesystemMutationFixture"
     description = "Test-only mutation without a restorable path"
     requires_explicit_approval = True

@@ -11,6 +11,10 @@ import pkgutil
 import re
 import sys
 from .command_base import CommandBase
+from .command_lifecycle import (
+    command_maturity,
+    validate_lifecycle_inventory,
+)
 
 class CommandLoader:
     """
@@ -57,6 +61,10 @@ class CommandLoader:
                 if not module.ispkg and not module.name.startswith("_"):
                     self._load_command_from_module(f"{package_name}.{module.name}")
 
+        validate_lifecycle_inventory(
+            command_class.name
+            for command_class in set(self.commands.values())
+        )
         self._discovered = True
         return self.commands
     
@@ -212,6 +220,13 @@ class CommandLoader:
         if not self.commands:
             self.discover_commands()
         return self.commands
+
+    def get_command_maturity(self, command_name):
+        """Return lifecycle details for a canonical name or accepted alias."""
+        command = self.get_command(command_name)
+        if command is None:
+            return None
+        return command_maturity(command.name)
     
     def list_commands(self):
         """

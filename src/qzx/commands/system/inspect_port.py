@@ -9,6 +9,8 @@ import os
 import sys
 import platform
 import subprocess
+import locale
+import socket
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -26,6 +28,17 @@ class InspectPortCommand(CommandBase):
     category = "system"
     requires_explicit_approval = True
     approval_when_parameter = "kill"
+    protected_process_names = {
+        "csrss.exe",
+        "idle",
+        "lsass.exe",
+        "registry",
+        "services.exe",
+        "smss.exe",
+        "system",
+        "wininit.exe",
+        "winlogon.exe",
+    }
     
     parameters = [
         {
@@ -40,6 +53,15 @@ class InspectPortCommand(CommandBase):
             'required': False,
             'default': False,
             'type': 'bool'
+        },
+        {
+            'name': 'expected_pid',
+            'description': (
+                'Exact PID previously observed on the port; required when '
+                'kill is true to prevent terminating a different process'
+            ),
+            'required': False,
+            'type': 'int'
         }
     ]
     
@@ -49,12 +71,15 @@ class InspectPortCommand(CommandBase):
             'description': 'Check what is listening on port 3000'
         },
         {
-            'command': 'qzx inspectPort 3000 true --yolo',
-            'description': 'Terminate the process when no restorable filesystem target exists'
+            'command': 'qzx inspectPort 3000 true 12345 --yolo',
+            'description': (
+                'Terminate only PID 12345 when it is still the observed '
+                'listener and no restorable filesystem target exists'
+            )
         }
     ]
     
-    def execute(self, port, kill=False):
+    def execute(self, port, kill=False, expected_pid=None):
         """
         Inspects the specified port
         
@@ -68,29 +93,84 @@ class InspectPortCommand(CommandBase):
         # Parse port
         try:
             port_num = int(port)
-        except ValueError:
+        except (TypeError, ValueError):
             return {
                 "success": False,
+                "error_code": "invalid_port",
                 "error": f"Port must be an integer, received '{port}'",
                 "message": f"Failed to inspect port: Port must be an integer, received '{port}'"
             }
+        if not 1 <= port_num <= 65535:
+            return {
+                "success": False,
+                "error_code": "invalid_port",
+                "error": f"Port must be between 1 and 65535, received '{port_num}'",
+                "message": (
+                    "Failed to inspect port: Port must be between 1 and "
+                    f"65535, received '{port_num}'."
+                ),
+            }
             
-        # Parse kill flag
-        if isinstance(kill, str):
-            kill_process = kill.lower() in ('true', 'yes', 'y', '1', 't')
-        else:
-            kill_process = bool(kill)
+        # Parse kill flag without silently downgrading invalid mutation intent.
+        kill_process = self._parse_bool(kill)
+        if kill_process is None:
+            return {
+                "success": False,
+                "error_code": "invalid_kill",
+                "error": f"kill must be a boolean value, received '{kill}'.",
+                "remediation": "Pass true to request termination or false to inspect.",
+                "message": (
+                    "Port inspection did not start because kill must be true "
+                    "or false."
+                ),
+            }
+
+        parsed_expected_pid = None
+        if expected_pid not in (None, ""):
+            try:
+                parsed_expected_pid = int(expected_pid)
+            except (TypeError, ValueError):
+                return {
+                    "success": False,
+                    "error_code": "invalid_expected_pid",
+                    "error": (
+                        "expected_pid must be a positive integer, received "
+                        f"'{expected_pid}'"
+                    ),
+                    "message": (
+                        "Failed to inspect port: expected_pid must be a "
+                        "positive integer."
+                    ),
+                }
+            if parsed_expected_pid <= 0:
+                return {
+                    "success": False,
+                    "error_code": "invalid_expected_pid",
+                    "error": "expected_pid must be a positive integer.",
+                    "message": (
+                        "Failed to inspect port: expected_pid must be a "
+                        "positive integer."
+                    ),
+                }
             
         try:
             import psutil
         except ImportError:
-            return self._execute_fallback(port_num, kill_process)
+            return self._execute_fallback(
+                port_num,
+                kill_process,
+                parsed_expected_pid,
+            )
 
         # psutil.net_connections can abort the entire interpreter on SunOS,
         # which cannot be recovered with try/except. Use the command-line
         # fallback there so inspectPort returns a structured result.
         if platform.system().lower() == "sunos":
-            return self._execute_fallback(port_num, kill_process)
+            return self._execute_fallback(
+                port_num,
+                kill_process,
+                parsed_expected_pid,
+            )
             
         try:
             # Look for active connections on the target port
@@ -99,10 +179,18 @@ class InspectPortCommand(CommandBase):
                 conns = psutil.net_connections(kind='inet')
             except (psutil.AccessDenied, Exception):
                 # Fallback if net_connections requires admin
-                return self._execute_fallback(port_num, kill_process)
+                return self._execute_fallback(
+                    port_num,
+                    kill_process,
+                    parsed_expected_pid,
+                )
                 
             for conn in conns:
-                if conn.laddr and conn.laddr.port == port_num:
+                if (
+                    conn.laddr
+                    and conn.laddr.port == port_num
+                    and self._is_bound_socket(conn, psutil)
+                ):
                     matching_conns.append(conn)
                     
             if not matching_conns:
@@ -121,8 +209,34 @@ class InspectPortCommand(CommandBase):
             
             # Use a set to avoid querying/killing the same PID multiple times
             pids = {conn.pid for conn in matching_conns if conn.pid is not None}
+
+            if not pids:
+                return {
+                    "success": True,
+                    "port": port_num,
+                    "in_use": True,
+                    "killed": False,
+                    "processes": [],
+                    "limitations": [
+                        "The operating system did not expose an owning PID."
+                    ],
+                    "message": (
+                        f"Port {port_num} is in use, but the operating system "
+                        "did not expose an owning PID."
+                    ),
+                }
+
+            if kill_process:
+                guard_failure = self._validate_kill_target(
+                    port_num,
+                    pids,
+                    parsed_expected_pid,
+                )
+                if guard_failure is not None:
+                    return guard_failure
+                pids = {parsed_expected_pid}
             
-            for pid in pids:
+            for pid in sorted(pids):
                 proc_info = {
                     "pid": pid,
                     "name": "unknown",
@@ -133,9 +247,12 @@ class InspectPortCommand(CommandBase):
                     "cpu_percent": 0.0,
                     "memory_usage": {}
                 }
-                
+
+                proc = None
+                process_created_at = None
                 try:
                     proc = psutil.Process(pid)
+                    process_created_at = proc.create_time()
                     proc_info["name"] = proc.name()
                     proc_info["status"] = proc.status()
                     
@@ -161,17 +278,49 @@ class InspectPortCommand(CommandBase):
                     errors.append(f"Error reading process {pid}: {str(e)}")
                     
                 processes_info.append(proc_info)
-                
+
                 # Perform termination if requested
                 if kill_process:
+                    protected_reason = self._protected_process_reason(
+                        pid,
+                        proc_info["name"],
+                    )
+                    if protected_reason is not None:
+                        errors.append(protected_reason)
+                        continue
+                    if proc is None or process_created_at is None:
+                        errors.append(
+                            f"PID {pid} could not be verified before termination."
+                        )
+                        continue
                     try:
-                        proc = psutil.Process(pid)
-                        proc.kill()  # Force kill
+                        if (
+                            not proc.is_running()
+                            or proc.create_time() != process_created_at
+                        ):
+                            errors.append(
+                                f"PID {pid} changed or exited before termination."
+                            )
+                            continue
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=3)
+                            proc_info["termination_method"] = "terminate"
+                        except psutil.TimeoutExpired:
+                            proc.kill()
+                            proc.wait(timeout=2)
+                            proc_info["termination_method"] = "forced_kill"
                         killed_pids.append(pid)
                     except psutil.NoSuchProcess:
-                        killed_pids.append(pid)  # already gone
+                        errors.append(
+                            f"PID {pid} exited before QZX could terminate it."
+                        )
                     except psutil.AccessDenied:
                         errors.append(f"Access denied trying to terminate PID {pid}. Try running as Administrator.")
+                    except psutil.TimeoutExpired:
+                        errors.append(
+                            f"PID {pid} did not exit within 5 seconds after termination."
+                        )
                     except Exception as e:
                         errors.append(f"Failed to terminate PID {pid}: {str(e)}")
                         
@@ -181,13 +330,55 @@ class InspectPortCommand(CommandBase):
             
             if kill_process:
                 if len(killed_pids) == len(pids):
-                    success_msg = f"Port {port_num} was cleared. Successfully terminated processes: {proc_names_str} (PIDs: {in_use_pids_str})."
+                    remaining_pids = None
+                    port_cleared = None
+                    try:
+                        remaining_connections = [
+                            conn
+                            for conn in psutil.net_connections(kind="inet")
+                            if (
+                                conn.laddr
+                                and conn.laddr.port == port_num
+                                and self._is_bound_socket(conn, psutil)
+                            )
+                        ]
+                        remaining_pids = sorted(
+                            {
+                                conn.pid
+                                for conn in remaining_connections
+                                if conn.pid is not None
+                            }
+                        )
+                        port_cleared = not remaining_connections
+                    except (psutil.AccessDenied, Exception):
+                        pass
+
+                    if port_cleared is True:
+                        success_msg = (
+                            f"Terminated {proc_names_str} (PIDs: "
+                            f"{in_use_pids_str}) and verified that port "
+                            f"{port_num} is clear."
+                        )
+                    elif port_cleared is False:
+                        success_msg = (
+                            f"Terminated {proc_names_str} (PIDs: "
+                            f"{in_use_pids_str}), but port {port_num} still "
+                            f"has listener PID(s) {remaining_pids}."
+                        )
+                    else:
+                        success_msg = (
+                            f"Terminated {proc_names_str} (PIDs: "
+                            f"{in_use_pids_str}). Re-inspect port {port_num} "
+                            "because ownership verification was unavailable."
+                        )
                     return {
                         "success": True,
                         "port": port_num,
                         "in_use": True,
                         "killed": True,
                         "killed_pids": killed_pids,
+                        "port_cleared": port_cleared,
+                        "remaining_pids": remaining_pids,
                         "processes": processes_info,
                         "errors": errors,
                         "message": success_msg
@@ -222,8 +413,114 @@ class InspectPortCommand(CommandBase):
                 "error": str(e),
                 "message": f"An error occurred while inspecting port {port_num}: {str(e)}"
             }
-            
-    def _execute_fallback(self, port_num, kill_process):
+
+    @staticmethod
+    def _is_bound_socket(connection, psutil_module):
+        """Accept TCP listeners and bound UDP sockets, not client connections."""
+        if connection.type == socket.SOCK_DGRAM:
+            return True
+        return connection.status in {
+            psutil_module.CONN_LISTEN,
+            "LISTEN",
+            "LISTENING",
+        }
+
+    @staticmethod
+    def _validate_kill_target(port_num, observed_pids, expected_pid):
+        """Require a caller-confirmed PID and fail closed on ownership drift."""
+        observed = sorted(observed_pids)
+        if expected_pid is None:
+            return {
+                "success": False,
+                "error_code": "expected_pid_required",
+                "port": port_num,
+                "in_use": True,
+                "killed": False,
+                "observed_pids": observed,
+                "error": (
+                    "Terminating by port alone is unsafe because ownership can "
+                    "change between inspection and termination."
+                ),
+                "details": {
+                    "remediation": (
+                        "Inspect the port without kill, then repeat with "
+                        "kill=true and the exact observed PID."
+                    )
+                },
+                "message": (
+                    f"Port {port_num} is owned by PID(s) {observed}. No process "
+                    "was terminated: provide expected_pid explicitly after "
+                    "reviewing the listener."
+                ),
+            }
+        if expected_pid not in observed_pids:
+            return {
+                "success": False,
+                "error_code": "port_ownership_changed",
+                "port": port_num,
+                "in_use": True,
+                "killed": False,
+                "expected_pid": expected_pid,
+                "observed_pids": observed,
+                "error": (
+                    f"Expected PID {expected_pid}, but the current listener "
+                    f"owner is {observed}."
+                ),
+                "details": {
+                    "remediation": (
+                        "Review the new listener ownership before deciding "
+                        "whether to retry."
+                    )
+                },
+                "message": (
+                    f"Port {port_num} ownership changed. Expected PID "
+                    f"{expected_pid}; observed {observed}. No process was "
+                    "terminated."
+                ),
+            }
+        return None
+
+    def _protected_process_reason(self, pid, process_name):
+        """Block termination of QZX itself, its parent, and critical OS names."""
+        normalized_name = str(process_name or "").strip().lower()
+        if pid in {os.getpid(), os.getppid()}:
+            return (
+                f"Refusing to terminate PID {pid}: it is the QZX process or "
+                "its invoking parent."
+            )
+        if normalized_name in self.protected_process_names:
+            return (
+                f"Refusing to terminate protected system process "
+                f"'{process_name}' (PID {pid})."
+            )
+        return None
+
+    @staticmethod
+    def _endpoint_port(endpoint):
+        """Extract an exact numeric port from netstat IPv4/IPv6 endpoints."""
+        if not endpoint or ":" not in endpoint:
+            return None
+        candidate = endpoint.rsplit(":", 1)[-1]
+        try:
+            return int(candidate)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _subprocess_text(command):
+        """Run a native diagnostic with the host encoding and bounded output."""
+        return subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding=locale.getencoding(),
+            errors="replace",
+            timeout=20,
+            check=False,
+        )
+
+    def _execute_fallback(self, port_num, kill_process, expected_pid=None):
         """Fallback implementation using subprocess command line tools if psutil fails/lacks permission"""
         system_name = platform.system().lower()
         is_windows = system_name == "windows"
@@ -233,37 +530,33 @@ class InspectPortCommand(CommandBase):
         try:
             if is_windows:
                 # Run netstat -ano
-                res = subprocess.run(
-                    ["netstat", "-ano"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
+                res = self._subprocess_text(["netstat", "-ano"])
                 if res.returncode == 0:
                     for line in res.stdout.splitlines():
                         line = line.strip()
                         if not line:
                             continue
-                        # Look for lines containing target port, e.g. ":3000 "
                         parts = line.split()
-                        if len(parts) >= 5:
-                            local_addr = parts[1]
-                            pid_str = parts[4]
-                            if f":{port_num}" in local_addr:
-                                try:
-                                    pids.add(int(pid_str))
-                                except ValueError:
-                                    pass
+                        if len(parts) < 4:
+                            continue
+                        protocol = parts[0].upper()
+                        local_addr = parts[1]
+                        if self._endpoint_port(local_addr) != port_num:
+                            continue
+                        if protocol == "TCP":
+                            if len(parts) < 5 or parts[-2].upper() != "LISTENING":
+                                continue
+                        elif protocol != "UDP":
+                            continue
+                        try:
+                            pids.add(int(parts[-1]))
+                        except ValueError:
+                            pass
             elif is_sunos:
                 # netstat is part of SunOS and remains safe when psutil's
                 # native system-wide connection enumeration is not.
-                res = subprocess.run(
-                    ["netstat", "-an", "-P", "tcp"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
+                res = self._subprocess_text(
+                    ["netstat", "-an", "-P", "tcp"]
                 )
                 if res.returncode != 0:
                     error = res.stderr.strip() or "netstat returned no diagnostics"
@@ -327,20 +620,25 @@ class InspectPortCommand(CommandBase):
                     )
                 }
             else:
-                # Linux/macOS fallback using lsof -t
-                res = subprocess.run(
-                    ["lsof", "-t", f"-i:{port_num}"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
+                # Linux/macOS fallback: listeners and bound UDP sockets only.
+                commands = (
+                    [
+                        "lsof",
+                        "-nP",
+                        "-t",
+                        f"-iTCP:{port_num}",
+                        "-sTCP:LISTEN",
+                    ],
+                    ["lsof", "-nP", "-t", f"-iUDP:{port_num}"],
                 )
-                if res.returncode == 0:
-                    for line in res.stdout.splitlines():
-                        try:
-                            pids.add(int(line.strip()))
-                        except ValueError:
-                            pass
+                for command in commands:
+                    res = self._subprocess_text(command)
+                    if res.returncode == 0:
+                        for line in res.stdout.splitlines():
+                            try:
+                                pids.add(int(line.strip()))
+                            except ValueError:
+                                pass
                             
             if not pids:
                 return {
@@ -350,22 +648,28 @@ class InspectPortCommand(CommandBase):
                     "killed": False,
                     "message": f"Port {port_num} is free."
                 }
+
+            if kill_process:
+                guard_failure = self._validate_kill_target(
+                    port_num,
+                    pids,
+                    expected_pid,
+                )
+                if guard_failure is not None:
+                    return guard_failure
+                pids = {expected_pid}
                 
             # If we need to kill the processes
             killed_pids = []
             errors = []
             processes_info = []
             
-            for pid in pids:
+            for pid in sorted(pids):
                 proc_name = "unknown"
                 # Query process name using tasklist on Windows
                 if is_windows:
-                    proc_res = subprocess.run(
-                        ["tasklist", "/NH", "/FI", f"PID eq {pid}"],
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        check=False
+                    proc_res = self._subprocess_text(
+                        ["tasklist", "/NH", "/FI", f"PID eq {pid}"]
                     )
                     if proc_res.returncode == 0 and "No tasks" not in proc_res.stdout:
                         for line in proc_res.stdout.splitlines():
@@ -385,25 +689,24 @@ class InspectPortCommand(CommandBase):
                 processes_info.append(proc_info)
                 
                 if kill_process:
+                    protected_reason = self._protected_process_reason(
+                        pid,
+                        proc_name,
+                    )
+                    if protected_reason is not None:
+                        errors.append(protected_reason)
+                        continue
                     if is_windows:
-                        kill_res = subprocess.run(
-                            ["taskkill", "/F", "/PID", str(pid)],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True,
-                            check=False
+                        kill_res = self._subprocess_text(
+                            ["taskkill", "/F", "/PID", str(pid)]
                         )
                         if kill_res.returncode == 0:
                             killed_pids.append(pid)
                         else:
                             errors.append(f"Failed to kill PID {pid}: {kill_res.stderr.strip()}")
                     else:
-                        kill_res = subprocess.run(
-                            ["kill", "-9", str(pid)],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True,
-                            check=False
+                        kill_res = self._subprocess_text(
+                            ["kill", "-9", str(pid)]
                         )
                         if kill_res.returncode == 0:
                             killed_pids.append(pid)
@@ -421,8 +724,15 @@ class InspectPortCommand(CommandBase):
                         "in_use": True,
                         "killed": True,
                         "killed_pids": killed_pids,
+                        "port_cleared": None,
+                        "remaining_pids": None,
                         "processes": processes_info,
-                        "message": f"Port {port_num} cleared. Terminated processes: {proc_names_str} (PIDs: {in_use_pids_str})."
+                        "message": (
+                            f"Terminated selected processes: {proc_names_str} "
+                            f"(PIDs: {in_use_pids_str}). Re-inspect port "
+                            f"{port_num} because fallback verification is "
+                            "unavailable."
+                        )
                     }
                 else:
                     return {

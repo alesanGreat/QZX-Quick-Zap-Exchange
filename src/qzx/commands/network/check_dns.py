@@ -1,22 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-CheckDns Command - Queries A, AAAA, MX, TXT, NS, and CNAME records for a domain.
-"""
-
-import os
-import sys
-import socket
-import subprocess
-import platform
-import ipaddress
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+"""Query common DNS record types with structured resolution status."""
 
 from qzx.core.command_base import CommandBase
+
 
 class CheckDnsCommand(CommandBase):
     """
@@ -24,7 +12,9 @@ class CheckDnsCommand(CommandBase):
     """
     
     name = "checkDns"
-    description = "Queries A, AAAA, MX, TXT, NS, and CNAME DNS records for a given domain"
+    description = (
+        "Queries A, AAAA, MX, TXT, NS, and CNAME DNS records for a given domain"
+    )
     category = "network"
     
     parameters = [
@@ -41,7 +31,10 @@ class CheckDnsCommand(CommandBase):
             'description': 'Get all DNS records for google.com'
         }
     ]
-    
+
+    def __init__(self, resolver_factory=None):
+        self._resolver_factory = resolver_factory
+
     def execute(self, domain):
         """
         Queries DNS records for a domain
@@ -52,158 +45,201 @@ class CheckDnsCommand(CommandBase):
         Returns:
             Dictionary with resolved DNS records
         """
-        domain = domain.strip().lower()
+        domain = str(domain).strip().rstrip(".").lower()
         if not domain:
             return {
                 "success": False,
+                "error_code": "invalid_domain",
                 "error": "Domain name must not be empty.",
-                "message": "Domain name must not be empty."
+                "message": "Domain name must not be empty.",
+                "remediation": "Pass a DNS name such as example.com.",
             }
-            
-        results = {
-            "A": [],
-            "AAAA": [],
-            "MX": [],
-            "TXT": [],
-            "NS": [],
-            "CNAME": []
-        }
-        
-        # Fallback to basic socket resolution for A/AAAA
+
         try:
-            addr_info = socket.getaddrinfo(domain, None)
-            for item in addr_info:
-                ip = item[4][0]
-                if ":" in ip:
-                    if ip not in results["AAAA"]:
-                        results["AAAA"].append(ip)
-                else:
-                    if ip not in results["A"]:
-                        results["A"].append(ip)
-        except Exception:
-            pass
-            
-        # Use nslookup to query detailed records (MX, TXT, NS, CNAME)
-        record_types = ["MX", "TXT", "NS", "CNAME", "A", "AAAA"]
+            import dns.exception
+            import dns.name
+            import dns.resolver
+        except ImportError:
+            return {
+                "success": False,
+                "error_code": "missing_dependency",
+                "error": "The required 'dnspython' package is not installed.",
+                "remediation": "Reinstall QZX with its required dependencies.",
+                "details": {
+                    "dependency": "dnspython",
+                },
+                "message": (
+                    "DNS inspection requires the maintained 'dnspython' "
+                    "dependency. Reinstall QZX dependencies and try again."
+                ),
+            }
+
+        try:
+            ascii_domain = domain.encode("idna").decode("ascii")
+            dns.name.from_text(ascii_domain + ".")
+        except (
+            UnicodeError,
+            dns.name.BadEscape,
+            dns.name.EmptyLabel,
+            dns.name.NameTooLong,
+        ):
+            return {
+                "success": False,
+                "error_code": "invalid_domain",
+                "error": f"'{domain}' is not a valid DNS name.",
+                "message": (
+                    f"Failed to inspect DNS: '{domain}' is not a valid DNS name."
+                ),
+                "remediation": "Pass a valid DNS name such as example.com.",
+            }
+
+        record_types = ("A", "AAAA", "MX", "TXT", "NS", "CNAME")
+        results = {
+            record_type: []
+            for record_type in record_types
+        }
+        record_status = {
+            record_type: "pending"
+            for record_type in record_types
+        }
+        ttl = {
+            record_type: None
+            for record_type in record_types
+        }
         errors = []
-        
+
+        try:
+            resolver = (
+                self._resolver_factory()
+                if self._resolver_factory is not None
+                else dns.resolver.Resolver(configure=True)
+            )
+        except (OSError, dns.exception.DNSException) as exc:
+            return {
+                "success": False,
+                "error_code": "dns_resolver_unavailable",
+                "error": f"Could not initialize the DNS resolver: {exc}",
+                "remediation": (
+                    "Check the operating system DNS configuration and retry."
+                ),
+                "message": (
+                    "DNS inspection could not start because no usable "
+                    "resolver configuration was available."
+                ),
+            }
         for r_type in record_types:
             try:
-                # Run nslookup
-                if platform.system().lower() == "windows":
-                    cmd = ["nslookup", f"-query={r_type.lower()}", domain]
-                else:
-                    cmd = ["nslookup", f"-type={r_type}", domain]
-                    
-                res = subprocess.run(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=10,
-                    check=False
+                answer = resolver.resolve(
+                    ascii_domain,
+                    r_type,
+                    lifetime=10.0,
+                    search=False,
                 )
-                
-                if res.returncode == 0:
-                    parsed = self._parse_nslookup(res.stdout, r_type, domain)
-                    for item in parsed:
-                        if item not in results[r_type]:
-                            results[r_type].append(item)
-            except Exception as e:
-                errors.append(f"Error querying {r_type}: {str(e)}")
-                
-        # Clean results (remove empty lists if they couldn't be resolved)
+                values = [
+                    self._format_rdata(r_type, rdata)
+                    for rdata in answer
+                ]
+                results[r_type] = list(dict.fromkeys(values))
+                ttl[r_type] = answer.rrset.ttl if answer.rrset is not None else None
+                if (
+                    r_type == "MX"
+                    and any(
+                        rdata.preference == 0
+                        and rdata.exchange == dns.name.root
+                        for rdata in answer
+                    )
+                ):
+                    record_status[r_type] = "null_mx"
+                else:
+                    record_status[r_type] = "resolved"
+            except dns.resolver.NoAnswer:
+                record_status[r_type] = "no_record"
+            except dns.resolver.NXDOMAIN:
+                return {
+                    "success": False,
+                    "error_code": "dns_name_not_found",
+                    "domain": ascii_domain,
+                    "records": results,
+                    # NXDOMAIN is authoritative for the queried name, not only
+                    # for the record type that happened to return it. Earlier
+                    # transient per-type failures cannot make records exist.
+                    "record_status": {
+                        key: "name_not_found"
+                        for key in record_status
+                    },
+                    "errors": [f"DNS name '{ascii_domain}' does not exist."],
+                    "error": f"DNS name '{ascii_domain}' does not exist.",
+                    "remediation": (
+                        "Check the spelling and whether the domain is registered."
+                    ),
+                    "message": f"DNS name '{ascii_domain}' does not exist.",
+                }
+            except (
+                dns.resolver.LifetimeTimeout,
+                dns.resolver.NoNameservers,
+                dns.exception.DNSException,
+            ) as exc:
+                record_status[r_type] = "query_failed"
+                errors.append(f"{r_type} query failed: {exc}")
+
         summary = {k: len(v) for k, v in results.items()}
-        
-        msg = f"DNS records resolved for '{domain}':\n"
+        successful_queries = sum(
+            status in {"resolved", "null_mx", "no_record"}
+            for status in record_status.values()
+        )
+
+        msg = f"DNS records inspected for '{ascii_domain}':\n"
         for r_type, count in summary.items():
-            if count > 0:
+            status = record_status[r_type]
+            if status == "null_mx":
+                msg += (
+                    f"- {r_type}: Null MX (0 .); this domain explicitly "
+                    "does not accept email\n"
+                )
+            elif count > 0:
                 values = ", ".join(results[r_type][:3])
                 if len(results[r_type]) > 3:
                     values += f" (+{count - 3} more)"
                 msg += f"- {r_type} ({count}): {values}\n"
+            elif status == "query_failed":
+                msg += f"- {r_type}: Query failed\n"
             else:
                 msg += f"- {r_type}: None found\n"
-                
-        return {
-            "success": True,
-            "domain": domain,
+
+        result = {
+            "success": successful_queries > 0,
+            "domain": ascii_domain,
             "records": results,
             "summary": summary,
+            "record_status": record_status,
+            "ttl_seconds": ttl,
             "errors": errors,
             "message": msg
         }
-        
-    def _parse_nslookup(self, stdout, record_type, domain):
-        """Parses nslookup stdout to extract record values"""
-        records = []
-        lines = stdout.splitlines()
-        
-        # Skip local resolver info (usually first few lines containing Server/Address)
-        data_started = False
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-                
-            # nslookup puts answers after "Non-authoritative answer:" or similar markers
-            if "non-authoritative" in line.lower() or "answer:" in line.lower():
-                data_started = True
-                continue
-            if line.startswith("Server:"):
-                # Ensure we don't capture the local resolver name.
-                continue
-            if (
-                not data_started
-                and (
-                    line.startswith("Address:")
-                    or line.startswith("Addresses:")
-                )
-            ):
-                # Ensure we don't capture the local resolver address.
-                continue
-                
-            # Simple line checks
-            if record_type == "MX":
-                if "mail exchanger" in line:
-                    # e.g.: google.com     mail exchanger = 10 smtp.google.com
-                    parts = line.split("mail exchanger =")
-                    if len(parts) == 2:
-                        records.append(parts[1].strip())
-            elif record_type == "TXT":
-                if "text =" in line:
-                    # e.g.: google.com     text = "v=spf1 include:_spf.google.com ~all"
-                    parts = line.split("text =")
-                    if len(parts) == 2:
-                        records.append(parts[1].strip().strip('"'))
-            elif record_type == "NS":
-                if "nameserver =" in line:
-                    # e.g.: google.com     nameserver = ns1.google.com
-                    parts = line.split("nameserver =")
-                    if len(parts) == 2:
-                        records.append(parts[1].strip())
-            elif record_type == "CNAME":
-                if "canonical name =" in line:
-                    parts = line.split("canonical name =")
-                    if len(parts) == 2:
-                        records.append(parts[1].strip())
-            elif record_type in ("A", "AAAA"):
-                if not data_started:
-                    continue
-                expected_version = 4 if record_type == "A" else 6
-                address_text = line
-                if line.startswith("Address:") or line.startswith(
-                    "Addresses:"
-                ):
-                    address_text = line.split(":", 1)[1]
-                for token in address_text.replace(",", " ").split():
-                    candidate = token.strip("[]()")
-                    try:
-                        parsed_address = ipaddress.ip_address(candidate)
-                    except ValueError:
-                        continue
-                    if parsed_address.version == expected_version:
-                        records.append(str(parsed_address))
-                    
-        return records
+        if successful_queries == 0:
+            result.update(
+                {
+                    "error_code": "dns_queries_failed",
+                    "error": (
+                        "Every DNS record query failed before a definitive "
+                        "answer was received."
+                    ),
+                    "remediation": (
+                        "Check network connectivity and configured DNS "
+                        "servers, then retry."
+                    ),
+                }
+            )
+        return result
+
+    @staticmethod
+    def _format_rdata(record_type, rdata):
+        """Return a stable, lossless string for a dnspython record."""
+        if record_type == "MX":
+            return f"{rdata.preference} {rdata.exchange.to_text()}"
+        if record_type == "TXT":
+            return "".join(
+                part.decode("utf-8", errors="replace")
+                for part in rdata.strings
+            )
+        return rdata.to_text()

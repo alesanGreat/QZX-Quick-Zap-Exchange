@@ -11,7 +11,9 @@ Use these canonical sources:
   status.
 - [Official QZX documentation](https://qzx.yumbale.com/en/) — canonical public
   web documentation.
-- [Command catalog](https://qzx.yumbale.com/en/commands) — availability,
-  parameters, safety facts, examples, and compatibility evidence.
+- [Command catalog](https://qzx.yumbale.com/en/commands) — maturity,
+  availability, parameters, safety facts, examples, and compatibility evidence.
+- [Command lifecycle](docs/command-lifecycle.md) — Planning, Proof of concept,
+  Alpha, Beta, Release Candidate, Stable, Deprecated, and Retired semantics.
 
-PyPI and the current checkout both provide QZX `0.2.2.0.2` alpha.
+PyPI and the current checkout both provide QZX `0.2.2.0.3` alpha.

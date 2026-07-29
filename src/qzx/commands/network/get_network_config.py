@@ -10,9 +10,13 @@ import sys
 import socket
 import platform
 import subprocess
+import locale
 import urllib.request
 import json
 from pathlib import Path
+
+import dns.resolver
+import psutil
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -47,7 +51,80 @@ class GetNetworkConfigCommand(CommandBase):
             'description': 'Get local network info only, skipping public IP resolution'
         }
     ]
-    
+
+    @staticmethod
+    def _run_system_command(command):
+        """Run a native network command without assuming UTF-8 output."""
+        encoding = "oem" if os.name == "nt" else locale.getpreferredencoding(False)
+        return subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding=encoding,
+            errors="replace",
+            timeout=5,
+            check=False,
+        )
+
+    @staticmethod
+    def _collect_interfaces():
+        """Collect locale-independent interface data from the host APIs."""
+        interfaces = {}
+        vpn_interfaces = []
+        stats = psutil.net_if_stats()
+        vpn_keywords = (
+            "tap",
+            "vpn",
+            "tun",
+            "wireguard",
+            "forti",
+            "cisco",
+            "anyconnect",
+            "tailscale",
+            "zerotier",
+        )
+
+        for name, addresses in psutil.net_if_addrs().items():
+            interface_stats = stats.get(name)
+            is_up = interface_stats.isup if interface_stats is not None else True
+            interface = {
+                "ipv4": [],
+                "ipv6": [],
+                "description": name,
+                "mac": "",
+                "is_up": is_up,
+                "speed_mbps": (
+                    interface_stats.speed if interface_stats is not None else 0
+                ),
+                "mtu": interface_stats.mtu if interface_stats is not None else None,
+            }
+
+            for address in addresses:
+                if address.family == socket.AF_INET:
+                    interface["ipv4"].append(address.address)
+                elif address.family == socket.AF_INET6:
+                    interface["ipv6"].append(address.address.split("%", 1)[0])
+                elif address.family == psutil.AF_LINK:
+                    interface["mac"] = address.address
+
+            if not is_up or not (interface["ipv4"] or interface["ipv6"]):
+                continue
+
+            interfaces[name] = interface
+            lower_name = name.lower()
+            is_vpn = any(keyword in lower_name for keyword in vpn_keywords)
+            is_vpn = is_vpn or lower_name.startswith("wg")
+            if is_vpn:
+                vpn_interfaces.append(name)
+
+        return interfaces, vpn_interfaces
+
+    @staticmethod
+    def _configured_dns_servers():
+        """Read configured resolvers without parsing localized command output."""
+        resolver = dns.resolver.Resolver(configure=True)
+        return list(dict.fromkeys(str(server) for server in resolver.nameservers))
+
     def execute(self, check_public='true'):
         """
         Gathers network configuration info
@@ -60,10 +137,23 @@ class GetNetworkConfigCommand(CommandBase):
         """
         is_windows = platform.system().lower() == "windows"
         
-        if isinstance(check_public, str):
-            resolve_pub = check_public.lower() in ('true', 'yes', 'y', '1', 't')
-        else:
-            resolve_pub = bool(check_public)
+        resolve_pub = self._parse_bool(check_public)
+        if resolve_pub is None:
+            return {
+                "success": False,
+                "error_code": "invalid_check_public",
+                "error": (
+                    "check_public must be a boolean value, got "
+                    f"'{check_public}'."
+                ),
+                "remediation": (
+                    "Pass true to query public services or false to skip them."
+                ),
+                "message": (
+                    "Network inspection did not start because check_public "
+                    "must be true or false."
+                ),
+            }
             
         local_hostname = socket.gethostname()
         local_ips = []
@@ -76,51 +166,53 @@ class GetNetworkConfigCommand(CommandBase):
             pass
             
         # Parse interfaces and gateways via ipconfig / ifconfig
-        interfaces = {}
+        try:
+            interfaces, vpn_interfaces = self._collect_interfaces()
+        except Exception:
+            interfaces = {}
+            vpn_interfaces = []
+
         vpn_active = False
-        vpn_interfaces = []
-        dns_servers = []
+        try:
+            dns_servers = self._configured_dns_servers()
+        except Exception:
+            dns_servers = []
         
         try:
             if is_windows:
                 # Run ipconfig /all
-                res = subprocess.run(
-                    ["ipconfig", "/all"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=5,
-                    check=False
-                )
+                res = self._run_system_command(["ipconfig", "/all"])
                 if res.returncode == 0:
-                    interfaces, vpn_interfaces, dns_servers = self._parse_ipconfig_all(res.stdout)
+                    fallback_interfaces, fallback_vpns, fallback_dns = (
+                        self._parse_ipconfig_all(res.stdout)
+                    )
+                    if not interfaces:
+                        interfaces = fallback_interfaces
+                        vpn_interfaces = fallback_vpns
+                    if not dns_servers:
+                        dns_servers = fallback_dns
             else:
                 # Linux/macOS
-                res = subprocess.run(
-                    ["ip", "addr"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=5,
-                    check=False
-                )
+                res = self._run_system_command(["ip", "addr"])
                 if res.returncode == 0:
-                    interfaces, vpn_interfaces = self._parse_ip_addr(res.stdout)
+                    fallback_interfaces, fallback_vpns = self._parse_ip_addr(res.stdout)
                 else:
                     # Fallback to ifconfig
-                    res = subprocess.run(
-                        ["ifconfig"],
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        timeout=5,
-                        check=False
-                    )
+                    res = self._run_system_command(["ifconfig"])
                     if res.returncode == 0:
-                        interfaces, vpn_interfaces = self._parse_ifconfig(res.stdout)
+                        fallback_interfaces, fallback_vpns = self._parse_ifconfig(
+                            res.stdout
+                        )
+                    else:
+                        fallback_interfaces, fallback_vpns = {}, []
+
+                if not interfaces:
+                    interfaces = fallback_interfaces
+                    vpn_interfaces = fallback_vpns
                         
                 # Read DNS from resolv.conf
-                dns_servers = self._parse_resolv_conf()
+                if not dns_servers:
+                    dns_servers = self._parse_resolv_conf()
         except Exception:
             pass
             

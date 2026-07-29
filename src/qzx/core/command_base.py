@@ -11,6 +11,11 @@ import os
 import re
 import time
 
+from qzx.core.command_lifecycle import (
+    CommandLifecycleError,
+    command_maturity,
+    stage_maturity,
+)
 from qzx.core.safety_backup import create_safety_backup
 
 
@@ -435,11 +440,64 @@ class CommandBase(ABC):
             )
         return bool(requested_mutation)
 
+    def get_maturity(self):
+        """Return registry-backed maturity or an explicit extension override."""
+        try:
+            return command_maturity(self.name)
+        except CommandLifecycleError:
+            explicit_stage = self.__class__.__dict__.get("maturity")
+            if explicit_stage is None:
+                raise
+            return stage_maturity(
+                explicit_stage,
+                "explicit_non_registry_command",
+            )
+
+    def _finalize_invocation_result(
+        self,
+        raw_result,
+        start,
+        safety_backup=None,
+    ):
+        """Attach the shared public metadata to every known-command result."""
+        result = self.format_result(raw_result)
+        existing_meta = result.get("meta")
+        if existing_meta is None:
+            meta = {}
+        elif isinstance(existing_meta, dict):
+            meta = existing_meta
+        else:
+            meta = {"legacy_value": existing_meta}
+        result["meta"] = meta
+        # Shared metadata is authoritative. Individual commands may add
+        # namespaced metadata but cannot impersonate another command, maturity
+        # assessment, schema, or execution duration.
+        meta["command"] = self.name
+        meta["command_maturity"] = self.get_maturity()
+        meta["duration_ms"] = round(
+            (time.perf_counter() - start) * 1000,
+            3,
+        )
+        meta["schema_version"] = 1
+        if safety_backup is not None:
+            meta["safety_backup"] = safety_backup
+            if safety_backup["status"] == "created":
+                result["message"] = "{} Safety backup: '{}'.".format(
+                    result["message"].rstrip(),
+                    safety_backup["path"],
+                )
+            elif safety_backup["status"] == "bypassed":
+                result["message"] = (
+                    "{} Safety backup was explicitly bypassed."
+                ).format(result["message"].rstrip())
+        return result
+
     def invoke(self, args=None):
         """Parse, execute and normalize one command invocation."""
+        start = time.perf_counter()
         valid, values, error = self.parse_arguments(args or [])
         if not valid:
-            return error
+            return self._finalize_invocation_result(error, start)
 
         flag_bypass_requested = values.pop(
             "__qzx_approval_granted",
@@ -461,7 +519,6 @@ class CommandBase(ABC):
             for parameter in self.parameters
         }
         safety_backup = None
-        start = time.perf_counter()
         if self.requires_explicit_approval:
             has_dry_run = "dry_run" in parameter_names
             if bypass_requested:
@@ -480,11 +537,7 @@ class CommandBase(ABC):
             elif requested_mutation:
                 backup_target = self.get_safety_backup_target(values)
                 if backup_target is None:
-                    duration_ms = round(
-                        (time.perf_counter() - start) * 1000,
-                        3,
-                    )
-                    return {
+                    return self._finalize_invocation_result({
                         "success": False,
                         "error_code": "approval_required",
                         "error": (
@@ -500,29 +553,27 @@ class CommandBase(ABC):
                             "command": self.name,
                             "bypass_flags": sorted(self.approval_flags),
                         },
-                        "meta": {
-                            "command": self.name,
-                            "duration_ms": duration_ms,
-                            "schema_version": 1,
-                        },
-                    }
+                    }, start)
                 preflight_failure = self.validate_safety_backup_target(
                     backup_target,
                     values,
                 )
                 if preflight_failure is not None:
-                    return self.format_result(preflight_failure)
+                    return self._finalize_invocation_result(
+                        preflight_failure,
+                        start,
+                    )
                 try:
                     safety_backup = create_safety_backup(
                         self.name,
                         backup_target,
                     )
                 except Exception as exc:
-                    duration_ms = round(
-                        (time.perf_counter() - start) * 1000,
-                        3,
-                    )
-                    return {
+                    failed_backup = {
+                        "status": "failed",
+                        "target": str(backup_target),
+                    }
+                    return self._finalize_invocation_result({
                         "success": False,
                         "error_code": "safety_backup_failed",
                         "error": "{}: {}".format(
@@ -538,16 +589,7 @@ class CommandBase(ABC):
                             "backup_target": str(backup_target),
                             "bypass_flags": sorted(self.approval_flags),
                         },
-                        "meta": {
-                            "command": self.name,
-                            "duration_ms": duration_ms,
-                            "schema_version": 1,
-                            "safety_backup": {
-                                "status": "failed",
-                                "target": str(backup_target),
-                            },
-                        },
-                    }
+                    }, start, safety_backup=failed_backup)
         try:
             signature = inspect.signature(self.execute)
             has_varargs = any(
@@ -581,26 +623,11 @@ class CommandBase(ABC):
                 ),
             }
 
-        result = self.format_result(raw_result)
-        result.setdefault("meta", {})
-        result["meta"].setdefault("command", self.name)
-        result["meta"].setdefault(
-            "duration_ms",
-            round((time.perf_counter() - start) * 1000, 3),
+        return self._finalize_invocation_result(
+            raw_result,
+            start,
+            safety_backup=safety_backup,
         )
-        result["meta"].setdefault("schema_version", 1)
-        if safety_backup is not None:
-            result["meta"]["safety_backup"] = safety_backup
-            if safety_backup["status"] == "created":
-                result["message"] = "{} Safety backup: '{}'.".format(
-                    result["message"].rstrip(),
-                    safety_backup["path"],
-                )
-            elif safety_backup["status"] == "bypassed":
-                result["message"] = (
-                    "{} Safety backup was explicitly bypassed."
-                ).format(result["message"].rstrip())
-        return result
     
     def get_help(self):
         """
@@ -609,9 +636,12 @@ class CommandBase(ABC):
         Returns:
             str: Help text with description, parameters, and examples
         """
+        maturity = self.get_maturity()
         help_text = [
             f"Command: {self.name}",
             f"Description: {self.description}",
+            f"Maturity: {maturity['label']}",
+            f"  {maturity['summary']}",
             ""
         ]
         

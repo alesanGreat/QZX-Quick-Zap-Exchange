@@ -104,6 +104,21 @@ QZX commands are designed to work together as an ecosystem. This means:
 - Consistent naming conventions and data structures enable cross-command analysis
 - System-wide context is maintained across command executions
 
+### 7. Explicit Maturity
+
+Useful capability and compatibility confidence are different facts. Every
+public QZX command exposes an independent maturity assessment in human help,
+structured JSON, and generated documentation. Planning and proof-of-concept
+work stays outside the public loader; executable commands progress through
+Alpha, Beta, Release Candidate, and Stable only as evidence supports the
+stronger promise.
+
+This prevents an AI agent from treating a roadmap item as installed behavior
+or assuming that every command inherits the package's overall maturity.
+Immutable release tags preserve the command-to-stage map for each published
+version. The complete semantics and promotion requirements live in
+[command-lifecycle.md](command-lifecycle.md).
+
 ## Real-World Application
 
 Consider how this philosophy manifests in the QZX tool:

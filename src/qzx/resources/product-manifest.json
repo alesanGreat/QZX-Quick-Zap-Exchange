@@ -17,6 +17,7 @@
       "profile_url": "https://qzx.yumbale.com/en/alejandro-sanchez",
       "same_as": [
         "https://github.com/alesanGreat",
+        "https://pypi.org/user/alesanGreat/",
         "https://www.linkedin.com/in/alesan/"
       ]
     },
@@ -89,20 +90,18 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.2",
+      "version": "0.2.2.0.3",
       "status": "Alpha",
       "channel": "Published package",
-      "released_at": "2026-07-24",
-      "requires_python": ">=3.9",
+      "released_at": "2026-07-29",
+      "requires_python": ">=3.13",
       "source": "https://pypi.org/pypi/qzx/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.2-py3-none-any.whl",
-        "sha256": "dbbfd9bf55e140f730c4c4eb70f6500dc640a86523a83e8a7a3b53a3299ce8f7",
-        "verified_at": "2026-07-24",
+        "filename": "qzx-0.2.2.0.3-py3-none-any.whl",
         "command_names": [
           "about",
           "analyzeComplexity",
-          "auditLanguages",
+          "projectLanguages",
           "auditRepository",
           "bootstrapProject",
           "changePermissions",
@@ -197,7 +196,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.2",
+      "version": "0.2.2.0.3",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",
@@ -225,7 +224,7 @@
   "documentation": {
     "channel": "development",
     "repository_branch": "main",
-    "snapshot_date": "2026-07-23",
+    "snapshot_date": "2026-07-29",
     "source_revision_environment_variable": "QZX_DOCS_COMMIT",
     "exact_revision_fallback": "A deterministic SHA-256 digest of command source files is embedded in the generated command catalog when Git metadata is unavailable."
   },

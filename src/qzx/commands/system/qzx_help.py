@@ -82,15 +82,23 @@ Naming:
         cmd_obj = self.command_loader.get_command(command)
         if cmd_obj:
             help_text = cmd_obj.get_help()
+            maturity = self.command_loader.get_command_maturity(command)
+            requested_name = str(command)
+            canonical_name = cmd_obj.name
             
             return {
                 "success": True,
-                "command": command,
+                "command": requested_name,
                 "message": help_text,
                 "details": {
                     "name": cmd_obj.name,
+                    "requested_name": requested_name,
+                    "canonical_name": canonical_name,
+                    "is_alias": requested_name.lower() != canonical_name.lower(),
+                    "aliases": list(getattr(cmd_obj, "aliases", [])),
                     "description": cmd_obj.description,
                     "category": cmd_obj.category,
+                    "maturity": maturity,
                     "parameters": cmd_obj.parameters,
                     "examples": cmd_obj.examples
                 }

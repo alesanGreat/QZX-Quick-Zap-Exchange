@@ -43,6 +43,9 @@ install_requires = [
     "psutil",  # Para información del sistema
     "chardet",  # Detección de codificación en isFileBinary
     "colorama",  # Colores portables en findText
+    "Pygments>=2.20,<3",  # Detección mantenida de lenguajes de programación
+    "pathspec>=1.1,<2",  # Reglas .gitignore portables para projectLanguages
+    "dnspython>=2.8,<3",  # Consultas DNS estructuradas y multiplataforma
     "pyreadline3; platform_system == 'Windows'",
 ]
 
@@ -95,6 +98,7 @@ setup(
     package_dir={"": "src"},
     package_data={
         "qzx": [
+            "resources/command-lifecycle.json",
             "resources/product-manifest.json",
             "resources/test-environments.json",
             "resources/function_words/*.json",

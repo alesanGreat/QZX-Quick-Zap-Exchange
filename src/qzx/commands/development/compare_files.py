@@ -1,179 +1,464 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-"""
-Comando CompareFiles - Compara el contenido de dos archivos
-Using the centralized recursive parameter utility
-"""
+"""Compare the contents of two files."""
 
-import os
 import difflib
-import sys
-from pathlib import Path
+import hashlib
+import operator
+import os
+from typing import ClassVar
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+import chardet
 
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import parse_recursive_parameter
+
 
 class CompareFilesCommand(CommandBase):
-    """
-    Comando para comparar dos archivos y mostrar sus diferencias
-    
-    This version uses the centralized recursive parameter utility.
-    """
-    
+    """Compare two files and report their differences."""
+
     name = "compareFiles"
-    description = "Compares two files and reports their differences"
+    description = (
+        "Compares text files line by line and binary files by exact bytes and SHA-256"
+    )
     category = "development"
-    
-    parameters = [
+    DEFAULT_MAX_BYTES = 1_048_576
+
+    parameters: ClassVar[list[dict[str, object]]] = [
+        {"name": "file1", "description": "Path to the first file", "required": True},
+        {"name": "file2", "description": "Path to the second file", "required": True},
         {
-            'name': 'file1',
-            'description': 'Ruta al primer archivo',
-            'required': True
+            "name": "mode",
+            "description": 'Comparison mode: "full", "summary", or "percent"',
+            "required": False,
+            "default": "full",
         },
         {
-            'name': 'file2',
-            'description': 'Ruta al segundo archivo',
-            'required': True
+            "name": "max_bytes",
+            "description": (
+                "Maximum allowed size of each file in bytes (defaults to 1 MiB)"
+            ),
+            "required": False,
+            "default": DEFAULT_MAX_BYTES,
         },
-        {
-            'name': 'mode',
-            'description': 'Modo de comparación: "full" (completo), "summary" (resumen) o "percent" (porcentaje)',
-            'required': False,
-            'default': 'full'
-        }
     ]
-    
-    examples = [
+
+    examples: ClassVar[list[dict[str, str]]] = [
         {
-            'command': 'qzx compareFiles "archivo1.py" "archivo2.py"',
-            'description': 'Comparar dos archivos Python y mostrar todas las diferencias'
+            "command": 'qzx compareFiles "file1.py" "file2.py"',
+            "description": "Compare two Python files and show every difference",
         },
         {
-            'command': 'qzx compareFiles "archivo1.txt" "archivo2.txt" "summary"',
-            'description': 'Mostrar un resumen de diferencias entre dos archivos de texto'
+            "command": 'qzx compareFiles "file1.txt" "file2.txt" "summary"',
+            "description": "Show a summary of differences between two text files",
         },
         {
-            'command': 'qzx compareFiles "versión1.js" "versión2.js" "percent"',
-            'description': 'Mostrar el porcentaje de similitud entre dos archivos JavaScript'
-        }
+            "command": 'qzx compareFiles "version1.js" "version2.js" "percent"',
+            "description": "Show the similarity percentage between two JavaScript files",
+        },
+        {
+            "command": 'qzx compareFiles "image-a.png" "image-b.png"',
+            "description": (
+                "Check whether two binary files are exactly equal by bytes and SHA-256"
+            ),
+        },
     ]
-    
-    def execute(self, file1, file2, mode='full'):
-        """
-        Compara dos archivos y muestra sus diferencias
-        
-        Args:
-            file1: Ruta al primer archivo
-            file2: Ruta al segundo archivo
-            mode: Modo de comparación (full, summary, percent)
-            
-        Returns:
-            Resultado de la comparación en el formato especificado
-        """
-        # Verificar que los archivos existen
-        if not os.path.exists(file1):
-            return {
-                "success": False,
-                "error": f"Error: El archivo '{file1}' no existe"
-            }
-        if not os.path.exists(file2):
-            return {
-                "success": False,
-                "error": f"Error: El archivo '{file2}' no existe"
-            }
-        
-        # Verificar que son archivos (no directorios)
-        if not os.path.isfile(file1):
-            return {
-                "success": False,
-                "error": f"Error: '{file1}' no es un archivo"
-            }
-        if not os.path.isfile(file2):
-            return {
-                "success": False,
-                "error": f"Error: '{file2}' no es un archivo"
-            }
-        
+
+    result_schema: ClassVar[dict[str, object]] = {
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "message": {"type": "string"},
+            "error": {"type": "string"},
+            "error_code": {"type": "string"},
+            "remediation": {"type": "string"},
+            "file1": {"type": "string"},
+            "file2": {"type": "string"},
+            "mode": {
+                "type": "string",
+                "enum": ["full", "summary", "percent"],
+            },
+            "identical": {"type": "boolean"},
+            "added_lines": {"type": "integer"},
+            "removed_lines": {"type": "integer"},
+            "total_changes": {"type": "integer"},
+            "diff": {"type": "string"},
+            "similarity": {"type": "number"},
+            "lines_file1": {"type": "integer"},
+            "lines_file2": {"type": "integer"},
+            "identical_lines": {"type": "integer"},
+            "changes": {"type": "integer"},
+            "summary": {"type": "string"},
+            "content_type": {
+                "type": "string",
+                "enum": ["text", "binary"],
+            },
+            "comparison_basis": {"type": "string"},
+            "byte_identical": {"type": "boolean"},
+            "bytes_file1": {"type": "integer"},
+            "bytes_file2": {"type": "integer"},
+            "max_bytes": {"type": "integer"},
+            "encoding_file1": {"type": ["string", "null"]},
+            "encoding_file2": {"type": ["string", "null"]},
+            "encoding_confidence_file1": {"type": ["number", "null"]},
+            "encoding_confidence_file2": {"type": ["number", "null"]},
+            "sha256_file1": {"type": "string"},
+            "sha256_file2": {"type": "string"},
+            "similarity_available": {"type": "boolean"},
+        },
+        "additionalProperties": True,
+    }
+
+    @staticmethod
+    def _error(message, error_code="comparison_failed", remediation=None, **details):
+        """Return the complete public failure contract."""
+        result = {
+            "success": False,
+            "message": message,
+            "error": message,
+            "error_code": error_code,
+        }
+        if remediation:
+            result["remediation"] = remediation
+        result.update(details)
+        return result
+
+    @staticmethod
+    def _normalize_max_bytes(value):
+        """Return a positive byte limit or None when the input is invalid."""
+        if isinstance(value, bool):
+            return None
         try:
-            # Leer el contenido de los archivos
-            with open(file1, 'r', encoding='utf-8', errors='replace') as f:
-                content1 = f.readlines()
-            
-            with open(file2, 'r', encoding='utf-8', errors='replace') as f:
-                content2 = f.readlines()
-            
-            # Determinar qué tipo de comparación hacer basado en el modo
-            if mode.lower() == 'full':
-                result = self._compare_full(file1, file2, content1, content2)
-            elif mode.lower() == 'summary':
-                result = self._compare_summary(file1, file2, content1, content2)
-            elif mode.lower() == 'percent':
-                result = self._compare_percent(file1, file2, content1, content2)
-            else:
-                return {
-                    "success": False,
-                    "error": f"Error: Modo de comparación '{mode}' no válido. Use 'full', 'summary' o 'percent'."
-                }
-                
-            # Formatear resultado como diccionario para consistencia
-            if isinstance(result, str):
-                return {
-                    "success": True,
-                    "file1": file1,
-                    "file2": file2,
-                    "mode": mode,
-                    "result": result,
-                    "message": f"Comparación de archivos '{file1}' y '{file2}' completada."
-                }
-            return result
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Error comparando archivos: {str(e)}"
-            }
-    
-    def _compare_full(self, file1, file2, content1, content2):
-        """
-        Realiza una comparación completa línea por línea
-        """
-        diff = difflib.unified_diff(
-            content1, content2,
-            fromfile=file1, tofile=file2,
-            lineterm=''
+            normalized = (
+                int(value.strip(), 10)
+                if isinstance(value, str)
+                else operator.index(value)
+            )
+        except (TypeError, ValueError):
+            return None
+        return normalized if normalized > 0 else None
+
+    @staticmethod
+    def _looks_binary(data):
+        """Detect control-byte patterns that should not be rendered as text."""
+        if not data:
+            return False
+        sample = data[:65_536]
+        if b"\x00" in sample:
+            return True
+        accepted_controls = {8, 9, 10, 12, 13, 27}
+        control_count = sum(
+            byte < 32 and byte not in accepted_controls for byte in sample
         )
-        
-        diff_text = list(diff)
-        
+        return control_count / len(sample) > 0.10
+
+    @classmethod
+    def _decode_text(cls, data, detect_encoding=chardet.detect):
+        """Decode without replacement; return text, encoding, and confidence."""
+        if not data:
+            return "", "utf-8", 1.0
+
+        bom_encodings = (
+            (b"\x00\x00\xfe\xff", "utf-32"),
+            (b"\xff\xfe\x00\x00", "utf-32"),
+            (b"\xef\xbb\xbf", "utf-8-sig"),
+            (b"\xfe\xff", "utf-16"),
+            (b"\xff\xfe", "utf-16"),
+        )
+        for prefix, encoding in bom_encodings:
+            if data.startswith(prefix):
+                try:
+                    return data.decode(encoding), encoding, 1.0
+                except UnicodeDecodeError:
+                    return None, None, None
+
+        if cls._looks_binary(data):
+            return None, None, None
+
+        try:
+            return data.decode("utf-8"), "utf-8", 1.0
+        except UnicodeDecodeError:
+            detection = detect_encoding(data[:65_536])
+            encoding = detection.get("encoding")
+            if not isinstance(encoding, str):
+                return None, None, None
+            try:
+                confidence = float(detection.get("confidence"))
+            except (TypeError, ValueError):
+                return None, None, None
+            if not 0 <= confidence <= 1:
+                return None, None, None
+            try:
+                return (
+                    data.decode(encoding),
+                    encoding.lower(),
+                    round(confidence, 4),
+                )
+            except (LookupError, UnicodeDecodeError):
+                return None, None, None
+
+    @staticmethod
+    def _sha256(data):
+        return hashlib.sha256(data).hexdigest()
+
+    def _file_too_large(self, file1, file2, size1, size2, max_bytes):
+        return self._error(
+            (
+                "Comparison stopped before reading the files: "
+                f"the limit is {max_bytes} bytes per file, while "
+                f"'{file1}' is {size1} bytes and '{file2}' is {size2} bytes."
+            ),
+            error_code="file_too_large",
+            remediation=(
+                "Pass a larger positive max_bytes value only when the expected "
+                "memory use and result size are acceptable."
+            ),
+            file1=file1,
+            file2=file2,
+            bytes_file1=size1,
+            bytes_file2=size2,
+            max_bytes=max_bytes,
+        )
+
+    def _compare_binary(self, file1, file2, data1, data2):
+        """Perform an exact, lossless binary comparison."""
+        identical = data1 == data2
+        sha256_file1 = self._sha256(data1)
+        sha256_file2 = self._sha256(data2)
+        if identical:
+            message = (
+                f"Binary files '{file1}' and '{file2}' are byte-for-byte "
+                f"identical (SHA-256: {sha256_file1})."
+            )
+        else:
+            message = (
+                f"Binary files '{file1}' and '{file2}' differ. QZX compared "
+                "their exact bytes and SHA-256 hashes; a text diff and partial "
+                "similarity percentage do not apply."
+            )
+        result = {
+            "success": True,
+            "file1": file1,
+            "file2": file2,
+            "content_type": "binary",
+            "comparison_basis": "exact_bytes_and_sha256",
+            "identical": identical,
+            "byte_identical": identical,
+            "bytes_file1": len(data1),
+            "bytes_file2": len(data2),
+            "encoding_file1": None,
+            "encoding_file2": None,
+            "encoding_confidence_file1": None,
+            "encoding_confidence_file2": None,
+            "sha256_file1": sha256_file1,
+            "sha256_file2": sha256_file2,
+            "similarity_available": identical,
+            "message": message,
+        }
+        if identical:
+            result["similarity"] = 100.0
+        return result
+
+    def execute(self, file1, file2, mode="full", max_bytes=DEFAULT_MAX_BYTES):
+        """
+        Compare two files and report their differences.
+
+        Args:
+            file1: Path to the first file.
+            file2: Path to the second file.
+            mode: Comparison mode (full, summary, percent).
+            max_bytes: Maximum allowed size of each file in bytes.
+
+        Returns:
+            The comparison result in the requested format.
+        """
+        try:
+            file1 = os.fspath(file1)
+            file2 = os.fspath(file2)
+        except TypeError as error:
+            return self._error(
+                f"Both file paths must be strings or path-like: {error}",
+                error_code="invalid_path",
+                remediation="Pass two filesystem paths.",
+            )
+
+        normalized_mode = str(mode).strip().lower()
+        if normalized_mode not in {"full", "summary", "percent"}:
+            return self._error(
+                f"Invalid comparison mode '{mode}'. "
+                "Use 'full', 'summary', or 'percent'.",
+                error_code="invalid_mode",
+                remediation="Use 'full', 'summary', or 'percent'.",
+            )
+
+        normalized_max_bytes = self._normalize_max_bytes(max_bytes)
+        if normalized_max_bytes is None:
+            return self._error(
+                f"max_bytes must be a positive integer, got '{max_bytes}'.",
+                error_code="invalid_max_bytes",
+                remediation="Pass a positive byte count, such as 1048576.",
+            )
+
+        # Verify that both paths exist.
+        if not os.path.exists(file1):
+            return self._error(
+                f"File '{file1}' does not exist.",
+                error_code="file_not_found",
+                remediation="Check the first path and try again.",
+                file1=file1,
+                file2=file2,
+            )
+        if not os.path.exists(file2):
+            return self._error(
+                f"File '{file2}' does not exist.",
+                error_code="file_not_found",
+                remediation="Check the second path and try again.",
+                file1=file1,
+                file2=file2,
+            )
+
+        # Verify that both paths are files rather than directories.
+        if not os.path.isfile(file1):
+            return self._error(
+                f"Path '{file1}' is not a file.",
+                error_code="not_a_file",
+                remediation="Pass a file path instead of a directory.",
+                file1=file1,
+                file2=file2,
+            )
+        if not os.path.isfile(file2):
+            return self._error(
+                f"Path '{file2}' is not a file.",
+                error_code="not_a_file",
+                remediation="Pass a file path instead of a directory.",
+                file1=file1,
+                file2=file2,
+            )
+
+        try:
+            size1 = os.path.getsize(file1)
+            size2 = os.path.getsize(file2)
+            if size1 > normalized_max_bytes or size2 > normalized_max_bytes:
+                return self._file_too_large(
+                    file1,
+                    file2,
+                    size1,
+                    size2,
+                    normalized_max_bytes,
+                )
+
+            with open(file1, "rb") as handle:
+                data1 = handle.read(normalized_max_bytes + 1)
+            with open(file2, "rb") as handle:
+                data2 = handle.read(normalized_max_bytes + 1)
+            if len(data1) > normalized_max_bytes or len(data2) > normalized_max_bytes:
+                return self._file_too_large(
+                    file1,
+                    file2,
+                    len(data1),
+                    len(data2),
+                    normalized_max_bytes,
+                )
+
+            text1, encoding1, confidence1 = self._decode_text(data1)
+            text2, encoding2, confidence2 = self._decode_text(data2)
+            if text1 is None or text2 is None:
+                result = self._compare_binary(file1, file2, data1, data2)
+            else:
+                content1 = text1.splitlines(keepends=True)
+                content2 = text2.splitlines(keepends=True)
+                if normalized_mode == "full":
+                    result = self._compare_full(file1, file2, content1, content2)
+                elif normalized_mode == "summary":
+                    result = self._compare_summary(
+                        file1,
+                        file2,
+                        content1,
+                        content2,
+                    )
+                else:
+                    result = self._compare_percent(
+                        file1,
+                        file2,
+                        content1,
+                        content2,
+                    )
+                byte_identical = data1 == data2
+                result.update(
+                    {
+                        "content_type": "text",
+                        "comparison_basis": "decoded_text_lines",
+                        "byte_identical": byte_identical,
+                        "bytes_file1": len(data1),
+                        "bytes_file2": len(data2),
+                        "encoding_file1": encoding1,
+                        "encoding_file2": encoding2,
+                        "encoding_confidence_file1": confidence1,
+                        "encoding_confidence_file2": confidence2,
+                        "sha256_file1": self._sha256(data1),
+                        "sha256_file2": self._sha256(data2),
+                        "similarity_available": True,
+                    }
+                )
+                if result["identical"] and not byte_identical:
+                    result["message"] = (
+                        f"Files '{file1}' and '{file2}' decode to identical "
+                        "text, but their byte encodings differ."
+                    )
+
+            result["mode"] = normalized_mode
+            result["max_bytes"] = normalized_max_bytes
+            return result
+
+        except OSError as error:
+            return self._error(
+                f"Could not compare the files: {error}",
+                error_code="file_read_failed",
+                remediation="Check file permissions and whether the files changed.",
+                file1=file1,
+                file2=file2,
+            )
+
+    def _compare_full(self, file1, file2, content1, content2):
+        """Perform a complete line-by-line comparison."""
+        diff = difflib.unified_diff(
+            content1,
+            content2,
+            fromfile=file1,
+            tofile=file2,
+            lineterm="",
+        )
+
+        diff_text = [line.rstrip("\r\n") for line in diff]
+
         if not diff_text:
             return {
                 "success": True,
                 "file1": file1,
                 "file2": file2,
                 "identical": True,
-                "message": f"Los archivos '{file1}' y '{file2}' son idénticos."
+                "added_lines": 0,
+                "removed_lines": 0,
+                "total_changes": 0,
+                "diff": "",
+                "message": f"Files '{file1}' and '{file2}' are identical.",
             }
-        
-        result = [f"Diferencias entre '{file1}' y '{file2}':"]
+
+        result = [f"Differences between '{file1}' and '{file2}':"]
         result.extend(diff_text)
-        
-        # Estadísticas
-        result.append("\nEstadísticas:")
+
+        # Statistics
+        result.append("\nStatistics:")
         added, removed = 0, 0
         for line in diff_text:
-            if line.startswith('+') and not line.startswith('+++'):
+            if line.startswith("+") and not line.startswith("+++"):
                 added += 1
-            elif line.startswith('-') and not line.startswith('---'):
+            elif line.startswith("-") and not line.startswith("---"):
                 removed += 1
-        
-        result.append(f"- Líneas añadidas: {added}")
-        result.append(f"- Líneas eliminadas: {removed}")
-        result.append(f"- Cambios totales: {added + removed}")
-        
+
+        result.append(f"- Added lines: {added}")
+        result.append(f"- Removed lines: {removed}")
+        result.append(f"- Total changes: {added + removed}")
+
         return {
             "success": True,
             "file1": file1,
@@ -182,38 +467,40 @@ class CompareFilesCommand(CommandBase):
             "added_lines": added,
             "removed_lines": removed,
             "total_changes": added + removed,
-            "diff": "\n".join(result)
+            "diff": "\n".join(result),
+            "message": (
+                f"Compared '{file1}' with '{file2}': "
+                f"{added} added and {removed} removed lines."
+            ),
         }
-    
+
     def _compare_summary(self, file1, file2, content1, content2):
-        """
-        Realiza una comparación resumida mostrando solo la cantidad de diferencias
-        """
+        """Summarize the number of differences."""
         matcher = difflib.SequenceMatcher(None, content1, content2)
-        
-        # Obtener los bloques que coinciden
+
+        # Get matching blocks.
         blocks = matcher.get_matching_blocks()
-        
-        # Calcular estadísticas
+
+        # Calculate statistics.
         similarity = matcher.ratio() * 100
         total_lines1 = len(content1)
         total_lines2 = len(content2)
-        
-        # Contar líneas idénticas
+
+        # Count identical lines.
         identical_lines = sum(block.size for block in blocks if block.size > 0)
-        
-        # Contar cambios
+
+        # Count changes.
         changes = max(total_lines1, total_lines2) - identical_lines
-        
+
         summary = [
-            f"Resumen de diferencias entre '{file1}' y '{file2}':",
-            f"- Similaridad: {similarity:.2f}%",
-            f"- Líneas en archivo 1: {total_lines1}",
-            f"- Líneas en archivo 2: {total_lines2}",
-            f"- Líneas idénticas: {identical_lines}",
-            f"- Cambios detectados: {changes}"
+            f"Difference summary for '{file1}' and '{file2}':",
+            f"- Similarity: {similarity:.2f}%",
+            f"- Lines in file 1: {total_lines1}",
+            f"- Lines in file 2: {total_lines2}",
+            f"- Identical lines: {identical_lines}",
+            f"- Changes detected: {changes}",
         ]
-        
+
         return {
             "success": True,
             "file1": file1,
@@ -224,25 +511,29 @@ class CompareFilesCommand(CommandBase):
             "lines_file2": total_lines2,
             "identical_lines": identical_lines,
             "changes": changes,
-            "summary": "\n".join(summary)
+            "summary": "\n".join(summary),
+            "message": (
+                f"Compared '{file1}' with '{file2}': "
+                f"{similarity:.2f}% similarity and {changes} detected changes."
+            ),
         }
-    
+
     def _compare_percent(self, file1, file2, content1, content2):
-        """
-        Realiza una comparación que devuelve solo el porcentaje de similitud
-        """
-        # Calcular la similitud usando SequenceMatcher
+        """Return only the similarity percentage."""
+        # Calculate similarity using SequenceMatcher.
         matcher = difflib.SequenceMatcher(None, content1, content2)
         similarity = matcher.ratio() * 100
-        
-        # Si son idénticos
-        identical = similarity >= 99.99
-        
+
+        # Similarity is approximate; identity remains an exact text comparison.
+        identical = content1 == content2
+
         return {
             "success": True,
             "file1": file1,
             "file2": file2,
             "identical": identical,
             "similarity": similarity,
-            "message": f"Similitud entre '{file1}' y '{file2}': {similarity:.2f}%"
+            "message": (
+                f"Similarity between '{file1}' and '{file2}': {similarity:.2f}%"
+            ),
         }

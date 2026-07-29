@@ -3,17 +3,38 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
-## Unreleased
+## 0.2.2.0.3 — 2026-07-29
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Added a package-shipped lifecycle registry so every command exposes its own
+  Alpha, Beta, Release Candidate, Stable, Deprecated, or Retired state
+  independently from the package release channel. Planning and
+  proof-of-concept entries remain outside the executable command loader.
+- Added lifecycle metadata to human help, structured JSON, command listings,
+  and the generated catalog, with fail-closed inventory and promotion-review
+  validation.
+- Replaced `auditLanguages` with the clearer `projectLanguages` command while
+  retaining `auditLanguages` as a compatibility alias. The new implementation
+  reports language, file, line, and byte evidence and honors project ignore
+  rules.
+- Hardened `compareFiles`, `checkDns`, `getNetworkConfig`,
+  `getStartupPrograms`, and `inspectPort` with clearer structured failures,
+  bounded work, and richer real-system evidence.
+- Strengthened the shared command contract so known commands consistently
+  return descriptive human output by default and complete, stable JSON with
+  `--json`.
+- Strengthened dangerous-command backups and approval barriers, including
+  explicit target validation and process identity checks before mutation.
 - Adopted the standard CPython 3.13.x build as QZX's certified Python runtime
   and concentrated the cross-platform test matrix on Python 3.13.
-- Set future distribution metadata to `Requires-Python: >=3.13`. Experimental
+- Set distribution metadata to `Requires-Python: >=3.13`. Experimental
   free-threaded CPython builds, PyPy, other implementations, and other Python
   series may work but are not certified.
 - Preserved the immutable `>=3.9` metadata of the already published PyPI
   `0.2.2.0.2` artifacts as a clearly labelled historical fact.
+- Added maintained dependencies for language detection, portable ignore rules,
+  and structured DNS queries.
 
 ## 0.2.2.0.2 — 2026-07-24
 

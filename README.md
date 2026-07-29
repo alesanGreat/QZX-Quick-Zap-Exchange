@@ -35,8 +35,8 @@ qzx getCurrentDate
 qzx getCurrentDate --json
 ```
 
-PyPI publishes QZX `0.2.2.0.2` with its historical Python `>=3.9` metadata.
-The current checkout adopts Python `>=3.13` for future distributions.
+PyPI publishes QZX `0.2.2.0.3` with Python `>=3.13` metadata.
+The current checkout follows the same minimum.
 
 QZX supports the standard CPython 3.13.x build. Other Python versions or
 implementations may work, but experimental free-threaded CPython builds, PyPy,
@@ -44,8 +44,8 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Published package | `0.2.2.0.2` | `>=3.9` (historical metadata) | Capabilities reconciled with the official wheel |
-| Current checkout | `0.2.2.0.2` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
+| Published package | `0.2.2.0.3` | `>=3.13`; standard CPython 3.13.x is certified | Capabilities reconciled with the official wheel |
+| Current checkout | `0.2.2.0.3` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -70,7 +70,21 @@ qzx findFiles examples/qzx_in_action "*.txt" -r --format name --json
 Command lookup is case-insensitive. Documentation uses the current canonical
 lower-camel-case spelling and lists accepted aliases separately.
 
-## Good starting commands in PyPI 0.2.2.0.2
+### Command maturity is explicit
+
+Every installed command has an independent lifecycle assessment. `qzxHelp`,
+`qzxListCommands`, direct `--json` output, and the public catalog expose whether
+its contract is Alpha, Beta, Release Candidate, Stable, or Deprecated.
+Planning and proof-of-concept work remains outside the executable command
+loader, so an AI agent cannot mistake a roadmap intention for an installed
+capability.
+
+The initial assessment is deliberately conservative: existing public commands
+start at Alpha until command-specific evidence supports promotion. Immutable
+future release tags preserve the exact command-to-stage map shipped by that
+version. See the [command lifecycle policy](docs/command-lifecycle.md).
+
+## Good starting commands in PyPI 0.2.2.0.3
 
 These names were verified in the official wheel:
 

@@ -29,6 +29,41 @@ def test_help_and_command_list_use_lazy_discovery():
     assert "findFiles" in list_result["message"]
 
 
+def test_help_identifies_alias_and_canonical_name_in_structured_details():
+    result = qzxHelp().execute("auditLanguages")
+
+    assert result["success"] is True
+    assert result["command"] == "auditLanguages"
+    assert result["details"]["requested_name"] == "auditLanguages"
+    assert result["details"]["canonical_name"] == "projectLanguages"
+    assert result["details"]["is_alias"] is True
+    assert "auditLanguages" in result["details"]["aliases"]
+
+
+def test_command_list_summarizes_canonical_commands_and_aliases():
+    result = qzxListCommands().execute("auditLanguages")
+
+    assert result["success"] is True
+    assert result["summary"] == {
+        "canonical_commands": 0,
+        "aliases": 1,
+        "listed_entries": 1,
+        "categories": 0,
+        "filter": "auditLanguages",
+    }
+    assert result["maturity_summary"] == {}
+    assert result["commands"]["alias"][0]["canonical_name"] == "projectLanguages"
+    assert "Commands: 0 canonical, 1 aliases" in result["message"]
+
+
+def test_command_list_structured_entries_are_deterministically_sorted():
+    result = qzxListCommands().execute()
+
+    for commands in result["commands"].values():
+        names = [command["name"] for command in commands]
+        assert names == sorted(names, key=str.lower)
+
+
 def test_aliases_do_not_override_canonical_commands():
     loader = CommandLoader()
 

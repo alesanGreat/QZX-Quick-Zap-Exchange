@@ -13,12 +13,19 @@ the design and evidence can be agreed before substantial work begins.
 Read:
 
 - [the project philosophy](docs/philosophy.md);
+- [the command lifecycle policy](docs/command-lifecycle.md);
 - [the project overview](README.md);
 - [the security policy](SECURITY.md) for private vulnerability reports.
 
 Public commands must preserve the dual-output contract: warm human output by
 default and equivalent stable JSON under `--json`, with at least `success` and
 a descriptive `message`.
+
+Every public command must also have one exact entry in
+`src/qzx/resources/command-lifecycle.json`. Planning and proof-of-concept work
+is not registered as an executable command. Alpha, Beta, Release Candidate,
+Stable, and Deprecated describe the command contract independently from the
+QZX package release channel.
 
 ## Development and verification
 

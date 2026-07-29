@@ -65,12 +65,14 @@ class GetStartupProgramsCommand(CommandBase):
                             value_count = info[1]
                             for i in range(value_count):
                                 name, val, val_type = winreg.EnumValue(key, i)
-                                startup_items.append({
-                                    "name": name,
-                                    "command": val,
-                                    "source": label,
-                                    "type": "registry"
-                                })
+                                startup_items.append(
+                                    self._startup_item(
+                                        name=name,
+                                        command=val,
+                                        source=label,
+                                        item_type="registry",
+                                    )
+                                )
                     except PermissionError:
                         errors.append(f"Permission denied reading registry subkey: {label}")
                     except OSError:
@@ -101,12 +103,15 @@ class GetStartupProgramsCommand(CommandBase):
                         for item in os.listdir(folder_path):
                             full_path = os.path.join(folder_path, item)
                             if os.path.isfile(full_path):
-                                startup_items.append({
-                                    "name": item,
-                                    "command": full_path,
-                                    "source": label,
-                                    "type": "directory"
-                                })
+                                startup_items.append(
+                                    self._startup_item(
+                                        name=item,
+                                        command=full_path,
+                                        source=label,
+                                        item_type="directory",
+                                        source_path=full_path,
+                                    )
+                                )
                     except Exception as e:
                         errors.append(f"Error reading startup folder '{folder_path}': {str(e)}")
                         
@@ -125,23 +130,40 @@ class GetStartupProgramsCommand(CommandBase):
                             if item.endswith(".desktop"):
                                 full_path = os.path.join(path, item)
                                 name, cmd = self._parse_desktop_file(full_path)
-                                startup_items.append({
-                                    "name": name or item,
-                                    "command": cmd or full_path,
-                                    "source": label,
-                                    "type": "desktop_file"
-                                })
+                                startup_items.append(
+                                    self._startup_item(
+                                        name=name or item,
+                                        command=cmd,
+                                        source=label,
+                                        item_type="desktop_file",
+                                        source_path=full_path,
+                                    )
+                                )
                     except Exception as e:
                         errors.append(f"Error reading autostart folder '{path}': {str(e)}")
                         
         total_items = len(startup_items)
+        actionable_items = sum(
+            item["actionable"]
+            for item in startup_items
+        )
+        entries_with_issues = sum(
+            bool(item["issues"])
+            for item in startup_items
+        )
         msg = "Startup Programs Audit Summary:\n"
         msg += f"- Total startup items: {total_items}\n"
+        msg += f"- Actionable entries: {actionable_items}\n"
+        msg += f"- Entries requiring attention: {entries_with_issues}\n"
         
         if total_items > 0:
             msg += "\nDetected Startup Applications:\n"
-            for index, item in enumerate(startup_items):
-                msg += f"  - [{item['source']}] {item['name']} -> Command: {item['command'][:60]}\n"
+            for item in startup_items:
+                command = item["command"][:60] or "(empty command)"
+                msg += (
+                    f"  - [{item['source']}] {item['name']} -> "
+                    f"Command: {command}\n"
+                )
         else:
             msg += "- No startup entries identified."
             
@@ -149,10 +171,44 @@ class GetStartupProgramsCommand(CommandBase):
             "success": True,
             "os": platform.system(),
             "total_startup_programs": total_items,
+            "actionable_startup_programs": actionable_items,
+            "entries_with_issues": entries_with_issues,
             "startup_programs": startup_items,
             "errors": errors,
             "message": msg
         }
+
+    @staticmethod
+    def _startup_item(
+        name,
+        command,
+        source,
+        item_type,
+        source_path=None,
+    ):
+        """Normalize a startup entry without inventing an executable target."""
+        normalized_name = str(name or "").strip()
+        normalized_command = str(command or "").strip()
+        issues = []
+        if not normalized_name:
+            normalized_name = "(unnamed startup entry)"
+            issues.append("The startup entry has no configured name.")
+        if not normalized_command:
+            issues.append(
+                "The startup entry has an empty command and cannot launch a program."
+            )
+
+        result = {
+            "name": normalized_name,
+            "command": normalized_command,
+            "source": source,
+            "type": item_type,
+            "actionable": bool(normalized_command),
+            "issues": issues,
+        }
+        if source_path is not None:
+            result["source_path"] = str(source_path)
+        return result
         
     def _parse_desktop_file(self, filepath):
         """Extracts Name and Exec from desktop entry files on Unix"""

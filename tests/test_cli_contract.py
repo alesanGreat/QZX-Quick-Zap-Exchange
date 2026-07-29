@@ -27,6 +27,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class DangerousFixtureCommand(CommandBase):
     name = "dangerousFixture"
+    maturity = "alpha"
     description = "Test-only high-risk command"
     requires_explicit_approval = True
     backup_target_parameter = "target"
@@ -50,6 +51,7 @@ class DangerousFixtureCommand(CommandBase):
 
 class RichFixtureCommand(CommandBase):
     name = "richFixture"
+    maturity = "alpha"
     description = "Test-only rich command"
     parameters = []
     examples = []

@@ -20,7 +20,7 @@ body:
     attributes:
       label: QZX version
       description: Run `qzx version --json` when possible.
-      placeholder: 0.2.2.0.2
+      placeholder: 0.2.2.0.3
     validations:
       required: true
   - type: input

@@ -1,0 +1,202 @@
+{
+  "schema_version": 2,
+  "assessment": {
+    "scope": "development_checkout",
+    "baseline": "Every existing public command starts from a conservative Alpha assessment until command-specific evidence supports promotion.",
+    "established_after_version": "0.2.2.0.2",
+    "history": "Each immutable Git release tag snapshots this registry; branches are working lines and are not the historical source of truth."
+  },
+  "stages": {
+    "planning": {
+      "label": "Planning",
+      "sequence": 0,
+      "public_executable": false,
+      "promotion_review_required": false,
+      "promotion_requirements": [
+        "Accepted problem statement, intended users, and owner-visible outcome."
+      ],
+      "stability": "specification_only",
+      "summary": "The capability has an accepted direction but is not presented as an executable QZX command."
+    },
+    "proof_of_concept": {
+      "label": "Proof of concept",
+      "sequence": 1,
+      "public_executable": false,
+      "promotion_review_required": false,
+      "promotion_requirements": [
+        "Isolated feasibility evidence and an explicit non-public scope."
+      ],
+      "stability": "feasibility_validation",
+      "summary": "An isolated experiment is validating feasibility; it is not part of the public command contract."
+    },
+    "alpha": {
+      "label": "Alpha",
+      "sequence": 2,
+      "public_executable": true,
+      "promotion_review_required": false,
+      "promotion_requirements": [
+        "Public implementation with documented parameters and examples.",
+        "Structured success and failure results with applicable safety barriers."
+      ],
+      "stability": "interface_may_change",
+      "summary": "Available for real use and feedback while its interface and behavior can still evolve."
+    },
+    "beta": {
+      "label": "Beta",
+      "sequence": 3,
+      "public_executable": true,
+      "promotion_review_required": true,
+      "promotion_requirements": [
+        "Feature-complete behavior and maintained behavioral tests.",
+        "Real execution evidence for relevant environments.",
+        "Reviewed result contract with no known release-blocking defects."
+      ],
+      "stability": "feature_complete_refinements_possible",
+      "summary": "Feature complete and broadly tested, with refinements and documented migrations still possible."
+    },
+    "release_candidate": {
+      "label": "Release candidate",
+      "sequence": 4,
+      "public_executable": true,
+      "promotion_review_required": true,
+      "promotion_requirements": [
+        "All Beta requirements remain satisfied.",
+        "The intended Stable contract is frozen.",
+        "Final validation is limited to release-blocking defects."
+      ],
+      "stability": "contract_candidate",
+      "summary": "The command contract is frozen as a stable candidate while final validation looks for release-blocking defects."
+    },
+    "stable": {
+      "label": "Stable",
+      "sequence": 5,
+      "public_executable": true,
+      "promotion_review_required": true,
+      "promotion_requirements": [
+        "Release-candidate evidence remains valid across representative platforms.",
+        "Compatibility support and migration commitments are documented."
+      ],
+      "stability": "compatibility_supported",
+      "summary": "The documented command contract is supported for dependable use and compatibility changes follow a migration policy."
+    },
+    "deprecated": {
+      "label": "Deprecated",
+      "sequence": 6,
+      "public_executable": true,
+      "promotion_review_required": true,
+      "promotion_requirements": [
+        "A supported public replacement is identified.",
+        "Migration guidance and a support window are documented."
+      ],
+      "stability": "supported_during_migration",
+      "summary": "The command remains available during a documented migration period, with a supported replacement identified."
+    },
+    "retired": {
+      "label": "Retired",
+      "sequence": 7,
+      "public_executable": false,
+      "promotion_review_required": false,
+      "promotion_requirements": [
+        "Migration is complete and immutable release history preserves the former contract."
+      ],
+      "stability": "not_available",
+      "summary": "The command is no longer executable; historical release tags preserve its former contract and status."
+    }
+  },
+  "commands": {
+    "about": {"stage": "alpha"},
+    "analyzeComplexity": {"stage": "alpha"},
+    "auditRepository": {"stage": "alpha"},
+    "bootstrapProject": {"stage": "alpha"},
+    "changePermissions": {"stage": "alpha"},
+    "checkDependency": {"stage": "alpha"},
+    "checkDns": {"stage": "alpha"},
+    "checkSslCertificate": {"stage": "alpha"},
+    "checkSystemPath": {"stage": "alpha"},
+    "checkUrlStatus": {"stage": "alpha"},
+    "cleanDevCaches": {"stage": "alpha"},
+    "clearScreen": {"stage": "alpha"},
+    "commandsBridge": {"stage": "alpha"},
+    "compareFiles": {"stage": "alpha"},
+    "compressZip": {"stage": "alpha"},
+    "copyFile": {"stage": "alpha"},
+    "countLinesInFile": {"stage": "alpha"},
+    "createDirectory": {"stage": "alpha"},
+    "createDocTemplatePython": {"stage": "alpha"},
+    "currentDir": {"stage": "alpha"},
+    "decompressZip": {"stage": "alpha"},
+    "deleteFile": {"stage": "alpha"},
+    "deployProject": {"stage": "alpha"},
+    "detectFileType": {"stage": "alpha"},
+    "downloadFile": {"stage": "alpha"},
+    "findBrokenSymlinks": {"stage": "alpha"},
+    "findDeadCode": {"stage": "alpha"},
+    "findDuplicateFiles": {"stage": "alpha"},
+    "findFiles": {"stage": "alpha"},
+    "findLargeFiles": {"stage": "alpha"},
+    "findText": {"stage": "alpha"},
+    "formatCode": {"stage": "alpha"},
+    "generateContent": {"stage": "alpha"},
+    "getCPULoad": {"stage": "alpha"},
+    "getCommandCount": {"stage": "alpha"},
+    "getCurrentDate": {"stage": "alpha"},
+    "getCurrentTime": {"stage": "alpha"},
+    "getCurrentUser": {"stage": "alpha"},
+    "getDiskInfo": {"stage": "alpha"},
+    "getDiskName": {"stage": "alpha"},
+    "getEnvironmentInfo": {"stage": "alpha"},
+    "getFileHash": {"stage": "alpha"},
+    "getGPULoad": {"stage": "alpha"},
+    "getGitStatus": {"stage": "alpha"},
+    "getHumanLanguageStats": {"stage": "alpha"},
+    "getNetworkConfig": {"stage": "alpha"},
+    "getProgrammingLanguageStats": {"stage": "alpha"},
+    "getProjectTree": {"stage": "alpha"},
+    "getRAMInfo": {"stage": "alpha"},
+    "getSmartValues": {"stage": "alpha"},
+    "getStartupPrograms": {"stage": "alpha"},
+    "getToday": {"stage": "alpha"},
+    "inspectImage": {"stage": "alpha"},
+    "inspectPort": {"stage": "alpha"},
+    "isAdmin": {"stage": "alpha"},
+    "isDirectoryEmpty": {"stage": "alpha"},
+    "isFileBinary": {"stage": "alpha"},
+    "isFileEmpty": {"stage": "alpha"},
+    "killProcess": {"stage": "alpha"},
+    "listFiles": {"stage": "alpha"},
+    "listProcesses": {"stage": "alpha"},
+    "listSystemServices": {"stage": "alpha"},
+    "moveFile": {"stage": "alpha"},
+    "projectDoctor": {"stage": "alpha"},
+    "projectLanguages": {"stage": "alpha"},
+    "qzxHelp": {"stage": "alpha"},
+    "qzxListCommands": {"stage": "alpha"},
+    "readFile": {"stage": "alpha"},
+    "releaseProject": {"stage": "alpha"},
+    "repairWorkspace": {"stage": "alpha"},
+    "runScript": {"stage": "alpha"},
+    "scaffoldC": {"stage": "alpha"},
+    "scaffoldCpp": {"stage": "alpha"},
+    "scaffoldCsharp": {"stage": "alpha"},
+    "scaffoldGo": {"stage": "alpha"},
+    "scaffoldJava": {"stage": "alpha"},
+    "scaffoldJavascript": {"stage": "alpha"},
+    "scaffoldKotlin": {"stage": "alpha"},
+    "scaffoldPhp": {"stage": "alpha"},
+    "scaffoldPython": {"stage": "alpha"},
+    "scaffoldRust": {"stage": "alpha"},
+    "scaffoldTypescript": {"stage": "alpha"},
+    "scanProject": {"stage": "alpha"},
+    "systemDoctor": {"stage": "alpha"},
+    "systemInfo": {"stage": "alpha"},
+    "terminal": {"stage": "alpha"},
+    "testDiskSpeed": {"stage": "alpha"},
+    "testWebSpeed": {"stage": "alpha"},
+    "touchFile": {"stage": "alpha"},
+    "traceCircularImports": {"stage": "alpha"},
+    "traceEnvVar": {"stage": "alpha"},
+    "version": {"stage": "alpha"},
+    "welcome": {"stage": "alpha"}
+  },
+  "roadmap": {}
+}

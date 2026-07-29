@@ -51,6 +51,8 @@ class qzxListCommands(CommandBase):
         Returns:
             dict: Dictionary containing list of commands organized by category
         """
+        requested_filter = filter_text
+
         # Group commands by category
         categories = {}
         
@@ -60,17 +62,28 @@ class qzxListCommands(CommandBase):
         
         # Get all commands from command loader
         all_commands = self.command_loader.get_all_commands()
-        command_instances = [
-            command_class() for command_class in set(all_commands.values())
-        ]
+        command_instances = sorted(
+            (
+                command_class()
+                for command_class in set(all_commands.values())
+            ),
+            key=lambda instance: instance.name.lower(),
+        )
         canonical_names = {
             instance.name.lower() for instance in command_instances
         }
         seen_aliases = set()
 
         for instance in command_instances:
+            maturity = self.command_loader.get_command_maturity(instance.name)
             categories.setdefault(instance.category, []).append(
-                (instance.name, instance.description)
+                {
+                    "name": instance.name,
+                    "description": instance.description,
+                    "canonical_name": instance.name,
+                    "is_alias": False,
+                    "maturity": maturity,
+                }
             )
             for alias in getattr(instance, "aliases", []):
                 alias_key = alias.lower()
@@ -78,21 +91,34 @@ class qzxListCommands(CommandBase):
                     continue
                 seen_aliases.add(alias_key)
                 categories[alias_category].append(
-                    (
-                        alias,
-                        f"Alias for {instance.name}: {instance.description}",
-                    )
+                    {
+                        "name": alias,
+                        "description": (
+                            f"Alias for {instance.name}: {instance.description}"
+                        ),
+                        "canonical_name": instance.name,
+                        "is_alias": True,
+                        "maturity": maturity,
+                    }
                 )
+
+        for commands in categories.values():
+            commands.sort(key=lambda command: command["name"].lower())
         
         # Apply filter if provided
         if filter_text:
-            filter_text = filter_text.lower()
+            normalized_filter = filter_text.lower()
             filtered_categories = {}
             
             for category, commands in categories.items():
                 filtered_commands = [
-                    (name, desc) for name, desc in commands 
-                    if filter_text in name.lower() or filter_text in desc.lower()
+                    item for item in commands
+                    if (
+                        normalized_filter in item["name"].lower()
+                        or normalized_filter in item["description"].lower()
+                        or normalized_filter in item["maturity"]["stage"]
+                        or normalized_filter in item["maturity"]["label"].lower()
+                    )
                 ]
                 
                 if filtered_commands:
@@ -102,11 +128,62 @@ class qzxListCommands(CommandBase):
         
         # Prepare output
         if filter_text:
-            title = f"Available Commands (filtered by '{filter_text}')"
+            title = f"Available Commands (filtered by '{requested_filter}')"
         else:
             title = "Available Commands"
         
         result = [title]
+        canonical_count = sum(
+            len(commands)
+            for category, commands in categories.items()
+            if category != alias_category
+        )
+        alias_count = len(categories.get(alias_category, []))
+        listed_count = canonical_count + alias_count
+        category_count = sum(
+            1
+            for category, commands in categories.items()
+            if category != alias_category and commands
+        )
+        summary = {
+            "canonical_commands": canonical_count,
+            "aliases": alias_count,
+            "listed_entries": listed_count,
+            "categories": category_count,
+            "filter": requested_filter,
+        }
+        result.append(
+            f"Commands: {canonical_count} canonical, {alias_count} aliases"
+        )
+        maturity_details = {}
+        for category, commands in categories.items():
+            if category == alias_category:
+                continue
+            for item in commands:
+                stage = item["maturity"]["stage"]
+                details = maturity_details.setdefault(
+                    stage,
+                    {
+                        "count": 0,
+                        "label": item["maturity"]["label"],
+                        "sequence": item["maturity"]["sequence"],
+                    },
+                )
+                details["count"] += 1
+        ordered_maturity = sorted(
+            maturity_details.items(),
+            key=lambda entry: entry[1]["sequence"],
+        )
+        maturity_summary = {
+            stage: details["count"]
+            for stage, details in ordered_maturity
+        }
+        if maturity_summary:
+            maturity_text = ", ".join(
+                "{} {}".format(details["count"], details["label"])
+                for stage, details in ordered_maturity
+            )
+            result.append(f"Maturity: {maturity_text}")
         
         # Sort categories (put 'alias' last)
         sorted_categories = sorted([c for c in categories.keys() if c != alias_category])
@@ -121,8 +198,17 @@ class qzxListCommands(CommandBase):
                 
             result.append(f"\n[{category.upper()}]")
             # Sort commands within category
-            for name, description in sorted(categories[category]):
-                result.append(f"  {name}: {description}")
+            for item in sorted(
+                categories[category],
+                key=lambda command: command["name"].lower(),
+            ):
+                result.append(
+                    "  {} [{}]: {}".format(
+                        item["name"],
+                        item["maturity"]["label"],
+                        item["description"],
+                    )
+                )
         
         text_result = "\n".join(result)
         
@@ -130,8 +216,7 @@ class qzxListCommands(CommandBase):
         return {
             "success": True,
             "message": text_result,
-            "commands": {
-                category: [{"name": name, "description": desc} for name, desc in commands]
-                for category, commands in categories.items()
-            }
+            "summary": summary,
+            "maturity_summary": maturity_summary,
+            "commands": categories,
         }
