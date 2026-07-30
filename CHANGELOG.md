@@ -3,6 +3,51 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a1 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Reduced the default Windows launcher path from a reported 20–60 seconds to
+  a measured 0.568-second median across seven fresh processes by using the
+  validated command index, importing only the requested command, deferring
+  first-run telemetry until after visible output, and reserving costly system
+  probes for the detailed welcome view.
+- Made the Windows and Unix launchers locate a compatible standard CPython
+  3.13 runtime predictably, including a bounded `uv python find 3.13`
+  recovery path and structured failures when no supported runtime exists.
+- Added deterministic `auditWorkspace` plans and made `repairWorkspace`
+  require an explicitly selected, fingerprinted plan with preview, backup,
+  staging, rollback, and time-of-check/time-of-use protection.
+- Prevented partial or overlapping path moves, preserved destinations during
+  cross-filesystem failures, and strengthened backup-first behavior across
+  destructive commands.
+- Made `createDocTemplatePython` and `cleanDevCaches` preview-first,
+  transactional, and recoverable; destructive application now validates the
+  target and aborts if its safety backup cannot be created.
+- Reworked `releaseProject` as bounded release preparation and
+  `deployProject` as an explicit artifact deployment with staging, hashes,
+  health checks, rollback, and no hidden build, publication, permission, or
+  service actions.
+- Made `generateContent` preview the exact bounded text sample before any
+  Gemini request, require explicit application, avoid credentials in URLs and
+  errors, and prefer current stable models discovered from the provider.
+- Consolidated portable environment reporting under `systemInfo`, retained
+  `getEnvironmentInfo` as a documented compatibility wrapper, and added the
+  strictly allowlisted `runDiagnosticCommand` while deprecating
+  `commandsBridge` for removal after QZX 0.2.x.
+- Normalized command boolean metadata so `true` and `false` are real typed
+  values rather than command-specific strings.
+- Expanded real command, rollback, security-boundary, launcher, Windows,
+  WSL2, and cross-platform regression coverage while keeping the 16-environment
+  compatibility catalog synchronized.
+- Split the former all-in-one `bootstrapProject` into a read-only
+  `planProjectBootstrap`; the deprecated 0.2.x wrapper now previews safely and
+  refuses the former combined writes, installs, secret generation, hooks, and
+  database migrations.
+- Updated the bilingual command catalog, lifecycle records, structured output
+  policies, reproducible evidence, and manually reviewed translations for the
+  enlarged 96-command development inventory.
+
 ## 0.2.2.0.5 — 2026-07-29
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

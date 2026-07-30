@@ -90,19 +90,19 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.5",
+      "version": "0.2.2.0.6a1",
       "status": "Alpha",
       "channel": "Published package",
-      "released_at": "2026-07-29",
+      "released_at": "2026-07-30",
       "requires_python": ">=3.13",
       "source": "https://pypi.org/pypi/qzx/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.5-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.6a1-py3-none-any.whl",
         "command_names": [
           "about",
           "analyzeComplexity",
-          "projectLanguages",
           "auditRepository",
+          "auditWorkspace",
           "bootstrapProject",
           "changePermissions",
           "checkDependency",
@@ -163,12 +163,15 @@
           "listProcesses",
           "listSystemServices",
           "moveFile",
+          "planProjectBootstrap",
           "projectDoctor",
+          "projectLanguages",
           "qzxHelp",
           "qzxListCommands",
           "readFile",
           "releaseProject",
           "repairWorkspace",
+          "runDiagnosticCommand",
           "runScript",
           "scaffoldC",
           "scaffoldCpp",
@@ -196,7 +199,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.5",
+      "version": "0.2.2.0.6a1",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",
@@ -224,7 +227,7 @@
   "documentation": {
     "channel": "development",
     "repository_branch": "main",
-    "snapshot_date": "2026-07-29",
+    "snapshot_date": "2026-07-30",
     "source_revision_environment_variable": "QZX_DOCS_COMMIT",
     "exact_revision_fallback": "A deterministic SHA-256 digest of command source files is embedded in the generated command catalog when Git metadata is unavailable."
   },
