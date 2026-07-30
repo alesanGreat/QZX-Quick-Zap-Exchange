@@ -174,7 +174,7 @@ An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
 
 <!-- BEGIN GENERATED TEST ENVIRONMENTS -->
 
-QZX's automated tests are based on Microsoft Windows Server 2025 (10.0.26100) (x64), Ubuntu 24.04.4 (x64), macOS 26.4 (25E246) (arm64), Alpine Linux 3.24.1 (x86_64), FreeBSD 15.1-RELEASE (amd64), OpenBSD 7.9 (amd64), OmniOS r151054 LTS (x86_64), and Oracle Solaris 11.4 CBE (x86_64), using the standard CPython 3.13 build.
+QZX's automated tests are based on Microsoft Windows Server 2025 (10.0.26100) (x64), Microsoft Windows Server 2025 (10.0.26100) (x64 host / x86 CPython), Microsoft Windows Server 2022 (10.0.20348) (x64), Microsoft Windows 11 Enterprise (10.0.26200) (arm64), Ubuntu 24.04.4 (x64), Ubuntu 24.04.4 (arm64), Ubuntu 22.04.5 (x64), macOS 26.4 (25E246) (arm64), macOS 15.7.7 (24G720) (arm64), macOS 15.7.7 (24G720) (x64 (Intel)), Debian 13.6 (amd64), Alpine Linux 3.24.1 (x86_64), FreeBSD 15.1-RELEASE (amd64), OpenBSD 7.9 (amd64), OmniOS r151054 LTS (x86_64), and Oracle Solaris 11.4 CBE (x86_64), using the standard CPython 3.13 build.
 
 QZX is Alpha software. This list identifies the environments used by the test matrix; it does not report run outcomes or guarantee compatibility.
 

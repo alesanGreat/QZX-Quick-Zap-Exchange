@@ -1,0 +1,69 @@
+name: QZX tests | Debian 13.6 amd64 | CPython 3.13
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-debian-13-6-amd64:
+    name: QZX test suite | Debian 13.6 amd64 | CPython 3.13
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      QZX_TELEMETRY: "0"
+      DEBIAN_13_6_AMD64_IMAGE: >-
+        python:3.13.14-slim-trixie@sha256:6771159cd4fa5d9bba1258caf0b82e6b73458c694d178ad97c5e925c2d0e1a91
+    steps:
+      - name: Check out QZX | Debian 13.6 amd64
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Run QZX test suite | Debian 13.6 amd64
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --platform linux/amd64 \
+            --env DEBIAN_FRONTEND=noninteractive \
+            --env QZX_TELEMETRY \
+            --volume "${GITHUB_WORKSPACE}:/workspace" \
+            --workdir /workspace \
+            "${DEBIAN_13_6_AMD64_IMAGE}" \
+            bash -euxo pipefail -c '
+              debian_release="$(cat /etc/debian_version)"
+              machine_arch="$(uname -m)"
+              printf "Debian release: %s\nArchitecture: %s\n" \
+                "$debian_release" "$machine_arch"
+              test "$debian_release" = "13.6"
+              test "$machine_arch" = "x86_64"
+              python -c "
+          import platform
+          import sysconfig
+
+          print(f\"Python: {platform.python_implementation()} {platform.python_version()}\")
+          assert platform.python_implementation() == \"CPython\"
+          assert platform.python_version().startswith(\"3.13.\")
+          assert sysconfig.get_config_var(\"Py_GIL_DISABLED\") != 1
+          "
+              apt-get update
+              apt-get install --yes --no-install-recommends \
+                build-essential \
+                ca-certificates \
+                curl \
+                dnsutils \
+                file \
+                git \
+                iproute2 \
+                libmagic1 \
+                procps
+              python -m pip install pytest -e .
+              python -m pytest -q \
+                tests/integration/test_real_system_dependencies.py
+              python -m pytest -q \
+                --ignore=tests/integration/test_real_system_dependencies.py
+            '

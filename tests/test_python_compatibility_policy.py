@@ -45,8 +45,16 @@ def test_python_compatibility_policy_is_consistent():
         environment["id"] for environment in test_environments["environments"]
     } == {
         "windows",
+        "windows-x86-python",
+        "windows-server-2022",
+        "windows-11-arm64",
         "ubuntu",
+        "ubuntu-24-04-arm64",
+        "ubuntu-22-04",
         "macos",
+        "macos-15-arm64",
+        "macos-15-intel",
+        "debian",
         "alpine-linux",
         "freebsd",
         "openbsd",
@@ -126,6 +134,16 @@ def test_additional_distribution_workflow_names_are_explicit():
             (
                 "python:3.13.14-alpine3.24"
                 "@sha256:c25cd44f45df1279a2cba589e67dfcd9db04647ea483b117a7de8b1a99bdfb23"
+            ),
+        ),
+        (
+            "test-debian-13.6-amd64.yml",
+            "Debian 13.6 amd64",
+            "test-debian-13-6-amd64:",
+            (
+                "python:3.13.14-slim-trixie"
+                "@sha256:6771159cd4fa5d9bba1258caf0b82e6b73458c694"
+                "d178ad97c5e925c2d0e1a91"
             ),
         ),
         (

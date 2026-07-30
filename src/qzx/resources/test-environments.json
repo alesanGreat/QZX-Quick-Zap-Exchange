@@ -29,7 +29,52 @@
       "workflow_references": [
         {
           "path": ".github/workflows/test.yml",
-          "target": "windows-latest"
+          "target": "Windows Server 2025 x64"
+        }
+      ]
+    },
+    {
+      "id": "windows-x86-python",
+      "name": {
+        "en": "Microsoft Windows Server",
+        "es": "Microsoft Windows Server"
+      },
+      "version": "2025 (10.0.26100)",
+      "architecture": "x64 host / x86 CPython",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "Windows Server 2025 x64 with x86 CPython"
+        }
+      ]
+    },
+    {
+      "id": "windows-server-2022",
+      "name": {
+        "en": "Microsoft Windows Server",
+        "es": "Microsoft Windows Server"
+      },
+      "version": "2022 (10.0.20348)",
+      "architecture": "x64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "Windows Server 2022 x64"
+        }
+      ]
+    },
+    {
+      "id": "windows-11-arm64",
+      "name": {
+        "en": "Microsoft Windows",
+        "es": "Microsoft Windows"
+      },
+      "version": "11 Enterprise (10.0.26200)",
+      "architecture": "arm64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "Windows 11 Enterprise ARM64"
         }
       ]
     },
@@ -44,7 +89,7 @@
       "workflow_references": [
         {
           "path": ".github/workflows/test.yml",
-          "target": "ubuntu-latest"
+          "target": "Ubuntu 24.04 x64"
         },
         {
           "path": ".github/workflows/test-real-deploy-project-ubuntu-24.04-amd64.yml",
@@ -53,6 +98,36 @@
         {
           "path": ".github/workflows/test-real-format-code-ubuntu-24.04-amd64.yml",
           "target": "ubuntu-24.04"
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-24-04-arm64",
+      "name": {
+        "en": "Ubuntu",
+        "es": "Ubuntu"
+      },
+      "version": "24.04.4",
+      "architecture": "arm64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "Ubuntu 24.04 ARM64"
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-22-04",
+      "name": {
+        "en": "Ubuntu",
+        "es": "Ubuntu"
+      },
+      "version": "22.04.5",
+      "architecture": "x64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "Ubuntu 22.04 x64"
         }
       ]
     },
@@ -67,7 +142,52 @@
       "workflow_references": [
         {
           "path": ".github/workflows/test.yml",
-          "target": "macos-latest"
+          "target": "macOS 26 ARM64"
+        }
+      ]
+    },
+    {
+      "id": "macos-15-arm64",
+      "name": {
+        "en": "macOS",
+        "es": "macOS"
+      },
+      "version": "15.7.7 (24G720)",
+      "architecture": "arm64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "macOS 15 ARM64"
+        }
+      ]
+    },
+    {
+      "id": "macos-15-intel",
+      "name": {
+        "en": "macOS",
+        "es": "macOS"
+      },
+      "version": "15.7.7 (24G720)",
+      "architecture": "x64 (Intel)",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test.yml",
+          "target": "macOS 15 Intel"
+        }
+      ]
+    },
+    {
+      "id": "debian",
+      "name": {
+        "en": "Debian",
+        "es": "Debian"
+      },
+      "version": "13.6",
+      "architecture": "amd64",
+      "workflow_references": [
+        {
+          "path": ".github/workflows/test-debian-13.6-amd64.yml",
+          "target": "Debian 13.6 amd64"
         }
       ]
     },

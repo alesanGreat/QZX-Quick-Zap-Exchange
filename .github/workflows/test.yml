@@ -10,22 +10,175 @@ permissions:
 
 jobs:
   python:
-    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    name: >-
+      QZX test suite | ${{ matrix.platform.name }} |
+      CPython ${{ matrix.python }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
         python: ["3.13"]
-    runs-on: ${{ matrix.os }}
+        platform:
+          - name: Windows Server 2025 x64
+            runner: windows-2025
+            python_architecture: x64
+            expected_system: Windows
+            expected_version_prefix: "10.0.26100"
+            expected_machines: AMD64
+            pointer_bits: 64
+          - name: Windows Server 2025 x64 with x86 CPython
+            runner: windows-2025
+            python_architecture: x86
+            expected_system: Windows
+            expected_version_prefix: "10.0.26100"
+            expected_machines: AMD64,x86
+            pointer_bits: 32
+          - name: Windows Server 2022 x64
+            runner: windows-2022
+            python_architecture: x64
+            expected_system: Windows
+            expected_version_prefix: "10.0.20348"
+            expected_machines: AMD64
+            pointer_bits: 64
+          - name: Windows 11 Enterprise ARM64
+            runner: windows-11-arm
+            python_architecture: arm64
+            expected_system: Windows
+            expected_version_prefix: "10.0.26200"
+            expected_machines: ARM64
+            pointer_bits: 64
+          - name: Ubuntu 24.04 x64
+            runner: ubuntu-24.04
+            python_architecture: x64
+            expected_system: Linux
+            expected_version_prefix: "24.04"
+            expected_machines: x86_64
+            pointer_bits: 64
+          - name: Ubuntu 24.04 ARM64
+            runner: ubuntu-24.04-arm
+            python_architecture: arm64
+            expected_system: Linux
+            expected_version_prefix: "24.04"
+            expected_machines: aarch64,arm64
+            pointer_bits: 64
+          - name: Ubuntu 22.04 x64
+            runner: ubuntu-22.04
+            python_architecture: x64
+            expected_system: Linux
+            expected_version_prefix: "22.04"
+            expected_machines: x86_64
+            pointer_bits: 64
+          - name: macOS 26 ARM64
+            runner: macos-26
+            python_architecture: arm64
+            expected_system: Darwin
+            expected_version_prefix: "26."
+            expected_machines: arm64
+            pointer_bits: 64
+          - name: macOS 15 ARM64
+            runner: macos-15
+            python_architecture: arm64
+            expected_system: Darwin
+            expected_version_prefix: "15."
+            expected_machines: arm64
+            pointer_bits: 64
+          - name: macOS 15 Intel
+            runner: macos-15-intel
+            python_architecture: x64
+            expected_system: Darwin
+            expected_version_prefix: "15."
+            expected_machines: x86_64
+            pointer_bits: 64
+    runs-on: ${{ matrix.platform.runner }}
     env:
       QZX_TELEMETRY: "0"
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - name: Check out QZX
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install standard CPython ${{ matrix.python }}
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.platform.python_architecture }}
           cache: pip
+
+      - name: Verify real operating system, architecture, and Python build
+        shell: python
+        env:
+          EXPECTED_SYSTEM: ${{ matrix.platform.expected_system }}
+          EXPECTED_VERSION_PREFIX: ${{ matrix.platform.expected_version_prefix }}
+          EXPECTED_MACHINES: ${{ matrix.platform.expected_machines }}
+          EXPECTED_POINTER_BITS: ${{ matrix.platform.pointer_bits }}
+        run: |
+          import json
+          import os
+          import platform
+          import struct
+          import sysconfig
+
+          system = platform.system()
+          machine = platform.machine()
+          pointer_bits = struct.calcsize("P") * 8
+
+          if system == "Linux":
+              os_release = {}
+              with open("/etc/os-release", encoding="utf-8") as handle:
+                  for line in handle:
+                      key, separator, value = line.rstrip().partition("=")
+                      if separator:
+                          os_release[key] = value.strip('"')
+              os_version = os_release.get("VERSION_ID", "")
+          elif system == "Darwin":
+              os_version = platform.mac_ver()[0]
+          elif system == "Windows":
+              os_version = platform.version()
+          else:
+              raise AssertionError("Unexpected operating system: {}".format(system))
+
+          expected_machines = {
+              value.casefold()
+              for value in os.environ["EXPECTED_MACHINES"].split(",")
+          }
+          evidence = {
+              "system": system,
+              "os_version": os_version,
+              "machine": machine,
+              "pointer_bits": pointer_bits,
+              "python_implementation": platform.python_implementation(),
+              "python_version": platform.python_version(),
+              "gil_disabled": sysconfig.get_config_var("Py_GIL_DISABLED"),
+          }
+          print(json.dumps(evidence, indent=2, sort_keys=True))
+
+          assert system == os.environ["EXPECTED_SYSTEM"]
+          assert os_version.startswith(os.environ["EXPECTED_VERSION_PREFIX"])
+          assert machine.casefold() in expected_machines
+          assert pointer_bits == int(os.environ["EXPECTED_POINTER_BITS"])
+          assert platform.python_implementation() == "CPython"
+          assert platform.python_version().startswith("3.13.")
+          assert sysconfig.get_config_var("Py_GIL_DISABLED") != 1
+
       - name: Install QZX and tests
         run: python -m pip install --upgrade pip pytest -e .
-      - name: Run Python suite
-        run: python -m pytest -q
+
+      - name: Smoke test QZX in PowerShell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python -m qzx version --json
+
+      - name: Smoke test QZX in Command Prompt
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: python -m qzx version --json
+
+      - name: Run real system integration
+        run: >-
+          python -m pytest -q
+          tests/integration/test_real_system_dependencies.py
+
+      - name: Run remaining QZX test suite
+        run: >-
+          python -m pytest -q
+          --ignore=tests/integration/test_real_system_dependencies.py
