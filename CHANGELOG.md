@@ -3,6 +3,15 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a2 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Restored the executable Git mode of `qzx.sh` after the
+  `v0.2.2.0.6a1` validation tag exposed a `Permission denied` failure in
+  Alpine Linux. Alpha 1 remains published and immutable; this follow-up
+  preserves its tag, artifacts, hashes, and release history.
+
 ## 0.2.2.0.6a1 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
