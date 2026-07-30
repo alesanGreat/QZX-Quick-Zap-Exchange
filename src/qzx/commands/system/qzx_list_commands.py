@@ -60,32 +60,26 @@ class qzxListCommands(CommandBase):
         alias_category = 'alias'
         categories[alias_category] = []
         
-        # Get all commands from command loader
-        all_commands = self.command_loader.get_all_commands()
-        command_instances = sorted(
-            (
-                command_class()
-                for command_class in set(all_commands.values())
-            ),
-            key=lambda instance: instance.name.lower(),
-        )
+        # Read the packaged metadata index; listing commands must not import
+        # every implementation module.
+        command_entries = self.command_loader.get_indexed_commands()
         canonical_names = {
-            instance.name.lower() for instance in command_instances
+            entry["name"].lower() for entry in command_entries
         }
         seen_aliases = set()
 
-        for instance in command_instances:
-            maturity = self.command_loader.get_command_maturity(instance.name)
-            categories.setdefault(instance.category, []).append(
+        for entry in command_entries:
+            maturity = self.command_loader.get_command_maturity(entry["name"])
+            categories.setdefault(entry["category"], []).append(
                 {
-                    "name": instance.name,
-                    "description": instance.description,
-                    "canonical_name": instance.name,
+                    "name": entry["name"],
+                    "description": entry["description"],
+                    "canonical_name": entry["name"],
                     "is_alias": False,
                     "maturity": maturity,
                 }
             )
-            for alias in getattr(instance, "aliases", []):
+            for alias in entry["aliases"]:
                 alias_key = alias.lower()
                 if alias_key in canonical_names or alias_key in seen_aliases:
                     continue
@@ -94,9 +88,9 @@ class qzxListCommands(CommandBase):
                     {
                         "name": alias,
                         "description": (
-                            f"Alias for {instance.name}: {instance.description}"
+                            f"Alias for {entry['name']}: {entry['description']}"
                         ),
-                        "canonical_name": instance.name,
+                        "canonical_name": entry["name"],
                         "is_alias": True,
                         "maturity": maturity,
                     }

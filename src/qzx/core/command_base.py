@@ -6,17 +6,9 @@ QZX Command Base - Base class for all QZX commands
 """
 
 from abc import ABC, abstractmethod
-import inspect
 import os
 import re
 import time
-
-from qzx.core.command_lifecycle import (
-    CommandLifecycleError,
-    command_maturity,
-    stage_maturity,
-)
-from qzx.core.safety_backup import create_safety_backup
 
 
 class CommandBase(ABC):
@@ -249,8 +241,25 @@ class CommandBase(ABC):
                             token,
                             self.name,
                         )
-                    )
-                values[shared_name] = token if shared_name == "recursive" else True
+                        )
+                if shared_name == "recursive":
+                    recursive_value = token
+                    if recursion_depth is None and index + 1 < len(args):
+                        candidate = args[index + 1]
+                        parsed_candidate = self._parse_bool(candidate)
+                        numeric_candidate = (
+                            isinstance(candidate, str)
+                            and re.fullmatch(r"[+-]?\d+", candidate.strip())
+                        )
+                        if parsed_candidate is not None:
+                            recursive_value = parsed_candidate
+                            index += 1
+                        elif numeric_candidate:
+                            recursive_value = int(candidate)
+                            index += 1
+                    values[shared_name] = recursive_value
+                else:
+                    values[shared_name] = True
                 index += 1
                 continue
 
@@ -442,6 +451,12 @@ class CommandBase(ABC):
 
     def get_maturity(self):
         """Return registry-backed maturity or an explicit extension override."""
+        from qzx.core.command_lifecycle import (
+            CommandLifecycleError,
+            command_maturity,
+            stage_maturity,
+        )
+
         try:
             return command_maturity(self.name)
         except CommandLifecycleError:
@@ -564,6 +579,8 @@ class CommandBase(ABC):
                         start,
                     )
                 try:
+                    from qzx.core.safety_backup import create_safety_backup
+
                     safety_backup = create_safety_backup(
                         self.name,
                         backup_target,
@@ -591,16 +608,19 @@ class CommandBase(ABC):
                         },
                     }, start, safety_backup=failed_backup)
         try:
-            signature = inspect.signature(self.execute)
-            has_varargs = any(
-                parameter.kind == inspect.Parameter.VAR_POSITIONAL
-                for parameter in signature.parameters.values()
-            )
-
             variadic_parameter = next(
                 (p for p in self.parameters if p.get("is_variadic")),
                 None,
             )
+            has_varargs = False
+            if variadic_parameter is not None:
+                import inspect
+
+                signature = inspect.signature(self.execute)
+                has_varargs = any(
+                    parameter.kind == inspect.Parameter.VAR_POSITIONAL
+                    for parameter in signature.parameters.values()
+                )
             if has_varargs and variadic_parameter is not None:
                 variadic_name = variadic_parameter["name"]
                 variadic_values = values.get(variadic_name, [])

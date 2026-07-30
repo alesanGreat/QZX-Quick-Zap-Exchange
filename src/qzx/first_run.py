@@ -4,10 +4,9 @@
 """One-time, local-only presentation state for the QZX attribution."""
 
 import os
-import platform
-from pathlib import Path
+import sys
 
-from qzx.identity import product_attribution
+from qzx._build_info import ATTRIBUTION
 
 
 _MARKER_FILENAME = "attribution-shown-v1"
@@ -18,20 +17,19 @@ def state_directory(environ=None):
     environ = os.environ if environ is None else environ
     override = environ.get("QZX_STATE_DIR")
     if override:
-        return Path(override).expanduser()
+        return os.path.expanduser(override)
 
-    system = platform.system().lower()
-    if system == "windows":
-        base = environ.get("LOCALAPPDATA")
-        if base:
-            return Path(base) / "qzx"
-    elif system == "darwin":
-        return Path.home() / "Library" / "Application Support" / "qzx"
+    if os.name == "nt" and environ.get("LOCALAPPDATA"):
+        return os.path.join(environ["LOCALAPPDATA"], "qzx")
+    if sys.platform == "darwin":
+        return os.path.expanduser(
+            os.path.join("~", "Library", "Application Support", "qzx")
+        )
 
-    xdg_state_home = environ.get("XDG_STATE_HOME")
-    if xdg_state_home:
-        return Path(xdg_state_home) / "qzx"
-    return Path.home() / ".local" / "state" / "qzx"
+    base = environ.get("XDG_STATE_HOME")
+    if base:
+        return os.path.join(base, "qzx")
+    return os.path.expanduser(os.path.join("~", ".local", "state", "qzx"))
 
 
 def claim_first_run_attribution(environ=None, directory=None):
@@ -41,17 +39,26 @@ def claim_first_run_attribution(environ=None, directory=None):
     When local state cannot be persisted, returning ``True`` favors showing the
     attribution instead of silently losing the required first-run disclosure.
     """
+    environ = os.environ if environ is None else environ
     marker_directory = (
-        Path(directory)
+        os.fspath(directory)
         if directory is not None
         else state_directory(environ)
     )
-    marker = marker_directory / _MARKER_FILENAME
+    marker = os.path.join(marker_directory, _MARKER_FILENAME)
     try:
-        marker_directory.mkdir(parents=True, exist_ok=True)
-        with marker.open("x", encoding="utf-8", newline="\n") as handle:
-            handle.write(product_attribution())
-            handle.write("\n")
+        os.makedirs(marker_directory, exist_ok=True)
+        descriptor = os.open(
+            marker,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600,
+        )
+        try:
+            pending = (ATTRIBUTION + "\n").encode("utf-8")
+            while pending:
+                pending = pending[os.write(descriptor, pending):]
+        finally:
+            os.close(descriptor)
         try:
             os.chmod(marker, 0o600)
         except OSError:

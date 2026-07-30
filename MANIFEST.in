@@ -4,6 +4,8 @@ include LICENSE
 include NOTICE
 include qzx.bat
 include qzx.sh
+include scripts/sync_command_index.py
+include scripts/sync_runtime_metadata.py
 include scripts/sync_test_environments.py
 recursive-include src/qzx/resources *.json
 prune docs

@@ -114,7 +114,7 @@ recommended after only `pip install qzx`:
 ```bash
 qzx scanProject . --json
 qzx projectDoctor . --json
-qzx repairWorkspace . --json
+qzx auditWorkspace . --json
 qzx systemDoctor --json
 qzx auditRepository . --json
 ```
@@ -125,6 +125,14 @@ Install the checkout for development:
 python -m pip install -e .
 python -m pytest -q
 ```
+
+The repository launchers (`qzx.bat` and `qzx.sh`) can also run the checkout
+directly. They prefer the standard CPython 3.13 runtime selected explicitly
+with `QZX_PYTHON`, an active compatible environment, or an existing `uv`
+installation. Ordinary invocations use a validated packaged command index and
+import only the requested command; full discovery remains a development and CI
+integrity check. The basic `qzx Welcome` path avoids system, memory, and storage
+probes; request those details explicitly with `qzx Welcome true`.
 
 Optional command groups can be installed with
 `python -m pip install "qzx[filetype]"` or
@@ -196,6 +204,13 @@ operating system, date, fixture, and exit code on the
 - `src/qzx/resources/test-environments.json` is the result-neutral source for
   the operating systems, versions, architectures, and runtime used by the
   automated test matrix.
+- `src/qzx/resources/command-index.json` is a generated, validated projection
+  of the discovered command classes. It lets each invocation import only the
+  requested command module; `scripts/sync_command_index.py` regenerates or
+  verifies it.
+- `src/qzx/_build_info.py` is the generated lightweight startup projection of
+  the canonical product and lifecycle manifests;
+  `scripts/sync_runtime_metadata.py` regenerates or verifies it.
 - `src/qzx/commands/` contains command implementations.
 - `tests/` contains the public automated Python test suite.
 - `examples/` contains standalone usage examples.

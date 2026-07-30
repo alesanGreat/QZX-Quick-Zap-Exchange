@@ -61,8 +61,8 @@ class QZXVersionCommand(CommandBase):
             # Get QZX installation information
             qzx_info = {}
             try:
-                commands = CommandLoader().discover_commands()
-                qzx_info["command_count"] = len(set(commands.values()))
+                commands = CommandLoader().get_indexed_commands()
+                qzx_info["command_count"] = len(commands)
             except Exception:
                 # Ignore errors in getting installation info
                 pass

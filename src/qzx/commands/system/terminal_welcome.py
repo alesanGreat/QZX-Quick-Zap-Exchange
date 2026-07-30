@@ -5,33 +5,66 @@
 TerminalWelcome Module - Manages the welcome screen for QZX Terminal
 """
 
-import os
-import sys
+import importlib
 import platform
 
-# Try to import optional modules
-try:
-    import psutil
-    PSUTIL_AVAILABLE = True
-except ImportError:
-    PSUTIL_AVAILABLE = False
+from qzx.welcome_text import basic_welcome_message
+
+_PSUTIL_UNSET = object()
+_PSUTIL_MODULE = _PSUTIL_UNSET
+
+
+def _load_psutil():
+    """Load optional probes only for an explicitly detailed request."""
+    global _PSUTIL_MODULE
+    if _PSUTIL_MODULE is _PSUTIL_UNSET:
+        try:
+            _PSUTIL_MODULE = importlib.import_module("psutil")
+        except ImportError:
+            _PSUTIL_MODULE = None
+    return _PSUTIL_MODULE
+
 
 class TerminalWelcome:
     """
     Class that manages the QZX Terminal welcome screen
     """
     
-    def __init__(self, qzx_version="0.02"):
+    def __init__(
+        self,
+        qzx_version=None,
+        system_info_provider=None,
+        psutil_loader=None,
+    ):
         """
         Initialize the welcome manager
         
         Args:
-            qzx_version (str): Current QZX version
+            qzx_version (str): Current QZX version. Defaults to the packaged
+                development version.
+            system_info_provider (callable): Optional deterministic provider
+                for the detailed view.
+            psutil_loader (callable): Optional dependency loader used only by
+                the detailed view.
         """
+        if qzx_version is None:
+            from qzx import __version__
+
+            qzx_version = __version__
         self.qzx_version = qzx_version
-        self.system_info = self._get_system_info()
+        self._system_info = None
+        self._system_info_provider = system_info_provider
+        self._psutil_loader = psutil_loader or _load_psutil
+
+    @property
+    def system_info(self):
+        """Collect expensive environment details only when a caller needs them."""
+        if self._system_info is None:
+            provider = self._system_info_provider or self._get_system_info
+            self._system_info = provider()
+        return self._system_info
     
-    def get_welcome_message(self, show_full_info=True):
+    def get_welcome_message(self, show_full_info=False):
         """
         Generate the welcome message
         
@@ -41,25 +74,26 @@ class TerminalWelcome:
         Returns:
             str: Formatted welcome message
         """
-        # Base message with enhanced professor greeting and version info
-        welcome = f"""
-=================================================================
-Welcome Professor! 
+        welcome = basic_welcome_message(self.qzx_version)
+        if show_full_info:
+            welcome += """
+System
+------
+{}
 
-QZX - Quick Zap Exchange - Version {self.qzx_version}
-I am at your service. Ready to assist with your tasks.
-=================================================================
-"""
+Memory
+------
+{}
 
-        # Basic instructions
-        welcome += """
------------------------------------------------------------------
-Type 'list' to see available commands
-Type 'help <command>' to get help on a specific command
-Type 'WonderMyEnvironment' to see system information
-Type 'exit' or press Ctrl+D to exit
+Storage
+-------
+{}
 =================================================================
-"""
+""".format(
+                self._format_system_info(),
+                self._format_ram_info(),
+                self._format_disk_info(),
+            )
         return welcome
     
     def _get_system_info(self):
@@ -79,24 +113,26 @@ Type 'exit' or press Ctrl+D to exit
             "python_implementation": platform.python_implementation()
         }
         
-        # Additional information if psutil is available
-        if PSUTIL_AVAILABLE:
+        # Disk probes can block on sleeping or disconnected mount points, so
+        # even importing the optional dependency belongs to the detailed path.
+        psutil_module = self._psutil_loader()
+        if psutil_module is not None:
             # RAM
             try:
-                virtual_memory = psutil.virtual_memory()
+                virtual_memory = psutil_module.virtual_memory()
                 info["ram_total"] = virtual_memory.total
                 info["ram_available"] = virtual_memory.available
                 info["ram_used"] = virtual_memory.used
                 info["ram_percent"] = virtual_memory.percent
-            except:
+            except Exception:
                 pass
             
             # Disk
             try:
                 disk_info = []
-                for partition in psutil.disk_partitions(all=False):
+                for partition in psutil_module.disk_partitions(all=False):
                     try:
-                        usage = psutil.disk_usage(partition.mountpoint)
+                        usage = psutil_module.disk_usage(partition.mountpoint)
                         disk_info.append({
                             "device": partition.device,
                             "mountpoint": partition.mountpoint,
@@ -106,17 +142,17 @@ Type 'exit' or press Ctrl+D to exit
                             "free": usage.free,
                             "percent": usage.percent
                         })
-                    except:
+                    except Exception:
                         pass
                 info["disk_info"] = disk_info
-            except:
+            except Exception:
                 pass
             
             # CPU
             try:
-                info["cpu_count_physical"] = psutil.cpu_count(logical=False)
-                info["cpu_count_logical"] = psutil.cpu_count(logical=True)
-            except:
+                info["cpu_count_physical"] = psutil_module.cpu_count(logical=False)
+                info["cpu_count_logical"] = psutil_module.cpu_count(logical=True)
+            except Exception:
                 pass
         
         return info
@@ -139,11 +175,10 @@ Type 'exit' or press Ctrl+D to exit
         if "processor" in info and info["processor"]:
             result += f"Processor: {info.get('processor')}\n"
         
-        if PSUTIL_AVAILABLE:
-            if "cpu_count_physical" in info:
-                result += f"Physical cores: {info.get('cpu_count_physical', 'Unknown')}\n"
-            if "cpu_count_logical" in info:
-                result += f"Logical cores: {info.get('cpu_count_logical', 'Unknown')}\n"
+        if "cpu_count_physical" in info:
+            result += f"Physical cores: {info.get('cpu_count_physical', 'Unknown')}\n"
+        if "cpu_count_logical" in info:
+            result += f"Logical cores: {info.get('cpu_count_logical', 'Unknown')}\n"
         
         result += f"Python: {info.get('python_implementation', 'Unknown')} {info.get('python_version', '')}"
         
@@ -158,7 +193,7 @@ Type 'exit' or press Ctrl+D to exit
         """
         info = self.system_info
         
-        if not PSUTIL_AVAILABLE:
+        if self._psutil_loader() is None:
             return "RAM information not available (requires 'psutil' module)"
         
         if "ram_total" not in info:
@@ -180,7 +215,7 @@ Type 'exit' or press Ctrl+D to exit
         """
         info = self.system_info
         
-        if not PSUTIL_AVAILABLE:
+        if self._psutil_loader() is None:
             return "Disk information not available (requires 'psutil' module)"
         
         if "disk_info" not in info or not info["disk_info"]:
@@ -194,8 +229,13 @@ Type 'exit' or press Ctrl+D to exit
             percent = disk.get("percent", 0)
             
             # Format line for each disk
-            disk_line = f"{disk.get('device', 'Unknown')} ({disk.get('mountpoint', '')}): "
-            disk_line += f"Total: {total} | Used: {used} ({percent}%) | Free: {free}"
+            disk_line = "{} ({}): ".format(
+                disk.get("device", "Unknown"),
+                disk.get("mountpoint", ""),
+            )
+            disk_line += (
+                f"Total: {total} | Used: {used} ({percent}%) | Free: {free}"
+            )
             
             if result:
                 result += "\n"
@@ -291,5 +331,5 @@ Type 'exit' or press Ctrl+D to exit
                     return f"{bytes_val:.2f} {unit}"
                 bytes_val /= 1024.0
             return f"{bytes_val:.2f} PB"
-        except:
-            return str(bytes_val) 
+        except (TypeError, ValueError, OverflowError):
+            return str(bytes_val)

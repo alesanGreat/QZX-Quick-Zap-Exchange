@@ -35,30 +35,26 @@ class WonderCommandsAmountCommand(CommandBase):
             Dictionary with the count of available commands
         """
         try:
-            loaded_commands = CommandLoader().discover_commands()
-            command_instances = {
-                command_class: command_class()
-                for command_class in set(loaded_commands.values())
-            }
+            command_entries = CommandLoader().get_indexed_commands()
             canonical_names = {
-                instance.name.lower() for instance in command_instances.values()
+                entry["name"].lower() for entry in command_entries
             }
             aliases = {
                 alias.lower()
-                for instance in command_instances.values()
-                for alias in getattr(instance, "aliases", [])
+                for entry in command_entries
+                for alias in entry["aliases"]
                 if alias.lower() not in canonical_names
             }
             alias_count = len(aliases)
 
-            command_count = len(command_instances)
+            command_count = len(command_entries)
             command_list = sorted(
-                instance.name for instance in command_instances.values()
+                entry["name"] for entry in command_entries
             )
             categories = {}
 
-            for instance in command_instances.values():
-                category = instance.category
+            for entry in command_entries:
+                category = entry["category"]
                 categories[category] = categories.get(category, 0) + 1
             
             # Prepare the result

@@ -163,7 +163,10 @@ class QZXTerminal(cmd.Cmd):
         self.show_path = show_path
         self.history_file = os.path.expanduser(history_file) if history_file else None
         self.command_loader = CommandLoader()
-        self.commands = self.command_loader.discover_commands()
+        self.commands = {
+            name: None
+            for name in self.command_loader.get_known_command_names()
+        }
         
         # Store initial directory
         self.initial_directory = os.getcwd()
@@ -277,8 +280,8 @@ class QZXTerminal(cmd.Cmd):
         
         # Execute the command using QZX command system
         try:
-            cmd_obj = self.commands.get(command.lower())
-            if cmd_obj:
+            cmd_instance = self._command_instance(command)
+            if cmd_instance:
                 from qzx.cli import (
                     _capture_process_stdout,
                     _parse_cli_request,
@@ -290,9 +293,6 @@ class QZXTerminal(cmd.Cmd):
                     [command, *args]
                 )
 
-                # Instantiate the command
-                cmd_instance = cmd_obj()
-                
                 # Use the same parser, approval gates, and result contract as
                 # the regular CLI.
                 stdout_context = (
@@ -321,6 +321,16 @@ class QZXTerminal(cmd.Cmd):
                 print(f"Unknown command: {command}")
         except Exception as e:
             print(f"Error executing command '{command}': {str(e)}")
+
+    def _command_instance(self, command_name):
+        """Resolve one interactive command without importing the full catalog."""
+        command_class = self.commands.get(command_name.lower())
+        if command_class is not None:
+            return command_class()
+        command_loader = getattr(self, "command_loader", None)
+        if command_loader is None:
+            return None
+        return command_loader.get_command(command_name)
     
     def do_help(self, arg):
         """Show help for commands"""
@@ -329,15 +339,17 @@ class QZXTerminal(cmd.Cmd):
             print("\nAvailable QZX commands:")
             print("=" * 70)
             
-            # Group commands by category
+            # Group indexed canonical commands by category without importing
+            # every implementation module.
             commands_by_category = {}
-            for cmd_name, cmd_class in self.commands.items():
-                cmd_instance = cmd_class()
-                category = cmd_instance.category
+            for entry in self.command_loader.get_indexed_commands():
+                category = entry["category"]
                 if category not in commands_by_category:
                     commands_by_category[category] = []
-                
-                commands_by_category[category].append((cmd_name, cmd_instance.description))
+
+                commands_by_category[category].append(
+                    (entry["name"], entry["description"])
+                )
             
             # Print commands by category
             for category, cmds in sorted(commands_by_category.items()):
@@ -381,10 +393,9 @@ class QZXTerminal(cmd.Cmd):
                 return
             
             # Regular command help
-            cmd_class = self.commands.get(cmd_name)
-            
-            if cmd_class:
-                cmd_instance = cmd_class()
+            cmd_instance = self._command_instance(cmd_name)
+
+            if cmd_instance:
                 print(f"\nCommand: {cmd_name}")
                 print(f"Description: {cmd_instance.description}")
                 

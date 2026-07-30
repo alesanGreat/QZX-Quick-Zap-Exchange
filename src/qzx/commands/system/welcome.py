@@ -5,13 +5,7 @@
 Welcome Command - Displays the system welcome information
 """
 
-import os
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
+from qzx import __version__
 from qzx.core.command_base import CommandBase
 
 # Import the welcome module
@@ -23,31 +17,41 @@ class WelcomeCommand(CommandBase):
     """
     
     name = "welcome"
-    aliases = ["welcome", "hello", "hi"]
-    description = "Displays the welcome screen with system information"
+    aliases = ["hello", "hi"]
+    description = (
+        "Displays the QZX welcome immediately, with optional system details"
+    )
     category = "system"
     
     parameters = [
         {
             'name': 'full_info',
-            'description': 'Show full system information (true/false)',
+            'description': (
+                'Collect and show system, memory, and storage details; disabled '
+                'by default for fast startup'
+            ),
             'required': False,
-            'default': 'true'
+            'default': False,
+            'type': 'bool'
         }
     ]
     
     examples = [
         {
             'command': 'qzx Welcome',
-            'description': 'Display the welcome screen with full system information'
+            'description': 'Display the welcome screen immediately'
         },
         {
-            'command': 'qzx Welcome false',
-            'description': 'Display the basic welcome screen without detailed information'
+            'command': 'qzx Welcome true',
+            'description': 'Collect system details, then display the detailed welcome screen'
         }
     ]
+
+    def __init__(self, welcome_factory=None):
+        """Accept a deterministic presentation boundary for testing."""
+        self._welcome_factory = welcome_factory or TerminalWelcome
     
-    def execute(self, full_info="true"):
+    def execute(self, full_info=False):
         """
         Display the welcome screen with system information
         
@@ -64,18 +68,20 @@ class WelcomeCommand(CommandBase):
             else:
                 show_full_info = bool(full_info)
             
-            # Get the QZX version
-            qzx_version = "0.02"  # Default, could be obtained dynamically
-            
             # Instantiate the welcome generator
-            welcome_generator = TerminalWelcome(qzx_version=qzx_version)
+            welcome_generator = self._welcome_factory(qzx_version=__version__)
             
             # Get the formatted message
-            welcome_message = welcome_generator.get_welcome_message(show_full_info=show_full_info)
+            welcome_message = welcome_generator.get_welcome_message(
+                show_full_info=show_full_info
+            )
             
             # Create a detailed description of what was displayed
             info_level = "detailed" if show_full_info else "basic"
-            message = f"QZX Welcome screen ({info_level} view) displayed successfully. Version {qzx_version}."
+            message = (
+                f"QZX welcome screen ({info_level} view) displayed. "
+                f"Version {__version__}."
+            )
             
             return {
                 "success": True,
@@ -83,7 +89,7 @@ class WelcomeCommand(CommandBase):
                 "output": welcome_message,
                 "welcome_displayed": True,
                 "info_level": info_level,
-                "qzx_version": qzx_version
+                "qzx_version": __version__
             }
             
         except Exception as e:

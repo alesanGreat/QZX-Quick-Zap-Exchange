@@ -1,4 +1,7 @@
 import os
+from copy import deepcopy
+
+import pytest
 
 from qzx.commands.development.analyze_complexity import AnalyzeComplexityCommand
 from qzx.commands.file.change_permissions import ChangePermissionsCommand
@@ -7,6 +10,11 @@ from qzx.commands.system.qzx_list_commands import qzxListCommands
 from qzx.commands.system.get_command_count import WonderCommandsAmountCommand
 from qzx.commands.system.version import QZXVersionCommand
 from qzx.core.command_loader import CommandLoader
+from qzx.core.command_index import (
+    CommandIndexError,
+    load_command_index,
+    validate_command_index_document,
+)
 from qzx.core.command_lifecycle import CommandLifecycleError
 
 
@@ -17,7 +25,71 @@ def test_command_loader_discovers_commands_on_first_lookup():
 
     assert command is not None
     assert command.name == "version"
+    assert loader._discovered is False
+    assert set(loader.command_modules) == {
+        "qzx.commands.system.version",
+    }
     assert loader.get_all_commands()
+    assert loader._discovered is True
+
+
+def test_canonical_lookup_is_lazy_for_mixed_case_command_names():
+    loader = CommandLoader()
+
+    command = loader.get_command("GETcurrentDATE")
+
+    assert command is not None
+    assert command.name == "getCurrentDate"
+    assert loader._discovered is False
+    assert set(loader.command_modules) == {
+        "qzx.commands.system.get_current_date",
+    }
+
+
+def test_alias_lookup_is_lazy_and_unknown_lookup_does_not_scan_catalog():
+    alias_loader = CommandLoader()
+    unknown_loader = CommandLoader()
+
+    alias = alias_loader.get_command("qzxVersion")
+    unknown = unknown_loader.get_command("commandThatDoesNotExist")
+
+    assert alias.name == "version"
+    assert alias_loader._discovered is False
+    assert set(alias_loader.command_modules) == {
+        "qzx.commands.system.version",
+    }
+    assert unknown is None
+    assert unknown_loader._discovered is False
+    assert unknown_loader.command_modules == {}
+
+
+def test_command_list_uses_index_without_importing_implementations():
+    command = qzxListCommands()
+
+    result = command.execute()
+
+    assert result["success"] is True
+    assert result["summary"]["canonical_commands"] >= 90
+    assert command.command_loader.command_modules == {}
+    assert command.command_loader._discovered is False
+
+
+def test_command_index_rejects_alias_collisions():
+    document = deepcopy(load_command_index())
+    document["commands"][1]["aliases"].append(
+        document["commands"][0]["name"]
+    )
+
+    with pytest.raises(CommandIndexError, match="collides"):
+        validate_command_index_document(document)
+
+
+def test_command_index_rejects_duplicate_canonical_records():
+    document = deepcopy(load_command_index())
+    document["commands"].insert(1, deepcopy(document["commands"][0]))
+
+    with pytest.raises(CommandIndexError, match="duplicate canonical"):
+        validate_command_index_document(document)
 
 
 def test_lifecycle_inventory_error_preserves_module_import_cause():

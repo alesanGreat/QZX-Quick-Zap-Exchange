@@ -48,6 +48,7 @@ def test_lifecycle_policy_and_registry_ship_with_distributions():
     setup = (PROJECT_ROOT / "setup.py").read_text(encoding="utf-8")
 
     assert "include docs/command-lifecycle.md" in manifest
+    assert '"resources/command-index.json"' in setup
     assert '"resources/command-lifecycle.json"' in setup
 
 

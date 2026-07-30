@@ -6,15 +6,15 @@ QZX Command Loader - Handles loading commands from various modules
 """
 
 import importlib
-import inspect
-import pkgutil
-import re
 import sys
 from .command_base import CommandBase
-from .command_lifecycle import (
-    CommandLifecycleError,
-    command_maturity,
-    validate_lifecycle_inventory,
+from .command_index import (
+    CommandIndexError,
+    indexed_command,
+    indexed_command_names,
+    indexed_command_records,
+    validate_command_index_inventory,
+    validate_loaded_command,
 )
 
 class CommandLoader:
@@ -36,7 +36,7 @@ class CommandLoader:
         # is intentionally disabled.
         self.attempted_installs = set()
     
-    def discover_commands(self):
+    def discover_commands(self, validate_index=True):
         """
         Discover and load all command classes from the command paths
         
@@ -46,21 +46,22 @@ class CommandLoader:
         if self._discovered:
             return self.commands
 
-        commands_package = importlib.import_module("qzx.commands")
-        self.command_packages = sorted(
-            module.name
-            for module in pkgutil.iter_modules(
-                commands_package.__path__,
-                commands_package.__name__ + ".",
-            )
-            if module.ispkg and not module.name.rsplit(".", 1)[-1].startswith("_")
-        )
+        # Keep this standard-library import off the one-command hot path while
+        # making full discovery self-contained for generators and CI.
+        import pkgutil
+
+        self.command_packages = self._discover_command_packages()
 
         for package_name in self.command_packages:
             package = importlib.import_module(package_name)
             for module in pkgutil.iter_modules(package.__path__):
                 if not module.ispkg and not module.name.startswith("_"):
                     self._load_command_from_module(f"{package_name}.{module.name}")
+
+        from .command_lifecycle import (
+            CommandLifecycleError,
+            validate_lifecycle_inventory,
+        )
 
         try:
             validate_lifecycle_inventory(
@@ -71,11 +72,32 @@ class CommandLoader:
             if not self.load_errors:
                 raise
             raise self._lifecycle_error_with_load_context(exc) from exc
+        if validate_index:
+            validate_command_index_inventory(set(self.commands.values()))
         self._discovered = True
         return self.commands
 
+    def _discover_command_packages(self):
+        """Return command category packages without importing their modules."""
+        import pkgutil
+
+        if self.command_packages:
+            return self.command_packages
+        commands_package = importlib.import_module("qzx.commands")
+        self.command_packages = sorted(
+            module.name
+            for module in pkgutil.iter_modules(
+                commands_package.__path__,
+                commands_package.__name__ + ".",
+            )
+            if module.ispkg and not module.name.rsplit(".", 1)[-1].startswith("_")
+        )
+        return self.command_packages
+
     def _lifecycle_error_with_load_context(self, lifecycle_error):
         """Attach suppressed module import failures to inventory errors."""
+        from .command_lifecycle import CommandLifecycleError
+
         failures = "; ".join(
             "{} [{}]: {}".format(
                 module_name,
@@ -117,11 +139,68 @@ class CommandLoader:
         Returns:
             str: The name of the missing module, or None if not found
         """
+        import re
+
         # Common pattern for ImportError messages: "No module named 'X'"
         match = re.search(r"No module named '?([a-zA-Z0-9_\.-]+)'?", error_message)
         if match:
             return match.group(1)
         return None
+
+    def _load_indexed_command(self, entry):
+        """Import and register exactly one class named by the validated index."""
+        module_name = entry["module"]
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError as exc:
+            error_msg = str(exc)
+            self.load_errors[module_name] = {
+                "type": "ImportError",
+                "message": error_msg,
+                "missing_dependency": self._extract_missing_module_name(
+                    error_msg
+                ),
+            }
+            return None
+        except Exception as exc:
+            self.load_errors[module_name] = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+                "missing_dependency": None,
+            }
+            return None
+
+        self.command_modules[module_name] = module
+        command_class = getattr(module, entry["class_name"], None)
+        if (
+            not isinstance(command_class, type)
+            or not issubclass(command_class, CommandBase)
+            or command_class is CommandBase
+            or command_class.__module__ != module.__name__
+        ):
+            raise CommandIndexError(
+                "Indexed command '{}' does not resolve to the declared "
+                "CommandBase subclass '{}.{}'.".format(
+                    entry["name"],
+                    module_name,
+                    entry["class_name"],
+                )
+            )
+
+        validate_loaded_command(entry, command_class)
+        for lookup_name in [entry["name"], *entry["aliases"]]:
+            normalized = lookup_name.lower()
+            existing = self.commands.get(normalized)
+            if existing is not None and existing is not command_class:
+                raise CommandIndexError(
+                    "Indexed lookup '{}' conflicts with a command already "
+                    "loaded from '{}'.".format(
+                        lookup_name,
+                        existing.__module__,
+                    )
+                )
+            self.commands[normalized] = command_class
+        return command_class
     
     def _load_command_from_module(self, module_name):
         """
@@ -130,6 +209,8 @@ class CommandLoader:
         Args:
             module_name: Fully qualified module name
         """
+        import inspect
+
         try:
             # Import the module
             module = importlib.import_module(module_name)
@@ -227,29 +308,59 @@ class CommandLoader:
         Returns:
             Command instance or None if not found
         """
-        if not self.commands:
-            self.discover_commands()
-
         # Always convert to lowercase to ensure case-insensitivity
-        command_name = command_name.lower() if command_name else ""
-        
-        command_class = self.commands.get(command_name)
+        command_name = command_name or ""
+        normalized_name = command_name.lower()
+        command_class = self.commands.get(normalized_name)
+        if command_class is None and not self._discovered:
+            entry = indexed_command(command_name)
+            if entry is None:
+                return None
+            self._load_indexed_command(entry)
+            module_error = self.load_errors.get(entry["module"])
+            if module_error is not None:
+                raise CommandIndexError(
+                    "Indexed command '{}' could not load module '{}': {}: {}.".format(
+                        entry["name"],
+                        entry["module"],
+                        module_error["type"],
+                        module_error["message"],
+                    )
+                )
+            command_class = self.commands.get(normalized_name)
+            if command_class is None:
+                raise CommandIndexError(
+                    "Indexed lookup '{}' was not registered after importing '{}'.".format(
+                        command_name,
+                        entry["module"],
+                    )
+                )
         if command_class:
             return command_class()
         return None
 
     def get_all_commands(self):
         """Return all registered commands, discovering them on first use."""
-        if not self.commands:
+        if not self._discovered:
             self.discover_commands()
         return self.commands
 
     def get_command_maturity(self, command_name):
         """Return lifecycle details for a canonical name or accepted alias."""
-        command = self.get_command(command_name)
-        if command is None:
+        from .command_lifecycle import command_maturity
+
+        entry = indexed_command(command_name)
+        if entry is None:
             return None
-        return command_maturity(command.name)
+        return command_maturity(entry["name"])
+
+    def get_indexed_commands(self):
+        """Return canonical metadata without importing command modules."""
+        return indexed_command_records()
+
+    def get_known_command_names(self):
+        """Return canonical and alias lookup names without full discovery."""
+        return indexed_command_names()
     
     def list_commands(self):
         """
@@ -258,14 +369,9 @@ class CommandLoader:
         Returns:
             List of (command_name, description, category) tuples
         """
-        if not self.commands:
-            self.discover_commands()
-
         result = [
-            (instance.name, instance.description, instance.category)
-            for instance in (
-                command_class() for command_class in set(self.commands.values())
-            )
+            (entry["name"], entry["description"], entry["category"])
+            for entry in indexed_command_records()
         ]
         
         # Sort by category and then by name

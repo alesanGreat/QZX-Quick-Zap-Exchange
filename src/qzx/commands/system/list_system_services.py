@@ -43,6 +43,11 @@ class ListSystemServicesCommand(CommandBase):
         },
     ]
 
+    def __init__(self, executable_finder=None, command_runner=None):
+        """Accept native boundaries explicitly for deterministic fallback tests."""
+        self._executable_finder = executable_finder or shutil.which
+        self._command_runner = command_runner or self._run
+
     def execute(self, status="all"):
         status_filter = str(status).strip().lower()
         if status_filter not in {"all", "running", "stopped"}:
@@ -141,45 +146,81 @@ class ListSystemServicesCommand(CommandBase):
 
     def _collect_windows_services(self):
         errors = []
-        powershell = shutil.which("powershell") or shutil.which("pwsh")
+        powershell = (
+            self._executable_finder("powershell")
+            or self._executable_finder("pwsh")
+        )
         if powershell:
-            result = self._run(
-                [
-                    powershell,
-                    "-NoProfile",
-                    "-Command",
-                    (
-                        "Get-Service | Select-Object Name, DisplayName, "
-                        "@{Name='Status';Expression={$_.Status.ToString()}} "
-                        "| ConvertTo-Json -Compress"
-                    ),
-                ]
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                decoded = json.loads(result.stdout)
-                items = decoded if isinstance(decoded, list) else [decoded]
-                return [
-                    {
-                        "name": item.get("Name", "unknown"),
-                        "display_name": item.get("DisplayName", ""),
-                        "status": (
-                            "running"
-                            if str(item.get("Status", "")).lower()
-                            == "running"
-                            else "stopped"
-                        ),
-                    }
-                    for item in items
-                ], "Windows Service Control Manager (PowerShell)", errors
-            errors.append(
-                "PowerShell Get-Service failed: "
-                + (result.stderr.strip() or "empty response")
-            )
+            command = [
+                powershell,
+                "-NoProfile",
+                "-Command",
+                (
+                    "Get-Service | Select-Object Name, DisplayName, "
+                    "@{Name='Status';Expression={$_.Status.ToString()}} "
+                    "| ConvertTo-Json -Compress"
+                ),
+            ]
+            try:
+                result = self._command_runner(command)
+            except subprocess.TimeoutExpired as exc:
+                errors.append(
+                    "PowerShell Get-Service timed out after {} seconds.".format(
+                        exc.timeout
+                    )
+                )
+            else:
+                if result.returncode == 0 and result.stdout.strip():
+                    try:
+                        decoded = json.loads(result.stdout)
+                    except json.JSONDecodeError as exc:
+                        errors.append(
+                            "PowerShell Get-Service returned invalid JSON: "
+                            f"{exc.msg}."
+                        )
+                    else:
+                        items = (
+                            decoded
+                            if isinstance(decoded, list)
+                            else [decoded]
+                        )
+                        if all(isinstance(item, dict) for item in items):
+                            return [
+                                {
+                                    "name": item.get("Name", "unknown"),
+                                    "display_name": item.get(
+                                        "DisplayName", ""
+                                    ),
+                                    "status": (
+                                        "running"
+                                        if str(
+                                            item.get("Status", "")
+                                        ).lower()
+                                        == "running"
+                                        else "stopped"
+                                    ),
+                                }
+                                for item in items
+                            ], (
+                                "Windows Service Control Manager (PowerShell)"
+                            ), errors
+                        errors.append(
+                            "PowerShell Get-Service returned an unexpected "
+                            "JSON shape."
+                        )
+                else:
+                    errors.append(
+                        "PowerShell Get-Service failed: "
+                        + (result.stderr.strip() or "empty response")
+                    )
 
-        service_control = shutil.which("sc.exe") or shutil.which("sc")
+        service_control = (
+            self._executable_finder("sc.exe")
+            or self._executable_finder("sc")
+        )
         if not service_control:
             raise FileNotFoundError("neither PowerShell nor sc.exe was found")
-        result = self._run(
+        result = self._command_runner(
             [
                 service_control,
                 "query",

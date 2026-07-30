@@ -25,7 +25,6 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib import request as urllib_request
 
 TELEMETRY_ENDPOINT = "https://qzx.yumbale.com/api/v1/telemetry"
 TELEMETRY_POLICY_URL = (
@@ -83,12 +82,11 @@ def _state_directory(environ=None):
     if override:
         return Path(override).expanduser()
 
-    system = platform.system().lower()
-    if system == "windows":
+    if os.name == "nt":
         base = environ.get("LOCALAPPDATA")
         if base:
             return Path(base) / "qzx"
-    elif system == "darwin":
+    elif sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "qzx"
 
     xdg_state_home = environ.get("XDG_STATE_HOME")
@@ -275,6 +273,12 @@ def _mark_sent(state_path, qzx_version, event_id):
 def send_event(event, state_path, endpoint=TELEMETRY_ENDPOINT, opener=None,
                timeout=_REQUEST_TIMEOUT_SECONDS, environ=None):
     """Send one event synchronously; intended for the worker and unit tests."""
+    # Importing urllib.request recursively imports the HTTP and email stacks.
+    # On synced Windows workspaces that can take several seconds, so keep it
+    # inside the already-backgrounded network path instead of charging every
+    # QZX invocation for a transport it will usually never need.
+    from urllib import request as urllib_request
+
     opener = urllib_request.urlopen if opener is None else opener
     payload = json.dumps(event, separators=(",", ":"), sort_keys=True).encode(
         "utf-8"

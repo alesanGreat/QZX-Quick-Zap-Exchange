@@ -1,0 +1,887 @@
+{
+  "schema_version": 1,
+  "commands": [
+    {
+      "name": "about",
+      "module": "qzx.commands.system.about",
+      "class_name": "AboutCommand",
+      "aliases": [
+        "qzxAbout",
+        "--about"
+      ],
+      "description": "Displays QZX product, creator, maintainer, and license details",
+      "category": "system"
+    },
+    {
+      "name": "analyzeComplexity",
+      "module": "qzx.commands.development.analyze_complexity",
+      "class_name": "AnalyzeComplexityCommand",
+      "aliases": [],
+      "description": "Analyzes code complexity metrics for files or projects",
+      "category": "development"
+    },
+    {
+      "name": "auditRepository",
+      "module": "qzx.commands.development.audit_repository",
+      "class_name": "AuditRepositoryCommand",
+      "aliases": [],
+      "description": "Runs security and quality audits on a Git repository (secrets, large files, duplicates, .gitignore compliance, licenses)",
+      "category": "development"
+    },
+    {
+      "name": "auditWorkspace",
+      "module": "qzx.commands.file.audit_workspace",
+      "class_name": "AuditWorkspaceCommand",
+      "aliases": [],
+      "description": "Builds a deterministic, fingerprinted workspace cleanup plan without altering workspace contents",
+      "category": "file"
+    },
+    {
+      "name": "bootstrapProject",
+      "module": "qzx.commands.development.bootstrap_project",
+      "class_name": "BootstrapProjectCommand",
+      "aliases": [],
+      "description": "Initializes a project from scratch, setting up directories, virtual environments, dependencies, .env files, and git hooks",
+      "category": "development"
+    },
+    {
+      "name": "changePermissions",
+      "module": "qzx.commands.file.change_permissions",
+      "class_name": "ChangePermissionsCommand",
+      "aliases": [],
+      "description": "Changes permissions of a file or directory",
+      "category": "file"
+    },
+    {
+      "name": "checkDependency",
+      "module": "qzx.commands.system.check_dependency",
+      "class_name": "CheckDependencyCommand",
+      "aliases": [],
+      "description": "Checks if a command-line dependency is installed in the system PATH and retrieves its version",
+      "category": "system"
+    },
+    {
+      "name": "checkDns",
+      "module": "qzx.commands.network.check_dns",
+      "class_name": "CheckDnsCommand",
+      "aliases": [],
+      "description": "Queries A, AAAA, MX, TXT, NS, and CNAME DNS records for a given domain",
+      "category": "network"
+    },
+    {
+      "name": "checkSslCertificate",
+      "module": "qzx.commands.network.check_ssl_certificate",
+      "class_name": "CheckSslCertificateCommand",
+      "aliases": [],
+      "description": "Inspects certificate dates, hostname coverage, and trust-chain validation",
+      "category": "network"
+    },
+    {
+      "name": "checkSystemPath",
+      "module": "qzx.commands.system.check_system_path",
+      "class_name": "CheckSystemPathCommand",
+      "aliases": [],
+      "description": "Diagnoses the system PATH variable, lists broken or duplicate folders, and locates all instances of a binary",
+      "category": "system"
+    },
+    {
+      "name": "checkUrlStatus",
+      "module": "qzx.commands.network.check_url_status",
+      "class_name": "CheckUrlStatusCommand",
+      "aliases": [],
+      "description": "Requests an HTTP(S) URL and reports its status code, response time, and basic headers.",
+      "category": "network"
+    },
+    {
+      "name": "cleanDevCaches",
+      "module": "qzx.commands.development.clean_dev_caches",
+      "class_name": "CleanDevCachesCommand",
+      "aliases": [],
+      "description": "Finds development caches, dependency directories, and generated build artifacts; preview is the default",
+      "category": "development"
+    },
+    {
+      "name": "clearScreen",
+      "module": "qzx.commands.system.clear_screen",
+      "class_name": "ClearScreenCommand",
+      "aliases": [
+        "cls",
+        "clear",
+        "clrscr"
+      ],
+      "description": "Clears the terminal screen",
+      "category": "system"
+    },
+    {
+      "name": "commandsBridge",
+      "module": "qzx.commands.system.commands_bridge",
+      "class_name": "CommandsBridgeCommand",
+      "aliases": [
+        "bridge",
+        "cmd",
+        "run"
+      ],
+      "description": "Executes allowlisted diagnostic system commands with bounded output",
+      "category": "system"
+    },
+    {
+      "name": "compareFiles",
+      "module": "qzx.commands.development.compare_files",
+      "class_name": "CompareFilesCommand",
+      "aliases": [],
+      "description": "Compares text files line by line and binary files by exact bytes and SHA-256",
+      "category": "development"
+    },
+    {
+      "name": "compressZip",
+      "module": "qzx.commands.file.compress_zip",
+      "class_name": "CompressZipCommand",
+      "aliases": [],
+      "description": "Compresses a file or directory into an atomic ZIP archive with custom exclusion rules",
+      "category": "file"
+    },
+    {
+      "name": "copyFile",
+      "module": "qzx.commands.file.copy_file",
+      "class_name": "CopyFileCommand",
+      "aliases": [],
+      "description": "Copies one file, symbolic link, or directory to a separate destination with explicit depth and replacement behavior",
+      "category": "file"
+    },
+    {
+      "name": "countLinesInFile",
+      "module": "qzx.commands.file.count_lines_in_file",
+      "class_name": "CountLinesInFileCommand",
+      "aliases": [],
+      "description": "Counts the number of lines in files with support for wildcards and recursive searching",
+      "category": "file"
+    },
+    {
+      "name": "createDirectory",
+      "module": "qzx.commands.file.create_directory",
+      "class_name": "CreateDirectoryCommand",
+      "aliases": [],
+      "description": "Creates one or more directories at specified paths",
+      "category": "file"
+    },
+    {
+      "name": "createDocTemplatePython",
+      "module": "qzx.commands.development.create_doc_template_python",
+      "class_name": "CreateDocTemplatePythonCommand",
+      "aliases": [],
+      "description": "Previews or adds generated docstring templates to functions, methods, and classes in one Python file",
+      "category": "development"
+    },
+    {
+      "name": "currentDir",
+      "module": "qzx.commands.system.current_dir",
+      "class_name": "CurrentDirCommand",
+      "aliases": [
+        "pwd",
+        "cwd",
+        "dir",
+        "where",
+        "location"
+      ],
+      "description": "Shows the current working directory",
+      "category": "system"
+    },
+    {
+      "name": "decompressZip",
+      "module": "qzx.commands.file.decompress_zip",
+      "class_name": "DecompressZipCommand",
+      "aliases": [],
+      "description": "Extracts files from a ZIP archive after validating paths, types, limits, and destination conflicts",
+      "category": "file"
+    },
+    {
+      "name": "deleteFile",
+      "module": "qzx.commands.file.delete_file",
+      "class_name": "DeleteFileCommand",
+      "aliases": [],
+      "description": "Previews or deletes a file or directory from the filesystem",
+      "category": "file"
+    },
+    {
+      "name": "deployProject",
+      "module": "qzx.commands.development.deploy_project",
+      "class_name": "DeployProjectCommand",
+      "aliases": [],
+      "description": "Previews or deploys one explicit artifact over SSH using a verified remote backup, SHA-256 validation, atomic promotion, health checks, and automatic rollback",
+      "category": "development"
+    },
+    {
+      "name": "detectFileType",
+      "module": "qzx.commands.file.detect_file_type",
+      "class_name": "WonderFileTypeMagicCommand",
+      "aliases": [
+        "wonderFileTypeMagic"
+      ],
+      "description": "Identifies file type based on its magic number (file signature) rather than extension",
+      "category": "file"
+    },
+    {
+      "name": "downloadFile",
+      "module": "qzx.commands.file.download_file",
+      "class_name": "DownloadFileCommand",
+      "aliases": [],
+      "description": "Downloads a file from the Internet (similar to 'wget' or 'curl' in Unix)",
+      "category": "file"
+    },
+    {
+      "name": "findBrokenSymlinks",
+      "module": "qzx.commands.file.find_broken_symlinks",
+      "class_name": "FindBrokenSymlinksCommand",
+      "aliases": [],
+      "description": "Scans directories for broken symbolic links (pointing to nonexistent files or folders)",
+      "category": "file"
+    },
+    {
+      "name": "findDeadCode",
+      "module": "qzx.commands.development.find_dead_code",
+      "class_name": "FindDeadCodeCommand",
+      "aliases": [],
+      "description": "Scans files for declared functions and classes, and identifies those with zero references in other files",
+      "category": "development"
+    },
+    {
+      "name": "findDuplicateFiles",
+      "module": "qzx.commands.file.find_duplicate_files",
+      "class_name": "FindDuplicateFilesCommand",
+      "aliases": [],
+      "description": "Scans a directory for identical files using size, SHA-256, and byte-for-byte verification",
+      "category": "file"
+    },
+    {
+      "name": "findFiles",
+      "module": "qzx.commands.file.find_files",
+      "class_name": "FindFilesCommand",
+      "aliases": [],
+      "description": "Advanced file search with multiple filtering options (like find + grep combined)",
+      "category": "file"
+    },
+    {
+      "name": "findLargeFiles",
+      "module": "qzx.commands.file.find_large_files",
+      "class_name": "FindLargeFilesCommand",
+      "aliases": [],
+      "description": "Searches for files with specific extensions that exceed a given size",
+      "category": "file"
+    },
+    {
+      "name": "findText",
+      "module": "qzx.commands.file.find_text",
+      "class_name": "FindTextCommand",
+      "aliases": [],
+      "description": "Searches for text patterns in files with advanced filtering options",
+      "category": "file"
+    },
+    {
+      "name": "formatCode",
+      "module": "qzx.commands.development.format_code",
+      "class_name": "FormatCodeCommand",
+      "aliases": [
+        "fmtCode",
+        "codeFmt",
+        "formatSource"
+      ],
+      "description": "Formats source code files by auto-detecting language and invoking the right formatter",
+      "category": "development"
+    },
+    {
+      "name": "generateContent",
+      "module": "qzx.commands.system.generate_content",
+      "class_name": "WonderContentGenCommand",
+      "aliases": [
+        "WonderContentGen",
+        "explainfile",
+        "aianalyze",
+        "analyzeContent"
+      ],
+      "description": "Previews and optionally sends bounded file samples to Google Gemini for explanation",
+      "category": "system"
+    },
+    {
+      "name": "getCommandCount",
+      "module": "qzx.commands.system.get_command_count",
+      "class_name": "WonderCommandsAmountCommand",
+      "aliases": [
+        "wonderCommandsAmount"
+      ],
+      "description": "Reports the total number of available commands in QZX",
+      "category": "system"
+    },
+    {
+      "name": "getCPULoad",
+      "module": "qzx.commands.system.get_cpu_load",
+      "class_name": "GetCPULoadCommand",
+      "aliases": [],
+      "description": "Gets information about current CPU usage",
+      "category": "system"
+    },
+    {
+      "name": "getCurrentDate",
+      "module": "qzx.commands.system.get_current_date",
+      "class_name": "GetCurrentDateCommand",
+      "aliases": [],
+      "description": "Gets the current date in YYYY-MM-DD format",
+      "category": "system"
+    },
+    {
+      "name": "getCurrentTime",
+      "module": "qzx.commands.system.get_current_time",
+      "class_name": "GetCurrentTimeCommand",
+      "aliases": [],
+      "description": "Gets the current time in HH-MM-SS-milliseconds format",
+      "category": "system"
+    },
+    {
+      "name": "getCurrentUser",
+      "module": "qzx.commands.system.get_current_user",
+      "class_name": "GetCurrentUserCommand",
+      "aliases": [],
+      "description": "Gets information about the currently logged in user",
+      "category": "system"
+    },
+    {
+      "name": "getDiskInfo",
+      "module": "qzx.commands.system.get_disk_info",
+      "class_name": "GetDiskInfoCommand",
+      "aliases": [],
+      "description": "Gets information about disk space usage",
+      "category": "system"
+    },
+    {
+      "name": "getDiskName",
+      "module": "qzx.commands.system.get_disk_name",
+      "class_name": "GetDiskNameCommand",
+      "aliases": [],
+      "description": "Gets disk name/model information for a disk or all disks",
+      "category": "system"
+    },
+    {
+      "name": "getEnvironmentInfo",
+      "module": "qzx.commands.system.get_environment_info",
+      "class_name": "WonderMyEnvironmentCommand",
+      "aliases": [
+        "WonderMyEnvironment",
+        "environment",
+        "sysinfo"
+      ],
+      "description": "Compatibility interface for systemInfo; retained temporarily for 0.2.x scripts",
+      "category": "system"
+    },
+    {
+      "name": "getFileHash",
+      "module": "qzx.commands.file.get_file_hash",
+      "class_name": "GetFileHashCommand",
+      "aliases": [],
+      "description": "Calculates cryptographic hashes (MD5, SHA-1, SHA-256) of a file",
+      "category": "file"
+    },
+    {
+      "name": "getGitStatus",
+      "module": "qzx.commands.development.get_git_status",
+      "class_name": "GetGitStatusCommand",
+      "aliases": [],
+      "description": "Provides a structured summary of the Git repository state (branch, remote, changes, recent commits)",
+      "category": "development"
+    },
+    {
+      "name": "getGPULoad",
+      "module": "qzx.commands.system.get_gpu_load",
+      "class_name": "GetGPULoadCommand",
+      "aliases": [
+        "gpuload",
+        "gpuinfo",
+        "gpustatus"
+      ],
+      "description": "Displays information about GPUs in the system",
+      "category": "system"
+    },
+    {
+      "name": "getHumanLanguageStats",
+      "module": "qzx.commands.file.get_human_language_stats",
+      "class_name": "GetHumanLanguageStatsFromFileCommand",
+      "aliases": [
+        "getHumanLanguageStatsFromFile"
+      ],
+      "description": "Analyzes files to estimate human-language distribution, with wildcard and recursive search support.",
+      "category": "file"
+    },
+    {
+      "name": "getNetworkConfig",
+      "module": "qzx.commands.network.get_network_config",
+      "class_name": "GetNetworkConfigCommand",
+      "aliases": [],
+      "description": "Displays comprehensive network status (interfaces, local IPs, DNS, public IP, VPN detection)",
+      "category": "network"
+    },
+    {
+      "name": "getProgrammingLanguageStats",
+      "module": "qzx.commands.file.get_programming_language_stats",
+      "class_name": "GetProgrammingLanguageStatsFromFileCommand",
+      "aliases": [
+        "getProgrammingLanguageStatsFromFile"
+      ],
+      "description": "Analyzes files to determine the programming language and provides statistics about the code. Supports wildcards and recursive directory search.",
+      "category": "file"
+    },
+    {
+      "name": "getProjectTree",
+      "module": "qzx.commands.development.get_project_tree",
+      "class_name": "GetProjectTreeCommand",
+      "aliases": [],
+      "description": "Generates a clean visual directory tree (ASCII and JSON) excluding heavy directories like node_modules",
+      "category": "development"
+    },
+    {
+      "name": "getRAMInfo",
+      "module": "qzx.commands.system.get_ram_info",
+      "class_name": "GetRAMInfoCommand",
+      "aliases": [],
+      "description": "Gets detailed information about system RAM usage",
+      "category": "system"
+    },
+    {
+      "name": "getSmartValues",
+      "module": "qzx.commands.system.get_smart_values",
+      "class_name": "GetSmartValuesCommand",
+      "aliases": [],
+      "description": "Retrieves disk health information using S.M.A.R.T. technology",
+      "category": "system"
+    },
+    {
+      "name": "getStartupPrograms",
+      "module": "qzx.commands.system.get_startup_programs",
+      "class_name": "GetStartupProgramsCommand",
+      "aliases": [],
+      "description": "Lists all startup programs configured to run on system boot or user login",
+      "category": "system"
+    },
+    {
+      "name": "getToday",
+      "module": "qzx.commands.system.get_today",
+      "class_name": "WonderTodayCommand",
+      "aliases": [
+        "WonderToday",
+        "today",
+        "now",
+        "datetime",
+        "fecha"
+      ],
+      "description": "Displays detailed information about the current date and time",
+      "category": "system"
+    },
+    {
+      "name": "inspectImage",
+      "module": "qzx.commands.file.inspect_image",
+      "class_name": "InspectImageCommand",
+      "aliases": [],
+      "description": "Inspects image dimensions, format, and size natively from headers (supports PNG, JPEG, GIF, BMP)",
+      "category": "file"
+    },
+    {
+      "name": "inspectPort",
+      "module": "qzx.commands.system.inspect_port",
+      "class_name": "InspectPortCommand",
+      "aliases": [],
+      "description": "Checks whether a local port is bound and reports the owning process without terminating it",
+      "category": "system"
+    },
+    {
+      "name": "isAdmin",
+      "module": "qzx.commands.system.is_admin",
+      "class_name": "WonderIfAdminCommand",
+      "aliases": [
+        "wonderIfAdmin"
+      ],
+      "description": "Checks if the current user has administrative privileges",
+      "category": "system"
+    },
+    {
+      "name": "isDirectoryEmpty",
+      "module": "qzx.commands.file.is_directory_empty",
+      "class_name": "WonderIfDirectoryEmptyCommand",
+      "aliases": [
+        "wonderIfDirectoryEmpty"
+      ],
+      "description": "Checks if a directory is empty (contains no files or subdirectories)",
+      "category": "file"
+    },
+    {
+      "name": "isFileBinary",
+      "module": "qzx.commands.file.is_file_binary",
+      "class_name": "WonderIfFileIsBinaryCommand",
+      "aliases": [
+        "wonderIfFileIsBinary"
+      ],
+      "description": "Analyzes a file to determine if it's binary or plain text",
+      "category": "file"
+    },
+    {
+      "name": "isFileEmpty",
+      "module": "qzx.commands.file.is_file_empty",
+      "class_name": "WonderIfFileEmptyCommand",
+      "aliases": [
+        "wonderIfFileEmpty"
+      ],
+      "description": "Checks if a file is empty (has zero bytes)",
+      "category": "file"
+    },
+    {
+      "name": "killProcess",
+      "module": "qzx.commands.system.kill_process",
+      "class_name": "KillProcessCommand",
+      "aliases": [],
+      "description": "Terminates one explicitly identified process and verifies that it exited",
+      "category": "system"
+    },
+    {
+      "name": "listFiles",
+      "module": "qzx.commands.file.list_files",
+      "class_name": "ListFilesCommand",
+      "aliases": [],
+      "description": "Lists files in a directory with support for wildcards and recursive searching",
+      "category": "file"
+    },
+    {
+      "name": "listProcesses",
+      "module": "qzx.commands.system.list_processes",
+      "class_name": "ListProcessesCommand",
+      "aliases": [],
+      "description": "Lists running processes (similar to 'ps' in Unix)",
+      "category": "system"
+    },
+    {
+      "name": "listSystemServices",
+      "module": "qzx.commands.system.list_system_services",
+      "class_name": "ListSystemServicesCommand",
+      "aliases": [],
+      "description": "Lists operating-system services and their running status",
+      "category": "system"
+    },
+    {
+      "name": "moveFile",
+      "module": "qzx.commands.file.move_file",
+      "class_name": "MoveFileCommand",
+      "aliases": [],
+      "description": "Moves or renames one file, symbolic link, or complete directory; partial directory moves are rejected",
+      "category": "file"
+    },
+    {
+      "name": "projectDoctor",
+      "module": "qzx.commands.development.project_doctor",
+      "class_name": "ProjectDoctorCommand",
+      "aliases": [],
+      "description": "Inspects project health: detects tech stack, dependencies, environment configuration, Git state, test suites, circular imports, dead code, and large files",
+      "category": "development"
+    },
+    {
+      "name": "projectLanguages",
+      "module": "qzx.commands.development.project_languages",
+      "class_name": "ProjectLanguagesCommand",
+      "aliases": [
+        "auditLanguages"
+      ],
+      "description": "Profiles a project's source languages and supporting formats with line, file, and byte percentages",
+      "category": "development"
+    },
+    {
+      "name": "qzxHelp",
+      "module": "qzx.commands.system.qzx_help",
+      "class_name": "qzxHelp",
+      "aliases": [
+        "help"
+      ],
+      "description": "Shows help for a command",
+      "category": "system"
+    },
+    {
+      "name": "qzxListCommands",
+      "module": "qzx.commands.system.qzx_list_commands",
+      "class_name": "qzxListCommands",
+      "aliases": [
+        "list",
+        "ListCommands"
+      ],
+      "description": "Lists all available commands organized by category",
+      "category": "system"
+    },
+    {
+      "name": "readFile",
+      "module": "qzx.commands.file.read_file",
+      "class_name": "ReadFileCommand",
+      "aliases": [],
+      "description": "Reads and displays the content of a file",
+      "category": "file"
+    },
+    {
+      "name": "releaseProject",
+      "module": "qzx.commands.development.release_project",
+      "class_name": "ReleaseProjectCommand",
+      "aliases": [],
+      "description": "Plans a release metadata update and can atomically update one manifest plus CHANGELOG.md; it never builds, commits, tags, or publishes",
+      "category": "development"
+    },
+    {
+      "name": "repairWorkspace",
+      "module": "qzx.commands.file.repair_workspace",
+      "class_name": "RepairWorkspaceCommand",
+      "aliases": [],
+      "description": "Validates a saved auditWorkspace plan and applies only explicitly selected, unchanged cleanup actions",
+      "category": "file"
+    },
+    {
+      "name": "runScript",
+      "module": "qzx.commands.system.run_script",
+      "class_name": "RunScriptCommand",
+      "aliases": [],
+      "description": "Executes a script with parameters",
+      "category": "system"
+    },
+    {
+      "name": "scaffoldC",
+      "module": "qzx.commands.development.scaffold_c",
+      "class_name": "MakeScaffProgramCCommand",
+      "aliases": [
+        "cScaff",
+        "newC",
+        "createC",
+        "makeScaffProgramC"
+      ],
+      "description": "Creates a basic scaffolding for a C program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldCpp",
+      "module": "qzx.commands.development.scaffold_cpp",
+      "class_name": "MakeScaffProgramCppCommand",
+      "aliases": [
+        "cppScaff",
+        "newCpp",
+        "createCpp",
+        "makeScaffProgramCpp"
+      ],
+      "description": "Creates a basic scaffolding for a C++ program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldCsharp",
+      "module": "qzx.commands.development.scaffold_csharp",
+      "class_name": "MakeScaffProgramCsharpCommand",
+      "aliases": [
+        "csharpScaff",
+        "newCsharp",
+        "createCsharp",
+        "makeScaffProgramCsharp",
+        "scaffoldCs"
+      ],
+      "description": "Creates a basic scaffolding for a C# program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldGo",
+      "module": "qzx.commands.development.scaffold_go",
+      "class_name": "MakeScaffProgramGoCommand",
+      "aliases": [
+        "goScaff",
+        "newGo",
+        "createGo",
+        "makeScaffProgramGo"
+      ],
+      "description": "Creates a basic scaffolding for a Go program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldJava",
+      "module": "qzx.commands.development.scaffold_java",
+      "class_name": "MakeScaffProgramJavaCommand",
+      "aliases": [
+        "javaScaff",
+        "newJava",
+        "createJava",
+        "makeScaffProgramJava"
+      ],
+      "description": "Creates a basic scaffolding for a Java program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldJavascript",
+      "module": "qzx.commands.development.scaffold_javascript",
+      "class_name": "MakeScaffProgramJavascriptCommand",
+      "aliases": [
+        "jsScaff",
+        "newJs",
+        "createJs",
+        "makeScaffProgramJavascript"
+      ],
+      "description": "Creates a basic scaffolding for a JavaScript/Node.js program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldKotlin",
+      "module": "qzx.commands.development.scaffold_kotlin",
+      "class_name": "MakeScaffProgramKotlinCommand",
+      "aliases": [
+        "kotlinScaff",
+        "newKotlin",
+        "createKotlin",
+        "makeScaffProgramKotlin"
+      ],
+      "description": "Creates a basic scaffolding for a Kotlin program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldPhp",
+      "module": "qzx.commands.development.scaffold_php",
+      "class_name": "MakeScaffProgramPhpCommand",
+      "aliases": [
+        "phpScaff",
+        "newPhp",
+        "createPhp",
+        "makeScaffProgramPhp"
+      ],
+      "description": "Creates a basic scaffolding for a PHP/Composer program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldPython",
+      "module": "qzx.commands.development.scaffold_python",
+      "class_name": "MakeScaffProgramPythonCommand",
+      "aliases": [
+        "pythonScaff",
+        "newPython",
+        "createPython",
+        "makeScaffProgramPython"
+      ],
+      "description": "Creates a basic scaffolding for a Python program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldRust",
+      "module": "qzx.commands.development.scaffold_rust",
+      "class_name": "MakeScaffProgramRustCommand",
+      "aliases": [
+        "rustScaff",
+        "newRust",
+        "createRust",
+        "makeScaffProgramRust"
+      ],
+      "description": "Creates a basic scaffolding for a Rust program",
+      "category": "development"
+    },
+    {
+      "name": "scaffoldTypescript",
+      "module": "qzx.commands.development.scaffold_typescript",
+      "class_name": "MakeScaffProgramTypescriptCommand",
+      "aliases": [
+        "tsScaff",
+        "newTs",
+        "createTs",
+        "makeScaffProgramTypescript"
+      ],
+      "description": "Creates a basic scaffolding for a TypeScript program",
+      "category": "development"
+    },
+    {
+      "name": "scanProject",
+      "module": "qzx.commands.development.scan_project",
+      "class_name": "ScanProjectCommand",
+      "aliases": [],
+      "description": "Scans a project root to identify technologies, scripts, configuration files, and missing environment keys",
+      "category": "development"
+    },
+    {
+      "name": "systemDoctor",
+      "module": "qzx.commands.system.system_doctor",
+      "class_name": "SystemDoctorCommand",
+      "aliases": [],
+      "description": "Performs a complete diagnostic of the CPU, RAM, disks, network, PATH, services, ports, and system errors",
+      "category": "system"
+    },
+    {
+      "name": "systemInfo",
+      "module": "qzx.commands.system.system_info",
+      "class_name": "SystemInfoCommand",
+      "aliases": [],
+      "description": "Gets portable operating-system, Python, user, and environment information with optional RAM and storage details",
+      "category": "system"
+    },
+    {
+      "name": "terminal",
+      "module": "qzx.commands.system.terminal",
+      "class_name": "QZXTerminalCommand",
+      "aliases": [
+        "term",
+        "shell",
+        "console",
+        "repl"
+      ],
+      "description": "Launches an interactive terminal/shell for QZX commands",
+      "category": "system"
+    },
+    {
+      "name": "testDiskSpeed",
+      "module": "qzx.commands.system.test_disk_speed",
+      "class_name": "TestDiskSpeedCommand",
+      "aliases": [],
+      "description": "Benchmarks sequential write and read speeds (MB/s) of the filesystem at a target path",
+      "category": "system"
+    },
+    {
+      "name": "testWebSpeed",
+      "module": "qzx.commands.network.test_web_speed",
+      "class_name": "TestWebSpeedCommand",
+      "aliases": [],
+      "description": "Measures internet download speed (Mbps) and HTTP ping latency (ms)",
+      "category": "network"
+    },
+    {
+      "name": "touchFile",
+      "module": "qzx.commands.file.touch_file",
+      "class_name": "TouchFileCommand",
+      "aliases": [],
+      "description": "Creates an empty file or updates the timestamp of an existing file",
+      "category": "file"
+    },
+    {
+      "name": "traceCircularImports",
+      "module": "qzx.commands.development.trace_circular_imports",
+      "class_name": "TraceCircularImportsCommand",
+      "aliases": [],
+      "description": "Traces module imports recursively and identifies circular import dependencies (loops)",
+      "category": "development"
+    },
+    {
+      "name": "traceEnvVar",
+      "module": "qzx.commands.development.trace_env_var",
+      "class_name": "TraceEnvVarCommand",
+      "aliases": [],
+      "description": "Traces usage of an environment variable across code files, .env, and .env.example templates",
+      "category": "development"
+    },
+    {
+      "name": "version",
+      "module": "qzx.commands.system.version",
+      "class_name": "QZXVersionCommand",
+      "aliases": [
+        "qzxVersion",
+        "--version"
+      ],
+      "description": "Displays the current version of QZX and system information",
+      "category": "system"
+    },
+    {
+      "name": "welcome",
+      "module": "qzx.commands.system.welcome",
+      "class_name": "WelcomeCommand",
+      "aliases": [
+        "hello",
+        "hi"
+      ],
+      "description": "Displays the QZX welcome immediately, with optional system details",
+      "category": "system"
+    }
+  ]
+}

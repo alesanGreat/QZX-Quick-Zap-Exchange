@@ -75,7 +75,8 @@ The philosophy extends to all aspects of QZX:
 - Command outputs are detailed
 - Error messages are explanatory
 - Help text is comprehensive
-- Welcome screens provide system context
+- Welcome screens appear immediately; optional detailed mode provides system
+  context only when requested
 - Even "simple" commands provide contextual information
 
 ### 4. Consistent Formatting

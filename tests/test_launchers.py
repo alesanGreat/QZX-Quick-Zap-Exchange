@@ -4,8 +4,10 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 from qzx import __version__
+from qzx._build_info import ATTRIBUTION
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -19,9 +21,12 @@ def _launcher_command():
 
 def test_local_launcher_emits_parseable_json_from_checkout():
     """The documented local launcher must preserve the JSON-only contract."""
+    environment = os.environ.copy()
+    environment["QZX_TELEMETRY"] = "0"
     completed = subprocess.run(
         [*_launcher_command(), "version", "--json"],
         cwd=REPOSITORY_ROOT,
+        env=environment,
         text=True,
         capture_output=True,
         timeout=30,
@@ -36,6 +41,56 @@ def test_local_launcher_emits_parseable_json_from_checkout():
     assert payload["meta"]["command"] == "version"
 
 
+def test_local_launcher_uses_fast_human_welcome(tmp_path):
+    """The no-argument launcher should greet before loading the full CLI."""
+    environment = os.environ.copy()
+    environment["QZX_TELEMETRY"] = "0"
+    environment["QZX_STATE_DIR"] = str(tmp_path)
+    completed = subprocess.run(
+        _launcher_command(),
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    assert completed.stderr == ""
+    assert ATTRIBUTION in completed.stdout
+    assert "Welcome Professor!" in completed.stdout
+    assert "QZX welcome screen (basic view) displayed." in completed.stdout
+
+
+def test_lightweight_runtime_metadata_matches_manifest():
+    """Generated startup constants must not become a second source of truth."""
+    manifest = json.loads(
+        (
+            REPOSITORY_ROOT
+            / "src"
+            / "qzx"
+            / "resources"
+            / "product-manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert __version__ == manifest["channels"]["development"]["version"]
+    assert ATTRIBUTION == manifest["product"]["attribution"]
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPOSITORY_ROOT / "scripts" / "sync_runtime_metadata.py"),
+        ],
+        cwd=REPOSITORY_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
 def test_windows_launcher_finds_uv_python_when_path_has_no_python(tmp_path):
     """qzx.bat must recover the installed uv interpreter after a PATH reset."""
     if os.name != "nt":
@@ -44,6 +99,7 @@ def test_windows_launcher_finds_uv_python_when_path_has_no_python(tmp_path):
         return
 
     environment = os.environ.copy()
+    environment["QZX_TELEMETRY"] = "0"
     environment["PATH"] = os.pathsep.join([
         str(Path(os.environ["SystemRoot"]) / "System32"),
         str(Path(os.environ["SystemRoot"])),
@@ -69,3 +125,19 @@ def test_windows_launcher_finds_uv_python_when_path_has_no_python(tmp_path):
     assert completed.returncode == 0, completed.stderr or completed.stdout
     assert completed.stderr == ""
     assert json.loads(completed.stdout)["version"] == __version__
+
+
+def test_windows_launcher_uses_builtin_lookup_instead_of_repeated_where():
+    """The hot path must not spawn WHERE.EXE for every Python candidate."""
+    launcher = (REPOSITORY_ROOT / "qzx.bat").read_text(
+        encoding="utf-8",
+    )
+
+    executable_lines = [
+        line.strip().upper()
+        for line in launcher.splitlines()
+        if line.strip() and not line.lstrip().upper().startswith("REM ")
+    ]
+    assert not any(line.startswith("WHERE ") for line in executable_lines)
+    assert "%%~$PATH:P" in launcher.upper()
+    assert "CPYTHON-3.13*-WINDOWS-*" in launcher.upper()

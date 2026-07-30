@@ -144,7 +144,7 @@ class DeleteFileCommand(CommandBase):
 
         if isinstance(recursive, str):
             parsed_recursive = parse_recursive_parameter(recursive)
-            recursive = False if parsed_recursive is None else parsed_recursive
+            recursive = True if parsed_recursive is None else parsed_recursive
 
         target_path = Path(target).expanduser()
         resolved_target = target_path.resolve(strict=False)

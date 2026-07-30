@@ -99,6 +99,7 @@ setup(
     package_dir={"": "src"},
     package_data={
         "qzx": [
+            "resources/command-index.json",
             "resources/command-lifecycle.json",
             "resources/product-manifest.json",
             "resources/test-environments.json",
@@ -124,7 +125,7 @@ setup(
     extras_require=extras_require,
     entry_points={
         "console_scripts": [
-            "qzx=qzx.cli:main",
+            "qzx=qzx:main",
         ],
     },
     include_package_data=True,

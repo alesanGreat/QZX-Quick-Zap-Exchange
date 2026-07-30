@@ -1,143 +1,89 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-WonderMyEnvironment Command - Displays detailed system environment information
-"""
-
-import os
-import sys
-import platform
-import time
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+"""Compatibility command for the former all-in-one environment report."""
 
 from qzx.core.command_base import CommandBase
+from qzx.commands.system.system_info import SystemInfoCommand
 
-# Import the terminal welcome module to reuse its methods
-from qzx.commands.system.terminal_welcome import TerminalWelcome
 
 class WonderMyEnvironmentCommand(CommandBase):
-    """
-    Command to display detailed system environment information
-    """
-    
+    """Delegate the legacy contract to ``systemInfo`` during migration."""
+
     name = "getEnvironmentInfo"
     aliases = ["WonderMyEnvironment", "environment", "sysinfo"]
-    description = "Displays detailed information about the system environment"
+    description = (
+        "Compatibility interface for systemInfo; retained temporarily for "
+        "0.2.x scripts"
+    )
     category = "system"
-    
+
     parameters = [
         {
-            'name': 'detailed',
-            'description': 'Show additional detailed information (true/false)',
-            'required': False,
-            'default': 'true'
+            "name": "detailed",
+            "description": (
+                "Include RAM and storage details (true/false; defaults to true)"
+            ),
+            "required": False,
+            "default": True,
+            "type": "bool",
         }
     ]
-    
+
     examples = [
         {
-            'command': 'qzx WonderMyEnvironment',
-            'description': 'Display full system environment information'
+            "command": "qzx getEnvironmentInfo",
+            "description": (
+                "Get the legacy detailed report through systemInfo"
+            ),
         },
         {
-            'command': 'qzx WonderMyEnvironment false',
-            'description': 'Display basic system environment information'
-        }
+            "command": "qzx getEnvironmentInfo false",
+            "description": "Get the legacy basic report through systemInfo",
+        },
     ]
-    
-    def execute(self, detailed="true"):
-        """
-        Display detailed system environment information
-        
-        Args:
-            detailed (str): Whether to show detailed information ('true' or 'false')
-            
-        Returns:
-            Dictionary with the operation result
-        """
-        try:
-            # Convert parameter to boolean
-            if isinstance(detailed, str):
-                show_detailed = detailed.lower() in ('true', 'yes', 'y', '1', 't')
-            else:
-                show_detailed = bool(detailed)
-            
-            # Get the QZX version
-            qzx_version = "0.02.1"  # Should match the current version
-            
-            print("Starting environment analysis...")
-            print("This may take a moment, please wait...")
-            
-            # Create an instance of TerminalWelcome to reuse its methods
-            print("Initializing system information modules...")
-            welcome_manager = TerminalWelcome(qzx_version=qzx_version)
-            print("Initialization complete.")
-            
-            # Get system information with feedback
-            print("\nCollecting basic system information...")
-            sys_info = welcome_manager._format_system_info()
-            print("Basic system information collected.")
-            
-            print("\nAnalyzing memory usage patterns...")
-            ram_info = welcome_manager._format_ram_info()
-            print("Memory analysis complete.")
-            
-            print("\nScanning storage devices...")
-            disk_info = welcome_manager._format_disk_info()
-            print("Storage scan complete.")
-            
-            print("\nDetecting and analyzing graphics processing units...")
-            gpu_info = welcome_manager._format_gpu_info()
-            if gpu_info:
-                print("GPU analysis complete.")
-            else:
-                print("No GPU information available or GPU analysis skipped.")
-            
-            print("\nCompiling final report...")
-            
-            # Format the environment information
-            environment_info = f"""
-=================================================================
-SYSTEM ENVIRONMENT INFORMATION
-=================================================================
 
-SYSTEM INFORMATION:
-{sys_info}
-
-MEMORY:
-{ram_info}
-
-STORAGE:
-{disk_info}
-"""
-
-            # Add GPU information if available
-            if gpu_info:
-                environment_info += f"""
-DETECTED GPUs:
-{gpu_info}
-"""
-
-            environment_info += """
-=================================================================
-"""
-            print("Environment analysis complete!")
-            
-            return {
-                "success": True,
-                "message": "System environment information displayed successfully.",
-                "output": environment_info,
-                "system_info": welcome_manager.system_info
-            }
-            
-        except Exception as e:
-            error_message = f"Error displaying system environment information: {str(e)}"
+    def execute(self, detailed=True):
+        """Return the replacement command's data without printing progress."""
+        parsed_detailed = self._parse_bool(detailed)
+        if parsed_detailed is None:
             return {
                 "success": False,
-                "error": error_message,
-                "message": f"Failed to display system environment information: {str(e)}"
+                "error_code": "invalid_boolean",
+                "error": f"Expected true/false, received {detailed!r}.",
+                "message": (
+                    "The 'detailed' value must be true or false. "
+                    "Use 'qzx systemInfo --detailed' for the replacement."
+                ),
+                "details": {"replacement": "systemInfo"},
             }
+
+        replacement_result = SystemInfoCommand().execute(
+            detailed=parsed_detailed,
+            include_environment=False,
+        )
+        if not replacement_result.get("success"):
+            replacement_result["message"] = (
+                "getEnvironmentInfo could not build its compatibility report. "
+                + replacement_result["message"]
+            )
+            replacement_result["replacement"] = "systemInfo"
+            return replacement_result
+
+        migration = (
+            "getEnvironmentInfo is deprecated and remains available throughout "
+            "QZX 0.2.x. Migrate to 'qzx systemInfo{}'; it returns the same "
+            "structured system report without automatic GPU probes."
+        ).format(" --detailed" if parsed_detailed else "")
+        return {
+            "success": True,
+            "message": migration + " " + replacement_result["message"],
+            "output": replacement_result["message"],
+            "system_info": replacement_result["system_info"],
+            "details_requested": parsed_detailed,
+            "environment_included": False,
+            "warnings": replacement_result["warnings"],
+            "deprecated": True,
+            "replacement": "systemInfo",
+            "supported_through": "QZX 0.2.x",
+        }

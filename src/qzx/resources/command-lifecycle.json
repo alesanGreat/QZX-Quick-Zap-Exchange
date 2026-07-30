@@ -107,6 +107,7 @@
     "about": {"stage": "alpha"},
     "analyzeComplexity": {"stage": "alpha"},
     "auditRepository": {"stage": "alpha"},
+    "auditWorkspace": {"stage": "alpha"},
     "bootstrapProject": {"stage": "alpha"},
     "changePermissions": {"stage": "alpha"},
     "checkDependency": {"stage": "alpha"},
@@ -144,7 +145,19 @@
     "getCurrentUser": {"stage": "alpha"},
     "getDiskInfo": {"stage": "alpha"},
     "getDiskName": {"stage": "alpha"},
-    "getEnvironmentInfo": {"stage": "alpha"},
+    "getEnvironmentInfo": {
+      "stage": "deprecated",
+      "note": "Compatibility wrapper supported throughout QZX 0.2.x; migrate to systemInfo before 0.3.0.",
+      "review": {
+        "reviewed_on": "2026-07-30",
+        "rationale": "The legacy command duplicated systemInfo, ignored its detail flag, printed progress outside the result contract, hardcoded an obsolete QZX version, and performed automatic GPU probes. It now delegates to the supported structured replacement during a documented 0.2.x migration window.",
+        "evidence": [
+          "tests/test_system_commands/test_system_info.py",
+          "docs/reference/commands-generated.md"
+        ],
+        "replacement": "systemInfo"
+      }
+    },
     "getFileHash": {"stage": "alpha"},
     "getGPULoad": {"stage": "alpha"},
     "getGitStatus": {"stage": "alpha"},

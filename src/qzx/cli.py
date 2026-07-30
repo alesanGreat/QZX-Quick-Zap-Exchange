@@ -6,28 +6,24 @@ QZX: Quick Zap Exchange - Universal Command Interface for AI Agents
 """
 
 import contextlib
-import difflib
 import io
 import json
-import math
 import os
-import platform
 import re
 import sys
-import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_loader import CommandLoader
+from qzx.core.command_index import CommandIndexError
 from qzx.first_run import claim_first_run_attribution
 from qzx.identity import product_attribution
 
 
 class QZX:
     def __init__(self):
-        self.os_type = platform.system().lower()
         try:
             from qzx import __version__
             self.version = __version__
@@ -36,9 +32,9 @@ class QZX:
         
         # Initialize command loader
         self.command_loader = CommandLoader()
-        
-        # Load modular commands
-        self.modular_commands = self.command_loader.discover_commands()
+        # Keep a live view of lazily loaded commands. Ordinary one-shot
+        # invocations import only the requested canonical command.
+        self.modular_commands = self.command_loader.commands
         
         # Legacy built-in commands (will be migrated to modular system)
         self.built_in_commands = {
@@ -60,13 +56,33 @@ class QZX:
             return self.built_in_commands[command](*args)
         
         # Execute a modular command
-        cmd_obj = self.command_loader.get_command(command)
+        try:
+            cmd_obj = self.command_loader.get_command(command)
+        except CommandIndexError as exc:
+            return {
+                "success": False,
+                "error_code": "command_index_invalid",
+                "error": str(exc),
+                "message": (
+                    "QZX could not load its packaged command index. Reinstall "
+                    "QZX or regenerate the development index."
+                ),
+                "details": {
+                    "command": command,
+                    "remediation": (
+                        "Run 'python scripts/sync_command_index.py --write' "
+                        "from a development checkout."
+                    ),
+                },
+            }
         if cmd_obj:
             if normalized_command in {"list", "listcommands", "qzxlistcommands"}:
                 cmd_obj.command_loader = self.command_loader
             return cmd_obj.invoke(args)
         
-        registered = self.command_loader.get_all_commands()
+        import difflib
+
+        registered = self.command_loader.get_known_command_names()
         suggestions = difflib.get_close_matches(
             normalized_command,
             sorted(registered),
@@ -117,6 +133,8 @@ def _json_compatible(value):
     if value is None or isinstance(value, (str, bool, int)):
         return value
     if isinstance(value, float):
+        import math
+
         return value if math.isfinite(value) else str(value)
     if isinstance(value, dict):
         return {
@@ -355,7 +373,15 @@ def _render_human(result):
             continue
         cleaned_value = _without_duplicate_text(value, displayed_text)
         if cleaned_value not in (None, "", [], {}):
-            fields_to_render[key] = cleaned_value
+            if key == "details" and isinstance(cleaned_value, dict):
+                # ``details`` is the structured domain container, not another
+                # user-facing section beneath the renderer's own Details
+                # heading. Flatten it while preserving first occurrence order
+                # and avoiding duplicate top-level compatibility projections.
+                for detail_key, detail_value in cleaned_value.items():
+                    fields_to_render.setdefault(detail_key, detail_value)
+            else:
+                fields_to_render.setdefault(key, cleaned_value)
 
     visible_meta = _visible_meta(result)
     if visible_meta:
@@ -415,6 +441,8 @@ def _capture_process_stdout():
     mode must capture those bytes as progress too, or they can corrupt the
     single JSON document written by the CLI.
     """
+    import tempfile
+
     captured = io.StringIO()
     original_stdout = sys.stdout
     try:
@@ -502,12 +530,13 @@ def _parse_cli_request(arguments):
     return json_output, command, command_args
 
 
-def main():
-    json_output, command, args = _parse_cli_request(sys.argv[1:])
-    first_run = claim_first_run_attribution()
+def _execute_requested_command(command, args):
+    """Execute one command through the validated lazy command loader."""
+    return QZX().execute(command, args)
 
-    # Schedule one privacy-documented activation event per QZX version. This
-    # always runs out of band and can never alter a command result.
+
+def _schedule_optional_telemetry():
+    """Schedule telemetry after user-visible command output is available."""
     try:
         from qzx import __version__
         from qzx.telemetry import TELEMETRY_NOTICE, schedule_version_telemetry
@@ -516,8 +545,13 @@ def main():
         if telemetry_status.get("details", {}).get("notice"):
             print(TELEMETRY_NOTICE, file=sys.stderr)
     except Exception:
-        # Telemetry is strictly optional and must never prevent CLI startup.
+        # Telemetry is strictly optional and must never prevent CLI execution.
         pass
+
+
+def main():
+    json_output, command, args = _parse_cli_request(sys.argv[1:])
+    first_run = claim_first_run_attribution()
 
     stdout_context = (
         _capture_process_stdout()
@@ -525,8 +559,7 @@ def main():
         else contextlib.nullcontext()
     )
     with stdout_context as captured_stdout:
-        qzx = QZX()
-        result = qzx.execute(command, args)
+        result = _execute_requested_command(command, args)
 
     if not isinstance(result, dict):
         result = {
@@ -547,7 +580,11 @@ def main():
     else:
         _print_human(result)
 
-    return _exit_code(result)
+    exit_code = _exit_code(result)
+    # Nonessential startup work belongs after the command result. The worker
+    # remains non-blocking and the documented notice, when needed, uses stderr.
+    _schedule_optional_telemetry()
+    return exit_code
 
 
 if __name__ == "__main__":

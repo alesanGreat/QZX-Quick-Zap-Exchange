@@ -17,7 +17,12 @@ from qzx.commands.system.get_disk_name import GetDiskNameCommand
 from qzx.commands.system.get_today import WonderTodayCommand
 from qzx.commands.system.generate_content import WonderContentGenCommand
 from qzx.commands.system.terminal import QZXTerminal
-from qzx.cli import _json_compatible, _parse_cli_request, _render_human
+from qzx.cli import (
+    QZX,
+    _json_compatible,
+    _parse_cli_request,
+    _render_human,
+)
 from qzx.core.command_base import CommandBase
 from qzx.core.command_loader import CommandLoader
 
@@ -91,6 +96,39 @@ def test_discovery_is_complete_and_collision_free():
     assert loader.load_errors == {}
     assert loader.registration_warnings == []
     assert loader.attempted_installs == set()
+
+
+def test_default_welcome_uses_lazy_index_without_full_discovery():
+    runtime = QZX()
+
+    result = runtime.execute("welcome", [])
+
+    assert result["success"] is True
+    assert "Welcome Professor!" in result["output"]
+    assert runtime.command_loader._discovered is False
+    assert set(runtime.command_loader.command_modules) == {
+        "qzx.commands.system.welcome",
+    }
+
+
+def test_welcome_aliases_share_the_startup_fast_path():
+    for alias in ("Welcome", "hello", "HI"):
+        runtime = QZX()
+        result = runtime.execute(alias, [])
+        assert result["success"] is True
+        assert "Welcome Professor!" in result["output"]
+        assert runtime.command_loader._discovered is False
+        assert set(runtime.command_loader.command_modules) == {
+            "qzx.commands.system.welcome",
+        }
+
+
+def test_default_welcome_omits_detailed_operating_system_payload():
+    result = QZX().execute("welcome", [])
+
+    assert result["success"] is True
+    assert result["info_level"] == "basic"
+    assert "system_info" not in result
 
 
 def test_every_documented_example_resolves_and_parses():
@@ -207,6 +245,45 @@ def test_delete_file_is_preview_first_and_default_execution_is_backed_up(
     assert len(backup_files) == 1
     with zipfile.ZipFile(backup_files[0]) as archive:
         assert archive.read("disposable.txt") == b"temporary"
+
+
+def test_recursive_option_consumes_only_explicit_boolean_or_depth_value():
+    command = DeleteFileCommand()
+
+    valid_boolean, boolean_values, boolean_error = command.parse_arguments(
+        ["target", "--recursive", "true", "--force", "false"]
+    )
+    valid_depth, depth_values, depth_error = command.parse_arguments(
+        ["target", "--recursive", "2"]
+    )
+    valid_flag, flag_values, flag_error = command.parse_arguments(
+        ["target", "-r"]
+    )
+
+    assert valid_boolean is True
+    assert boolean_error is None
+    assert boolean_values["recursive"] is True
+    assert boolean_values["force"] is False
+    assert valid_depth is True
+    assert depth_error is None
+    assert depth_values["recursive"] == 2
+    assert valid_flag is True
+    assert flag_error is None
+    assert flag_values["recursive"] == "-r"
+
+
+def test_delete_file_short_recursive_flag_removes_descendants(tmp_path):
+    target = tmp_path / "disposable"
+    target.mkdir()
+    (target / "nested.txt").write_text("temporary", encoding="utf-8")
+
+    result = DeleteFileCommand().invoke(
+        [str(target), "-r", "--dry-run", "false", "--apply", "--yolo"]
+    )
+
+    assert result["success"] is True
+    assert result["details"]["recursive"] is True
+    assert not target.exists()
 
 
 def test_qzx_safety_yolo_is_honored_by_the_public_cli(
@@ -432,6 +509,31 @@ def test_human_renderer_preserves_nested_data_without_raw_containers():
     assert "Safety Backup:" in rendered
     assert "{'" not in rendered
     assert '"files_found"' not in rendered
+
+
+def test_human_renderer_flattens_details_and_deduplicates_compatibility_fields():
+    external_service = {
+        "provider": "Google Gemini",
+        "content_shared": False,
+    }
+    rendered = _render_human(
+        {
+            "success": True,
+            "message": "External request preview is ready.",
+            "details": {
+                "file_size_bytes": 1024,
+                "external_service": external_service,
+            },
+            # Some commands retain a top-level projection for compatibility.
+            "external_service": external_service,
+        }
+    )
+
+    assert rendered.count("Details:") == 1
+    assert "\n  Details:" not in rendered
+    assert "File Size Bytes: 1024" in rendered
+    assert rendered.count("External Service:") == 1
+    assert "Content Shared: No" in rendered
 
 
 def test_human_renderer_uses_dedicated_content_without_duplicate_structures():
