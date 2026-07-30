@@ -124,10 +124,6 @@ def test_argument_grammars_reject_known_mutating_forms():
         "ipconfig",
         ["/flushdns"],
     )
-    assert RunDiagnosticCommand._validate_windows_arguments(
-        "ipconfig",
-        ["/flushdns"],
-    )
     assert RunDiagnosticCommand._validate_unix_arguments(
         "ss",
         ["-K"],
@@ -135,6 +131,26 @@ def test_argument_grammars_reject_known_mutating_forms():
     assert RunDiagnosticCommand._validate_unix_arguments(
         "ss",
         ["--kill"],
+    )
+    assert RunDiagnosticCommand._validate_unix_arguments(
+        "ss",
+        ["-p"],
+    )
+    assert RunDiagnosticCommand._validate_unix_arguments(
+        "ss",
+        [],
+    )
+    assert RunDiagnosticCommand._validate_unix_arguments(
+        "ss",
+        ["-x"],
+    )
+    assert RunDiagnosticCommand._validate_unix_arguments(
+        "netstat",
+        ["-np"],
+    )
+    assert RunDiagnosticCommand._validate_windows_arguments(
+        "netstat",
+        ["-ano"],
     )
     assert RunDiagnosticCommand._validate_windows_arguments(
         "netstat",
@@ -146,10 +162,14 @@ def test_argument_grammars_reject_known_mutating_forms():
     )
     assert RunDiagnosticCommand._validate_windows_arguments(
         "netstat",
-        ["-ano"],
+        ["-an"],
     ) is None
     assert RunDiagnosticCommand._validate_unix_arguments(
         "netstat",
+        ["-lnt"],
+    ) is None
+    assert RunDiagnosticCommand._validate_unix_arguments(
+        "ss",
         ["-lnt"],
     ) is None
 

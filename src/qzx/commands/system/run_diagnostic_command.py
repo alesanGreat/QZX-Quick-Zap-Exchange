@@ -207,7 +207,7 @@ class RunDiagnosticCommand(CommandBase):
             "name": "command",
             "description": (
                 "Read-only diagnostic. Windows: hostname, ipconfig, netstat, "
-                "whoami. Unix: cal, date, free, hostname, netstat, ps, ss, "
+                "whoami. Unix: cal, date, free, hostname, netstat, ss, "
                 "uname, uptime, whoami"
             ),
             "required": True,
@@ -500,7 +500,7 @@ class RunDiagnosticCommand(CommandBase):
             valid = (
                 bool(arguments)
                 and all(
-                    re.fullmatch(r"-[anoers]+", argument.lower())
+                    re.fullmatch(r"-[aners]+", argument.lower())
                     for argument in arguments
                 )
                 and any(
@@ -512,8 +512,9 @@ class RunDiagnosticCommand(CommandBase):
                 None
                 if valid
                 else "Windows netstat requires numeric output (-n) and "
-                "accepts only combined read-only flags from -a, -n, -o, -e, "
-                "-r, and -s. Name resolution and remote targets are blocked."
+                "accepts only combined read-only flags from -a, -n, -e, -r, "
+                "and -s. Name resolution, process attribution, and remote "
+                "targets are blocked."
             )
         return None if not arguments else "This diagnostic accepts no arguments."
 
@@ -557,7 +558,7 @@ class RunDiagnosticCommand(CommandBase):
             valid = (
                 bool(arguments)
                 and all(
-                    re.fullmatch(r"-[anrtulp]+", argument)
+                    re.fullmatch(r"-[anrtul]+", argument)
                     for argument in arguments
                 )
                 and any("n" in argument[1:] for argument in arguments)
@@ -566,18 +567,24 @@ class RunDiagnosticCommand(CommandBase):
                 None
                 if valid
                 else "netstat requires numeric output (-n) and accepts only "
-                "combined local read-only flags."
+                "combined local read-only flags without process attribution."
             )
         if command_name == "ss":
-            valid = all(
-                re.fullmatch(r"-[alntupxsemoi]+", argument)
-                for argument in arguments
+            valid = (
+                bool(arguments)
+                and all(
+                    re.fullmatch(r"-[alntusemoi]+", argument)
+                    for argument in arguments
+                )
+                and any("n" in argument[1:] for argument in arguments)
             )
             return (
                 None
                 if valid
-                else "ss accepts only local display flags; socket-kill and "
-                "filter expressions are blocked."
+                else "ss requires numeric output (-n) and accepts only local "
+                "network-socket display flags; socket-kill, Unix-domain "
+                "paths, filter expressions, name resolution, and process "
+                "attribution are blocked."
             )
         if command_name == "cal":
             valid = (
