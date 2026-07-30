@@ -3,17 +3,38 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a8 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Prepared a corrected publication candidate from the runtime validated in
+  alpha 7, without changing its 96-command interface.
+- Required the source distribution to be built from the immutable tag on a
+  POSIX filesystem and to preserve executable mode `0755` for `qzx.sh`.
+- Added an automated distribution verifier and CI release gate for package
+  metadata, attribution, hashes, PyPI rendering, and the Unix launcher mode.
+- Preserved `v0.2.2.0.6a7`, its PyPI publication, GitHub pre-release,
+  artifacts, and hashes after its immutable source distribution exposed
+  `qzx.sh` with non-executable mode `0666`.
+
 ## 0.2.2.0.6a7 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
-- Reconciled the package manifest and README with the immutable
-  `qzx-0.2.2.0.6a5` wheel and source distribution actually published on PyPI.
-- Clarified that normal `pip install qzx` selects the latest final release,
-  while `pip install --pre qzx` opts into the newest Alpha candidate.
-- Preserved `v0.2.2.0.6a6` as an immutable validation tag after it carried
-  stale release-history prose; alpha 6 was not uploaded to PyPI or published
-  as a GitHub Release.
+- Published the 96-command `qzx-0.2.2.0.6a7` wheel and source distribution on
+  PyPI and as byte-identical immutable assets of its GitHub pre-release.
+- Verified the wheel SHA-256 as
+  `77c678480e9bd84336c7718f54620f43ec53648608a81fe26c580081b2d51eda`
+  and the source distribution SHA-256 as
+  `3b0da145f312148eb31303c7cf423186d1eb9151bb536ee1aa4c8fa587fcc2c9`.
+- Recorded that the source distribution built on Windows stored `qzx.sh` with
+  non-executable mode `0666`; PyPI artifacts are immutable, so the correction
+  is carried by alpha 8 instead of rewriting alpha 7.
+- Passed the hosted ten-platform matrix and the specialized Alpine, Debian,
+  FreeBSD, OpenBSD, OmniOS, Oracle Solaris, native-formatting, and real SSH
+  deployment workflows for the immutable `v0.2.2.0.6a7` tag.
+- Preserved `v0.2.2.0.6a6` as an immutable validation tag; alpha 6 was not
+  uploaded to PyPI or published as a GitHub Release.
 
 ## 0.2.2.0.6a6 — 2026-07-30
 
@@ -39,8 +60,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 - Made the Unix launcher portable to POSIX `sh` instead of assuming
   `/bin/bash`, so minimal Linux, BSD, Solaris, and illumos environments can
   execute the same checked-in launcher without an artificial Bash dependency.
-- Preserved `v0.2.2.0.6a4` as an immutable validation tag; alpha 4 was not
-  uploaded to PyPI.
+- Preserved `v0.2.2.0.6a4`, its GitHub pre-release, and its PyPI artifacts as
+  immutable public history.
 
 ## 0.2.2.0.6a4 — 2026-07-30
 
@@ -59,8 +80,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   Alpine, FreeBSD, OpenBSD, and OmniOS jobs, and made the SSH deployment test
   verify its remote backup through SSH instead of assuming a shared local
   filesystem.
-- Preserved alpha 1 and alpha 2 as immutable public GitHub pre-releases, not
-  PyPI publications; alpha 3 itself remained an unpublished validation tag.
+- Preserved alpha 1 and alpha 2 as immutable public PyPI and GitHub
+  pre-releases; alpha 3 itself remained an unpublished validation tag.
 
 ## 0.2.2.0.6a2 — 2026-07-30
 
@@ -68,9 +89,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 - Restored the executable Git mode of `qzx.sh` after the
   `v0.2.2.0.6a1` validation tag exposed a `Permission denied` failure in
-  Alpine Linux. Alpha 1 remains an immutable public GitHub pre-release, not a
-  PyPI publication; this follow-up preserves its tag, artifacts, hashes, and
-  release history.
+  Alpine Linux. Alpha 1 remains published and immutable; this follow-up
+  preserves its tag, artifacts, hashes, and release history.
 
 ## 0.2.2.0.6a1 — 2026-07-30
 

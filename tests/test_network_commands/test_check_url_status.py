@@ -5,13 +5,6 @@ import socket
 from qzx.commands.network.check_url_status import CheckUrlStatusCommand
 
 
-def _unused_local_url():
-    with socket.socket() as reserved_socket:
-        reserved_socket.bind(("127.0.0.1", 0))
-        host, port = reserved_socket.getsockname()
-    return f"http://{host}:{port}"
-
-
 class TestCheckUrlStatusCommand:
     def setup_method(self):
         self.command = CheckUrlStatusCommand()
@@ -54,7 +47,16 @@ class TestCheckUrlStatusCommand:
         assert "responded with client/server error" in result["message"]
 
     def test_real_connection_refusal(self):
-        result = self.command.execute(_unused_local_url(), timeout=1)
+        # Keep the unlistened socket bound throughout the request. Releasing
+        # an ephemeral port before connecting creates a race in which another
+        # local process can acquire it and return an unrelated HTTP response.
+        with socket.socket() as reserved_socket:
+            reserved_socket.bind(("127.0.0.1", 0))
+            host, port = reserved_socket.getsockname()
+            result = self.command.execute(
+                f"http://{host}:{port}",
+                timeout=1,
+            )
 
         assert result["success"] is True
         assert result["is_online"] is False
