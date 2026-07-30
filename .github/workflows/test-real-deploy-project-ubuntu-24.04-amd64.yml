@@ -28,12 +28,12 @@ jobs:
           python-version: "3.13"
           cache: pip
 
-      - name: Install real SSH and rsync deployment tools | Ubuntu 24.04 amd64
+      - name: Install real SSH deployment tools | Ubuntu 24.04 amd64
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install --yes openssh-server rsync
+          sudo apt-get install --yes openssh-server
           python -m pip install --upgrade pip pytest -e .
 
       - name: Start isolated real SSH target | Ubuntu 24.04 amd64
@@ -85,7 +85,8 @@ jobs:
             -f "${deploy_root}/sshd_config" \
             -E "${deploy_root}/sshd.log"
           ssh-keyscan -p "${QZX_REAL_DEPLOY_PORT}" 127.0.0.1 \
-            >>"${HOME}/.ssh/known_hosts" 2>/dev/null
+            >"${deploy_root}/known_hosts" 2>/dev/null
+          cp "${deploy_root}/known_hosts" "${HOME}/.ssh/known_hosts"
           chmod 600 "${HOME}/.ssh/known_hosts"
 
           ssh -p "${QZX_REAL_DEPLOY_PORT}" \
@@ -95,11 +96,12 @@ jobs:
           {
             echo "QZX_REAL_DEPLOY_HOST=${deploy_user}@127.0.0.1"
             echo "QZX_REAL_DEPLOY_SSH_KEY=${deploy_root}/client-key"
+            echo "QZX_REAL_DEPLOY_KNOWN_HOSTS=${deploy_root}/known_hosts"
             echo "QZX_REAL_DEPLOY_TARGET_ROOT=${target_root}"
             echo "QZX_REAL_DEPLOY_SSHD_PID=${deploy_root}/sshd.pid"
           } >>"${GITHUB_ENV}"
 
-      - name: Run real deployProject deployment and rollback | Ubuntu 24.04 amd64
+      - name: Run real deployProject promotion and rollback | Ubuntu 24.04 amd64
         shell: bash
         run: >-
           python -m pytest -q
