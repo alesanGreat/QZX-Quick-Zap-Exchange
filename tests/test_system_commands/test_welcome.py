@@ -1,5 +1,7 @@
 """Startup-focused tests for the QZX welcome presentation."""
 
+import pytest
+
 from qzx import __version__
 from qzx._build_info import ATTRIBUTION
 from qzx.commands.system.terminal_welcome import TerminalWelcome
@@ -33,6 +35,45 @@ def test_fast_startup_claims_attribution_once(tmp_path, capsys):
     assert ATTRIBUTION not in second_output.out
     assert "Welcome Professor!" in second_output.out
     assert second_output.err == ""
+
+
+@pytest.mark.parametrize(
+    ("debug_value", "expected_error"),
+    [
+        (None, ""),
+        ("true", "QZX telemetry scheduling failed: RuntimeError."),
+    ],
+)
+def test_fast_startup_keeps_telemetry_failures_safe_and_optional(
+    monkeypatch,
+    tmp_path,
+    capsys,
+    debug_value,
+    expected_error,
+):
+    import qzx.telemetry
+
+    def fail_without_leaking_message(*args, **kwargs):
+        raise RuntimeError("sensitive upstream response")
+
+    monkeypatch.setattr(
+        qzx.telemetry,
+        "schedule_version_telemetry",
+        fail_without_leaking_message,
+    )
+    environment = {
+        "QZX_STATE_DIR": str(tmp_path),
+        "QZX_TELEMETRY": "1",
+    }
+    if debug_value is not None:
+        environment["QZX_TELEMETRY_DEBUG"] = debug_value
+
+    assert fast_startup_main(environment) == 0
+
+    output = capsys.readouterr()
+    assert "Welcome Professor!" in output.out
+    assert output.err.strip() == expected_error
+    assert "sensitive upstream response" not in output.err
 
 
 def test_welcome_message_does_not_probe_system_resources():

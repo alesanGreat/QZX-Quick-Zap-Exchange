@@ -10,6 +10,8 @@ from qzx.welcome_text import basic_welcome_message
 
 _FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 _TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
+
+
 def _normalized_bool(value):
     if value is None:
         return None
@@ -40,8 +42,14 @@ def _schedule_optional_telemetry(environ):
         status = schedule_version_telemetry(VERSION, environ=environ)
         if status.get("details", {}).get("notice"):
             print(TELEMETRY_NOTICE, file=sys.stderr)
-    except Exception:
-        pass
+    except Exception as exc:
+        if _normalized_bool(environ.get("QZX_TELEMETRY_DEBUG")) is True:
+            print(
+                "QZX telemetry scheduling failed: {}.".format(
+                    type(exc).__name__
+                ),
+                file=sys.stderr,
+            )
 
 
 def _human_label(name):
