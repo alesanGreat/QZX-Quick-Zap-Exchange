@@ -3,6 +3,19 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a12 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Made the packaged README describe the immutable source release it belongs
+  to instead of embedding a mutable "latest published" version that became
+  stale as soon as a new artifact reached PyPI.
+- Added a distribution-verification barrier that requires both the wheel long
+  description and source distribution to identify their own exact version.
+- Preserved PyPI as the authority for the version selected by installation
+  commands without allowing that external state to make packaged
+  documentation internally inconsistent.
+
 ## 0.2.2.0.6a11 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

@@ -23,6 +23,26 @@ ATTRIBUTION = (
 )
 
 
+def release_readme_marker(version: str) -> str:
+    """Return the exact immutable-release statement required in metadata."""
+    return f"This source release is QZX `{version}`"
+
+
+def verify_release_description(
+    text: str,
+    *,
+    expected_version: str,
+    context: str,
+) -> None:
+    """Reject package descriptions that do not identify their own release."""
+    marker = release_readme_marker(expected_version)
+    if marker not in text:
+        raise ValueError(
+            f"{context} does not identify its immutable source release; "
+            f"expected {marker!r}."
+        )
+
+
 def sha256(path: Path) -> str:
     """Return the hexadecimal SHA-256 digest of one artifact."""
     digest = hashlib.sha256()
@@ -112,6 +132,11 @@ def verify_wheel(
         raise ValueError(
             f"{wheel_path.name} does not contain the required attribution."
         )
+    verify_release_description(
+        metadata_text,
+        expected_version=expected_version,
+        context=wheel_path.name,
+    )
     return {
         "filename": wheel_path.name,
         "size_bytes": wheel_path.stat().st_size,
@@ -165,6 +190,16 @@ def verify_sdist(
         raise ValueError(
             f"{sdist_path.name} does not contain the required attribution."
         )
+    verify_release_description(
+        metadata_text,
+        expected_version=expected_version,
+        context=f"{sdist_path.name} PKG-INFO",
+    )
+    verify_release_description(
+        readme_text,
+        expected_version=expected_version,
+        context=f"{sdist_path.name} README.md",
+    )
     return {
         "filename": sdist_path.name,
         "size_bytes": sdist_path.stat().st_size,

@@ -10,6 +10,7 @@ import pytest
 
 from scripts.verify_distribution_artifacts import (
     ATTRIBUTION,
+    release_readme_marker,
     verify_distributions,
 )
 
@@ -18,7 +19,7 @@ VERSION = "9.8.7a6"
 REQUIRES_PYTHON = ">=3.13"
 
 
-def metadata_text() -> str:
+def metadata_text(description_version=VERSION) -> str:
     return (
         "Metadata-Version: 2.4\n"
         "Name: qzx\n"
@@ -26,7 +27,8 @@ def metadata_text() -> str:
         f"Requires-Python: {REQUIRES_PYTHON}\n"
         "Description-Content-Type: text/markdown\n"
         "\n"
-        f"{ATTRIBUTION}\n"
+        f"{ATTRIBUTION}\n\n"
+        f"{release_readme_marker(description_version)}.\n"
     )
 
 
@@ -38,19 +40,31 @@ def add_tar_text(archive, name, text, mode=0o644):
     archive.addfile(member, io.BytesIO(payload))
 
 
-def build_fixture_distributions(dist_dir, launcher_mode=0o755):
+def build_fixture_distributions(
+    dist_dir,
+    launcher_mode=0o755,
+    description_version=VERSION,
+):
     wheel = dist_dir / f"qzx-{VERSION}-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr(
             f"qzx-{VERSION}.dist-info/METADATA",
-            metadata_text(),
+            metadata_text(description_version),
         )
 
     sdist = dist_dir / f"qzx-{VERSION}.tar.gz"
     root = f"qzx-{VERSION}"
     with tarfile.open(sdist, "w:gz") as archive:
-        add_tar_text(archive, f"{root}/PKG-INFO", metadata_text())
-        add_tar_text(archive, f"{root}/README.md", ATTRIBUTION)
+        add_tar_text(
+            archive,
+            f"{root}/PKG-INFO",
+            metadata_text(description_version),
+        )
+        add_tar_text(
+            archive,
+            f"{root}/README.md",
+            f"{ATTRIBUTION}\n\n{release_readme_marker(description_version)}.\n",
+        )
         add_tar_text(
             archive,
             f"{root}/qzx.sh",
@@ -79,6 +93,20 @@ def test_distribution_verifier_rejects_windows_sdist_launcher_mode(tmp_path):
     build_fixture_distributions(tmp_path, launcher_mode=0o666)
 
     with pytest.raises(ValueError, match=r"qzx\.sh as 0666.*require 0755"):
+        verify_distributions(
+            tmp_path,
+            expected_version=VERSION,
+            expected_python=REQUIRES_PYTHON,
+        )
+
+
+def test_distribution_verifier_rejects_stale_packaged_description(tmp_path):
+    build_fixture_distributions(tmp_path, description_version="9.8.7a5")
+
+    with pytest.raises(
+        ValueError,
+        match="does not identify its immutable source release",
+    ):
         verify_distributions(
             tmp_path,
             expected_version=VERSION,
