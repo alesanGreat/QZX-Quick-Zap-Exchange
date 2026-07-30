@@ -2,61 +2,68 @@
 # -*- coding: utf-8 -*-
 
 """
-CleanDevCaches Command - Recursively scans for common development cache/dependency directories and cleans them.
+CleanDevCaches Command - Finds and optionally removes development caches,
+dependency directories, and generated build artifacts.
 """
 
+import fnmatch
 import os
-import sys
 import shutil
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
+
 class CleanDevCachesCommand(CommandBase):
     """
-    Command to identify and clean up heavy development cache/dependency directories (e.g. node_modules, __pycache__).
+    Identify and optionally remove known development-generated directories.
     """
-    
+
     name = "cleanDevCaches"
-    description = "Scans recursively for heavy development caches/dependencies (node_modules, __pycache__, dist) and purges them"
+    description = (
+        "Finds development caches, dependency directories, and generated build "
+        "artifacts; preview is the default"
+    )
     category = "development"
-    
+    requires_explicit_approval = True
+    backup_target_parameter = "scan_path"
+
     parameters = [
         {
             'name': 'scan_path',
-            'description': 'Path to start the scan from (defaults to current working directory)',
+            'description': 'Directory to scan (defaults to the current working directory)',
             'required': False,
-            'default': '.'
+            'default': '.',
+            'type': 'str',
         },
         {
             'name': 'dry_run',
-            'description': 'If true, only lists files and space saved without deleting anything (true/false)',
+            'description': 'Preview matching directories without deleting them',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool',
         },
         {
             'name': 'max_depth',
-            'description': 'Maximum folder depth to traverse recursively (defaults to 4)',
+            'description': 'Maximum directory depth to inspect (must be at least 1)',
             'required': False,
-            'default': '4'
+            'default': 4,
+            'type': 'int',
         }
     ]
-    
+
     examples = [
         {
             'command': 'qzx cleanDevCaches',
-            'description': 'Scan the current directory for cache folders (dry run)'
+            'description': 'Preview generated development directories below the current directory'
         },
         {
-            'command': 'qzx cleanDevCaches . false',
-            'description': 'Scan the current directory and actually delete found cache folders'
+            'command': 'qzx cleanDevCaches . --dry-run false',
+            'description': 'Back up the current directory, then remove every matched generated directory'
         }
     ]
-    
-    # Target folder names that are safe to delete as development caches
+
+    # Direct targets are generated state, but some are expensive to recreate.
+    # Their presence still requires a real preview and a fail-closed backup.
     CACHE_TARGETS = {
         "node_modules",
         "__pycache__",
@@ -78,67 +85,122 @@ class CleanDevCachesCommand(CommandBase):
         "bin": ["*.csproj", "*.sln"],
         "obj": ["*.csproj", "*.sln"]
     }
-    
-    def execute(self, scan_path='.', dry_run='true', max_depth='4'):
+
+    def validate_safety_backup_target(self, target, values):
+        """Reject invalid and dangerously broad backup targets."""
+        absolute = os.path.abspath(os.fspath(target))
+        if not os.path.exists(absolute):
+            return self._path_error(
+                "path_not_found",
+                f"Path '{target}' does not exist.",
+                absolute,
+            )
+        if not os.path.isdir(absolute):
+            return self._path_error(
+                "path_not_directory",
+                f"Path '{target}' is not a directory.",
+                absolute,
+            )
+        drive, tail = os.path.splitdrive(absolute)
+        normalized_tail = tail.rstrip(os.sep)
+        if normalized_tail == "":
+            return {
+                "success": False,
+                "error_code": "filesystem_root_refused",
+                "error": f"Refusing to clean filesystem root '{absolute}'.",
+                "message": (
+                    "A filesystem root is too broad for cleanDevCaches. Choose "
+                    "a project directory, or use the explicit QZX safety bypass "
+                    "only if this broad target is genuinely intended."
+                ),
+                "details": {
+                    "scan_path": absolute,
+                    "drive": drive or os.path.sep,
+                    "dry_run": False,
+                },
+            }
+        return None
+
+    def execute(self, scan_path='.', dry_run=True, max_depth=4):
         """
-        Executes the cache scanning and cleaning
-        
+        Scan for generated development directories and optionally remove them.
+
         Args:
             scan_path (str): The starting directory path
-            dry_run (str/bool): Whether to skip actual deletion
-            max_depth (str/int): Traversal depth limit
-            
+            dry_run (bool): Whether to skip actual deletion
+            max_depth (int): Traversal depth limit
+
         Returns:
             Dictionary with results and details
         """
         abs_path = os.path.abspath(scan_path)
-        
+
         if not os.path.exists(abs_path):
-            return {
-                "success": False,
-                "error": f"Path '{scan_path}' does not exist.",
-                "message": f"Path '{scan_path}' does not exist."
-            }
-            
+            return self._path_error(
+                "path_not_found",
+                f"Path '{scan_path}' does not exist.",
+                abs_path,
+            )
+
         if not os.path.isdir(abs_path):
-            return {
-                "success": False,
-                "error": f"'{scan_path}' is not a directory. Scanning requires a folder path.",
-                "message": f"'{scan_path}' is not a directory."
-            }
-            
-        # Parse arguments
+            return self._path_error(
+                "path_not_directory",
+                f"Path '{scan_path}' is not a directory.",
+                abs_path,
+            )
+
         if isinstance(dry_run, str):
-            is_dry_run = dry_run.lower() in ('true', 'yes', 'y', '1', 't')
+            normalized = dry_run.strip().lower()
+            if normalized in {"true", "yes", "y", "1", "t", "on"}:
+                is_dry_run = True
+            elif normalized in {"false", "no", "n", "0", "f", "off"}:
+                is_dry_run = False
+            else:
+                return self._argument_error(
+                    "invalid_dry_run",
+                    f"Invalid dry_run value: {dry_run!r}.",
+                    abs_path,
+                    dry_run=dry_run,
+                    max_depth=max_depth,
+                )
         else:
             is_dry_run = bool(dry_run)
-            
+
         try:
             depth_limit = int(max_depth)
-        except ValueError:
-            depth_limit = 4
-            
+        except (TypeError, ValueError):
+            return self._argument_error(
+                "invalid_max_depth",
+                f"max_depth must be an integer of at least 1, got {max_depth!r}.",
+                abs_path,
+                dry_run=is_dry_run,
+                max_depth=max_depth,
+            )
+        if depth_limit < 1:
+            return self._argument_error(
+                "invalid_max_depth",
+                f"max_depth must be at least 1, got {depth_limit}.",
+                abs_path,
+                dry_run=is_dry_run,
+                max_depth=depth_limit,
+            )
+
         found_folders = []
-        total_bytes = 0
-        
-        # Walk directories recursively up to depth_limit
+        identified_bytes = 0
+
         base_depth = abs_path.count(os.sep)
-        
+
         try:
             for root, dirs, files in os.walk(abs_path, topdown=True):
-                # Calculate current depth
                 current_depth = root.count(os.sep) - base_depth
                 if current_depth >= depth_limit:
-                    # Clear subdirectories to stop traversing deeper
                     dirs.clear()
                     continue
-                
-                # Exclude standard version control to avoid entering them
+
                 for skip_dir in [".git", ".svn", ".hg"]:
                     if skip_dir in dirs:
                         dirs.remove(skip_dir)
-                        
-                # Identify cache directories inside the current root
+
                 matched_dirs = []
                 for d in list(dirs):
                     full_d_path = os.path.join(root, d)
@@ -149,14 +211,10 @@ class CleanDevCachesCommand(CommandBase):
                     if d in self.CACHE_TARGETS:
                         is_match = True
                         reason = f"Direct cache target name '{d}'"
-                    # Conditional match (safety verification check)
                     elif d in self.CONDITIONAL_TARGETS:
                         triggers = self.CONDITIONAL_TARGETS[d]
-                        # Check if any trigger files exist in the parent folder (root)
                         for trigger in triggers:
                             if "*" in trigger:
-                                # wildcard match
-                                import fnmatch
                                 if any(fnmatch.fnmatch(f, trigger) for f in files):
                                     is_match = True
                                     reason = f"Conditional target '{d}' matched by file pattern '{trigger}'"
@@ -166,12 +224,11 @@ class CleanDevCachesCommand(CommandBase):
                                     is_match = True
                                     reason = f"Conditional target '{d}' matched by parent file '{trigger}'"
                                     break
-                                    
+
                     if is_match:
-                        # Add to matches and remove from dirs to prevent walking inside it
                         matched_dirs.append((full_d_path, d, reason))
                         dirs.remove(d)
-                        
+
                 for full_path, name, reason in matched_dirs:
                     size = self._get_dir_size(full_path)
                     found_folders.append({
@@ -182,56 +239,125 @@ class CleanDevCachesCommand(CommandBase):
                         "size_bytes": size,
                         "size_readable": self._format_bytes(size)
                     })
-                    total_bytes += size
-                    
-            # Perform deletion if not dry_run
+                    identified_bytes += size
+
             deleted_folders = []
+            deleted_bytes = 0
+            deletion_failures = []
             errors = []
-            
+
             if not is_dry_run:
                 for item in found_folders:
                     target_path = item["path"]
                     try:
-                        shutil.rmtree(target_path)
+                        self._remove_directory(target_path)
                         deleted_folders.append(target_path)
-                    except Exception as e:
-                        errors.append(f"Failed to delete '{target_path}': {str(e)}")
-            
-            # Formulate the response message
-            readable_total = self._format_bytes(total_bytes)
-            action_type = "Dry-run scan" if is_dry_run else "Clean operation"
-            
-            msg = f"{action_type} completed for '{abs_path}':\n"
-            msg += f"- Identified cache folders: {len(found_folders)}\n"
-            msg += f"- Total space: {readable_total}\n"
-            
-            if not is_dry_run:
-                msg += f"- Successfully deleted: {len(deleted_folders)}\n"
-                if errors:
-                    msg += f"- Deletion errors encountered: {len(errors)}\n"
+                        deleted_bytes += item["size_bytes"]
+                    except Exception as exc:
+                        error = (
+                            f"Failed to delete '{target_path}': "
+                            f"{type(exc).__name__}: {exc}"
+                        )
+                        errors.append(error)
+                        deletion_failures.append({
+                            "path": target_path,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        })
+
+            identified_readable = self._format_bytes(identified_bytes)
+            deleted_readable = self._format_bytes(deleted_bytes)
+            if is_dry_run:
+                message = (
+                    f"Previewed '{abs_path}' and found {len(found_folders)} "
+                    f"generated development directorie(s), totaling "
+                    f"{identified_readable}. Nothing was deleted."
+                )
+            elif deletion_failures:
+                message = (
+                    f"Cleaned {len(deleted_folders)} of {len(found_folders)} "
+                    f"matched directorie(s) below '{abs_path}', recovering "
+                    f"{deleted_readable}. {len(deletion_failures)} deletion(s) "
+                    "failed; review deletion_failures and restore from the "
+                    "reported safety backup if needed."
+                )
             else:
-                msg += "- Note: This was a dry run. No folders were deleted. Run with dry_run=false to delete.\n"
-                
+                message = (
+                    f"Removed {len(deleted_folders)} generated development "
+                    f"directorie(s) below '{abs_path}', recovering "
+                    f"{deleted_readable}."
+                )
+
+            success = not deletion_failures
             return {
-                "success": True,
+                "success": success,
+                "status": (
+                    "preview"
+                    if is_dry_run
+                    else ("success" if success else "partial_failure")
+                ),
                 "scan_path": abs_path,
                 "dry_run": is_dry_run,
+                "max_depth": depth_limit,
                 "total_folders_found": len(found_folders),
-                "total_bytes_saved": total_bytes,
-                "total_space_saved_readable": readable_total,
+                "total_bytes_identified": identified_bytes,
+                "total_space_identified_readable": identified_readable,
+                "total_bytes_saved": deleted_bytes,
+                "total_space_saved_readable": deleted_readable,
                 "found_folders": found_folders,
                 "deleted_folders": deleted_folders,
+                "deletion_failures": deletion_failures,
                 "errors": errors,
-                "message": msg
+                "message": message,
             }
-            
-        except Exception as e:
+
+        except Exception as exc:
             return {
                 "success": False,
-                "error": str(e),
-                "message": f"Failed to execute cache cleaning: {str(e)}"
+                "error_code": "scan_failed",
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": (
+                    f"Could not inspect generated development directories "
+                    f"below '{abs_path}': {exc}"
+                ),
+                "details": {
+                    "scan_path": abs_path,
+                    "dry_run": is_dry_run,
+                    "max_depth": depth_limit,
+                },
             }
-            
+
+    @staticmethod
+    def _path_error(error_code, message, path):
+        return {
+            "success": False,
+            "error_code": error_code,
+            "error": message,
+            "message": message,
+            "details": {"scan_path": path},
+        }
+
+    @staticmethod
+    def _argument_error(
+        error_code,
+        message,
+        scan_path,
+        *,
+        dry_run,
+        max_depth,
+    ):
+        return {
+            "success": False,
+            "error_code": error_code,
+            "error": message,
+            "message": message,
+            "details": {
+                "scan_path": scan_path,
+                "dry_run": dry_run,
+                "max_depth": max_depth,
+            },
+        }
+
     def _get_dir_size(self, path):
         """Calculates total size of a directory in bytes"""
         total_size = 0
@@ -247,4 +373,8 @@ class CleanDevCachesCommand(CommandBase):
         except Exception:
             pass
         return total_size
-        
+
+    @staticmethod
+    def _remove_directory(path):
+        """Remove one selected directory through an explicit test boundary."""
+        shutil.rmtree(path)

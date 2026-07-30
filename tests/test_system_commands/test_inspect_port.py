@@ -3,7 +3,6 @@
 
 """Real socket and process tests for inspectPort."""
 
-import platform
 import socket
 import subprocess
 import sys
@@ -73,7 +72,7 @@ def test_detects_a_real_listening_socket_without_killing_it():
     assert result["killed"] is False
 
 
-def test_kill_operates_only_on_a_controlled_real_child_process():
+def test_legacy_kill_option_never_terminates_a_controlled_real_child():
     child_code = (
         "import socket,sys,time;"
         "s=socket.socket();"
@@ -91,47 +90,30 @@ def test_kill_operates_only_on_a_controlled_real_child_process():
     try:
         port = int(child.stdout.readline().strip())
         inspection = InspectPortCommand().execute(port)
+        assert inspection["success"] is True, inspection
+        assert inspection["in_use"] is True
 
-        if platform.system().lower() == "sunos":
-            result = InspectPortCommand().execute(port, kill=True)
-            assert result["success"] is False
-            assert result["in_use"] is True
-            assert result["killed"] is False
-            assert child.poll() is None
-        else:
-            assert inspection["success"] is True, inspection
-            observed_pids = {
-                process["pid"]
-                for process in inspection["processes"]
-            }
-            assert observed_pids
+        result = InspectPortCommand().execute(port, kill=True)
 
-            unconfirmed = InspectPortCommand().execute(port, kill=True)
-            assert unconfirmed["success"] is False
-            assert unconfirmed["error_code"] == "expected_pid_required"
-            assert unconfirmed["killed"] is False
-            assert child.poll() is None
+        assert result["success"] is False
+        assert result["error_code"] == "operation_moved"
+        assert result["status"] == "read_only"
+        assert result["in_use"] is True
+        assert result["killed"] is False
+        assert child.poll() is None
 
-            observed_pid = next(iter(observed_pids))
-            result = InspectPortCommand().execute(
-                port,
-                kill=True,
-                expected_pid=observed_pid,
-            )
-            assert result["success"] is True, result
-            assert result["in_use"] is True
-            assert result["killed"] is True
-            assert result["killed_pids"] == [observed_pid]
-            assert result["port_cleared"] is True
-            assert result["remaining_pids"] == []
-            child.wait(timeout=5)
+        if result["observed_pids"]:
+            assert child.pid in result["observed_pids"]
+            suggestions = result["details"]["suggested_commands"]
+            assert any(f"killProcess {child.pid}" in item for item in suggestions)
+            assert any("--expected-create-time" in item for item in suggestions)
     finally:
         if child.poll() is None:
             child.terminate()
             child.wait(timeout=5)
 
 
-def test_macos_fallback_verifies_port_after_controlled_termination():
+def test_macos_fallback_legacy_kill_returns_guidance_without_termination():
     command = DarwinFallbackInspectPortCommand(listener_pid=424242)
 
     result = command._execute_fallback(
@@ -140,9 +122,19 @@ def test_macos_fallback_verifies_port_after_controlled_termination():
         expected_pid=424242,
     )
 
-    assert result["success"] is True
-    assert result["killed"] is True
-    assert result["killed_pids"] == [424242]
-    assert result["port_cleared"] is True
-    assert result["remaining_pids"] == []
-    assert "verified that port 54321 is clear" in result["message"]
+    assert result["success"] is False
+    assert result["error_code"] == "operation_moved"
+    assert result["status"] == "read_only"
+    assert result["killed"] is False
+    assert result["observed_pids"] == [424242]
+    assert command.terminated is False
+    assert result["details"]["suggested_commands"] == [
+        "qzx killProcess 424242 --yolo"
+    ]
+
+
+def test_inspect_port_metadata_is_read_only():
+    command = InspectPortCommand()
+
+    assert command.requires_explicit_approval is False
+    assert command.approval_when_parameter is None

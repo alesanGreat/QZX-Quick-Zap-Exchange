@@ -9,14 +9,12 @@ import os
 import re
 import ast
 import inspect
+import stat
+import tempfile
 from typing import List, Dict, Any, Tuple
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
+
 
 class CreateDocTemplatePythonCommand(CommandBase):
     """
@@ -24,55 +22,91 @@ class CreateDocTemplatePythonCommand(CommandBase):
     """
     
     name = "createDocTemplatePython"
-    description = "Creates basic documentation templates for Python code that lacks docstrings"
+    description = (
+        "Previews or adds generated docstring templates to functions, methods, "
+        "and classes in one Python file"
+    )
     category = "development"
-    
+    requires_explicit_approval = True
+    backup_target_parameter = "file_path"
+
     parameters = [
         {
             'name': 'file_path',
             'description': 'Path to the Python file to process',
-            'required': True
+            'required': True,
+            'type': 'str',
         },
         {
             'name': 'style',
             'description': 'Documentation style (google, numpy, sphinx)',
             'required': False,
-            'default': 'google'
+            'default': 'google',
+            'type': 'str',
         },
         {
             'name': 'overwrite',
             'description': 'Whether to overwrite existing docstrings',
             'required': False,
-            'default': False
+            'default': False,
+            'type': 'bool',
         },
         {
             'name': 'preview',
+            'description': 'Compatibility option: preview changes without modifying the file',
+            'required': False,
+            'default': None,
+            'type': 'bool',
+        },
+        {
+            'name': 'dry_run',
             'description': 'Preview changes without modifying the file',
             'required': False,
-            'default': False
+            'default': True,
+            'type': 'bool',
         }
     ]
-    
+
     examples = [
         {
-            'command': 'qzx CreateDocTemplatePython myfile.py',
-            'description': 'Create Google-style documentation templates for myfile.py'
+            'command': 'qzx createDocTemplatePython myfile.py',
+            'description': 'Preview Google-style docstring templates for myfile.py'
         },
         {
-            'command': 'qzx CreateDocTemplatePython myfile.py sphinx',
-            'description': 'Create Sphinx-style documentation templates for myfile.py'
+            'command': 'qzx createDocTemplatePython myfile.py sphinx',
+            'description': 'Preview Sphinx-style docstring templates for myfile.py'
         },
         {
-            'command': 'qzx CreateDocTemplatePython myfile.py google true false',
-            'description': 'Create Google-style documentation templates, overwriting existing ones'
+            'command': 'qzx createDocTemplatePython myfile.py --dry-run false',
+            'description': 'Back up myfile.py, then add missing Google-style docstrings'
         },
         {
-            'command': 'qzx CreateDocTemplatePython myfile.py google false true',
-            'description': 'Preview Google-style documentation templates without modifying the file'
+            'command': 'qzx createDocTemplatePython myfile.py --overwrite --dry-run false',
+            'description': 'Back up myfile.py, then replace existing docstrings'
         }
     ]
-    
-    def execute(self, file_path, style='google', overwrite=False, preview=False):
+
+    def _requested_high_risk_mutation(self, values):
+        """Treat the legacy preview flag and the canonical dry-run alike."""
+        preview = values.get("preview")
+        if preview is not None:
+            parsed_preview = self._parse_bool(preview)
+            if parsed_preview is not None:
+                return not parsed_preview
+        return not bool(values.get("dry_run", True))
+
+    def validate_safety_backup_target(self, target, values):
+        """Require one existing regular Python source file."""
+        return self._validate_file_path(target, preview=False)
+
+    def execute(
+        self,
+        file_path,
+        style='google',
+        overwrite=False,
+        preview=None,
+        dry_run=True,
+    ):
         """
         Generates documentation templates for Python code
         
@@ -80,62 +114,94 @@ class CreateDocTemplatePythonCommand(CommandBase):
             file_path (str): Path to the Python file to process
             style (str, optional): Documentation style (google, numpy, sphinx)
             overwrite (bool, optional): Whether to overwrite existing docstrings
-            preview (bool, optional): Preview changes without modifying the file
+            preview (bool, optional): Legacy preview switch
+            dry_run (bool, optional): Preview changes without modifying the file
             
         Returns:
             Dictionary with the result of the operation
         """
         try:
-            # Validate file exists
-            if not os.path.exists(file_path):
-                return {
-                    "success": False,
-                    "error": f"File '{file_path}' does not exist"
-                }
-            
-            # Validate it's a Python file
-            if not file_path.endswith('.py'):
-                return {
-                    "success": False,
-                    "error": f"File '{file_path}' is not a Python file"
-                }
-            
-            # Convert parameters to appropriate types
-            if isinstance(style, str):
-                style = style.lower()
-                if style not in ['google', 'numpy', 'sphinx']:
-                    return {
-                        "success": False,
-                        "error": f"Invalid style: '{style}'. Must be one of: google, numpy, sphinx"
-                    }
-            
-            if isinstance(overwrite, str):
-                overwrite = overwrite.lower() in ('true', 'yes', 'y', '1')
-            
-            if isinstance(preview, str):
-                preview = preview.lower() in ('true', 'yes', 'y', '1')
-            
-            # Read the file
-            with open(file_path, 'r', encoding='utf-8') as f:
+            absolute_path = os.path.abspath(os.fspath(file_path))
+            path_failure = self._validate_file_path(
+                absolute_path,
+                preview=True,
+            )
+            if path_failure is not None:
+                return path_failure
+
+            style = str(style).strip().lower()
+            if style not in {'google', 'numpy', 'sphinx'}:
+                return self._error_result(
+                    "invalid_style",
+                    (
+                        f"Invalid style '{style}'. Choose google, numpy, or "
+                        "sphinx."
+                    ),
+                    absolute_path,
+                )
+
+            overwrite_value = self._strict_bool(overwrite)
+            if overwrite_value is None:
+                return self._error_result(
+                    "invalid_overwrite",
+                    f"overwrite must be true or false, got {overwrite!r}.",
+                    absolute_path,
+                )
+            dry_run_value = self._strict_bool(dry_run)
+            if dry_run_value is None:
+                return self._error_result(
+                    "invalid_dry_run",
+                    f"dry_run must be true or false, got {dry_run!r}.",
+                    absolute_path,
+                )
+            preview_value = None
+            if preview is not None:
+                preview_value = self._strict_bool(preview)
+                if preview_value is None:
+                    return self._error_result(
+                        "invalid_preview",
+                        f"preview must be true or false, got {preview!r}.",
+                        absolute_path,
+                    )
+            effective_preview = (
+                preview_value
+                if preview_value is not None
+                else dry_run_value
+            )
+            live_path_failure = self._validate_file_path(
+                absolute_path,
+                preview=effective_preview,
+            )
+            if live_path_failure is not None:
+                return live_path_failure
+
+            with open(
+                absolute_path,
+                'r',
+                encoding='utf-8',
+                newline='',
+            ) as f:
                 content = f.read()
-            
-            # Parse the Python code
+
             try:
                 tree = ast.parse(content)
-            except SyntaxError as e:
-                return {
-                    "success": False,
-                    "error": f"Syntax error in file: {str(e)}"
-                }
-            
-            # Process the AST to find functions and classes
-            visitor = DocstringVisitor(content, style, overwrite)
+            except SyntaxError as exc:
+                result = self._error_result(
+                    "invalid_python_syntax",
+                    f"Python syntax error: {exc}",
+                    absolute_path,
+                )
+                result["details"].update({
+                    "line": exc.lineno,
+                    "offset": exc.offset,
+                })
+                return result
+
+            visitor = DocstringVisitor(content, style, overwrite_value)
             visitor.visit(tree)
-            
-            # Get the new content with docstrings added
             new_content = visitor.get_modified_content()
-            
-            # Generate statistics
+            new_content = self._preserve_file_endings(content, new_content)
+
             stats = {
                 "functions_processed": visitor.stats["functions_processed"],
                 "functions_updated": visitor.stats["functions_updated"],
@@ -144,49 +210,174 @@ class CreateDocTemplatePythonCommand(CommandBase):
                 "methods_processed": visitor.stats["methods_processed"],
                 "methods_updated": visitor.stats["methods_updated"]
             }
-            
-            # Get a preview of changes if requested
-            changes_preview = []
-            if preview or len(visitor.updates) > 0:
-                changes_preview = visitor.get_changes_preview()
-            
-            # Write the new content to the file if not in preview mode
-            if not preview and content != new_content:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(new_content)
-            
-            # Prepare the result
+
+            changes_preview = (
+                visitor.get_changes_preview()
+                if visitor.updates
+                else []
+            )
+            changes_detected = content != new_content
+            changes_applied = False
+            if not effective_preview and changes_detected:
+                self._atomic_write_text(absolute_path, new_content)
+                changes_applied = True
+
             result = {
                 "success": True,
-                "file_path": os.path.abspath(file_path),
+                "status": (
+                    "preview"
+                    if effective_preview
+                    else ("updated" if changes_applied else "unchanged")
+                ),
+                "file_path": absolute_path,
                 "style": style,
-                "overwrite": overwrite,
-                "preview": preview,
+                "overwrite": overwrite_value,
+                "preview": effective_preview,
+                "dry_run": effective_preview,
                 "stats": stats,
-                "changes_made": content != new_content,
+                "changes_detected": changes_detected,
+                "changes_applied": changes_applied,
+                "changes_made": changes_applied,
                 "changes_preview": changes_preview
             }
-            
-            # Add a message
-            if preview:
-                if len(changes_preview) > 0:
-                    result["message"] = f"Preview of documentation templates for '{file_path}' generated"
+
+            if effective_preview:
+                if changes_preview:
+                    result["message"] = (
+                        f"Previewed {len(changes_preview)} docstring change(s) "
+                        f"for '{absolute_path}'. Nothing was written."
+                    )
                 else:
-                    result["message"] = f"No documentation templates needed for '{file_path}'"
+                    result["message"] = (
+                        f"No docstring templates are needed for "
+                        f"'{absolute_path}'."
+                    )
             else:
-                if content != new_content:
-                    result["message"] = f"Documentation templates generated for '{file_path}'"
+                if changes_applied:
+                    result["message"] = (
+                        f"Applied {len(changes_preview)} docstring change(s) "
+                        f"atomically to '{absolute_path}'."
+                    )
                 else:
-                    result["message"] = f"No documentation templates needed for '{file_path}'"
-            
+                    result["message"] = (
+                        f"No docstring templates were needed for "
+                        f"'{absolute_path}'; the file was not rewritten."
+                    )
+
             return result
-            
-        except Exception as e:
+
+        except Exception as exc:
             return {
                 "success": False,
-                "file_path": file_path,
-                "error": str(e)
+                "error_code": "docstring_generation_failed",
+                "file_path": os.path.abspath(os.fspath(file_path)),
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": (
+                    f"Could not generate docstring templates for "
+                    f"'{file_path}': {exc}"
+                ),
             }
+
+    @staticmethod
+    def _strict_bool(value):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "yes", "y", "1", "on"}:
+                return True
+            if normalized in {"false", "no", "n", "0", "off"}:
+                return False
+        return None
+
+    @classmethod
+    def _validate_file_path(cls, file_path, preview):
+        absolute_path = os.path.abspath(os.fspath(file_path))
+        if not os.path.lexists(absolute_path):
+            return cls._error_result(
+                "file_not_found",
+                f"File '{absolute_path}' does not exist.",
+                absolute_path,
+            )
+        if os.path.islink(absolute_path):
+            return cls._error_result(
+                "symbolic_link_refused",
+                (
+                    f"File '{absolute_path}' is a symbolic link. QZX refuses "
+                    "to replace an ambiguous target."
+                ),
+                absolute_path,
+            )
+        if not os.path.isfile(absolute_path):
+            return cls._error_result(
+                "path_not_file",
+                f"Path '{absolute_path}' is not a regular file.",
+                absolute_path,
+            )
+        if not absolute_path.lower().endswith('.py'):
+            return cls._error_result(
+                "not_python_file",
+                f"File '{absolute_path}' does not have a .py extension.",
+                absolute_path,
+            )
+        if not preview and not os.access(absolute_path, os.W_OK):
+            return cls._error_result(
+                "file_not_writable",
+                f"File '{absolute_path}' is not writable.",
+                absolute_path,
+            )
+        return None
+
+    @staticmethod
+    def _error_result(error_code, message, file_path):
+        return {
+            "success": False,
+            "error_code": error_code,
+            "error": message,
+            "message": message,
+            "details": {"file_path": file_path},
+        }
+
+    @staticmethod
+    def _preserve_file_endings(original, generated):
+        newline = '\r\n' if '\r\n' in original else '\n'
+        if newline != '\n':
+            generated = generated.replace('\n', newline)
+        had_terminal_newline = original.endswith(('\n', '\r'))
+        if had_terminal_newline and not generated.endswith(newline):
+            generated += newline
+        return generated
+
+    @staticmethod
+    def _atomic_write_text(file_path, content):
+        """Replace one file from a fully written sibling temporary file."""
+        original_mode = stat.S_IMODE(os.stat(file_path).st_mode)
+        directory = os.path.dirname(file_path) or os.curdir
+        descriptor, temporary_path = tempfile.mkstemp(
+            dir=directory,
+            prefix=f".{os.path.basename(file_path)}.qzx-",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(
+                descriptor,
+                'w',
+                encoding='utf-8',
+                newline='',
+            ) as temporary:
+                descriptor = None
+                temporary.write(content)
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            os.chmod(temporary_path, original_mode)
+            os.replace(temporary_path, file_path)
+        except Exception:
+            if descriptor is not None:
+                os.close(descriptor)
+            if os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+            raise
+
 
 class DocstringVisitor(ast.NodeVisitor):
     """

@@ -7,6 +7,8 @@ Tests for the CleanDevCaches command
 
 import os
 import shutil
+from pathlib import Path
+
 from qzx.commands.development.clean_dev_caches import CleanDevCachesCommand
 
 class TestCleanDevCachesCommand:
@@ -101,7 +103,9 @@ class TestCleanDevCachesCommand:
         assert result_dry["dry_run"] is True
         assert result_dry["total_folders_found"] == 4  # node_modules, dist, __pycache__, rust_app/target
         # Size details: 100 (node_modules) + 200 (dist) + 50 (__pycache__) + 400 (rust_app/target) = 750 bytes
-        assert result_dry["total_bytes_saved"] == 750
+        assert result_dry["status"] == "preview"
+        assert result_dry["total_bytes_identified"] == 750
+        assert result_dry["total_bytes_saved"] == 0
         
         # Ensure files still exist
         assert node_modules.exists()
@@ -115,6 +119,7 @@ class TestCleanDevCachesCommand:
         assert result_clean["success"] is True
         assert result_clean["dry_run"] is False
         assert result_clean["total_folders_found"] == 4
+        assert result_clean["total_bytes_identified"] == 750
         assert result_clean["total_bytes_saved"] == 750
         assert len(result_clean["deleted_folders"]) == 4
         
@@ -130,3 +135,102 @@ class TestCleanDevCachesCommand:
         assert (tmp_path / "package.json").exists()
         assert (tmp_path / "src" / "app.py").exists()
         assert (tmp_path / "rust_app" / "Cargo.toml").exists()
+
+    def test_invalid_depth_fails_instead_of_silently_using_default(self, tmp_path):
+        """Invalid depth must not select an operation different from the request."""
+        result = self.command.execute(str(tmp_path), max_depth="deep")
+
+        assert result["success"] is False
+        assert result["error_code"] == "invalid_max_depth"
+
+        zero = self.command.execute(str(tmp_path), max_depth=0)
+        assert zero["success"] is False
+        assert zero["error_code"] == "invalid_max_depth"
+
+    def test_partial_deletion_is_a_structured_failure(
+        self,
+        tmp_path,
+    ):
+        """A failed deletion cannot be reported as a globally successful clean."""
+        first = tmp_path / "__pycache__"
+        second = tmp_path / "node_modules"
+        first.mkdir()
+        second.mkdir()
+        (first / "cache.pyc").write_bytes(b"a")
+        (second / "dependency.js").write_bytes(b"bb")
+        class SelectiveFailureCommand(CleanDevCachesCommand):
+            @staticmethod
+            def _remove_directory(path):
+                if Path(path).name == "node_modules":
+                    raise PermissionError("locked")
+                shutil.rmtree(path)
+
+        result = SelectiveFailureCommand().execute(
+            str(tmp_path),
+            dry_run=False,
+        )
+
+        assert result["success"] is False
+        assert result["status"] == "partial_failure"
+        assert result["total_bytes_identified"] == 3
+        assert result["total_bytes_saved"] == 1
+        assert result["deleted_folders"] == [str(first)]
+        assert result["deletion_failures"] == [{
+            "path": str(second),
+            "error_type": "PermissionError",
+            "error": "locked",
+        }]
+        assert not first.exists()
+        assert second.exists()
+
+    def test_public_preview_does_not_create_backup(self, tmp_path, monkeypatch):
+        """The safe default remains read-only and avoids unnecessary archives."""
+        monkeypatch.setenv("QZX_BACKUPS_PATH", str(tmp_path / "backups"))
+        cache = tmp_path / "__pycache__"
+        cache.mkdir()
+        (cache / "cache.pyc").write_bytes(b"cache")
+
+        result = self.command.invoke([str(tmp_path)])
+
+        assert result["success"] is True
+        assert result["status"] == "preview"
+        assert "safety_backup" not in result["meta"]
+        assert cache.exists()
+
+    def test_public_clean_creates_backup_before_deletion(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        """A live clean must archive the selected project before mutation."""
+        backups = tmp_path / "backups"
+        project = tmp_path / "project"
+        cache = project / "__pycache__"
+        cache.mkdir(parents=True)
+        (cache / "cache.pyc").write_bytes(b"cache")
+        monkeypatch.setenv("QZX_BACKUPS_PATH", str(backups))
+
+        result = self.command.invoke([
+            str(project),
+            "--dry-run",
+            "false",
+        ])
+
+        assert result["success"] is True
+        assert not cache.exists()
+        backup = result["meta"]["safety_backup"]
+        assert backup["status"] == "created"
+        assert backup["source_path"] == str(project.resolve())
+        assert Path(backup["path"]).exists()
+
+    def test_filesystem_root_is_refused_for_live_clean(self):
+        """A root clean needs the conspicuous explicit bypass."""
+        root = Path.cwd().anchor
+
+        result = self.command.validate_safety_backup_target(
+            root,
+            {"scan_path": root, "dry_run": False},
+        )
+
+        assert result["success"] is False
+        assert result["error_code"] == "filesystem_root_refused"
