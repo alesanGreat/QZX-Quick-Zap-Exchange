@@ -41,7 +41,7 @@
       "module": "qzx.commands.development.bootstrap_project",
       "class_name": "BootstrapProjectCommand",
       "aliases": [],
-      "description": "Initializes a project from scratch, setting up directories, virtual environments, dependencies, .env files, and git hooks",
+      "description": "Deprecated compatibility preview for planProjectBootstrap; former live installation and migration behavior has been removed",
       "category": "development"
     },
     {
@@ -568,6 +568,14 @@
       "aliases": [],
       "description": "Moves or renames one file, symbolic link, or complete directory; partial directory moves are rejected",
       "category": "file"
+    },
+    {
+      "name": "planProjectBootstrap",
+      "module": "qzx.commands.development.plan_project_bootstrap",
+      "class_name": "PlanProjectBootstrapCommand",
+      "aliases": [],
+      "description": "Builds a selectable project bootstrap plan without writing files, installing dependencies, creating secrets, or running migrations",
+      "category": "development"
     },
     {
       "name": "projectDoctor",

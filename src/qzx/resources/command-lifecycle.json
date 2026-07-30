@@ -108,7 +108,19 @@
     "analyzeComplexity": {"stage": "alpha"},
     "auditRepository": {"stage": "alpha"},
     "auditWorkspace": {"stage": "alpha"},
-    "bootstrapProject": {"stage": "alpha"},
+    "bootstrapProject": {
+      "stage": "deprecated",
+      "note": "Compatibility preview supported throughout QZX 0.2.x; migrate to planProjectBootstrap before 0.3.0. The former live bootstrap was removed because one filesystem backup cannot restore dependency services, secrets, hooks, or databases.",
+      "review": {
+        "reviewed_on": "2026-07-30",
+        "rationale": "The former command guessed Python, combined unrelated local and external mutations, and returned success after failed steps. It now preserves only a read-only compatibility preview and fails closed when live execution is requested.",
+        "evidence": [
+          "tests/test_development_commands/test_bootstrap_project.py",
+          "docs/reference/commands-generated.md"
+        ],
+        "replacement": "planProjectBootstrap"
+      }
+    },
     "changePermissions": {"stage": "alpha"},
     "checkDependency": {"stage": "alpha"},
     "checkDns": {"stage": "alpha"},
@@ -192,6 +204,7 @@
     "listProcesses": {"stage": "alpha"},
     "listSystemServices": {"stage": "alpha"},
     "moveFile": {"stage": "alpha"},
+    "planProjectBootstrap": {"stage": "alpha"},
     "projectDoctor": {"stage": "alpha"},
     "projectLanguages": {"stage": "alpha"},
     "qzxHelp": {"stage": "alpha"},
