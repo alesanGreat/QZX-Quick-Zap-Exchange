@@ -449,7 +449,6 @@ def test_action_ancestor_replaced_by_link_is_refused(tmp_path):
                 str(parent),
                 str(outside),
             ],
-            text=True,
             capture_output=True,
             check=False,
         )
