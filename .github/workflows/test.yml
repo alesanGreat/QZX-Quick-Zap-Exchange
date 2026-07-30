@@ -33,6 +33,18 @@ jobs:
       - name: Install the QZX runtime dependency set in isolation
         run: python -m pip install --target "$RUNNER_TEMP/qzx-audit" .
 
+      - name: Exclude the unreleased QZX package from the dependency audit
+        shell: python
+        run: |
+          import os
+          import shutil
+          from pathlib import Path
+
+          audit_root = Path(os.environ["RUNNER_TEMP"]) / "qzx-audit"
+          shutil.rmtree(audit_root / "qzx")
+          for metadata_directory in audit_root.glob("qzx-*.dist-info"):
+              shutil.rmtree(metadata_directory)
+
       - name: Reject runtime dependencies with known vulnerabilities
         run: >-
           python -m pip_audit
