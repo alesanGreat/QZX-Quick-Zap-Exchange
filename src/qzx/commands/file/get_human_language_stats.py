@@ -182,6 +182,7 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
     def __init__(self):
         """Initialize the command and load function words from JSON files"""
         super().__init__()
+        self.dictionary_warnings = []
         # Load function words from JSON files
         self.function_words = self._load_function_words()
     
@@ -191,9 +192,11 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
         
         # Check if the directory exists
         if not os.path.isdir(FUNCTION_WORDS_DIR):
-            print(f"ERROR: FunctionWords directory not found at {FUNCTION_WORDS_DIR}")
-            print(f"Current working directory: {os.getcwd()}")
-            print("This command requires the FunctionWords directory to operate correctly.")
+            self.dictionary_warnings.append(
+                f"Human-language dictionaries were not found at "
+                f"'{FUNCTION_WORDS_DIR}'; character-based fallback analysis "
+                "will be used."
+            )
             return {}
         
         # Load each JSON file in the directory
@@ -232,13 +235,21 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
                                         function_words[language] = words_set
                                         # print(f"  Loaded {len(words_set)} words from dictionary keys/values")
                                     else:
-                                        print(f"  ERROR: Couldn't find word list in dictionary structure.")
-                                        print(f"  Dictionary keys: {list(data.keys())}")
+                                        self.dictionary_warnings.append(
+                                            f"Human-language dictionary "
+                                            f"'{filename}' contains no usable "
+                                            "word list."
+                                        )
                         except json.JSONDecodeError as je:
-                            print(f"  ERROR: Invalid JSON format in {file_path}: {str(je)}")
-                            print(f"  First 100 characters: {content[:100]}...")
+                            self.dictionary_warnings.append(
+                                f"Human-language dictionary '{filename}' "
+                                f"contains invalid JSON: {je}"
+                            )
                 except Exception as e:
-                    print(f"  ERROR loading function words for {language}: {str(e)}")
+                    self.dictionary_warnings.append(
+                        f"Human-language dictionary '{filename}' could not "
+                        f"be loaded: {type(e).__name__}: {e}"
+                    )
         
         # Log information about loaded dictionaries
         if function_words:
@@ -248,10 +259,15 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
                 pass
         else:
             if files_found > 0:
-                print(f"ERROR: Found {files_found} dictionary files but failed to load any of them.")
-                print("Check the errors above for more details.")
+                self.dictionary_warnings.append(
+                    f"Found {files_found} human-language dictionary file(s), "
+                    "but none could be loaded."
+                )
             else:
-                print(f"ERROR: No dictionary files found in {FUNCTION_WORDS_DIR}")
+                self.dictionary_warnings.append(
+                    f"No human-language dictionary files were found in "
+                    f"'{FUNCTION_WORDS_DIR}'."
+                )
             
         return function_words
     
@@ -270,13 +286,16 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
         Returns:
             dict: Command result with language statistics
         """
+        warnings = list(self.dictionary_warnings)
+
         # Check if function words were loaded correctly
         if not self.function_words:
-            print("WARNING: No function words dictionaries available.")
-            print("Language detection will fall back to character-based analysis, which is less accurate.")
-            print("This analysis may incorrectly classify many words as 'english' or 'other'.")
-            print(f"For accurate results, make sure {FUNCTION_WORDS_DIR} contains valid JSON files.")
-            print("Continuing with limited functionality...\n")
+            fallback_warning = (
+                "No human-language word dictionaries are available; "
+                "character-based fallback analysis is less accurate."
+            )
+            if fallback_warning not in warnings:
+                warnings.append(fallback_warning)
             
         # Process flag-style parameters if passed
         if isinstance(ignore_comments, str):
@@ -313,12 +332,14 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
             if language_list is None or lang in language_list:
                 selected_function_words[lang] = words
         
-        # If no function words were loaded or selected, print a warning
+        # Record degraded detection without contaminating machine-readable stdout.
         if not selected_function_words:
-            print("Warning: No function words loaded. Language detection may be less accurate.")
-        
-        # Use the centralized file finder to find files
-        print(f"Searching for files matching '{file_path}'...")
+            selection_warning = (
+                "No selected human-language word dictionaries are available; "
+                "results may be less accurate."
+            )
+            if selection_warning not in warnings:
+                warnings.append(selection_warning)
         
         # Track statistics for real-time reporting
         total_files = 0
@@ -333,8 +354,6 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
             nonlocal total_files
             total_files += 1
             files_found.append(file_path)
-            if show_files_match:
-                print(f"Found file: {file_path}")
         
         # Find all files using the centralized utility
         for _ in find_files(
@@ -346,45 +365,58 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
             pass  # The callback already tracks the files
         
         if len(files_found) == 0:
-            print(f"No files found matching '{file_path}'")
-            return {
+            no_match_result = {
                 "success": False,
                 "status": "error",
                 "error": f"No files found matching '{file_path}'",
                 "message": f"No files found matching '{file_path}'"
             }
-        
-        # Mostrar cuántos archivos se encontraron si no se muestran individualmente
-        if not show_files_match:
-            print(f"Found {len(files_found)} files matching '{file_path}'")
-        
-        # Analyze each file
-        print(f"\nAnalyzing {len(files_found)} files for language content...")
+            if warnings:
+                no_match_result["warnings"] = warnings
+            return no_match_result
         
         for file_path in files_found:
             processed_files += 1
-            print(f"Processing file {processed_files}/{total_files}: {file_path}")
             
             try:
                 stats = self._analyze_file(file_path, ignore_comments, min_word_length, selected_function_words)
                 file_stats[file_path] = stats
             except Exception as e:
-                print(f"Error processing file {file_path}: {str(e)}")
                 file_stats[file_path] = {"error": str(e)}
         
         # Aggregate stats across all files
         aggregated_stats = self._aggregate_stats(file_stats)
+        failed_files = [
+            path for path, stats in file_stats.items() if "error" in stats
+        ]
+        analyzed_files = processed_files - len(failed_files)
         
         # Return complete results
-        return {
-            "success": True,
-            "status": "success",
-            "message": f"Analyzed human-language content in {processed_files} file(s).",
+        result = {
+            "success": not failed_files,
+            "status": "success" if not failed_files else "error",
+            "message": (
+                f"Analyzed human-language content in {analyzed_files} of "
+                f"{processed_files} file(s)."
+            ),
             "files_processed": processed_files,
+            "files_analyzed": analyzed_files,
+            "files_failed": len(failed_files),
             "files_found": total_files,
             "file_stats": file_stats,
             "aggregated_stats": aggregated_stats
         }
+        if show_files_match:
+            result["matched_files"] = files_found
+        if failed_files:
+            result["error_code"] = "partial_analysis_failure"
+            result["error"] = (
+                f"Analysis failed for {len(failed_files)} of "
+                f"{processed_files} matched file(s)."
+            )
+        if warnings:
+            result["warnings"] = warnings
+        return result
     
     def _analyze_file(self, file_path, ignore_comments=False, min_word_length=4, function_words=None):
         """
@@ -702,27 +734,6 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
             return "scandinavian"
         else:
             return "english"  # Default to English for Latin script
-    
-    def _print_file_stats(self, file_path, stats):
-        """Print statistics for a single file"""
-        if "error" in stats:
-            print(f"  Error: {stats['error']}")
-            return
-            
-        print(f"  Total words: {stats['total_words']}")
-        print("  Language distribution:")
-        
-        # Sort languages by percentage
-        sorted_langs = sorted(
-            stats['percentage_by_language'].items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-        
-        for lang, percentage in sorted_langs:
-            print(f"    {lang}: {percentage:.2f}%")
-            
-        print("")
     
     def _aggregate_stats(self, file_stats):
         """Aggregate statistics across all files"""

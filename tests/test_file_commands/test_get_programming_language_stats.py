@@ -51,3 +51,19 @@ def test_all_file_failures_make_the_command_fail(tmp_path):
     assert "deterministic read failure" in result["file_results"][
         str(source)
     ]["error"]
+
+
+def test_dictionary_fallback_is_structured_and_keeps_stdout_clean(
+    tmp_path, capsys
+):
+    source = tmp_path / "example.py"
+    source.write_text("answer = 42\n", encoding="utf-8")
+    command = GetProgrammingLanguageStatsFromFileCommand()
+    command.LANGUAGES_DIR = tmp_path / "missing-language-dictionaries"
+
+    result = command.execute(str(source))
+
+    assert capsys.readouterr().out == ""
+    assert result["success"] is True
+    assert result["warnings"]
+    assert str(command.LANGUAGES_DIR) in result["warnings"][0]

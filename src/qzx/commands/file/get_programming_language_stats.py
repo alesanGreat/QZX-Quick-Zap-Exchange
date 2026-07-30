@@ -128,10 +128,11 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
             languages (list, optional): List of language names to load
             
         Returns:
-            dict: Dictionary with language data
+            tuple: Dictionary with language data and structured warnings
         """
         language_data = {}
         available_languages = []
+        warnings = []
         
         # Map some common case variations to standard names
         language_name_map = {
@@ -162,8 +163,11 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                     lang_name = os.path.splitext(file)[0]
                     available_languages.append(lang_name)
         except FileNotFoundError:
-            print(f"Warning: Languages directory '{self.LANGUAGES_DIR}' not found")
-            return self._get_default_language_data()
+            warnings.append(
+                f"Programming-language dictionaries were not found at "
+                f"'{self.LANGUAGES_DIR}'; using the built-in fallback."
+            )
+            return self._get_default_language_data(), warnings
             
         # If no languages specified, load all available
         if not languages:
@@ -179,7 +183,10 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                 if normalized in available_languages:
                     languages_to_load.append(normalized)
                 else:
-                    print(f"Warning: Language '{lang}' not found in languages directory")
+                    warnings.append(
+                        f"Programming-language dictionary '{lang}' was not "
+                        "found and was excluded from detection."
+                    )
         
         # Load dictionaries for each language
         for lang in languages_to_load:
@@ -193,13 +200,20 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                     lang_name = lang.title()
                     language_data[lang_name] = lang_data
             except Exception as e:
-                print(f"Error loading language data for '{lang}': {str(e)}")
+                warnings.append(
+                    f"Programming-language dictionary '{lang}' could not be "
+                    f"loaded: {type(e).__name__}: {e}"
+                )
         
         # If no languages were loaded, use defaults
         if not language_data:
-            return self._get_default_language_data()
+            warnings.append(
+                "No requested programming-language dictionaries could be "
+                "loaded; using the built-in fallback."
+            )
+            return self._get_default_language_data(), warnings
                 
-        return language_data
+        return language_data, warnings
     
     def _get_default_language_data(self):
         """
@@ -372,6 +386,7 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
         Returns:
             Dictionary with analysis results for each file and aggregated statistics
         """
+        dictionary_warnings = []
         try:
             # Process flags in command arguments if they exist
             args = sys.argv
@@ -389,7 +404,9 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
             # Load language dictionaries
             if languages:
                 languages = [lang.strip().lower() for lang in languages.split(',') if lang.strip()]
-            language_data = self._load_language_dictionaries(languages)
+            language_data, dictionary_warnings = (
+                self._load_language_dictionaries(languages)
+            )
             
             # Find matching files using centralized file finder
             matching_files = []
@@ -414,11 +431,14 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                 recursion_message = f" (including subdirectories up to {recursive} level{'s' if recursive > 1 else ''})"
             
             if not matching_files:
-                return {
+                no_match_result = {
                     "success": True,
                     "files_found": 0,
                     "message": f"No files found matching '{file_path}'{recursion_message}"
                 }
+                if dictionary_warnings:
+                    no_match_result["warnings"] = dictionary_warnings
+                return no_match_result
             
             # Process each file
             file_results = {}
@@ -510,6 +530,8 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                         f"Analysis failed for all {len(failed_files)} "
                         f"matching file(s); inspect file_results for causes."
                     )
+                if dictionary_warnings:
+                    no_supported_result["warnings"] = dictionary_warnings
                 return no_supported_result
             
             # Calculate percentages
@@ -559,16 +581,21 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                     f" {len(failed_files)} file(s) failed; inspect "
                     "file_results for causes."
                 )
+            if dictionary_warnings:
+                result["warnings"] = dictionary_warnings
             
             return result
                 
         except Exception as e:
-            return {
+            failure_result = {
                 "success": False,
                 "error_code": "analysis_failed",
                 "error": f"{type(e).__name__}: {e}",
                 "message": f"Error analyzing files: {str(e)}"
             }
+            if dictionary_warnings:
+                failure_result["warnings"] = dictionary_warnings
+            return failure_result
     
     def _analyze_content(self, lines, content, language_data):
         """

@@ -22,12 +22,15 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   SHA-256, with byte-for-byte confirmation before reporting or deleting a
   duplicate.
 - Fixed the missing-language-dictionary fallback in
-  `getHumanLanguageStats`.
+  `getHumanLanguageStats`; dictionary and file-analysis failures now remain in
+  structured results instead of contaminating machine-readable standard
+  output.
 - Fixed `getProgrammingLanguageStats` field aggregation and made complete or
   partial per-file failures propagate to the command's top-level status.
+  Dictionary fallbacks are also reported as structured warnings.
 - Added a pinned Ruff correctness gate and isolated dependency auditing to CI,
   alongside the expanded cross-platform GitHub Actions matrix.
-- Expanded deterministic regression coverage from 276 to 299 passing tests on
+- Expanded deterministic regression coverage from 276 to 302 passing tests on
   the certified local CPython 3.13 runtime.
 
 ## 0.2.2.0.4 — 2026-07-29
