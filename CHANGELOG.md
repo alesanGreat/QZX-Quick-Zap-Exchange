@@ -3,14 +3,27 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a6 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Fixed every Windows interpreter compatibility probe so `cmd.exe` delayed
+  expansion cannot consume Python's `!=` operator, and recognized managed
+  toolchain roots exposed by GitHub Actions and CMake.
+- On macOS, verified an apparently absent listener with the exact native
+  `lsof` query before declaring its port free.
+- Withheld legacy `inspectPort` termination suggestions when the operating
+  system cannot provide the process creation timestamp needed to bind a later
+  `killProcess` action to the same process identity.
+- Preserved `v0.2.2.0.6a5` as an immutable validation tag; alpha 5 was not
+  uploaded to PyPI.
+
 ## 0.2.2.0.6a5 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
-- Reconciled the published command inventory with the actual
-  `qzx-0.2.2.0.5` wheel on PyPI. Development-only commands remain documented
-  in the candidate channel without being attributed retroactively to that
-  immutable package.
+- Kept the development command inventory separate from the immutable
+  `qzx-0.2.2.0.6a2` wheel published on PyPI.
 - Made the Unix launcher portable to POSIX `sh` instead of assuming
   `/bin/bash`, so minimal Linux, BSD, Solaris, and illumos environments can
   execute the same checked-in launcher without an artificial Bash dependency.
@@ -34,8 +47,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   Alpine, FreeBSD, OpenBSD, and OmniOS jobs, and made the SSH deployment test
   verify its remote backup through SSH instead of assuming a shared local
   filesystem.
-- Preserved the immutable validation tags and public GitHub pre-releases; no
-  `0.2.2.0.6aN` candidate was uploaded to PyPI.
+- Preserved the immutable, publicly released alpha 1 and alpha 2 packages;
+  alpha 3 itself remained an unpublished validation tag.
 
 ## 0.2.2.0.6a2 — 2026-07-30
 
@@ -43,9 +56,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 - Restored the executable Git mode of `qzx.sh` after the
   `v0.2.2.0.6a1` validation tag exposed a `Permission denied` failure in
-  Alpine Linux. Alpha 1 remains an immutable public GitHub pre-release, not a
-  PyPI publication; this follow-up preserves its tag, artifacts, hashes, and
-  release history.
+  Alpine Linux. Alpha 1 remains published and immutable; this follow-up
+  preserves its tag, artifacts, hashes, and release history.
 
 ## 0.2.2.0.6a1 — 2026-07-30
 

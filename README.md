@@ -35,7 +35,7 @@ qzx getCurrentDate
 qzx getCurrentDate --json
 ```
 
-PyPI publishes QZX `0.2.2.0.5` with Python `>=3.13` metadata.
+PyPI publishes QZX `0.2.2.0.6a2` with Python `>=3.13` metadata.
 The current checkout follows the same minimum.
 
 QZX supports the standard CPython 3.13.x build. Other Python versions or
@@ -44,8 +44,8 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Published package | `0.2.2.0.5` | `>=3.13`; standard CPython 3.13.x is certified | Capabilities reconciled with the official wheel |
-| Current checkout | `0.2.2.0.6a5` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
+| Published package | `0.2.2.0.6a2` | `>=3.13`; standard CPython 3.13.x is certified | Capabilities reconciled with the official wheel |
+| Current checkout | `0.2.2.0.6a6` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -84,7 +84,7 @@ start at Alpha until command-specific evidence supports promotion. Immutable
 future release tags preserve the exact command-to-stage map shipped by that
 version. See the [command lifecycle policy](docs/command-lifecycle.md).
 
-## Good starting commands in PyPI 0.2.2.0.5
+## Good starting commands in PyPI 0.2.2.0.6a2
 
 These names were verified in the official wheel:
 

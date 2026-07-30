@@ -91,8 +91,8 @@ def test_lightweight_runtime_metadata_matches_manifest():
     assert completed.returncode == 0, completed.stdout + completed.stderr
 
 
-def test_windows_launcher_finds_uv_python_when_path_has_no_python(tmp_path):
-    """qzx.bat must recover the installed uv interpreter after a PATH reset."""
+def test_windows_launcher_finds_managed_python_when_path_has_no_python(tmp_path):
+    """qzx.bat must recover a managed Python root after a PATH reset."""
     if os.name != "nt":
         assert (REPOSITORY_ROOT / "qzx.bat").is_file()
         assert (REPOSITORY_ROOT / "qzx.sh").is_file()
@@ -100,6 +100,9 @@ def test_windows_launcher_finds_uv_python_when_path_has_no_python(tmp_path):
 
     environment = os.environ.copy()
     environment["QZX_TELEMETRY"] = "0"
+    environment.pop("QZX_PYTHON", None)
+    environment.pop("VIRTUAL_ENV", None)
+    environment["pythonLocation"] = str(Path(sys.executable).parent)
     environment["PATH"] = os.pathsep.join([
         str(Path(os.environ["SystemRoot"]) / "System32"),
         str(Path(os.environ["SystemRoot"])),
@@ -141,3 +144,4 @@ def test_windows_launcher_uses_builtin_lookup_instead_of_repeated_where():
     assert not any(line.startswith("WHERE ") for line in executable_lines)
     assert "%%~$PATH:P" in launcher.upper()
     assert "CPYTHON-3.13*-WINDOWS-*" in launcher.upper()
+    assert "%PYTHONLOCATION%" in launcher.upper()

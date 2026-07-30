@@ -103,10 +103,22 @@ def test_legacy_kill_option_never_terminates_a_controlled_real_child():
         assert child.poll() is None
 
         if result["observed_pids"]:
-            assert child.pid in result["observed_pids"]
             suggestions = result["details"]["suggested_commands"]
-            assert any(f"killProcess {child.pid}" in item for item in suggestions)
-            assert any("--expected-create-time" in item for item in suggestions)
+            for process in result["processes"]:
+                pid = process["pid"]
+                process_suggestions = [
+                    item
+                    for item in suggestions
+                    if f"killProcess {pid}" in item
+                ]
+                if process["create_time"] is None:
+                    assert process_suggestions == []
+                else:
+                    assert process_suggestions
+                    assert all(
+                        "--expected-create-time" in item
+                        for item in process_suggestions
+                    )
     finally:
         if child.poll() is None:
             child.terminate()
@@ -128,9 +140,27 @@ def test_macos_fallback_legacy_kill_returns_guidance_without_termination():
     assert result["killed"] is False
     assert result["observed_pids"] == [424242]
     assert command.terminated is False
-    assert result["details"]["suggested_commands"] == [
-        "qzx killProcess 424242 --yolo"
-    ]
+    assert result["details"]["suggested_commands"] == []
+    assert "withheld a termination command" in result["details"]["remediation"]
+
+
+def test_macos_uses_lsof_when_psutil_omits_a_visible_listener(monkeypatch):
+    class IncompletePsutil:
+        CONN_LISTEN = "LISTEN"
+
+        @staticmethod
+        def net_connections(kind):
+            assert kind == "inet"
+            return []
+
+    monkeypatch.setitem(sys.modules, "psutil", IncompletePsutil)
+    command = DarwinFallbackInspectPortCommand(listener_pid=424242)
+
+    result = command.execute(54321)
+
+    assert result["success"] is True
+    assert result["in_use"] is True
+    assert result["observed_pids"] == [424242]
 
 
 def test_inspect_port_metadata_is_read_only():

@@ -107,9 +107,11 @@ class InspectPortCommand(CommandBase):
                 parsed_expected_pid,
             )
 
+        system_name = self._system_name().lower()
+
         # On SunOS, psutil.net_connections can terminate the interpreter
         # instead of raising a recoverable exception.
-        if self._system_name().lower() == "sunos":
+        if system_name == "sunos":
             return self._execute_fallback(
                 port_num,
                 kill_requested,
@@ -135,6 +137,15 @@ class InspectPortCommand(CommandBase):
             )
         ]
         if not matching:
+            # macOS can omit otherwise visible listeners from psutil's
+            # process-wide connection snapshot. Its native lsof query is
+            # authoritative for this exact port and avoids a false "free".
+            if system_name == "darwin":
+                return self._execute_fallback(
+                    port_num,
+                    kill_requested,
+                    parsed_expected_pid,
+                )
             return self._free_port_result(port_num)
 
         pids = sorted(
@@ -358,12 +369,12 @@ class InspectPortCommand(CommandBase):
         for process in processes:
             pid = process.get("pid")
             create_time = process.get("create_time")
-            if pid is None:
+            if pid is None or create_time is None:
                 continue
-            command = f"qzx killProcess {pid}"
-            if create_time is not None:
-                command += f" --expected-create-time {create_time}"
-            command += " --yolo"
+            command = (
+                f"qzx killProcess {pid} "
+                f"--expected-create-time {create_time} --yolo"
+            )
             suggestions.append(command)
 
         ownership_changed = (
@@ -373,6 +384,12 @@ class InspectPortCommand(CommandBase):
             ownership_note = (
                 f"The legacy expected PID {expected_pid} no longer owns the "
                 f"port; current PID(s): {observed_pids or 'unavailable'}."
+            )
+        elif observed_pids and not suggestions:
+            ownership_note = (
+                "QZX withheld a termination command because the operating "
+                "system did not expose a process creation timestamp. "
+                "Re-inspect until that identity fingerprint is available."
             )
         else:
             ownership_note = (

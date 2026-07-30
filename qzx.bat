@@ -11,7 +11,7 @@ SET "QZX_RUNTIME="
 REM Honor an explicit interpreter first.
 IF DEFINED QZX_PYTHON (
     IF EXIST "%QZX_PYTHON%" (
-        "%QZX_PYTHON%" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') != 1 else 1)" >nul 2>&1
+        "%QZX_PYTHON%" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') not in (1, True) else 1)" >nul 2>&1
         IF NOT ERRORLEVEL 1 SET "QZX_RUNTIME=%QZX_PYTHON%"
     )
 )
@@ -19,8 +19,20 @@ IF DEFINED QZX_PYTHON (
 REM Preserve an explicitly activated standard CPython 3.13 environment.
 IF NOT DEFINED QZX_RUNTIME IF DEFINED VIRTUAL_ENV (
     IF EXIST "%VIRTUAL_ENV%\Scripts\python.exe" (
-        "%VIRTUAL_ENV%\Scripts\python.exe" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') != 1 else 1)" >nul 2>&1
+        "%VIRTUAL_ENV%\Scripts\python.exe" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') not in (1, True) else 1)" >nul 2>&1
         IF NOT ERRORLEVEL 1 SET "QZX_RUNTIME=%VIRTUAL_ENV%\Scripts\python.exe"
+    )
+)
+
+REM Recognize managed Python roots exposed by actions/setup-python, CMake,
+REM and other professional toolchains. These locations remain available even
+REM when a caller deliberately supplies a minimal PATH.
+IF NOT DEFINED QZX_RUNTIME (
+    FOR %%R IN ("%pythonLocation%" "%Python_ROOT_DIR%" "%Python3_ROOT_DIR%") DO (
+        IF NOT DEFINED QZX_RUNTIME IF EXIST "%%~R\python.exe" (
+            "%%~R\python.exe" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') not in (1, True) else 1)" >nul 2>&1
+            IF NOT ERRORLEVEL 1 SET "QZX_RUNTIME=%%~R\python.exe"
+        )
     )
 )
 
@@ -48,8 +60,9 @@ REM WHERE.EXE once for every candidate.
 IF NOT DEFINED QZX_RUNTIME (
     FOR %%P IN (python.exe python3.13.exe python3.exe) DO (
         IF NOT DEFINED QZX_RUNTIME IF NOT "%%~$PATH:P"=="" (
-            "%%~$PATH:P" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') != 1 else 1)" >nul 2>&1
-            IF NOT ERRORLEVEL 1 SET "QZX_RUNTIME=%%~$PATH:P"
+            SET "QZX_PATH_RUNTIME=%%~$PATH:P"
+            "!QZX_PATH_RUNTIME!" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') not in (1, True) else 1)" >nul 2>&1
+            IF NOT ERRORLEVEL 1 SET "QZX_RUNTIME=!QZX_PATH_RUNTIME!"
         )
     )
 )
@@ -60,7 +73,7 @@ IF NOT DEFINED QZX_RUNTIME (
     IF EXIST "!QZX_UV!" (
         FOR /F "usebackq delims=" %%P IN (`"!QZX_UV!" python find 3.13 2^>nul`) DO (
             IF NOT DEFINED QZX_RUNTIME IF EXIST "%%P" (
-                "%%P" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') != 1 else 1)" >nul 2>&1
+                "%%P" -c "import platform,sys,sysconfig; raise SystemExit(0 if platform.python_implementation() == 'CPython' and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var('Py_GIL_DISABLED') not in (1, True) else 1)" >nul 2>&1
                 IF NOT ERRORLEVEL 1 SET "QZX_RUNTIME=%%P"
             )
         )
