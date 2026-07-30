@@ -1,25 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-FindDeadCode Command - Scans the workspace files for exported or defined functions/classes,
-builds a token map of references, and flags symbols that have no external references.
-"""
+"""Find definitions that have no statically visible source-code references."""
 
 import os
 import re
 import ast
+from collections import Counter
 
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import find_files
+from qzx.core.recursive_findfiles_utils import (
+    SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
+    find_files,
+)
 
-class FindDeadCodeCommand(CommandBase):
+class FindUnusedCodeCommand(CommandBase):
     """
-    Command to identify dead code (unused classes, functions, or exports) in a codebase.
+    Identify review candidates, not definitive dead code.
+
+    Dynamic dispatch, framework discovery, and reflection cannot always be
+    proven through source tokens, so the command deliberately reports
+    candidates instead of claiming that deletion is safe.
     """
     
-    name = "findDeadCode"
-    description = "Scans files for declared functions and classes, and identifies those with zero references in other files"
+    name = "findUnusedCode"
+    description = "Finds functions, classes, and exports with no statically visible references so they can be reviewed for removal"
     category = "development"
     
     parameters = [
@@ -33,12 +38,12 @@ class FindDeadCodeCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx findDeadCode',
-            'description': 'Scan the current directory for dead code'
+            'command': 'qzx findUnusedCode',
+            'description': 'Find unused-code candidates in the current directory'
         },
         {
-            'command': 'qzx findDeadCode "src/"',
-            'description': 'Scan the src/ directory'
+            'command': 'qzx findUnusedCode "src/"',
+            'description': 'Find unused-code candidates in the src/ directory'
         }
     ]
     
@@ -50,13 +55,13 @@ class FindDeadCodeCommand(CommandBase):
     
     def execute(self, scan_path='.'):
         """
-        Executes dead code detection
+        Find definitions with no statically visible references.
         
         Args:
             scan_path (str): Path to scan
             
         Returns:
-            Dictionary with dead code analysis details
+            Dictionary with review candidates and analysis details.
         """
         abs_scan_path = os.path.abspath(scan_path)
         if not os.path.exists(abs_scan_path):
@@ -77,7 +82,12 @@ class FindDeadCodeCommand(CommandBase):
             return ext.lower() in self.SUPPORTED_EXTENSIONS
             
         if os.path.isdir(abs_scan_path):
-            for file_path in find_files(abs_scan_path, recursive=True, file_type='f'):
+            for file_path in find_files(
+                abs_scan_path,
+                recursive=True,
+                exclude_dirs=SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
+                file_type='f',
+            ):
                 if file_filter(file_path):
                     file_callback(file_path)
         elif os.path.isfile(abs_scan_path) and file_filter(abs_scan_path):
@@ -86,13 +96,15 @@ class FindDeadCodeCommand(CommandBase):
         if not files:
             return {
                 "success": True,
-                "dead_symbols_count": 0,
-                "dead_symbols": [],
+                "candidate_symbols_count": 0,
+                "candidate_symbols": [],
                 "message": "No supported source files found to analyze."
             }
             
-        # 2. Build token sets for each file (set of all alphanumeric words)
-        token_sets = {}
+        # 2. Count tokens in every file. A set is insufficient here because a
+        # declaration and an in-file use share the same token; the count lets
+        # us distinguish a definition-only occurrence from a real reference.
+        token_counts = {}
         file_contents = {}
         
         word_pattern = re.compile(r'\b[A-Za-z0-9_]+\b')
@@ -105,8 +117,7 @@ class FindDeadCodeCommand(CommandBase):
                 with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                     content = f.read()
                     file_contents[file_path] = content
-                    # Tokenize
-                    token_sets[file_path] = set(word_pattern.findall(content))
+                    token_counts[file_path] = Counter(word_pattern.findall(content))
             except Exception:
                 pass
                 
@@ -140,49 +151,51 @@ class FindDeadCodeCommand(CommandBase):
                 self._extract_csharp_symbols(content, file_path, rel_path, symbols)
                 
         # 4. Check references for each symbol
-        dead_symbols = []
+        candidate_symbols = []
         for sym in symbols:
             name = sym["name"]
             def_file = sym["file_abs"]
             
             referenced = False
-            # Check if this symbol's name appears in any other file's token set
-            for file_path, token_set in token_sets.items():
-                if file_path == def_file:
-                    continue
-                if name in token_set:
+            # The definition itself contributes one occurrence in its file.
+            # A second in-file occurrence or any occurrence elsewhere is a
+            # reference and therefore evidence that the symbol is in use.
+            for file_path, counts in token_counts.items():
+                minimum_references = 1 if file_path == def_file else 0
+                if counts[name] > minimum_references:
                     referenced = True
                     break
                     
             if not referenced:
-                dead_symbols.append({
+                candidate_symbols.append({
                     "name": name,
                     "type": sym["type"],
                     "file": sym["file_rel"],
-                    "line_number": sym["line_number"]
+                    "line_number": sym["line_number"],
+                    "reason": "No statically visible references were found in the analyzed source files.",
                 })
                 
         # 5. Format message (Verbose is Gold)
-        msg = "Dead Code Diagnostic Report:\n"
+        msg = "Unused Code Candidate Report:\n"
         msg += f"- Total files scanned: {len(files)}\n"
         msg += f"- Total symbols analyzed: {len(symbols)}\n"
-        msg += f"- Total dead/unused symbols identified: {len(dead_symbols)}\n"
+        msg += f"- Candidates requiring review: {len(candidate_symbols)}\n"
         
-        if dead_symbols:
-            msg += "\n⚠️  Unused definitions identified (Zero references outside definition file):\n"
-            for index, sym in enumerate(dead_symbols[:15], 1):
+        if candidate_symbols:
+            msg += "\nPotentially unused definitions (review dynamic or reflective uses before removal):\n"
+            for index, sym in enumerate(candidate_symbols[:15], 1):
                 msg += f"  {index}. [{sym['type'].upper()}] '{sym['name']}' at {sym['file']}:{sym['line_number']}\n"
-            if len(dead_symbols) > 15:
-                msg += f"  ... and {len(dead_symbols) - 15} more unused symbols.\n"
+            if len(candidate_symbols) > 15:
+                msg += f"  ... and {len(candidate_symbols) - 15} more candidates.\n"
         else:
-            msg += "\n✅ No dead code or unused exported symbols detected.\n"
+            msg += "\nNo unused-code candidates were detected.\n"
             
         return {
             "success": True,
             "scan_path": abs_scan_path,
             "analyzed_symbols_count": len(symbols),
-            "dead_symbols_count": len(dead_symbols),
-            "dead_symbols": dead_symbols,
+            "candidate_symbols_count": len(candidate_symbols),
+            "candidate_symbols": candidate_symbols,
             "message": msg
         }
         
@@ -206,6 +219,24 @@ class FindDeadCodeCommand(CommandBase):
                 elif isinstance(node, ast.ClassDef):
                     name = node.name
                     if name.startswith('_'):
+                        continue
+                    base_names = {
+                        base.id
+                        if isinstance(base, ast.Name)
+                        else base.attr
+                        if isinstance(base, ast.Attribute)
+                        else ""
+                        for base in node.bases
+                    }
+                    if "CommandBase" in base_names:
+                        continue
+                    if (
+                        name.startswith("Test")
+                        and (
+                            rel_path.startswith("tests/")
+                            or os.path.basename(rel_path).startswith("test_")
+                        )
+                    ):
                         continue
                     symbols.append({
                         "name": name,

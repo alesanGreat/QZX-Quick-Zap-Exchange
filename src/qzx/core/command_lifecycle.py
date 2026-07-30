@@ -467,18 +467,3 @@ def command_maturity(command_name):
     if entry.get("review"):
         result["review"] = entry["review"]
     return result
-
-
-def lifecycle_stage_counts(canonical_command_names):
-    """Count public commands by stage in deterministic lifecycle order."""
-    document = validate_lifecycle_inventory(canonical_command_names)
-    counts = {}
-    for command_name in canonical_command_names:
-        stage_name = document["commands"][command_name]["stage"]
-        counts[stage_name] = counts.get(stage_name, 0) + 1
-    return dict(
-        sorted(
-            counts.items(),
-            key=lambda item: document["stages"][item[0]]["sequence"],
-        )
-    )

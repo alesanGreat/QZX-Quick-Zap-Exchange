@@ -14,6 +14,42 @@ import fnmatch
 import glob
 from typing import Callable, Generator, List, Optional
 
+
+# Source-analysis commands should inspect authored code, not dependency,
+# environment, cache, coverage, or generated-output trees.  Keeping this list
+# here gives every recursive analyzer the same cross-platform boundary while
+# leaving the generic ``find_files`` helper opt-in.
+SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES = (
+    ".angular",
+    ".git",
+    ".gradle",
+    ".hg",
+    ".idea",
+    ".mypy_cache",
+    ".next",
+    ".nox",
+    ".nuxt",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".svn",
+    ".svelte-kit",
+    ".tox",
+    ".turbo",
+    ".venv",
+    ".vscode",
+    "__pycache__",
+    "bower_components",
+    "build",
+    "coverage",
+    "dist",
+    "env",
+    "node_modules",
+    "target",
+    "venv",
+    "vendor",
+)
+
+
 def parse_recursive_parameter(recursive_param) -> Optional[int]:
     """
     Parse the recursive parameter into a depth value

@@ -177,13 +177,6 @@
       "category": "file"
     },
     {
-      "name": "findDeadCode",
-      "module": "qzx.commands.development.find_dead_code",
-      "class_name": "FindDeadCodeCommand",
-      "description": "Scans files for declared functions and classes, and identifies those with zero references in other files",
-      "category": "development"
-    },
-    {
       "name": "findDuplicateFiles",
       "module": "qzx.commands.file.find_duplicate_files",
       "class_name": "FindDuplicateFilesCommand",
@@ -203,6 +196,13 @@
       "class_name": "FindTextCommand",
       "description": "Searches for text patterns in files with advanced filtering options",
       "category": "file"
+    },
+    {
+      "name": "findUnusedCode",
+      "module": "qzx.commands.development.find_unused_code",
+      "class_name": "FindUnusedCodeCommand",
+      "description": "Finds functions, classes, and exports with no statically visible references so they can be reviewed for removal",
+      "category": "development"
     },
     {
       "name": "formatCode",
@@ -432,7 +432,7 @@
       "name": "projectDoctor",
       "module": "qzx.commands.development.project_doctor",
       "class_name": "ProjectDoctorCommand",
-      "description": "Inspects project health: detects tech stack, dependencies, environment configuration, Git state, test suites, circular imports, dead code, and large files",
+      "description": "Inspects project health: detects tech stack, dependencies, environment configuration, Git state, test suites, circular imports, unused-code candidates, and large files",
       "category": "development"
     },
     {

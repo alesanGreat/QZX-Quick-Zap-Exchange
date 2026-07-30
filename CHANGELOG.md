@@ -3,6 +3,24 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a11 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Replaced the misleading `findDeadCode` command with `findUnusedCode`; its
+  result now identifies review candidates and explicitly warns that dynamic
+  dispatch, reflection, and framework discovery can hide legitimate uses.
+- Fixed the analyzer so references inside the definition file count as real
+  usage and framework-discovered QZX commands and pytest suites are not
+  misclassified.
+- Centralized the generated-output, dependency, environment, cache, and
+  coverage directories excluded by recursive source analysis.
+- Corrected `projectDoctor` so stale `build/` copies no longer lower a healthy
+  project's score, and made its unused-code evidence and scan boundary
+  explicit.
+- Removed an actually unreferenced lifecycle helper after the corrected
+  analyzer isolated it from the former false positives.
+
 ## 0.2.2.0.6a10 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

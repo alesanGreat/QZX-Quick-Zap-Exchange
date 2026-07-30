@@ -55,3 +55,27 @@ class TestProjectDoctorCommand:
         # Missing .env should be flagged in issues
         issue_titles = [issue["title"] for issue in details["summary"]["issues"]]
         assert "Missing .env file" in issue_titles
+
+    def test_project_doctor_ignores_generated_unused_code_candidates(self, tmp_path):
+        """Generated build copies must not lower the project's health score."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[project]\nname = 'test'\n",
+            encoding="utf-8",
+        )
+        build = tmp_path / "build" / "lib"
+        build.mkdir(parents=True)
+        (build / "stale.py").write_text(
+            "def stale_generated_function():\n"
+            "    return 1\n",
+            encoding="utf-8",
+        )
+
+        result = self.command.execute(path=str(tmp_path))
+
+        assert result["success"] is True
+        unused_code = result["details"]["code_quality"]["unused_code"]
+        assert unused_code["candidate_symbols_count"] == 0
+        issue_titles = {
+            issue["title"] for issue in result["details"]["summary"]["issues"]
+        }
+        assert "Unused code candidates" not in issue_titles

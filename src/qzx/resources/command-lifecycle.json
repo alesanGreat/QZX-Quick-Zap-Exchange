@@ -129,7 +129,7 @@
     "detectFileType": {"stage": "alpha"},
     "downloadFile": {"stage": "alpha"},
     "findBrokenSymlinks": {"stage": "alpha"},
-    "findDeadCode": {"stage": "alpha"},
+    "findUnusedCode": {"stage": "alpha"},
     "findDuplicateFiles": {"stage": "alpha"},
     "findFiles": {"stage": "alpha"},
     "findText": {"stage": "alpha"},

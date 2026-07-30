@@ -2,19 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Tests for the findDeadCode command
+Tests for the findUnusedCode command
 """
 
-from qzx.commands.development.find_dead_code import FindDeadCodeCommand
+from qzx.commands.development.find_unused_code import FindUnusedCodeCommand
 
-class TestFindDeadCodeCommand:
+class TestFindUnusedCodeCommand:
     """
     Tests for the FindDeadCodeCommand class
     """
     
     def setup_method(self):
         """Setup for each test"""
-        self.command = FindDeadCodeCommand()
+        self.command = FindUnusedCodeCommand()
         
     def test_nonexistent_directory(self):
         """Test with a directory that does not exist"""
@@ -22,7 +22,7 @@ class TestFindDeadCodeCommand:
         assert result["success"] is False
         assert "does not exist" in result["error"]
         
-    def test_find_dead_code_python(self, tmp_path):
+    def test_find_unused_code_python(self, tmp_path):
         """Test identifying unused Python functions and classes"""
         # Create active module: defines used_func which is called in app.py
         used_module_content = (
@@ -30,7 +30,7 @@ class TestFindDeadCodeCommand:
             "    return 'I am used'\n"
             "\n"
             "def unused_func():\n"
-            "    return 'I am dead code'\n"
+            "    return 'I may be unused'\n"
             "\n"
             "class UsedClass:\n"
             "    pass\n"
@@ -53,21 +53,75 @@ class TestFindDeadCodeCommand:
         result = self.command.execute(str(tmp_path))
         assert result["success"] is True
         
-        # We expect unused_func and UnusedClass to be identified as dead code
-        dead_names = [sym["name"] for sym in result["dead_symbols"]]
-        assert "unused_func" in dead_names
-        assert "UnusedClass" in dead_names
+        # We expect unused_func and UnusedClass to be review candidates.
+        candidate_names = [sym["name"] for sym in result["candidate_symbols"]]
+        assert "unused_func" in candidate_names
+        assert "UnusedClass" in candidate_names
         
         # used_func and UsedClass should NOT be flagged as dead
-        assert "used_func" not in dead_names
-        assert "UsedClass" not in dead_names
+        assert "used_func" not in candidate_names
+        assert "UsedClass" not in candidate_names
         
         # Verify details
-        unused_func_details = next(sym for sym in result["dead_symbols"] if sym["name"] == "unused_func")
+        unused_func_details = next(
+            sym
+            for sym in result["candidate_symbols"]
+            if sym["name"] == "unused_func"
+        )
         assert unused_func_details["type"] == "function"
         assert unused_func_details["file"] == "utils.py"
+
+    def test_excludes_generated_and_dependency_directories(self, tmp_path):
+        """Generated copies and dependencies must not create false positives."""
+        source = tmp_path / "src"
+        source.mkdir()
+        (source / "active.py").write_text(
+            "def active_symbol():\n"
+            "    return 1\n",
+            encoding="utf-8",
+        )
+        (source / "consumer.py").write_text(
+            "from active import active_symbol\n"
+            "print(active_symbol())\n",
+            encoding="utf-8",
+        )
+
+        for directory_name in ("build", "node_modules", ".venv"):
+            ignored = tmp_path / directory_name
+            ignored.mkdir()
+            (ignored / "stale.py").write_text(
+                f"def stale_{directory_name.replace('.', 'dot')}():\n"
+                "    return 0\n",
+                encoding="utf-8",
+            )
+
+        result = self.command.execute(str(tmp_path))
+
+        assert result["success"] is True
+        assert result["candidate_symbols"] == []
+
+    def test_accepts_a_reference_in_the_definition_file(self, tmp_path):
+        """A symbol used locally is live even without a cross-file reference."""
+        (tmp_path / "app.py").write_text(
+            "def local_helper():\n"
+            "    return 1\n"
+            "\n"
+            "def unused_helper():\n"
+            "    return 2\n"
+            "\n"
+            "print(local_helper())\n",
+            encoding="utf-8",
+        )
+
+        result = self.command.execute(str(tmp_path))
+
+        candidate_names = {
+            symbol["name"] for symbol in result["candidate_symbols"]
+        }
+        assert "local_helper" not in candidate_names
+        assert "unused_helper" in candidate_names
         
-    def test_find_dead_code_js(self, tmp_path):
+    def test_find_unused_code_js(self, tmp_path):
         """Test identifying unused JS/TS exported items"""
         # Module: defines active and dead exports
         js_module = (
@@ -89,12 +143,12 @@ class TestFindDeadCodeCommand:
         result = self.command.execute(str(tmp_path))
         assert result["success"] is True
         
-        dead_names = [sym["name"] for sym in result["dead_symbols"]]
-        assert "UnusedClassExport" in dead_names
-        assert "unusedConstExport" in dead_names
-        assert "activeExport" not in dead_names
+        candidate_names = [sym["name"] for sym in result["candidate_symbols"]]
+        assert "UnusedClassExport" in candidate_names
+        assert "unusedConstExport" in candidate_names
+        assert "activeExport" not in candidate_names
 
-    def test_find_dead_code_php(self, tmp_path):
+    def test_find_unused_code_php(self, tmp_path):
         """Test identifying unused PHP functions and classes"""
         php_lib = (
             "<?php\n"
@@ -121,13 +175,13 @@ class TestFindDeadCodeCommand:
         result = self.command.execute(str(tmp_path))
         assert result["success"] is True
         
-        dead_names = [sym["name"] for sym in result["dead_symbols"]]
-        assert "DeadService" in dead_names
-        assert "dead_helper" in dead_names
-        assert "ActiveService" not in dead_names
-        assert "active_helper" not in dead_names
+        candidate_names = [sym["name"] for sym in result["candidate_symbols"]]
+        assert "DeadService" in candidate_names
+        assert "dead_helper" in candidate_names
+        assert "ActiveService" not in candidate_names
+        assert "active_helper" not in candidate_names
 
-    def test_find_dead_code_rust(self, tmp_path):
+    def test_find_unused_code_rust(self, tmp_path):
         """Test identifying unused Rust functions and structs"""
         rust_lib = (
             "pub struct ActiveStruct {}\n"
@@ -150,13 +204,13 @@ class TestFindDeadCodeCommand:
         result = self.command.execute(str(tmp_path))
         assert result["success"] is True
         
-        dead_names = [sym["name"] for sym in result["dead_symbols"]]
-        assert "DeadStruct" in dead_names
-        assert "dead_fn" in dead_names
-        assert "ActiveStruct" not in dead_names
-        assert "active_fn" not in dead_names
+        candidate_names = [sym["name"] for sym in result["candidate_symbols"]]
+        assert "DeadStruct" in candidate_names
+        assert "dead_fn" in candidate_names
+        assert "ActiveStruct" not in candidate_names
+        assert "active_fn" not in candidate_names
 
-    def test_find_dead_code_cpp(self, tmp_path):
+    def test_find_unused_code_cpp(self, tmp_path):
         """Test identifying unused C++ functions and classes"""
         cpp_lib = (
             "class ActiveClass {};\n"
@@ -179,8 +233,8 @@ class TestFindDeadCodeCommand:
         result = self.command.execute(str(tmp_path))
         assert result["success"] is True
         
-        dead_names = [sym["name"] for sym in result["dead_symbols"]]
-        assert "DeadClass" in dead_names
-        assert "dead_func" in dead_names
-        assert "ActiveClass" not in dead_names
-        assert "active_func" not in dead_names
+        candidate_names = [sym["name"] for sym in result["candidate_symbols"]]
+        assert "DeadClass" in candidate_names
+        assert "dead_func" in candidate_names
+        assert "ActiveClass" not in candidate_names
+        assert "active_func" not in candidate_names

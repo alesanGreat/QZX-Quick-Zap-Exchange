@@ -11,12 +11,15 @@ import shutil
 import re
 
 from qzx.core.command_base import CommandBase
+from qzx.core.recursive_findfiles_utils import (
+    SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
+)
 
 # Import sibling commands if possible
 try:
-    from qzx.commands.development.find_dead_code import FindDeadCodeCommand
+    from qzx.commands.development.find_unused_code import FindUnusedCodeCommand
 except ImportError:
-    FindDeadCodeCommand = None
+    FindUnusedCodeCommand = None
 
 try:
     from qzx.commands.development.trace_circular_imports import TraceCircularImportsCommand
@@ -25,11 +28,11 @@ except ImportError:
 
 class ProjectDoctorCommand(CommandBase):
     """
-    Command to run a full diagnostic on a workspace's project health (VCS, tech stack, deps, env, tests, dead code, circular imports, large files)
+    Command to run a full diagnostic on a workspace's project health (VCS, tech stack, deps, env, tests, unused-code candidates, circular imports, large files)
     """
     
     name = "projectDoctor"
-    description = "Inspects project health: detects tech stack, dependencies, environment configuration, Git state, test suites, circular imports, dead code, and large files"
+    description = "Inspects project health: detects tech stack, dependencies, environment configuration, Git state, test suites, circular imports, unused-code candidates, and large files"
     category = "development"
     
     parameters = [
@@ -198,10 +201,10 @@ class ProjectDoctorCommand(CommandBase):
                 "message": "No test suite configurations or folders detected."
             }
             
-        # 6. Code Quality (Lint configs, Dead code, Circular imports)
+        # 6. Code Quality (Lint configs, unused-code candidates, circular imports)
         quality_info = {
             "lint_configs": [f for f in files_in_root if any(cfg in f for cfg in ("eslint", "prettier", "flake8", "pylint", "tsconfig"))],
-            "dead_code": "not_run",
+            "unused_code": "not_run",
             "circular_imports": "not_run",
             "lint_execution": {"executed": False, "status": "skipped"},
             "type_checking": {"executed": False, "status": "skipped"}
@@ -212,18 +215,25 @@ class ProjectDoctorCommand(CommandBase):
         quality_info["lint_execution"] = lint_res
         quality_info["type_checking"] = type_res
         
-        # Dead code check (reusing FindDeadCodeCommand)
-        if FindDeadCodeCommand:
+        # Unused-code check (reusing FindUnusedCodeCommand)
+        if FindUnusedCodeCommand:
             try:
-                cmd = FindDeadCodeCommand()
-                dc_res = cmd.execute(scan_path=abs_path)
-                if dc_res.get("success"):
-                    quality_info["dead_code"] = {
-                        "dead_symbols_count": dc_res.get("dead_symbols_count", 0),
-                        "dead_symbols": dc_res.get("dead_symbols", [])[:10]  # Cap list to 10 items
+                cmd = FindUnusedCodeCommand()
+                unused_res = cmd.execute(scan_path=abs_path)
+                if unused_res.get("success"):
+                    quality_info["unused_code"] = {
+                        "scan_path": abs_path,
+                        "candidate_symbols_count": unused_res.get(
+                            "candidate_symbols_count",
+                            0,
+                        ),
+                        "candidate_symbols": unused_res.get(
+                            "candidate_symbols",
+                            [],
+                        )[:10],
                     }
             except Exception as e:
-                quality_info["dead_code"] = {"error": str(e)}
+                quality_info["unused_code"] = {"error": str(e)}
                 
         # Circular imports check (reusing TraceCircularImportsCommand)
         if TraceCircularImportsCommand:
@@ -232,6 +242,7 @@ class ProjectDoctorCommand(CommandBase):
                 ci_res = cmd.execute(scan_path=abs_path)
                 if ci_res.get("success"):
                     quality_info["circular_imports"] = {
+                        "scan_path": abs_path,
                         "cycles_count": ci_res.get("cycles_count", 0),
                         "cycles": ci_res.get("cycles", [])
                     }
@@ -247,7 +258,12 @@ class ProjectDoctorCommand(CommandBase):
         large_files = []
         scanned_files_count = 0
         for root, dirs, files in os.walk(abs_path):
-            dirs[:] = [d for d in dirs if d not in ('.git', 'node_modules', 'dist', 'build', '.pytest_cache', '__pycache__', '.dropbox', '.dropbox.cache')]
+            dirs[:] = [
+                directory
+                for directory in dirs
+                if directory not in SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES
+                and directory not in (".dropbox", ".dropbox.cache")
+            ]
             for f in files:
                 scanned_files_count += 1
                 if scanned_files_count > 5000:
@@ -296,10 +312,14 @@ class ProjectDoctorCommand(CommandBase):
             issues.append(("Tests failed", f"Unit tests execution failed in project.", "high"))
             score -= 15
             
-        # Dead code / circular import issues
-        if isinstance(quality_info["dead_code"], dict) and quality_info["dead_code"].get("dead_symbols_count", 0) > 0:
-            count = quality_info["dead_code"]["dead_symbols_count"]
-            issues.append(("Dead code detected", f"Found {count} unused functions or classes.", "low"))
+        # Unused-code candidates / circular import issues
+        if isinstance(quality_info["unused_code"], dict) and quality_info["unused_code"].get("candidate_symbols_count", 0) > 0:
+            count = quality_info["unused_code"]["candidate_symbols_count"]
+            issues.append((
+                "Unused code candidates",
+                f"Static analysis found {count} definitions without visible references; review dynamic uses before removal.",
+                "low",
+            ))
             score -= 5
             
         if isinstance(quality_info["circular_imports"], dict) and quality_info["circular_imports"].get("cycles_count", 0) > 0:

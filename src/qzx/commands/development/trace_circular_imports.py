@@ -10,7 +10,10 @@ import os
 import ast
 
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import find_files
+from qzx.core.recursive_findfiles_utils import (
+    SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
+    find_files,
+)
 
 class TraceCircularImportsCommand(CommandBase):
     """
@@ -69,7 +72,12 @@ class TraceCircularImportsCommand(CommandBase):
             return file_path.lower().endswith('.py')
             
         if os.path.isdir(abs_scan_path):
-            for file_path in find_files(abs_scan_path, recursive=True, file_type='f'):
+            for file_path in find_files(
+                abs_scan_path,
+                recursive=True,
+                exclude_dirs=SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
+                file_type='f',
+            ):
                 if file_filter(file_path):
                     file_callback(file_path)
         elif os.path.isfile(abs_scan_path) and file_filter(abs_scan_path):

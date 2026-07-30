@@ -76,3 +76,16 @@ class TestTraceCircularImportsCommand:
         assert "c.py" in cycle
         assert len(cycle) == 4
         assert cycle[0] == cycle[-1]
+
+    def test_excludes_generated_directory_cycles(self, tmp_path):
+        """A stale build copy must not become a project-level cycle."""
+        build = tmp_path / "build"
+        build.mkdir()
+        (build / "a.py").write_text("import b\n", encoding="utf-8")
+        (build / "b.py").write_text("import a\n", encoding="utf-8")
+        (tmp_path / "main.py").write_text("print('healthy')\n", encoding="utf-8")
+
+        result = self.command.execute(str(tmp_path))
+
+        assert result["success"] is True
+        assert result["cycles_count"] == 0
