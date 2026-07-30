@@ -318,8 +318,11 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                 "file_size": file_size,
                 "file_size_readable": self._format_bytes(file_size),
                 "detected_language": detected_language,
+                "language": detected_language,
                 "line_count": line_count,
+                "total_lines": line_count,
                 "empty_lines": empty_lines,
+                "blank_lines": empty_lines,
                 "code_lines": line_count - empty_lines - comment_stats['comment_lines'],
                 "comment_lines": comment_stats['comment_lines'],
                 "comment_percentage": round((comment_stats['comment_lines'] / line_count * 100) if line_count > 0 else 0, 2),
@@ -425,8 +428,11 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
             
             for file_path in matching_files:
                 try:
-                    print(f"Analyzing {file_path}...")
                     result = self._analyze_file(file_path, detailed, language_data)
+
+                    if not result.get("success", False):
+                        file_results[file_path] = result
+                        continue
                     
                     # Skip unsupported file types
                     if result["language"] == "Unknown":
@@ -461,6 +467,7 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                     file_results[file_path] = result
                 except Exception as e:
                     file_results[file_path] = {
+                        "success": False,
                         "error": str(e),
                         "language": "Error",
                         "file_size": 0,
@@ -468,16 +475,42 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                     }
             
             # Prepare summary stats
-            supported_files = [r for r in file_results.values() if "error" not in r and r["language"] != "Unknown"]
+            failed_files = [
+                result
+                for result in file_results.values()
+                if not result.get("success", False)
+            ]
+            supported_files = [
+                result
+                for result in file_results.values()
+                if result.get("success", False)
+                and result["language"] != "Unknown"
+            ]
             
             if not supported_files:
-                return {
-                    "success": True,
+                no_supported_result = {
+                    "success": not failed_files,
                     "files_found": len(matching_files),
                     "files_analyzed": 0,
-                    "message": f"No supported files found among {len(matching_files)} files matching '{file_path}'{recursion_message}",
-                    "file_results": file_results
+                    "files_failed": len(failed_files),
+                    "message": (
+                        f"No supported files were analyzed among "
+                        f"{len(matching_files)} file(s) matching "
+                        f"'{file_path}'{recursion_message}."
+                    ),
+                    "file_results": file_results,
                 }
+                if failed_files:
+                    no_supported_result["error_code"] = "file_analysis_failed"
+                    no_supported_result["error"] = (
+                        f"Analysis failed for all {len(failed_files)} "
+                        "matching file(s)."
+                    )
+                    no_supported_result["message"] = (
+                        f"Analysis failed for all {len(failed_files)} "
+                        f"matching file(s); inspect file_results for causes."
+                    )
+                return no_supported_result
             
             # Calculate percentages
             if aggregated_stats["total_lines"] > 0:
@@ -497,9 +530,10 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
             
             # Prepare return object
             result = {
-                "success": True,
+                "success": not failed_files,
                 "files_found": len(matching_files),
                 "files_analyzed": len(supported_files),
+                "files_failed": len(failed_files),
                 "language_counts": dict(languages_found),
                 "extension_counts": dict(extensions_found),
                 "aggregated_stats": dict(aggregated_stats),
@@ -514,12 +548,25 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
                 top_language = languages_found.most_common(1)[0][0] if languages_found else "Unknown"
                 result["message"] = (f"Analyzed {len(supported_files)} files ({aggregated_stats['total_lines']} lines total). "
                                    f"Most common language: {top_language} ({languages_found[top_language]} files)")
+
+            if failed_files:
+                result["error_code"] = "partial_analysis_failure"
+                result["error"] = (
+                    f"Analysis failed for {len(failed_files)} of "
+                    f"{len(matching_files)} matching file(s)."
+                )
+                result["message"] += (
+                    f" {len(failed_files)} file(s) failed; inspect "
+                    "file_results for causes."
+                )
             
             return result
                 
         except Exception as e:
             return {
                 "success": False,
+                "error_code": "analysis_failed",
+                "error": f"{type(e).__name__}: {e}",
                 "message": f"Error analyzing files: {str(e)}"
             }
     
