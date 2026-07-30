@@ -47,7 +47,8 @@ class MakeScaffProgramCppCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include testing scaffolding (using Catch2)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         },
         {
             'name': 'build_system',
@@ -78,7 +79,7 @@ class MakeScaffProgramCppCommand(CommandBase):
         }
     ]
     
-    def execute(self, project_name, path='.', with_tests='true', build_system='cmake', cpp_standard='17'):
+    def execute(self, project_name, path='.', with_tests=True, build_system='cmake', cpp_standard='17'):
         """
         Creates a basic scaffolding for a C++ program
         

@@ -47,7 +47,8 @@ class MakeScaffProgramJavaCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include test scaffolding (JUnit 5)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         },
         {
             'name': 'build_tool',
@@ -68,7 +69,7 @@ class MakeScaffProgramJavaCommand(CommandBase):
         }
     ]
 
-    def execute(self, project_name, path='.', with_tests='true', build_tool='maven'):
+    def execute(self, project_name, path='.', with_tests=True, build_tool='maven'):
         """
         Creates a basic scaffolding for a Java program
         """

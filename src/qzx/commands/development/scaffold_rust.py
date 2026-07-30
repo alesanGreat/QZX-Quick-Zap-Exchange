@@ -44,13 +44,15 @@ class MakeScaffProgramRustCommand(CommandBase):
             'name': 'binary',
             'description': 'Whether to create a binary application (true) or a library (false)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         },
         {
             'name': 'with_tests',
             'description': 'Whether to include test scaffolding',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         }
     ]
     
@@ -69,7 +71,7 @@ class MakeScaffProgramRustCommand(CommandBase):
         }
     ]
     
-    def execute(self, project_name, path='.', binary='true', with_tests='true'):
+    def execute(self, project_name, path='.', binary=True, with_tests=True):
         """
         Creates a basic scaffolding for a Rust program
         

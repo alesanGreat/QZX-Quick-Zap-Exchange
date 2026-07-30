@@ -31,7 +31,8 @@ class GetGPULoadCommand(CommandBase):
             'name': 'detailed',
             'description': 'Show detailed information (true/false)',
             'required': False,
-            'default': 'false'
+            'default': False,
+            'type': 'bool'
         }
     ]
     
@@ -46,7 +47,7 @@ class GetGPULoadCommand(CommandBase):
         }
     ]
     
-    def execute(self, detailed="false"):
+    def execute(self, detailed=False):
         """
         Retrieves information about the GPUs in the system
         
@@ -432,4 +433,4 @@ class GetGPULoadCommand(CommandBase):
                 bytes_val /= 1024.0
             return f"{bytes_val:.2f} PB"
         except:
-            return str(bytes_val) 
+            return str(bytes_val)

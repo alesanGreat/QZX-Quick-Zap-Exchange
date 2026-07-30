@@ -47,7 +47,8 @@ class MakeScaffProgramGoCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include test scaffolding (Go native tests)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         },
         {
             'name': 'module_path',
@@ -72,7 +73,7 @@ class MakeScaffProgramGoCommand(CommandBase):
         }
     ]
 
-    def execute(self, project_name, path='.', with_tests='true', module_path=''):
+    def execute(self, project_name, path='.', with_tests=True, module_path=''):
         """
         Creates a basic scaffolding for a Go program
 

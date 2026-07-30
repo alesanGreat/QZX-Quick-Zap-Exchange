@@ -36,7 +36,8 @@ class GetNetworkConfigCommand(CommandBase):
             'name': 'check_public',
             'description': 'Whether to fetch public IP and location info (true/false)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         }
     ]
     
@@ -139,7 +140,7 @@ class GetNetworkConfigCommand(CommandBase):
         resolver = dns.resolver.Resolver(configure=True)
         return list(dict.fromkeys(str(server) for server in resolver.nameservers))
 
-    def execute(self, check_public='true'):
+    def execute(self, check_public=True):
         """
         Gathers network configuration info
         

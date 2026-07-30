@@ -10,6 +10,7 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import stat
+from typing import ClassVar
 import uuid
 
 from qzx.core.command_base import CommandBase
@@ -33,6 +34,31 @@ class RepairWorkspaceCommand(CommandBase):
     category = "file"
     requires_explicit_approval = True
     backup_target_parameter = "path"
+
+    result_schema: ClassVar[dict[str, object]] = {
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "message": {"type": "string"},
+            "status": {
+                "type": "string",
+                "enum": [
+                    "preview",
+                    "applied",
+                    "rolled_back",
+                    "recovery_required",
+                    "cleanup_incomplete",
+                ],
+            },
+            "error_code": {"type": "string"},
+            "error": {"type": "string"},
+            "details": {
+                "type": "object",
+                "additionalProperties": True,
+            },
+        },
+        "additionalProperties": True,
+    }
 
     parameters = [
         {

@@ -47,7 +47,8 @@ class MakeScaffProgramCCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include testing scaffolding',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         },
         {
             'name': 'build_system',
@@ -72,7 +73,7 @@ class MakeScaffProgramCCommand(CommandBase):
         }
     ]
     
-    def execute(self, project_name, path='.', with_tests='true', build_system='make'):
+    def execute(self, project_name, path='.', with_tests=True, build_system='make'):
         """
         Creates a basic scaffolding for a C program
         

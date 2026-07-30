@@ -161,6 +161,19 @@ def test_repair_requires_saved_plan_and_strict_boolean(tmp_path):
     assert invalid_bool["error_code"] == "invalid_boolean"
 
 
+def test_repair_declares_its_dynamic_result_contract():
+    properties = RepairWorkspaceCommand.result_schema["properties"]
+
+    assert properties["status"]["enum"] == [
+        "preview",
+        "applied",
+        "rolled_back",
+        "recovery_required",
+        "cleanup_incomplete",
+    ]
+    assert properties["details"]["type"] == "object"
+
+
 def test_repair_preview_validates_plan_without_mutation(tmp_path):
     workspace = tmp_path / "workspace"
     workspace.mkdir()

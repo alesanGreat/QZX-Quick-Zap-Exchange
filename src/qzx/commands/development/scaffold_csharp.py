@@ -47,7 +47,8 @@ class MakeScaffProgramCsharpCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include test scaffolding (xUnit)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         },
         {
             'name': 'project_type',
@@ -68,7 +69,7 @@ class MakeScaffProgramCsharpCommand(CommandBase):
         }
     ]
 
-    def execute(self, project_name, path='.', with_tests='true', project_type='console'):
+    def execute(self, project_name, path='.', with_tests=True, project_type='console'):
         """
         Creates a basic scaffolding for a C# program
         """

@@ -46,7 +46,8 @@ class MakeScaffProgramJavascriptCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include test scaffolding (jest)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         }
     ]
     
@@ -61,7 +62,7 @@ class MakeScaffProgramJavascriptCommand(CommandBase):
         }
     ]
     
-    def execute(self, project_name, path='.', with_tests='true'):
+    def execute(self, project_name, path='.', with_tests=True):
         """
         Creates a basic scaffolding for a JavaScript program
         

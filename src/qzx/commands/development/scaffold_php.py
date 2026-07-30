@@ -46,7 +46,8 @@ class MakeScaffProgramPhpCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include test scaffolding (phpunit)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         }
     ]
     
@@ -61,7 +62,7 @@ class MakeScaffProgramPhpCommand(CommandBase):
         }
     ]
     
-    def execute(self, project_name, path='.', with_tests='true'):
+    def execute(self, project_name, path='.', with_tests=True):
         """
         Creates a basic scaffolding for a PHP program
         

@@ -117,7 +117,19 @@
     "checkUrlStatus": {"stage": "alpha"},
     "cleanDevCaches": {"stage": "alpha"},
     "clearScreen": {"stage": "alpha"},
-    "commandsBridge": {"stage": "alpha"},
+    "commandsBridge": {
+      "stage": "deprecated",
+      "note": "Compatibility wrapper supported throughout QZX 0.2.x; migrate native diagnostics to runDiagnosticCommand before 0.3.0.",
+      "review": {
+        "reviewed_on": "2026-07-30",
+        "rationale": "The former generic bridge mixed native diagnostics with simulated shell actions and broad aliases. It now preserves compatible read-only calls while delegating to a command-specific argument grammar, trusted operating-system executables, bounded output, and no shell expansion.",
+        "evidence": [
+          "tests/test_system_commands/test_run_diagnostic_command.py",
+          "docs/reference/commands-generated.md"
+        ],
+        "replacement": "runDiagnosticCommand"
+      }
+    },
     "compareFiles": {"stage": "alpha"},
     "compressZip": {"stage": "alpha"},
     "copyFile": {"stage": "alpha"},
@@ -187,6 +199,7 @@
     "readFile": {"stage": "alpha"},
     "releaseProject": {"stage": "alpha"},
     "repairWorkspace": {"stage": "alpha"},
+    "runDiagnosticCommand": {"stage": "alpha"},
     "runScript": {"stage": "alpha"},
     "scaffoldC": {"stage": "alpha"},
     "scaffoldCpp": {"stage": "alpha"},

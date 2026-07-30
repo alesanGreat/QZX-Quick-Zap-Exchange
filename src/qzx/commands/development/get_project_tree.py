@@ -46,7 +46,8 @@ class GetProjectTreeCommand(CommandBase):
             'name': 'include_files',
             'description': 'Whether to list files as well as directories (true/false)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         }
     ]
     
@@ -65,7 +66,7 @@ class GetProjectTreeCommand(CommandBase):
         }
     ]
     
-    def execute(self, dir_path='.', max_depth='2', exclude_dirs=None, include_files='true'):
+    def execute(self, dir_path='.', max_depth='2', exclude_dirs=None, include_files=True):
         """
         Executes directory tree generation
         

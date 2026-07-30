@@ -121,7 +121,7 @@
         "cmd",
         "run"
       ],
-      "description": "Executes allowlisted diagnostic system commands with bounded output",
+      "description": "Compatibility interface for runDiagnosticCommand; retained temporarily for QZX 0.2.x scripts",
       "category": "system"
     },
     {
@@ -631,6 +631,14 @@
       "aliases": [],
       "description": "Validates a saved auditWorkspace plan and applies only explicitly selected, unchanged cleanup actions",
       "category": "file"
+    },
+    {
+      "name": "runDiagnosticCommand",
+      "module": "qzx.commands.system.run_diagnostic_command",
+      "class_name": "RunDiagnosticCommand",
+      "aliases": [],
+      "description": "Runs a strictly read-only native system diagnostic from a platform-specific allowlist",
+      "category": "system"
     },
     {
       "name": "runScript",

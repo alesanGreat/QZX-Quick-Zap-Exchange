@@ -45,22 +45,14 @@ def test_fast_startup_claims_attribution_once(tmp_path, capsys):
     ],
 )
 def test_fast_startup_keeps_telemetry_failures_safe_and_optional(
-    monkeypatch,
     tmp_path,
     capsys,
     debug_value,
     expected_error,
 ):
-    import qzx.telemetry
-
     def fail_without_leaking_message(*args, **kwargs):
         raise RuntimeError("sensitive upstream response")
 
-    monkeypatch.setattr(
-        qzx.telemetry,
-        "schedule_version_telemetry",
-        fail_without_leaking_message,
-    )
     environment = {
         "QZX_STATE_DIR": str(tmp_path),
         "QZX_TELEMETRY": "1",
@@ -68,7 +60,13 @@ def test_fast_startup_keeps_telemetry_failures_safe_and_optional(
     if debug_value is not None:
         environment["QZX_TELEMETRY_DEBUG"] = debug_value
 
-    assert fast_startup_main(environment) == 0
+    assert (
+        fast_startup_main(
+            environment,
+            telemetry_scheduler=fail_without_leaking_message,
+        )
+        == 0
+    )
 
     output = capsys.readouterr()
     assert "Welcome Professor!" in output.out

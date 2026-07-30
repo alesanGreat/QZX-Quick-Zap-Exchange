@@ -30,18 +30,23 @@ def _telemetry_definitely_disabled(environ):
     return _normalized_bool(environ.get("DO_NOT_TRACK")) is True
 
 
-def _schedule_optional_telemetry(environ):
+def _schedule_optional_telemetry(environ, telemetry_scheduler=None):
     if _telemetry_definitely_disabled(environ):
         return
     try:
-        from qzx.telemetry import (
-            TELEMETRY_NOTICE,
-            schedule_version_telemetry,
-        )
+        telemetry_notice = None
+        if telemetry_scheduler is None:
+            from qzx.telemetry import (
+                TELEMETRY_NOTICE,
+                schedule_version_telemetry,
+            )
 
-        status = schedule_version_telemetry(VERSION, environ=environ)
-        if status.get("details", {}).get("notice"):
-            print(TELEMETRY_NOTICE, file=sys.stderr)
+            telemetry_scheduler = schedule_version_telemetry
+            telemetry_notice = TELEMETRY_NOTICE
+
+        status = telemetry_scheduler(VERSION, environ=environ)
+        if status.get("details", {}).get("notice") and telemetry_notice:
+            print(telemetry_notice, file=sys.stderr)
     except Exception as exc:
         if _normalized_bool(environ.get("QZX_TELEMETRY_DEBUG")) is True:
             print(
@@ -88,7 +93,7 @@ def _append_human_value(lines, label, value, indent):
     lines.append("{}{}: {}".format(prefix, label, _human_scalar(value)))
 
 
-def main(environ=None):
+def main(environ=None, telemetry_scheduler=None):
     """Print the basic welcome first, then perform optional background work."""
     environ = os.environ if environ is None else environ
     if claim_first_run_attribution(environ):
@@ -114,5 +119,8 @@ def main(environ=None):
     )
     print("\n".join(lines))
     sys.stdout.flush()
-    _schedule_optional_telemetry(environ)
+    _schedule_optional_telemetry(
+        environ,
+        telemetry_scheduler=telemetry_scheduler,
+    )
     return 0

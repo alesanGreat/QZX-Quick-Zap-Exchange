@@ -178,6 +178,25 @@ def test_command_counts_are_consistent():
     )
 
 
+def test_boolean_parameter_defaults_are_typed_not_stringly_typed():
+    """Published true/false defaults must use the strict shared parser."""
+    loader = CommandLoader()
+    string_boolean_defaults = []
+
+    for command in set(loader.get_all_commands().values()):
+        for parameter in command.parameters:
+            default = parameter.get("default")
+            if isinstance(default, str) and default.lower() in {
+                "true",
+                "false",
+            }:
+                string_boolean_defaults.append(
+                    "{}.{}".format(command.name, parameter.get("name"))
+                )
+
+    assert string_boolean_defaults == []
+
+
 def test_analyze_complexity_processes_directories(tmp_path):
     source = tmp_path / "sample.py"
     source.write_text("def sample():\n    return 1\n", encoding="utf-8")

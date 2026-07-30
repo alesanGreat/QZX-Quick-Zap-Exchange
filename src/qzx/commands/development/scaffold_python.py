@@ -43,13 +43,15 @@ class MakeScaffProgramPythonCommand(CommandBase):
             'name': 'with_tests',
             'description': 'Whether to include test scaffolding (pytest)',
             'required': False,
-            'default': 'true'
+            'default': True,
+            'type': 'bool'
         },
         {
             'name': 'create_venv',
             'description': 'Whether to create a virtual environment',
             'required': False,
-            'default': 'false'
+            'default': False,
+            'type': 'bool'
         }
     ]
     
@@ -68,7 +70,7 @@ class MakeScaffProgramPythonCommand(CommandBase):
         }
     ]
     
-    def execute(self, project_name, path='.', with_tests='true', create_venv='false'):
+    def execute(self, project_name, path='.', with_tests=True, create_venv=False):
         """
         Creates a basic scaffolding for a Python program
         
