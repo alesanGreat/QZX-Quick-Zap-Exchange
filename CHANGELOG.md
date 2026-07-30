@@ -36,6 +36,13 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 - Validated the real CLI on PowerShell, `cmd.exe`, and WSL with standard
   CPython 3.13, plus the complete Python and website test suites and a local
   browser smoke test.
+- Published the verified 89-command wheel and POSIX-built source distribution
+  to PyPI and as byte-identical assets of the GitHub pre-release.
+- Verified SHA-256
+  `5f082266582b925154e6e51987b82a15244f798ab19ec7789dc67079f20ca3a7`
+  for the wheel and
+  `f326c42c64069e7c406cd7630b56161abc54fedcefcecc36de17fc8e47304fe7`
+  for the source distribution.
 
 ## 0.2.2.0.6a8 — 2026-07-30
 
