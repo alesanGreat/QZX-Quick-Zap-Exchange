@@ -205,7 +205,11 @@ class RunDiagnosticCommand(CommandBase):
     parameters = [
         {
             "name": "command",
-            "description": "Allowlisted read-only diagnostic command",
+            "description": (
+                "Read-only diagnostic. Windows: hostname, ipconfig, netstat, "
+                "whoami. Unix: cal, date, free, hostname, netstat, ps, ss, "
+                "uname, uptime, whoami"
+            ),
             "required": True,
             "type": "str",
         },
@@ -238,6 +242,12 @@ class RunDiagnosticCommand(CommandBase):
             "command": "qzx runDiagnosticCommand ipconfig /all",
             "description": "Read the complete Windows network configuration",
         },
+        {
+            "command": "qzx runDiagnosticCommand netstat -an",
+            "description": (
+                "List connections numerically without name resolution"
+            ),
+        },
     ]
 
     TIMEOUT_SECONDS = 20
@@ -257,11 +267,9 @@ class RunDiagnosticCommand(CommandBase):
         "free",
         "hostname",
         "netstat",
-        "ps",
         "ss",
         "uname",
         "uptime",
-        "who",
         "whoami",
     }
     _TRUSTED_UNIX_DIRECTORIES = (
@@ -313,7 +321,8 @@ class RunDiagnosticCommand(CommandBase):
                 (
                     "Use a dedicated QZX command. Network checks belong to "
                     "checkDns, checkUrlStatus, or getNetworkConfig; paths and "
-                    "files belong to the dedicated file commands."
+                    "files belong to the dedicated file commands; processes "
+                    "and sessions belong to listProcesses or getCurrentUser."
                 ),
                 command_details,
                 allowed_commands=sorted(available),
@@ -510,7 +519,7 @@ class RunDiagnosticCommand(CommandBase):
 
     @staticmethod
     def _validate_unix_arguments(command_name, arguments):
-        if command_name in {"date", "who"}:
+        if command_name == "date":
             return (
                 None
                 if not arguments
@@ -543,12 +552,6 @@ class RunDiagnosticCommand(CommandBase):
                 None
                 if valid
                 else "free accepts only unit and summary display flags."
-            )
-        if command_name == "ps":
-            return (
-                None
-                if arguments in ([], ["-e"], ["-ef"], ["-f"], ["aux"])
-                else "ps permits only its default, -e, -ef, -f, or aux view."
             )
         if command_name == "netstat":
             valid = (

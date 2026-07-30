@@ -106,10 +106,12 @@ def test_network_and_mutating_utilities_are_not_allowlisted():
         "ifconfig",
         "ping",
         "printenv",
+        "ps",
         "systeminfo",
         "tasklist",
         "where",
         "which",
+        "who",
     ):
         result = command.execute(native_name)
         assert result["success"] is False
@@ -118,6 +120,10 @@ def test_network_and_mutating_utilities_are_not_allowlisted():
 
 
 def test_argument_grammars_reject_known_mutating_forms():
+    assert RunDiagnosticCommand._validate_windows_arguments(
+        "ipconfig",
+        ["/flushdns"],
+    )
     assert RunDiagnosticCommand._validate_windows_arguments(
         "ipconfig",
         ["/flushdns"],

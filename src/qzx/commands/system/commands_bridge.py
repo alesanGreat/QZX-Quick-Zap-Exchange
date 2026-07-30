@@ -140,11 +140,10 @@ class CommandsBridgeCommand(RunDiagnosticCommand):
                     "reviewing its safety contract."
                 ),
                 "deprecated": True,
-                "replacement": "runDiagnosticCommand",
                 "supported_through": "QZX 0.2.x",
                 "details": {
                     "deprecated": True,
-                    "replacement": "runDiagnosticCommand",
+                    "replacement_strategy": "dedicated_qzx_command",
                     "supported_through": "QZX 0.2.x",
                 },
             }
@@ -154,15 +153,9 @@ class CommandsBridgeCommand(RunDiagnosticCommand):
         result["replacement"] = "runDiagnosticCommand"
         result["supported_through"] = "QZX 0.2.x"
         result["message"] = (
-            "commandsBridge is deprecated; migrate to "
-            "'qzx runDiagnosticCommand {}{}'. {}"
+            "commandsBridge is deprecated; runDiagnosticCommand is its "
+            "supported replacement. {}"
         ).format(
-            command_name,
-            (
-                " " + " ".join(str(argument) for argument in args)
-                if args
-                else ""
-            ),
             result["message"],
         )
         return result
