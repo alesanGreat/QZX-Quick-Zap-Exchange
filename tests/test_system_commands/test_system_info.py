@@ -1,11 +1,7 @@
 """Behavioral tests for the consolidated system-information contract."""
 
 from qzx import __version__
-from qzx.commands.system.get_environment_info import (
-    WonderMyEnvironmentCommand,
-)
 from qzx.commands.system.system_info import SystemInfoCommand
-from qzx.core.command_lifecycle import command_maturity
 
 
 def test_basic_system_info_is_structured_and_avoids_optional_probes():
@@ -56,7 +52,7 @@ def test_detailed_system_info_runs_real_memory_and_storage_probes():
     assert result["details_requested"] is True
     assert result["system_info"]["memory"]["virtual_memory"]["total"] > 0
     assert result["system_info"]["storage"]["summary"]["total_disks"] > 0
-    assert "getGPULoad" in result["message"]
+    assert "getGpuInfo" in result["message"]
 
 
 def test_system_info_cli_boolean_contract_is_strict():
@@ -73,25 +69,3 @@ def test_system_info_direct_boolean_contract_is_structured():
     assert result["success"] is False
     assert result["error_code"] == "invalid_boolean"
     assert "true or false" in result["message"]
-
-
-def test_legacy_environment_command_delegates_without_printing(capsys):
-    result = WonderMyEnvironmentCommand().execute(detailed=False)
-
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert captured.err == ""
-    assert result["success"] is True
-    assert result["deprecated"] is True
-    assert result["replacement"] == "systemInfo"
-    assert result["supported_through"] == "QZX 0.2.x"
-    assert result["system_info"]["qzx"]["version"] == __version__
-    assert "memory" not in result["system_info"]
-    assert "storage" not in result["system_info"]
-
-
-def test_legacy_environment_command_has_a_valid_deprecation_review():
-    maturity = command_maturity("getEnvironmentInfo")
-
-    assert maturity["stage"] == "deprecated"
-    assert maturity["review"]["replacement"] == "systemInfo"

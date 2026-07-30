@@ -3,6 +3,40 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a9 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Replaced the inherited alias layer with one case-insensitive canonical
+  lowerCamelCase vocabulary, reducing the executable surface from 96 legacy
+  entries to 89 focused commands.
+- Retired redundant wrappers and overlapping commands instead of preserving
+  compatibility machinery that obscured ownership, including the separate
+  date/time variants and the duplicate large-file search.
+- Renamed unclear operations around paths, archives, disks, executables,
+  scaffolding, release preparation, Gemini explanations, and network speed so
+  their public names describe what they actually do.
+- Made `findFiles` a bounded metadata search with strict filters and rich
+  structured results; content search remains the distinct responsibility of
+  `findText`.
+- Added command-specific `--help` and `-h`, strict boolean parsing, stable
+  machine-readable failures, and stronger human output without weakening the
+  complete `--json` contract.
+- Hardened `runScript` with platform-aware script validation, a 60-second
+  timeout, bounded stdout/stderr capture, truncation metadata, and argument
+  privacy.
+- Consolidated shared path hashing and identity checks, strengthened archive,
+  workspace, repository, complexity, GPU, disk, executable, and diagnostics
+  behavior, and removed broad exception handlers and unused imports.
+- Required every dangerous public command to identify a restorable backup
+  target or remain blocked unless the operator explicitly selects the safety
+  bypass.
+- Regenerated the bilingual command inventory, lifecycle evidence, examples,
+  website details, and documentation from the canonical runtime surface.
+- Validated the real CLI on PowerShell, `cmd.exe`, and WSL with standard
+  CPython 3.13, plus the complete Python and website test suites and a local
+  browser smoke test.
+
 ## 0.2.2.0.6a8 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

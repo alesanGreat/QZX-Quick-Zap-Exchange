@@ -14,7 +14,7 @@ from scripts.verify_distribution_artifacts import (
 )
 
 
-VERSION = "0.2.2.0.6a8"
+VERSION = "9.8.7a6"
 REQUIRES_PYTHON = ">=3.13"
 
 

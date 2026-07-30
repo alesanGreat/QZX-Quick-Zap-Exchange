@@ -7,7 +7,6 @@ Using the centralized recursive file finder utility
 """
 
 import os
-import platform
 import stat
 import sys
 

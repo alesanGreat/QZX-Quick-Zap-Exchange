@@ -2,29 +2,23 @@
 # -*- coding: utf-8 -*-
 
 """
-WonderIfAdmin Command - Checks if the current user has administrative privileges
+IsAdmin Command - Checks if the current user has administrative privileges
 """
 
 import os
-import sys
 import ctypes
 import subprocess
 import getpass
 import platform
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
-class WonderIfAdminCommand(CommandBase):
+class IsAdminCommand(CommandBase):
     """
     Command to check if the current user has administrative privileges
     """
     
     name = "isAdmin"
-    aliases = ["wonderIfAdmin"]
     description = "Checks if the current user has administrative privileges"
     category = "system"
     
@@ -32,7 +26,7 @@ class WonderIfAdminCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx wonderIfAdmin',
+            'command': 'qzx isAdmin',
             'description': 'Check if the current user has administrative privileges'
         }
     ]
@@ -84,7 +78,7 @@ class WonderIfAdminCommand(CommandBase):
                             else:
                                 result["details"]["status"] = "not_admin"
                                 result["details"]["description"] = "User is not a member of administrators group"
-                        except:
+                        except Exception:
                             result["details"]["status"] = "unknown_group_membership"
                             result["details"]["description"] = "Unable to determine administrators group membership"
                 except Exception as e:
@@ -102,7 +96,7 @@ class WonderIfAdminCommand(CommandBase):
                         is_admin = process.returncode == 0
                         result["is_admin"] = is_admin
                         result["details"]["method"] = "fallback"
-                    except:
+                    except Exception:
                         result["details"]["status"] = "check_failed"
                         result["details"]["description"] = "Unable to determine administrative status"
             
@@ -148,7 +142,7 @@ class WonderIfAdminCommand(CommandBase):
                             else:
                                 result["details"]["status"] = "not_admin"
                                 result["details"]["description"] = "Not a member of any known admin groups"
-                        except:
+                        except Exception:
                             result["details"]["status"] = "check_failed"
                             result["details"]["description"] = "Unable to determine sudo capabilities"
                 except Exception as e:
@@ -184,7 +178,7 @@ class WonderIfAdminCommand(CommandBase):
                         )
                         has_sudo_nopass = sudo_test.returncode == 0
                         result["details"]["has_passwordless_sudo"] = has_sudo_nopass
-                    except:
+                    except Exception:
                         result["details"]["sudo_check"] = "failed"
                 except Exception as e:
                     result["details"]["error"] = str(e)
@@ -246,4 +240,4 @@ class WonderIfAdminCommand(CommandBase):
                 "error": error_message,
                 "message": f"Failed to determine administrative status: {str(e)}",
                 "is_admin": False
-            } 
+            }

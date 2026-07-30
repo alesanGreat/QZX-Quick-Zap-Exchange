@@ -1,6 +1,5 @@
 """Run formatCode against every real formatter it claims to support."""
 
-from pathlib import Path
 import shutil
 
 import pytest

@@ -2,31 +2,25 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramJavascript Command - Creates a basic scaffolding for a JavaScript/Node.js program
+ScaffoldJavaScript Command - Creates a basic scaffolding for a JavaScript/Node.js program
 """
 
 import os
-import shutil
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
-class MakeScaffProgramJavascriptCommand(CommandBase):
+class ScaffoldJavaScriptCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a JavaScript/Node.js program.
     Creates a new JavaScript project with standard directory structure and basic files.
     """
     
-    name = "scaffoldJavascript"
-    aliases = ["jsScaff", "newJs", "createJs", "makeScaffProgramJavascript"]
+    name = "scaffoldJavaScript"
     description = "Creates a basic scaffolding for a JavaScript/Node.js program"
     category = "development"
     
@@ -53,11 +47,11 @@ class MakeScaffProgramJavascriptCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx makeScaffProgramJavascript my_js_project',
+            'command': 'qzx scaffoldJavaScript my_js_project',
             'description': 'Creates a new JavaScript project named "my_js_project" in the current directory'
         },
         {
-            'command': 'qzx jsScaff backend_api /path/to/dir true',
+            'command': 'qzx scaffoldJavaScript backend_api /path/to/dir true',
             'description': 'Creates a new JavaScript project with Jest tests in the specified directory'
         }
     ]
@@ -76,8 +70,7 @@ class MakeScaffProgramJavascriptCommand(CommandBase):
         """
         try:
             # Convert string parameters to appropriate types
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
             
             # Normalize and validate project name
             project_name = normalize_project_name(

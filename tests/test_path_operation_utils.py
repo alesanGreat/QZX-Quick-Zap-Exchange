@@ -6,6 +6,7 @@ from pathlib import Path
 from qzx.core.path_operation_utils import (
     destination_device,
     file_sha256,
+    files_identical,
     is_filesystem_root,
     same_or_nested_path_relationship,
 )
@@ -49,3 +50,16 @@ def test_file_sha256_is_content_stable(tmp_path):
 
     assert file_sha256(first) == file_sha256(second)
     assert len(file_sha256(first)) == 64
+
+
+def test_files_identical_requires_exact_regular_file_content(tmp_path):
+    first = tmp_path / "first.bin"
+    matching = tmp_path / "matching.bin"
+    same_size_different = tmp_path / "different.bin"
+    first.write_bytes(b"QZX\x00content")
+    matching.write_bytes(b"QZX\x00content")
+    same_size_different.write_bytes(b"QZX\x00changed")
+
+    assert files_identical(first, matching) is True
+    assert files_identical(first, same_size_different) is False
+    assert files_identical(first, tmp_path) is False

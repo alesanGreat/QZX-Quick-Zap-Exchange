@@ -8,11 +8,6 @@ validates its presence in .env/.env.example, and extracts default/fallback value
 
 import os
 import re
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter

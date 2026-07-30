@@ -2,29 +2,25 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramRust Command - Creates a basic scaffolding for a Rust program
+ScaffoldRust Command - Creates a basic scaffolding for a Rust program
 """
 
 import os
-import shutil
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
-from qzx.commands.development._scaffold_utils import prepare_scaffold_project
+from qzx.commands.development._scaffold_utils import (
+    parse_scaffold_boolean,
+    prepare_scaffold_project,
+)
 
-class MakeScaffProgramRustCommand(CommandBase):
+class ScaffoldRustCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a Rust program.
     Creates a new Rust project with standard directory structure and basic files.
     """
     
     name = "scaffoldRust"
-    aliases = ["rustScaff", "newRust", "createRust", "makeScaffProgramRust"]
     description = "Creates a basic scaffolding for a Rust program"
     category = "development"
     
@@ -58,15 +54,15 @@ class MakeScaffProgramRustCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx makeScaffProgramRust my_project',
+            'command': 'qzx scaffoldRust my_project',
             'description': 'Creates a new Rust binary project named "my_project" in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramRust my_library false',
+            'command': 'qzx scaffoldRust my_library false',
             'description': 'Creates a new Rust library project named "my_library" in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramRust my_project /path/to/dir true false',
+            'command': 'qzx scaffoldRust my_project /path/to/dir true false',
             'description': 'Creates a new Rust binary project without tests in the specified directory'
         }
     ]
@@ -86,11 +82,8 @@ class MakeScaffProgramRustCommand(CommandBase):
         """
         try:
             # Convert string parameters to appropriate types
-            if isinstance(binary, str):
-                binary = binary.lower() in ('true', 'yes', 'y', '1', 't')
-            
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            binary = parse_scaffold_boolean(binary, "binary")
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
             
             # Normalize and validate project name (convert spaces to underscores, etc.)
             project_name = self._normalize_project_name(project_name)

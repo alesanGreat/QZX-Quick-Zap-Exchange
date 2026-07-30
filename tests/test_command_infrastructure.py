@@ -5,10 +5,9 @@ import pytest
 
 from qzx.commands.development.analyze_complexity import AnalyzeComplexityCommand
 from qzx.commands.file.change_permissions import ChangePermissionsCommand
-from qzx.commands.system.qzx_help import qzxHelp
-from qzx.commands.system.qzx_list_commands import qzxListCommands
-from qzx.commands.system.get_command_count import WonderCommandsAmountCommand
-from qzx.commands.system.version import QZXVersionCommand
+from qzx.commands.system.help import HelpCommand
+from qzx.commands.system.list_commands import ListCommandsCommand
+from qzx.commands.system.version import VersionCommand
 from qzx.core.command_loader import CommandLoader
 from qzx.core.command_index import (
     CommandIndexError,
@@ -36,51 +35,42 @@ def test_command_loader_discovers_commands_on_first_lookup():
 def test_canonical_lookup_is_lazy_for_mixed_case_command_names():
     loader = CommandLoader()
 
-    command = loader.get_command("GETcurrentDATE")
+    command = loader.get_command("GETcurrentDATETIME")
 
     assert command is not None
-    assert command.name == "getCurrentDate"
+    assert command.name == "getCurrentDateTime"
     assert loader._discovered is False
     assert set(loader.command_modules) == {
-        "qzx.commands.system.get_current_date",
+        "qzx.commands.system.get_current_date_time",
     }
 
 
-def test_alias_lookup_is_lazy_and_unknown_lookup_does_not_scan_catalog():
-    alias_loader = CommandLoader()
+def test_unknown_lookup_does_not_scan_catalog():
     unknown_loader = CommandLoader()
 
-    alias = alias_loader.get_command("qzxVersion")
     unknown = unknown_loader.get_command("commandThatDoesNotExist")
 
-    assert alias.name == "version"
-    assert alias_loader._discovered is False
-    assert set(alias_loader.command_modules) == {
-        "qzx.commands.system.version",
-    }
     assert unknown is None
     assert unknown_loader._discovered is False
     assert unknown_loader.command_modules == {}
 
 
 def test_command_list_uses_index_without_importing_implementations():
-    command = qzxListCommands()
+    command = ListCommandsCommand()
 
     result = command.execute()
 
     assert result["success"] is True
-    assert result["summary"]["canonical_commands"] >= 90
+    assert result["summary"]["commands"] >= 80
     assert command.command_loader.command_modules == {}
     assert command.command_loader._discovered is False
 
 
-def test_command_index_rejects_alias_collisions():
+def test_command_index_rejects_undeclared_fields():
     document = deepcopy(load_command_index())
-    document["commands"][1]["aliases"].append(
-        document["commands"][0]["name"]
-    )
+    document["commands"][0]["legacy_aliases"] = ["oldName"]
 
-    with pytest.raises(CommandIndexError, match="collides"):
+    with pytest.raises(CommandIndexError, match="must contain exactly"):
         validate_command_index_document(document)
 
 
@@ -112,8 +102,8 @@ def test_lifecycle_inventory_error_preserves_module_import_cause():
 
 
 def test_help_and_command_list_use_lazy_discovery():
-    help_result = qzxHelp().execute("version")
-    list_result = qzxListCommands().execute("findFiles")
+    help_result = HelpCommand().execute("version")
+    list_result = ListCommandsCommand().execute("findFiles")
 
     assert help_result["success"] is True
     assert help_result["details"]["name"] == "version"
@@ -121,61 +111,59 @@ def test_help_and_command_list_use_lazy_discovery():
     assert "findFiles" in list_result["message"]
 
 
-def test_help_identifies_alias_and_canonical_name_in_structured_details():
-    result = qzxHelp().execute("auditLanguages")
+def test_help_reports_requested_and_canonical_names():
+    result = HelpCommand().execute("PROJECTLANGUAGES")
 
     assert result["success"] is True
-    assert result["command"] == "auditLanguages"
-    assert result["details"]["requested_name"] == "auditLanguages"
+    assert result["command"] == "PROJECTLANGUAGES"
+    assert result["details"]["requested_name"] == "PROJECTLANGUAGES"
     assert result["details"]["canonical_name"] == "projectLanguages"
-    assert result["details"]["is_alias"] is True
-    assert "auditLanguages" in result["details"]["aliases"]
 
 
-def test_command_list_summarizes_canonical_commands_and_aliases():
-    result = qzxListCommands().execute("auditLanguages")
+def test_public_command_inventory_is_canonical_only():
+    result = ListCommandsCommand().execute()
 
     assert result["success"] is True
-    assert result["summary"] == {
-        "canonical_commands": 0,
-        "aliases": 1,
-        "listed_entries": 1,
-        "categories": 0,
-        "filter": "auditLanguages",
-    }
-    assert result["maturity_summary"] == {}
-    assert result["commands"]["alias"][0]["canonical_name"] == "projectLanguages"
-    assert "Commands: 0 canonical, 1 aliases" in result["message"]
+    assert result["summary"]["commands"] >= 80
+    assert all("aliases" not in entry for entry in load_command_index()["commands"])
 
 
 def test_command_list_structured_entries_are_deterministically_sorted():
-    result = qzxListCommands().execute()
+    result = ListCommandsCommand().execute()
 
     for commands in result["commands"].values():
         names = [command["name"] for command in commands]
         assert names == sorted(names, key=str.lower)
 
 
-def test_aliases_do_not_override_canonical_commands():
+def test_retired_commands_and_old_names_are_not_available():
     loader = CommandLoader()
 
     assert loader.get_command("systemInfo").name == "systemInfo"
-    assert loader.get_command("WonderMyEnvironment").name == "getEnvironmentInfo"
-    for alias in ("term", "shell", "console", "repl"):
-        assert loader.get_command(alias).name == "terminal"
+    for retired_name in (
+        "bootstrapProject",
+        "cleanDevCaches",
+        "commandsBridge",
+        "compressZip",
+        "createDocTemplatePython",
+        "decompressZip",
+        "findLargeFiles",
+        "generateContent",
+        "getEnvironmentInfo",
+        "releaseProject",
+        "WonderMyEnvironment",
+    ):
+        assert loader.get_command(retired_name) is None
 
 
 def test_command_counts_are_consistent():
     loader = CommandLoader()
     canonical_count = len(set(loader.get_all_commands().values()))
-    version_result = QZXVersionCommand().execute()
-    count_result = WonderCommandsAmountCommand().execute()
+    version_result = VersionCommand().execute()
+    list_result = ListCommandsCommand().execute()
 
     assert version_result["qzx_info"]["command_count"] == canonical_count
-    assert count_result["command_count"] == canonical_count
-    assert count_result["total_count"] == (
-        count_result["command_count"] + count_result["alias_count"]
-    )
+    assert list_result["summary"]["commands"] == canonical_count
 
 
 def test_boolean_parameter_defaults_are_typed_not_stringly_typed():
@@ -204,12 +192,22 @@ def test_analyze_complexity_processes_directories(tmp_path):
     result = AnalyzeComplexityCommand().execute(
         str(tmp_path),
         recursive=False,
-        format="summary",
+        detail_level="summary",
     )
 
     assert result["success"] is True
     assert "sample.py" in result["report"]
     assert result["details"]["files_analyzed"] == 1
+
+
+def test_analyze_complexity_rejects_unknown_detail_level(tmp_path):
+    result = AnalyzeComplexityCommand().execute(
+        str(tmp_path),
+        detail_level="json",
+    )
+
+    assert result["success"] is False
+    assert result["error_code"] == "invalid_detail_level"
 
 
 def test_change_permissions_processes_directory_recursively(tmp_path):

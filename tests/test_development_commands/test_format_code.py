@@ -5,7 +5,6 @@
 Tests for the formatCode command
 """
 
-import os
 import shutil
 import zipfile
 from qzx.commands.development.format_code import FormatCodeCommand

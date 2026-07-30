@@ -2,20 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Tests for the WonderIfFileEmpty command
+Tests for the isFileEmpty command
 """
 
-import os
-from qzx.commands.file.is_file_empty import WonderIfFileEmptyCommand
+from qzx.commands.file.is_file_empty import IsFileEmptyCommand
 
-class TestWonderIfFileEmptyCommand:
+class TestIsFileEmptyCommand:
     """
-    Tests for the WonderIfFileEmpty command
+    Tests for the isFileEmpty command
     """
     
     def setup_method(self):
         """Setup for each test"""
-        self.command = WonderIfFileEmptyCommand()
+        self.command = IsFileEmptyCommand()
         
     def test_format_bytes(self):
         """Test formatting bytes to human-readable size"""

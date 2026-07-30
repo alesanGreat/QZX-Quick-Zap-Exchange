@@ -2,24 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-GetRAMInfo Command - Retrieves information about system RAM
+GetRamInfo Command - Retrieves information about system RAM
 """
 
 import psutil
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
-class GetRAMInfoCommand(CommandBase):
+class GetRamInfoCommand(CommandBase):
     """
     Command to get information about system RAM
     """
     
-    name = "getRAMInfo"
+    name = "getRamInfo"
     description = "Gets detailed information about system RAM usage"
     category = "system"
     
@@ -27,7 +22,7 @@ class GetRAMInfoCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx getRAMInfo',
+            'command': 'qzx getRamInfo',
             'description': 'Get detailed information about system memory usage'
         }
     ]
@@ -109,7 +104,7 @@ class GetRAMInfoCommand(CommandBase):
                         "value": virtual_memory.slab,
                         "readable": self._format_bytes(virtual_memory.slab)
                     }
-            except:
+            except Exception:
                 pass  # Ignore if additional stats are not available
             
             # Try to get swap details
@@ -117,7 +112,7 @@ class GetRAMInfoCommand(CommandBase):
                 if hasattr(swap, 'sin') and hasattr(swap, 'sout'):
                     ram_info["swap"]["sin"] = swap.sin
                     ram_info["swap"]["sout"] = swap.sout
-            except:
+            except Exception:
                 pass  # Ignore if swap details are not available
             
             # Create a detailed message for verbose output

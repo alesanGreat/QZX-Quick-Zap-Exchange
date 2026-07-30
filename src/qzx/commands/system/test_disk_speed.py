@@ -1,160 +1,221 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-TestDiskSpeed Command - Benchmarks sequential read/write speed of a directory's filesystem.
-"""
+"""Benchmark sequential filesystem throughput with a collision-safe fixture."""
+
+from __future__ import annotations
 
 import os
-import sys
+import tempfile
 import time
 from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
 
 class TestDiskSpeedCommand(CommandBase):
-    """
-    Command to measure read and write throughput speeds for a target storage directory.
-    """
+    """Measure sequential read and durable write throughput."""
 
     name = "testDiskSpeed"
-    description = "Benchmarks sequential write and read speeds (MB/s) of the filesystem at a target path"
+    description = (
+        "Measures sequential durable-write and buffered-read throughput in "
+        "MiB/s using a uniquely named temporary file"
+    )
     category = "system"
 
     parameters = [
         {
             "name": "test_path",
-            "description": "Directory path to benchmark (defaults to current directory)",
+            "description": (
+                "Existing directory whose filesystem will be benchmarked"
+            ),
             "required": False,
             "default": ".",
+            "type": "str",
         },
         {
-            "name": "size_mb",
-            "description": "Temporary test file size in Megabytes (defaults to 50)",
+            "name": "size_mib",
+            "description": (
+                "Temporary fixture size in MiB, from 1 through 1024"
+            ),
             "required": False,
-            "default": "50",
+            "default": 50,
+            "type": "int",
         },
     ]
 
     examples = [
         {
             "command": "qzx testDiskSpeed",
-            "description": "Benchmark disk speed in the current folder using a 50MB test file",
+            "description": (
+                "Benchmark the current filesystem with a 50 MiB fixture"
+            ),
         },
         {
-            "command": "qzx testDiskSpeed C:/temp 100",
-            "description": "Benchmark disk speed in C:/temp using a 100MB test file",
+            "command": "qzx testDiskSpeed C:/temp --size-mib 100",
+            "description": (
+                "Benchmark C:/temp with a unique 100 MiB temporary fixture"
+            ),
         },
     ]
 
-    def execute(self, test_path=".", size_mb="50"):
-        """
-        Runs read/write benchmark
-
-        Args:
-            test_path (str): Directory to test
-            size_mb (str/int): Test file size in MB
-
-        Returns:
-            Dictionary with read and write MB/s values
-        """
-        abs_path = os.path.abspath(test_path)
-
-        if not os.path.exists(abs_path):
-            return {
-                "success": False,
-                "error": f"Path '{test_path}' does not exist.",
-                "message": f"Path '{test_path}' does not exist.",
-            }
-
-        if not os.path.isdir(abs_path):
-            return {
-                "success": False,
-                "error": f"'{test_path}' is not a directory.",
-                "message": f"'{test_path}' is not a directory.",
-            }
-
-        try:
-            mb_to_test = int(size_mb)
-            if mb_to_test <= 0:
-                mb_to_test = 50
-        except ValueError:
-            mb_to_test = 50
-
-        temp_file = os.path.join(abs_path, "qzx_speedtest_temp.bin")
-
-        try:
-            # 1. Generate 1MB byte buffer
-            # Using random bytes to prevent filesystem compression optimization from inflating results
-            chunk_size = 1024 * 1024  # 1 MB
-            buffer = os.urandom(chunk_size)
-
-            # 2. Benchmark Write Speed
-            print(f"Executing write test of {mb_to_test} MB...")
-            start_write = time.perf_counter()
-            with open(temp_file, "wb") as f:
-                for _ in range(mb_to_test):
-                    f.write(buffer)
-                    # Force disk flushing
-                    f.flush()
-                    os.fsync(f.fileno())
-            write_duration = max(
-                time.perf_counter() - start_write,
-                time.get_clock_info("perf_counter").resolution,
+    def execute(self, test_path=".", size_mib=50):
+        """Run the benchmark and remove its unique fixture on every path."""
+        directory = Path(test_path).expanduser().resolve()
+        if not directory.exists():
+            return self._failure(
+                "test_path_missing",
+                f"Directory '{directory}' does not exist.",
+                directory,
+                size_mib,
+            )
+        if not directory.is_dir():
+            return self._failure(
+                "test_path_not_directory",
+                f"Path '{directory}' is not a directory.",
+                directory,
+                size_mib,
             )
 
-            # 3. Benchmark Read Speed
-            print(f"Executing read test of {mb_to_test} MB...")
-            start_read = time.perf_counter()
+        try:
+            requested_size = int(size_mib)
+        except (TypeError, ValueError):
+            requested_size = 0
+        if not 1 <= requested_size <= 1024:
+            return self._failure(
+                "invalid_size_mib",
+                "size_mib must be an integer from 1 through 1024.",
+                directory,
+                size_mib,
+            )
+
+        fixture_path = None
+        result = None
+        try:
+            descriptor, fixture_name = tempfile.mkstemp(
+                prefix=".qzx-disk-speed-",
+                suffix=".bin",
+                dir=directory,
+            )
+            fixture_path = Path(fixture_name)
+            os.close(descriptor)
+            chunk_size = 1024 * 1024
+            chunk = os.urandom(chunk_size)
+            clock_floor = time.get_clock_info("perf_counter").resolution
+
+            write_started = time.perf_counter()
+            with fixture_path.open("wb") as handle:
+                for _ in range(requested_size):
+                    handle.write(chunk)
+                handle.flush()
+                os.fsync(handle.fileno())
+            write_duration = max(
+                time.perf_counter() - write_started,
+                clock_floor,
+            )
+
             bytes_read = 0
-            with open(temp_file, "rb") as f:
-                while True:
-                    read_chunk = f.read(chunk_size)
-                    if not read_chunk:
-                        break
+            read_started = time.perf_counter()
+            with fixture_path.open("rb") as handle:
+                while read_chunk := handle.read(chunk_size):
                     bytes_read += len(read_chunk)
             read_duration = max(
-                time.perf_counter() - start_read,
-                time.get_clock_info("perf_counter").resolution,
+                time.perf_counter() - read_started,
+                clock_floor,
             )
-
-            # Clean up temp file immediately
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-
-            # Calculations
-            write_speed = mb_to_test / write_duration
-            read_speed = mb_to_test / read_duration
-
-            msg = f"Disk Benchmark completed successfully for '{abs_path}':\n"
-            msg += f"- Sequential Write: {write_speed:.2f} MB/s (took {write_duration:.6f} s)\n"
-            msg += f"- Sequential Read: {read_speed:.2f} MB/s (took {read_duration:.6f} s)\n"
-            msg += f"- Tested File Size: {mb_to_test} MB"
-
-            return {
-                "success": True,
-                "test_directory": abs_path,
-                "test_file_size_mb": mb_to_test,
-                "write_speed_mbs": round(write_speed, 2),
-                "write_duration_seconds": write_duration,
-                "read_speed_mbs": round(read_speed, 2),
-                "read_duration_seconds": read_duration,
-                "message": msg,
-            }
-
-        except Exception as e:
-            # Clean up if failed
-            if os.path.exists(temp_file):
+            expected_bytes = requested_size * chunk_size
+            if bytes_read != expected_bytes:
+                result = self._failure(
+                    "fixture_verification_failed",
+                    (
+                        f"Expected to read {expected_bytes} bytes but read "
+                        f"{bytes_read}; benchmark results were discarded."
+                    ),
+                    directory,
+                    requested_size,
+                )
+            else:
+                write_speed = requested_size / write_duration
+                read_speed = requested_size / read_duration
+                result = {
+                    "success": True,
+                    "message": (
+                        f"Filesystem benchmark completed in '{directory}': "
+                        f"{write_speed:.2f} MiB/s durable write and "
+                        f"{read_speed:.2f} MiB/s buffered read using a "
+                        f"{requested_size} MiB temporary fixture."
+                    ),
+                    "test_directory": str(directory),
+                    "fixture_size": {
+                        "mebibytes": requested_size,
+                        "bytes": expected_bytes,
+                    },
+                    "write": {
+                        "mebibytes_per_second": round(write_speed, 2),
+                        "duration_seconds": write_duration,
+                        "durability": "flush + fsync after sequential write",
+                    },
+                    "read": {
+                        "mebibytes_per_second": round(read_speed, 2),
+                        "duration_seconds": read_duration,
+                        "bytes_verified": bytes_read,
+                    },
+                    "details": {
+                        "temporary_fixture": "unique and removed",
+                        "chunk_size_bytes": chunk_size,
+                    },
+                }
+        except OSError as exc:
+            result = self._failure(
+                "disk_benchmark_failed",
+                (
+                    f"Filesystem benchmark in '{directory}' failed: "
+                    f"{type(exc).__name__}: {exc}."
+                ),
+                directory,
+                requested_size,
+            )
+        finally:
+            if fixture_path is not None and fixture_path.exists():
                 try:
-                    os.remove(temp_file)
-                except OSError:
-                    pass
-            return {
-                "success": False,
-                "error": str(e),
-                "message": f"Disk speed test failed: {str(e)}",
-            }
+                    fixture_path.unlink()
+                except OSError as exc:
+                    if result is None:
+                        result = self._failure(
+                            "fixture_cleanup_failed",
+                            (
+                                f"Temporary fixture '{fixture_path}' could "
+                                f"not be removed: {type(exc).__name__}: {exc}."
+                            ),
+                            directory,
+                            requested_size,
+                        )
+                    else:
+                        result.setdefault("warnings", []).append(
+                            {
+                                "code": "fixture_cleanup_failed",
+                                "message": (
+                                    f"Remove temporary fixture "
+                                    f"'{fixture_path}' manually: "
+                                    f"{type(exc).__name__}: {exc}."
+                                ),
+                            }
+                        )
+                        result["details"]["temporary_fixture"] = str(
+                            fixture_path
+                        )
+        return result
+
+    @staticmethod
+    def _failure(error_code, message, directory, received_size):
+        return {
+            "success": False,
+            "error_code": error_code,
+            "error": message,
+            "message": message,
+            "details": {
+                "test_directory": str(directory),
+                "received_size_mib": received_size,
+                "allowed_size_mib": {"minimum": 1, "maximum": 1024},
+            },
+        }

@@ -29,10 +29,10 @@ operations present in the installed command catalog.
 
 ```bash
 python -m pip install qzx
-qzx qzxListCommands
-qzx qzxHelp findFiles
-qzx getCurrentDate
-qzx getCurrentDate --json
+qzx listCommands
+qzx help findFiles
+qzx getCurrentDateTime
+qzx getCurrentDateTime --output-format iso --json
 ```
 
 PyPI hosts the QZX `0.2.2.0.6a8` pre-release with Python `>=3.13`
@@ -47,7 +47,7 @@ and other implementations are not certified.
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
 | Published pre-release | `0.2.2.0.6a8` | `>=3.13`; standard CPython 3.13.x is certified | 96 commands reconciled with the official wheel |
-| Current checkout | `0.2.2.0.6a8` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
+| Current checkout | `0.2.2.0.6a9` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -65,17 +65,17 @@ The CLI prints `message` by default. Pass `--json` to print the complete
 structured result:
 
 ```bash
-qzx findFiles examples/qzx_in_action "*.txt" -r --format name
-qzx findFiles examples/qzx_in_action "*.txt" -r --format name --json
+qzx findFiles examples/qzx_in_action "*.txt" -r
+qzx findFiles examples/qzx_in_action "*.txt" -r --json
 ```
 
-Command lookup is case-insensitive. Documentation uses the current canonical
-lower-camel-case spelling and lists accepted aliases separately.
+Command lookup is case-insensitive. Documentation uses each command's canonical
+lower-camel-case spelling.
 
 ### Command maturity is explicit
 
-Every installed command has an independent lifecycle assessment. `qzxHelp`,
-`qzxListCommands`, direct `--json` output, and the public catalog expose whether
+Every installed command has an independent lifecycle assessment. `help`,
+`listCommands`, direct `--json` output, and the public catalog expose whether
 its contract is Alpha, Beta, Release Candidate, Stable, or Deprecated.
 Planning and proof-of-concept work remains outside the executable command
 loader, so an AI agent cannot mistake a roadmap intention for an installed
@@ -92,14 +92,14 @@ These names were verified in the official wheel:
 
 ```bash
 qzx version --json
-qzx qzxListCommands --json
-qzx qzxHelp findFiles
+qzx listCommands --json
+qzx help findFiles
 qzx systemInfo --json
-qzx getCurrentDate --json
+qzx getCurrentDateTime --output-format iso --json
 qzx findFiles . "*.py" -r --json
 qzx findText "TODO" src -r --json
-qzx getRAMInfo --json
-qzx getDiskInfo --json
+qzx getRamInfo --json
+qzx getDiskSpace --json
 qzx listProcesses "python" --json
 ```
 

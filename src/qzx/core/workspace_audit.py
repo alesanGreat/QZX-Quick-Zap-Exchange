@@ -14,7 +14,11 @@ import os
 from pathlib import Path, PurePosixPath
 import stat
 
-from qzx.core.path_operation_utils import file_sha256, is_filesystem_root
+from qzx.core.path_operation_utils import (
+    file_sha256,
+    files_identical,
+    is_filesystem_root,
+)
 
 
 PLAN_SCHEMA_VERSION = 1
@@ -418,27 +422,6 @@ def fingerprint_path(path):
         "Path '{}' is not a regular file or directory.".format(path),
         {"path": str(path), "type": entry_type},
     )
-
-
-def files_identical(first_path, second_path):
-    """Compare two regular files byte-for-byte."""
-    first_path = Path(first_path)
-    second_path = Path(second_path)
-    if (
-        _path_type(first_path) != "file"
-        or _path_type(second_path) != "file"
-        or first_path.stat(follow_symlinks=False).st_size
-        != second_path.stat(follow_symlinks=False).st_size
-    ):
-        return False
-    with first_path.open("rb") as first, second_path.open("rb") as second:
-        while True:
-            first_chunk = first.read(1024 * 1024)
-            second_chunk = second.read(1024 * 1024)
-            if first_chunk != second_chunk:
-                return False
-            if not first_chunk:
-                return True
 
 
 def _scan_inventory(root, max_files):

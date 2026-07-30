@@ -5,7 +5,6 @@
 Tests for the FindDuplicateFiles command
 """
 
-import os
 from qzx.commands.file.find_duplicate_files import FindDuplicateFilesCommand
 
 

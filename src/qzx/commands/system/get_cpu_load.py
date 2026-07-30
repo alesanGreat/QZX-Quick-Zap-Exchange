@@ -2,24 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-GetCPULoad Command - Retrieves information about CPU usage
+GetCpuLoad Command - Retrieves information about CPU usage
 """
 
 import psutil
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
-class GetCPULoadCommand(CommandBase):
+class GetCpuLoadCommand(CommandBase):
     """
     Command to get CPU load information
     """
     
-    name = "getCPULoad"
+    name = "getCpuLoad"
     description = "Gets information about current CPU usage"
     category = "system"
     
@@ -35,11 +30,11 @@ class GetCPULoadCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx getCPULoad',
+            'command': 'qzx getCpuLoad',
             'description': 'Get CPU usage information with 1-second interval'
         },
         {
-            'command': 'qzx getCPULoad 0.5',
+            'command': 'qzx getCpuLoad 0.5',
             'description': 'Get CPU usage information with 0.5-second interval'
         }
     ]
@@ -117,9 +112,9 @@ class GetCPULoadCommand(CommandBase):
                         
                         if core_freqs:
                             result["per_core_frequency"] = core_freqs
-                except:
+                except Exception:
                     pass  # Skip if per-core frequency is not available
-            except:
+            except Exception:
                 pass  # Skip if frequency information is not available
             
             # Get CPU load averages (on Unix systems)
@@ -130,7 +125,7 @@ class GetCPULoadCommand(CommandBase):
                     "5min": load_avg[1],
                     "15min": load_avg[2]
                 }
-            except:
+            except Exception:
                 pass  # Skip on Windows or if not available
             
             # Get CPU times
@@ -152,7 +147,7 @@ class GetCPULoadCommand(CommandBase):
                 
                 if times_dict:
                     result["times_percent"] = times_dict
-            except:
+            except Exception:
                 pass  # Skip if CPU times are not available
             
             # Create a detailed message with CPU information

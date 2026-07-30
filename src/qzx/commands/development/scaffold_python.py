@@ -2,28 +2,27 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramPython Command - Creates a basic scaffolding for a Python program
+ScaffoldPython Command - Creates a basic scaffolding for a Python program
 """
 
 import os
-import shutil
 import subprocess
 import sys
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
-class MakeScaffProgramPythonCommand(CommandBase):
+class ScaffoldPythonCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a Python program.
     Creates a new Python project with standard directory structure and basic files.
     """
     
     name = "scaffoldPython"
-    aliases = ["pythonScaff", "newPython", "createPython", "makeScaffProgramPython"]
     description = "Creates a basic scaffolding for a Python program"
     category = "development"
     
@@ -57,15 +56,15 @@ class MakeScaffProgramPythonCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx makeScaffProgramPython my_project',
+            'command': 'qzx scaffoldPython my_project',
             'description': 'Creates a new Python project named "my_project" in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramPython my_project /path/to/dir true true',
+            'command': 'qzx scaffoldPython my_project /path/to/dir true true',
             'description': 'Creates a new Python project with tests and virtual environment in the specified directory'
         },
         {
-            'command': 'qzx pythonScaff api_service . false',
+            'command': 'qzx scaffoldPython api_service . false',
             'description': 'Creates a new Python project named "api_service" without tests in the current directory'
         }
     ]
@@ -85,11 +84,8 @@ class MakeScaffProgramPythonCommand(CommandBase):
         """
         try:
             # Convert string parameters to appropriate types
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
-            
-            if isinstance(create_venv, str):
-                create_venv = create_venv.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
+            create_venv = parse_scaffold_boolean(create_venv, "create_venv")
             
             # Normalize and validate project name (convert spaces to underscores, etc.)
             project_name = normalize_project_name(

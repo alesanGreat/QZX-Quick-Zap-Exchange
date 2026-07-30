@@ -46,7 +46,6 @@ class ProjectLanguagesCommand(CommandBase):
     """Build a trustworthy, AI-ready profile of a project's code languages."""
 
     name = "projectLanguages"
-    aliases = ["auditLanguages"]
     description = (
         "Profiles a project's source languages and supporting formats with "
         "line, file, and byte percentages"
@@ -71,10 +70,6 @@ class ProjectLanguagesCommand(CommandBase):
         {
             "command": 'qzx projectLanguages "src/"',
             "description": "Profile languages in the src/ directory",
-        },
-        {
-            "command": "qzx auditLanguages",
-            "description": "Use the compatibility alias for the former command name",
         },
     ]
 
@@ -411,7 +406,7 @@ class ProjectLanguagesCommand(CommandBase):
                 "percentage_precision": 2,
             },
             # Compatibility fields preserve the most useful part of the former
-            # auditLanguages JSON while the alias migrates to projectLanguages.
+            # Preserve the stable summary shape used by projectLanguages JSON.
             "total_files": counters["recognized_files"],
             "languages_found": languages_found,
             "message": message,

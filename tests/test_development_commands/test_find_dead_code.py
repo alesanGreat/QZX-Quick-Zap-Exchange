@@ -5,7 +5,6 @@
 Tests for the findDeadCode command
 """
 
-import os
 from qzx.commands.development.find_dead_code import FindDeadCodeCommand
 
 class TestFindDeadCodeCommand:

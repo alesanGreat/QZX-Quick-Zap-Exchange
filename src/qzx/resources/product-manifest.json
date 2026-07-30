@@ -85,8 +85,8 @@
   "command_naming": {
     "canonical_style": "lowerCamelCase",
     "case_sensitive": false,
-    "aliases_supported": true,
-    "documentation_rule": "Use the current canonical lowerCamelCase spelling in examples and list accepted aliases separately."
+    "aliases_supported": false,
+    "documentation_rule": "Use the canonical lowerCamelCase spelling; command lookup is case-insensitive."
   },
   "channels": {
     "published": {
@@ -199,7 +199,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.6a8",
+      "version": "0.2.2.0.6a9",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",

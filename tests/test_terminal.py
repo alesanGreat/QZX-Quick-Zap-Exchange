@@ -5,7 +5,7 @@
 Quick test script for QZX Terminal functionality
 """
 
-from qzx.commands.system.terminal import QZXTerminalCommand
+from qzx.commands.system.terminal import TerminalCommand
 
 def main():
     """
@@ -13,7 +13,7 @@ def main():
     This helps isolate any issues with the command itself vs. the command invocation
     """
     print("Starting QZX Terminal directly...")
-    terminal = QZXTerminalCommand()
+    terminal = TerminalCommand()
     terminal.execute()
 
 if __name__ == "__main__":

@@ -6,14 +6,9 @@ FindDuplicateFiles Command - Scans directories recursively for duplicate files b
 """
 
 import os
-import sys
-import hashlib
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
+from qzx.core.path_operation_utils import file_sha256, files_identical
 
 class FindDuplicateFilesCommand(CommandBase):
     """
@@ -224,28 +219,15 @@ class FindDuplicateFilesCommand(CommandBase):
             
     def _get_sha256(self, filepath):
         """Compute a SHA-256 content digest in bounded chunks."""
-        content_hash = hashlib.sha256()
         try:
-            with open(filepath, "rb") as f:
-                for chunk in iter(lambda: f.read(65536), b""):
-                    content_hash.update(chunk)
-            return content_hash.hexdigest()
-        except Exception:
+            return file_sha256(filepath)
+        except OSError:
             return None
 
     @staticmethod
     def _files_identical(first_path, second_path):
         """Confirm equality without trusting a digest alone."""
         try:
-            if os.path.getsize(first_path) != os.path.getsize(second_path):
-                return False
-            with open(first_path, "rb") as first, open(second_path, "rb") as second:
-                while True:
-                    first_chunk = first.read(65536)
-                    second_chunk = second.read(65536)
-                    if first_chunk != second_chunk:
-                        return False
-                    if not first_chunk:
-                        return True
+            return files_identical(first_path, second_path)
         except OSError:
             return False

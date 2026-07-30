@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Behavioral tests for projectLanguages and its auditLanguages alias."""
+"""Behavioral tests for the canonical projectLanguages command."""
 
 from qzx.commands.development.project_languages import ProjectLanguagesCommand
 from qzx.core.command_loader import CommandLoader
@@ -136,13 +136,12 @@ class TestProjectLanguagesCommand:
         assert result["scan_errors_truncated"] is True
         assert "25 access or read errors" in result["message"]
 
-    def test_alias_resolves_to_project_languages(self):
+    def test_retired_alias_is_not_available(self):
         loader = CommandLoader()
 
         canonical = loader.get_command("projectLanguages")
-        alias = loader.get_command("auditLanguages")
+        retired_name = loader.get_command("auditLanguages")
 
         assert canonical is not None
-        assert alias is not None
-        assert type(alias) is type(canonical)
+        assert retired_name is None
         assert canonical.name == "projectLanguages"

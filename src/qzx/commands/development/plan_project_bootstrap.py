@@ -15,7 +15,6 @@ class PlanProjectBootstrapCommand(CommandBase):
     """Describe bootstrap work without writing files or running tools."""
 
     name = "planProjectBootstrap"
-    aliases = []
     description = (
         "Builds a selectable project bootstrap plan without writing files, "
         "installing dependencies, creating secrets, or running migrations"
@@ -64,8 +63,8 @@ class PlanProjectBootstrapCommand(CommandBase):
     }
     SCAFFOLD_COMMANDS = {
         "python": "scaffoldPython",
-        "node": "scaffoldJavascript",
-        "typescript": "scaffoldTypescript",
+        "node": "scaffoldJavaScript",
+        "typescript": "scaffoldTypeScript",
         "rust": "scaffoldRust",
         "php": "scaffoldPhp",
         "cpp": "scaffoldCpp",

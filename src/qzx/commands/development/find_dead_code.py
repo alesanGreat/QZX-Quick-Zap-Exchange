@@ -9,11 +9,6 @@ builds a token map of references, and flags symbols that have no external refere
 import os
 import re
 import ast
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files

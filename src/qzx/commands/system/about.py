@@ -12,13 +12,12 @@ class AboutCommand(CommandBase):
     """Display the canonical QZX creator, maintainer, and license details."""
 
     name = "about"
-    aliases = ["qzxAbout", "--about"]
     description = "Displays QZX product, creator, maintainer, and license details"
     category = "system"
     parameters = []
     examples = [
         {
-            "command": "qzx --about",
+            "command": "qzx about",
             "description": "Display QZX product and attribution details",
         },
     ]

@@ -10,7 +10,6 @@ import os
 import re
 import math
 import ast
-import sys
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
@@ -39,8 +38,8 @@ class AnalyzeComplexityCommand(CommandBase):
             'default': False
         },
         {
-            'name': 'format',
-            'description': 'Output format: "detailed" or "summary"',
+            'name': 'detail_level',
+            'description': 'Detail level: "detailed" or "summary"',
             'required': False,
             'default': 'detailed'
         }
@@ -56,7 +55,10 @@ class AnalyzeComplexityCommand(CommandBase):
             'description': 'Recursively analyze all code files in a directory'
         },
         {
-            'command': 'qzx analyzeComplexity "project/" -r2 "summary"',
+            'command': (
+                'qzx analyzeComplexity "project/" -r2 '
+                '--detail-level summary'
+            ),
             'description': 'Generate a summary report analyzing up to 2 levels deep'
         }
     ]
@@ -80,14 +82,19 @@ class AnalyzeComplexityCommand(CommandBase):
         '.rs': 'rust'
     }
     
-    def execute(self, file_path, recursive=False, format='detailed'):
+    def execute(
+        self,
+        file_path,
+        recursive=False,
+        detail_level="detailed",
+    ):
         """
         Analyzes code complexity of files or directories
         
         Args:
             file_path: Path to file or directory to analyze
             recursive: Whether to recursively analyze directories: -r/--recursive for unlimited, -rN/--recursiveN for N levels
-            format: Output format (detailed or summary)
+            detail_level: Report detail level (detailed or summary)
             
         Returns:
             Analysis results as string
@@ -101,17 +108,26 @@ class AnalyzeComplexityCommand(CommandBase):
                 "message": "Check the analysis path and try again.",
             }
         
+        normalized_detail_level = str(detail_level or "").strip().lower()
+        if normalized_detail_level not in {"detailed", "summary"}:
+            return {
+                "success": False,
+                "error_code": "invalid_detail_level",
+                "error": (
+                    "detail_level must be 'detailed' or 'summary'."
+                ),
+                "message": (
+                    "Choose a detailed per-file report or a summary report."
+                ),
+                "details": {
+                    "path": os.path.abspath(file_path),
+                    "detail_level": detail_level,
+                },
+            }
+
         results = []
         total_files = 0
         analyzed_files = 0
-        
-        # Process flags in command arguments if they exist
-        args = sys.argv
-        recursive_flags = ['-r', '-R', '--recursive']
-        recursive_found = any(flag in args for flag in recursive_flags)
-        
-        if recursive_found and recursive is False:
-            recursive = True
         recursive = parse_recursive_parameter(recursive)
         
         # Process a single file
@@ -155,7 +171,12 @@ class AnalyzeComplexityCommand(CommandBase):
                 },
             }
         
-        report = self._format_results(results, total_files, analyzed_files, format)
+        report = self._format_results(
+            results,
+            total_files,
+            analyzed_files,
+            normalized_detail_level,
+        )
         return {
             "success": True,
             "message": (
@@ -166,7 +187,7 @@ class AnalyzeComplexityCommand(CommandBase):
                 "path": os.path.abspath(file_path),
                 "files_seen": total_files,
                 "files_analyzed": analyzed_files,
-                "format": format,
+                "detail_level": normalized_detail_level,
                 "analyses": results,
             },
         }

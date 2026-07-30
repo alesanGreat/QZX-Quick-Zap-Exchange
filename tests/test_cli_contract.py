@@ -11,11 +11,8 @@ import sys
 from pathlib import Path
 import zipfile
 
-from qzx.commands.file.delete_file import DeleteFileCommand
-from qzx.commands.system.commands_bridge import CommandsBridgeCommand
-from qzx.commands.system.get_disk_name import GetDiskNameCommand
-from qzx.commands.system.get_today import WonderTodayCommand
-from qzx.commands.system.generate_content import WonderContentGenCommand
+from qzx.commands.file.delete_path import DeletePathCommand
+from qzx.commands.system.list_disk_devices import ListDiskDevicesCommand
 from qzx.commands.system.terminal import QZXTerminal
 from qzx.cli import (
     QZX,
@@ -92,7 +89,7 @@ def test_discovery_is_complete_and_collision_free():
     loader = CommandLoader()
     commands = loader.discover_commands()
 
-    assert len(set(commands.values())) >= 90
+    assert len(set(commands.values())) >= 80
     assert loader.load_errors == {}
     assert loader.registration_warnings == []
     assert loader.attempted_installs == set()
@@ -109,18 +106,6 @@ def test_default_welcome_uses_lazy_index_without_full_discovery():
     assert set(runtime.command_loader.command_modules) == {
         "qzx.commands.system.welcome",
     }
-
-
-def test_welcome_aliases_share_the_startup_fast_path():
-    for alias in ("Welcome", "hello", "HI"):
-        runtime = QZX()
-        result = runtime.execute(alias, [])
-        assert result["success"] is True
-        assert "Welcome Professor!" in result["output"]
-        assert runtime.command_loader._discovered is False
-        assert set(runtime.command_loader.command_modules) == {
-            "qzx.commands.system.welcome",
-        }
 
 
 def test_default_welcome_omits_detailed_operating_system_payload():
@@ -146,11 +131,14 @@ def test_every_documented_example_resolves_and_parses():
             if len(tokens) < 2 or tokens[0].lower() != "qzx":
                 failures.append((command.name, example["command"], "missing qzx prefix"))
                 continue
-            resolved_class = registered.get(tokens[1].lower())
+            _json_output, parsed_name, parsed_args = _parse_cli_request(
+                tokens[1:]
+            )
+            resolved_class = registered.get(parsed_name.lower())
             if resolved_class is None:
                 failures.append((command.name, example["command"], "unknown command"))
                 continue
-            valid, _values, error = resolved_class().parse_arguments(tokens[2:])
+            valid, _values, error = resolved_class().parse_arguments(parsed_args)
             if not valid:
                 failures.append((command.name, example["command"], error["error"]))
 
@@ -213,7 +201,7 @@ def test_dangerous_command_stops_when_backup_configuration_is_invalid(
     assert command.executions == 0
 
 
-def test_delete_file_is_preview_first_and_default_execution_is_backed_up(
+def test_delete_path_is_preview_first_and_default_execution_is_backed_up(
     tmp_path,
     monkeypatch,
 ):
@@ -222,7 +210,7 @@ def test_delete_file_is_preview_first_and_default_execution_is_backed_up(
     backup_directory = tmp_path / "backups"
     monkeypatch.delenv("QZX_SAFETY", raising=False)
     monkeypatch.setenv("QZX_BACKUPS_PATH", str(backup_directory))
-    command = DeleteFileCommand()
+    command = DeletePathCommand()
 
     preview = command.invoke([str(target)])
     assert preview["success"] is True
@@ -248,7 +236,7 @@ def test_delete_file_is_preview_first_and_default_execution_is_backed_up(
 
 
 def test_recursive_option_consumes_only_explicit_boolean_or_depth_value():
-    command = DeleteFileCommand()
+    command = DeletePathCommand()
 
     valid_boolean, boolean_values, boolean_error = command.parse_arguments(
         ["target", "--recursive", "true", "--force", "false"]
@@ -272,12 +260,23 @@ def test_recursive_option_consumes_only_explicit_boolean_or_depth_value():
     assert flag_values["recursive"] == "-r"
 
 
-def test_delete_file_short_recursive_flag_removes_descendants(tmp_path):
+def test_boolean_defaults_reject_ambiguous_cli_text():
+    valid, values, error = DeletePathCommand().parse_arguments(
+        ["target", "--force", "perhaps"]
+    )
+
+    assert valid is False
+    assert values is None
+    assert error["error_code"] == "usage_error"
+    assert "expected true/false for 'force'" in error["message"]
+
+
+def test_delete_path_short_recursive_flag_removes_descendants(tmp_path):
     target = tmp_path / "disposable"
     target.mkdir()
     (target / "nested.txt").write_text("temporary", encoding="utf-8")
 
-    result = DeleteFileCommand().invoke(
+    result = DeletePathCommand().invoke(
         [str(target), "-r", "--dry-run", "false", "--apply", "--yolo"]
     )
 
@@ -296,7 +295,7 @@ def test_qzx_safety_yolo_is_honored_by_the_public_cli(
     monkeypatch.setenv("QZX_SAFETY", "YOLO")
     monkeypatch.setenv("QZX_BACKUPS_PATH", str(backup_directory))
 
-    completed = _run_cli("deleteFile", str(target), "--json")
+    completed = _run_cli("deletePath", str(target), "--json")
     payload = json.loads(completed.stdout)
 
     assert completed.returncode == 0
@@ -304,13 +303,6 @@ def test_qzx_safety_yolo_is_honored_by_the_public_cli(
     assert payload["meta"]["safety_backup"]["reason"] == "QZX_SAFETY=YOLO"
     assert not target.exists()
     assert not backup_directory.exists()
-
-
-def test_commands_bridge_blocks_mutating_programs():
-    result = CommandsBridgeCommand().invoke(["rm", "-rf", "anything"])
-
-    assert result["success"] is False
-    assert result["error_code"] == "command_blocked"
 
 
 def test_json_mode_emits_one_document_and_failure_exit_code(tmp_path):
@@ -339,16 +331,16 @@ def test_unknown_command_uses_127_and_suggestions():
     payload = json.loads(completed.stdout)
     assert completed.returncode == 127
     assert payload["error_code"] == "command_not_found"
-    assert "readfile" in payload["details"]["suggestions"]
+    assert "readFile" in payload["details"]["suggestions"]
 
 
-def test_about_and_version_global_flags_include_attribution(tmp_path):
+def test_about_command_and_version_global_flag_include_attribution(tmp_path):
     attribution = (
         "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez."
     )
     environment = {"QZX_STATE_DIR": str(tmp_path)}
 
-    about = _run_cli("--about", "--json", environment_overrides=environment)
+    about = _run_cli("about", "--json", environment_overrides=environment)
     version = _run_cli("--version", "--json", environment_overrides=environment)
     about_payload = json.loads(about.stdout)
     version_payload = json.loads(version.stdout)
@@ -361,6 +353,27 @@ def test_about_and_version_global_flags_include_attribution(tmp_path):
     assert version_payload["license"] == "Apache-2.0"
 
 
+def test_help_flag_after_command_uses_the_canonical_help_contract():
+    json_output, command, arguments = _parse_cli_request(
+        ["findFiles", "--limit", "5", "--help", "--json"]
+    )
+
+    assert json_output is True
+    assert command == "help"
+    assert arguments == ["findFiles"]
+
+    completed = _run_cli("findFiles", "-h", "--json")
+    payload = json.loads(completed.stdout)
+
+    assert completed.returncode == 0
+    assert payload["success"] is True
+    assert payload["details"]["canonical_name"] == "findFiles"
+    assert any(
+        parameter["name"] == "modified_after"
+        for parameter in payload["details"]["parameters"]
+    )
+
+
 def test_first_run_attribution_is_shown_once_without_breaking_json(tmp_path):
     attribution = (
         "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez."
@@ -369,11 +382,11 @@ def test_first_run_attribution_is_shown_once_without_breaking_json(tmp_path):
     environment = {"QZX_STATE_DIR": str(human_state)}
 
     first = _run_cli(
-        "getCurrentDate",
+        "getCurrentDateTime",
         environment_overrides=environment,
     )
     second = _run_cli(
-        "getCurrentDate",
+        "getCurrentDateTime",
         environment_overrides=environment,
     )
 
@@ -383,7 +396,7 @@ def test_first_run_attribution_is_shown_once_without_breaking_json(tmp_path):
 
     json_state = tmp_path / "json"
     json_first = _run_cli(
-        "getCurrentDate",
+        "getCurrentDateTime",
         "--json",
         environment_overrides={"QZX_STATE_DIR": str(json_state)},
     )
@@ -401,12 +414,6 @@ def test_usage_error_uses_exit_code_2():
     assert payload["error_code"] == "usage_error"
 
 
-def test_aliases_are_not_overwritten():
-    assert "WonderToday" in WonderTodayCommand.aliases
-    assert "WonderContentGen" in WonderContentGenCommand.aliases
-    assert "explainfile" in WonderContentGenCommand.aliases
-
-
 def test_legacy_error_text_is_normalized_as_failure():
     result = DangerousFixtureCommand().format_result("Error: legacy failure")
 
@@ -414,10 +421,10 @@ def test_legacy_error_text_is_normalized_as_failure():
     assert result["error_code"] == "legacy_unstructured_error"
 
 
-def test_get_disk_name_reports_the_real_current_filesystem():
+def test_list_disk_devices_reports_the_real_current_filesystem():
     disk_path = Path.cwd().anchor or os.path.abspath(os.sep)
 
-    result = GetDiskNameCommand().invoke([disk_path])
+    result = ListDiskDevicesCommand().invoke([disk_path])
 
     assert result["success"] is True
     assert disk_path in result["message"]
@@ -472,8 +479,8 @@ def test_every_public_command_uses_the_shared_dual_output_contract():
         ):
             failures.append((command.name, "human terminal rendering"))
 
-    assert len(command_classes) >= 90
-    assert len(registered) >= 180
+    assert len(command_classes) >= 80
+    assert len(registered) == len(command_classes)
     assert failures == []
 
 

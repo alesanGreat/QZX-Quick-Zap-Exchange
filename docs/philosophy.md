@@ -12,7 +12,7 @@ However, for AI-driven systems and tools designed to be consumed by AI agents, *
 
 AI systems don't have the implicit knowledge and contextual understanding that humans build up over years of experience. What might be obvious to a human user often needs to be explicitly stated for an AI. Verbose outputs provide this critical context.
 
-For example, when `GetCPULoad` returns not just a percentage but detailed per-core statistics, frequency information, and a formatted message explaining what the numbers mean, it gives AI agents the full picture needed to make informed recommendations.
+For example, when `GetCpuLoad` returns not just a percentage but detailed per-core statistics, frequency information, and a formatted message explaining what the numbers mean, it gives AI agents the full picture needed to make informed recommendations.
 
 ### 2. Structured Richness Enables Better Decision Making
 

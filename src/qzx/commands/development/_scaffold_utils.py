@@ -4,6 +4,21 @@ import datetime
 import os
 
 
+def parse_scaffold_boolean(value, name):
+    """Parse a scaffold boolean strictly for direct and CLI execution alike."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in {0, 1}:
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "yes", "y", "1", "on"}:
+            return True
+        if normalized in {"false", "no", "n", "0", "off"}:
+            return False
+    raise ValueError(f"{name} must be true or false, got {value!r}.")
+
+
 def normalize_project_name(
     name,
     *,

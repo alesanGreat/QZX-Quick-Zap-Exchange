@@ -86,7 +86,7 @@ claims to verify.
     "reviewed_on": "2026-07-29",
     "rationale": "Feature-complete contract reviewed on supported platforms.",
     "evidence": [
-      "tests/test_system_commands/test_current_dir.py",
+      "tests/test_system_commands/test_get_current_directory.py",
       "docs/reference/commands-generated.md"
     ]
   }

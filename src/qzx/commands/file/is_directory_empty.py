@@ -2,25 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-WonderIfDirectoryEmpty Command - Checks if a directory is empty
+IsDirectoryEmpty Command - Checks if a directory is empty
 """
 
 import os
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
-class WonderIfDirectoryEmptyCommand(CommandBase):
+class IsDirectoryEmptyCommand(CommandBase):
     """
     Command to check if a directory is empty
     """
     
     name = "isDirectoryEmpty"
-    aliases = ["wonderIfDirectoryEmpty"]
     description = "Checks if a directory is empty (contains no files or subdirectories)"
     category = "file"
     
@@ -40,11 +34,11 @@ class WonderIfDirectoryEmptyCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx wonderIfDirectoryEmpty /path/to/directory',
+            'command': 'qzx isDirectoryEmpty /path/to/directory',
             'description': 'Check if /path/to/directory is empty, ignoring hidden files'
         },
         {
-            'command': 'qzx wonderIfDirectoryEmpty /path/to/directory true',
+            'command': 'qzx isDirectoryEmpty /path/to/directory true',
             'description': 'Check if /path/to/directory is empty, including hidden files'
         }
     ]
@@ -116,4 +110,4 @@ class WonderIfDirectoryEmptyCommand(CommandBase):
                 "success": False,
                 "directory_path": directory_path,
                 "error": str(e)
-            } 
+            }

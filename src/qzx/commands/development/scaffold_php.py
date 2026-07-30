@@ -2,31 +2,25 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramPhp Command - Creates a basic scaffolding for a PHP/Composer program
+ScaffoldPhp Command - Creates a basic scaffolding for a PHP/Composer program
 """
 
 import os
-import shutil
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
-class MakeScaffProgramPhpCommand(CommandBase):
+class ScaffoldPhpCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a PHP/Composer program.
     Creates a new PHP project with standard directory structure and basic files.
     """
     
     name = "scaffoldPhp"
-    aliases = ["phpScaff", "newPhp", "createPhp", "makeScaffProgramPhp"]
     description = "Creates a basic scaffolding for a PHP/Composer program"
     category = "development"
     
@@ -53,11 +47,11 @@ class MakeScaffProgramPhpCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx makeScaffProgramPhp my_php_project',
+            'command': 'qzx scaffoldPhp my_php_project',
             'description': 'Creates a new PHP project named "my_php_project" in the current directory'
         },
         {
-            'command': 'qzx phpScaff app_service /path/to/dir true',
+            'command': 'qzx scaffoldPhp app_service /path/to/dir true',
             'description': 'Creates a new PHP project with PHPUnit tests in the specified directory'
         }
     ]
@@ -76,8 +70,7 @@ class MakeScaffProgramPhpCommand(CommandBase):
         """
         try:
             # Convert string parameters to appropriate types
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
             
             # Normalize and validate project name
             project_name = normalize_project_name(

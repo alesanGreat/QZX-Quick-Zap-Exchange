@@ -1,165 +1,233 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-RunScript Command - Executes a script with parameters
-"""
+"""Run one explicitly selected local script with bounded retained output."""
 
+import locale
 import os
-import sys
-import subprocess
 import platform
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+import shutil
+import subprocess
+import sys
+import tempfile
 
 from qzx.core.command_base import CommandBase
 
+
 class RunScriptCommand(CommandBase):
-    """
-    Command to execute a script with parameters
-    """
-    
+    """Execute a supported script without pretending to sandbox its behavior."""
+
     name = "runScript"
-    description = "Executes a script with parameters"
+    description = (
+        "Executes one explicit Python, Bash, or Windows Batch script with a "
+        "timeout and bounded retained output"
+    )
     category = "system"
     requires_explicit_approval = True
-    
+
+    timeout_seconds = 60
+    retained_output_bytes = 1024 * 1024
+
     parameters = [
         {
-            'name': 'script_path',
-            'description': 'Path to the script to execute',
-            'required': True
+            "name": "script_path",
+            "description": "Path to the local script to execute",
+            "required": True,
         },
         {
-            'name': 'args',
-            'description': 'Arguments to pass to the script',
-            'required': False,
-            'default': [],
-            'is_variadic': True
-        }
+            "name": "args",
+            "description": (
+                "Arguments passed to the script; values are not echoed in the result"
+            ),
+            "required": False,
+            "default": [],
+            "is_variadic": True,
+        },
     ]
-    
+
     examples = [
         {
-            'command': 'qzx runScript myscript.py --yolo',
-            'description': 'Execute a Python script when its mutation targets cannot be determined'
+            "command": "qzx runScript myscript.py --yolo",
+            "description": (
+                "Execute a reviewed Python script when its mutation targets "
+                "cannot be determined"
+            ),
         },
         {
-            'command': 'qzx runScript myscript.py arg1 arg2 --yolo',
-            'description': 'Execute with arguments when mutation targets cannot be determined'
+            "command": "qzx runScript myscript.py arg1 arg2 --yolo",
+            "description": (
+                "Execute with two arguments without repeating their values in "
+                "the result"
+            ),
         },
         {
-            'command': 'qzx runScript script.sh --dangerously-bypass-approvals-and-sandbox',
-            'description': 'Execute a shell script without a safety backup'
-        }
+            "command": (
+                "qzx runScript script.sh "
+                "--dangerously-bypass-approvals-and-sandbox"
+            ),
+            "description": "Execute a reviewed Bash script without a safety backup",
+        },
     ]
-    
+
     def execute(self, script_path, *args):
-        """
-        Executes a script with parameters
-        
-        Args:
-            script_path (str): Path to the script to execute
-            *args: List of arguments to pass to the script
-            
-        Returns:
-            Dictionary with the execution results and status
-        """
+        """Execute a supported script and return a bounded structured result."""
         try:
-            if not os.path.exists(script_path):
-                return {
-                    "success": False,
-                    "error": f"Script '{script_path}' not found",
-                    "message": f"Failed to execute script: File '{script_path}' does not exist",
-                    "script": script_path,
-                    "args": args
-                }
-            
-            # Get script details
-            script_name = os.path.basename(script_path)
-            script_dir = os.path.dirname(os.path.abspath(script_path))
-            script_size = os.path.getsize(script_path)
-            script_type = os.path.splitext(script_path)[1].lower()
-            
-            # Determine how to execute the script based on its extension
-            os_type = platform.system().lower()
-            
-            if script_path.endswith('.py'):
-                cmd = [sys.executable, script_path] + list(args)
-                script_type = "Python"
-            elif script_path.endswith('.sh') and os_type != 'windows':
-                cmd = ['bash', script_path] + list(args)
-                script_type = "Bash"
-            elif script_path.endswith('.bat') and os_type == 'windows':
-                cmd = [script_path] + list(args)
-                script_type = "Batch"
-            else:
-                return {
-                    "success": False,
-                    "error": f"Unsupported script type: {script_path}",
-                    "message": f"Failed to execute script: Unsupported file type '{os.path.splitext(script_path)[1]}'",
-                    "script": script_path,
-                    "script_type": script_type,
-                    "args": args
-                }
-            
-            # Create message about script execution
-            cmd_str = ' '.join(cmd)
-            execution_msg = f"Executing {script_type} script '{script_name}'"
-            if args:
-                execution_msg += f" with arguments: {' '.join(str(arg) for arg in args)}"
-            
-            # Run the script with subprocess
-            result = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True,
-                timeout=300,
-                check=False
+            absolute_script = os.path.abspath(os.fspath(script_path))
+        except TypeError:
+            return self._failure(
+                "invalid_script_path",
+                "script_path must be a filesystem path.",
+                script_path=str(script_path),
             )
-            
-            # Prepare output details
-            stdout = result.stdout.strip() if result.stdout else ""
-            stderr = result.stderr.strip() if result.stderr else ""
-            success = result.returncode == 0
-            
-            # Create response message based on execution result
-            if success:
-                message = f"Successfully executed {script_type} script '{script_name}'"
-                if result.returncode == 0 and stdout:
-                    message += f" with {len(stdout.splitlines())} lines of output"
-            else:
-                message = f"Script '{script_name}' failed with exit code {result.returncode}"
-                if stderr:
-                    message += f" and produced error output"
-            
-            # Return detailed information about the execution
-            return {
-                "success": success,
-                "message": message,
-                "script": script_path,
-                "script_info": {
-                    "name": script_name,
-                    "directory": script_dir,
-                    "size_bytes": script_size,
-                    "type": script_type
-                },
-                "args": args,
-                "execution": {
-                    "command": cmd_str,
-                    "exit_code": result.returncode
-                },
-                "output": stdout,
-                "error": stderr if not success else None,
-                "summary": execution_msg
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Error executing script: {str(e)}",
-                "message": f"Failed to execute script '{script_path}': {str(e)}",
-                "script": script_path,
-                "args": args
-            } 
+
+        if not os.path.exists(absolute_script):
+            return self._failure(
+                "script_not_found",
+                f"Script does not exist: {absolute_script}",
+                script_path=absolute_script,
+            )
+        if not os.path.isfile(absolute_script):
+            return self._failure(
+                "script_not_regular_file",
+                f"Script path is not a regular file: {absolute_script}",
+                script_path=absolute_script,
+            )
+
+        try:
+            command, script_type = self._command_for_script(absolute_script, args)
+        except ValueError as exc:
+            return self._failure(
+                "unsupported_script_type",
+                str(exc),
+                script_path=absolute_script,
+            )
+
+        with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+            try:
+                completed = subprocess.run(
+                    command,
+                    stdin=subprocess.DEVNULL,
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    timeout=self.timeout_seconds,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired:
+                stdout = self._read_capture(stdout_file)
+                stderr = self._read_capture(stderr_file)
+                return {
+                    "success": False,
+                    "message": (
+                        f"{script_type} script '{os.path.basename(absolute_script)}' "
+                        f"exceeded the {self.timeout_seconds}-second timeout."
+                    ),
+                    "error": "Script execution timed out.",
+                    "error_code": "script_timeout",
+                    "script": self._script_info(
+                        absolute_script,
+                        script_type,
+                        len(args),
+                    ),
+                    "execution": {
+                        "timeout_seconds": self.timeout_seconds,
+                        "exit_code": None,
+                        "timed_out": True,
+                    },
+                    "stdout": stdout,
+                    "stderr": stderr,
+                }
+            except OSError as exc:
+                return self._failure(
+                    "script_start_failed",
+                    f"Could not start the {script_type} script: {exc}",
+                    script_path=absolute_script,
+                    script_type=script_type,
+                )
+
+            stdout = self._read_capture(stdout_file)
+            stderr = self._read_capture(stderr_file)
+
+        success = completed.returncode == 0
+        if success:
+            message = (
+                f"Executed {script_type} script "
+                f"'{os.path.basename(absolute_script)}' successfully."
+            )
+        else:
+            message = (
+                f"{script_type} script '{os.path.basename(absolute_script)}' "
+                f"exited with code {completed.returncode}."
+            )
+        return {
+            "success": success,
+            "message": message,
+            "error": None if success else "Script returned a non-zero exit code.",
+            "error_code": None if success else "script_failed",
+            "script": self._script_info(
+                absolute_script,
+                script_type,
+                len(args),
+            ),
+            "execution": {
+                "timeout_seconds": self.timeout_seconds,
+                "exit_code": completed.returncode,
+                "timed_out": False,
+            },
+            "stdout": stdout,
+            "stderr": stderr,
+        }
+
+    @staticmethod
+    def _command_for_script(script_path, args):
+        suffix = os.path.splitext(script_path)[1].lower()
+        normalized_args = [str(argument) for argument in args]
+        system = platform.system().lower()
+        if suffix == ".py":
+            return [sys.executable, script_path, *normalized_args], "Python"
+        if suffix == ".sh" and system != "windows":
+            bash = shutil.which("bash")
+            if not bash:
+                raise ValueError("Bash is not available in PATH.")
+            return [bash, script_path, *normalized_args], "Bash"
+        if suffix in {".bat", ".cmd"} and system == "windows":
+            return [script_path, *normalized_args], "Windows Batch"
+        supported = ".py on every platform, .sh outside Windows, and .bat/.cmd on Windows"
+        raise ValueError(
+            f"Unsupported script type '{suffix or '(none)'}'; supported types are {supported}."
+        )
+
+    def _read_capture(self, capture):
+        size = capture.tell()
+        capture.seek(0)
+        retained = capture.read(self.retained_output_bytes)
+        encoding = locale.getpreferredencoding(False) or "utf-8"
+        return {
+            "text": retained.decode(encoding, errors="replace"),
+            "bytes_produced": size,
+            "bytes_retained": len(retained),
+            "truncated": size > len(retained),
+            "retention_limit_bytes": self.retained_output_bytes,
+        }
+
+    @staticmethod
+    def _script_info(script_path, script_type, argument_count):
+        return {
+            "path": script_path,
+            "name": os.path.basename(script_path),
+            "directory": os.path.dirname(script_path),
+            "size_bytes": os.path.getsize(script_path),
+            "type": script_type,
+            "argument_count": argument_count,
+            "argument_values_returned": False,
+            "working_directory": os.getcwd(),
+        }
+
+    @staticmethod
+    def _failure(error_code, message, **details):
+        return {
+            "success": False,
+            "message": message,
+            "error": message,
+            "error_code": error_code,
+            "details": details,
+        }

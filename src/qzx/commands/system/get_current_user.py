@@ -8,11 +8,6 @@ GetCurrentUser Command - Retrieves information about the currently logged in use
 import os
 import getpass
 import psutil
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
@@ -52,10 +47,10 @@ class GetCurrentUserCommand(CommandBase):
             # Get basic user information
             try:
                 result["username"] = getpass.getuser()
-            except:
+            except Exception:
                 try:
                     result["username"] = os.getlogin()
-                except:
+                except Exception:
                     result["username"] = "Unknown"
             
             # Get environment variables related to the user
@@ -123,15 +118,15 @@ class GetCurrentUserCommand(CommandBase):
                         result["processes"]["total_memory_usage_readable"] = self._format_bytes(
                             result["processes"]["total_memory_usage"]
                         )
-                except:
+                except Exception:
                     pass
-            except:
+            except Exception:
                 pass  # Skip if psutil features are not available
             
             # Try to get current working directory
             try:
                 result["current_directory"] = os.getcwd()
-            except:
+            except Exception:
                 pass
             
             # Create a detailed message about the user

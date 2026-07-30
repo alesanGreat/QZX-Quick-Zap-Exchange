@@ -45,7 +45,7 @@ install_requires = [
     "colorama",  # Colores portables en findText
     "Pygments>=2.20,<3",  # Detección mantenida de lenguajes de programación
     "pathspec>=1.1,<2",  # Reglas .gitignore portables para projectLanguages
-    "packaging>=24,<27",  # Validación PEP 440 para releaseProject
+    "packaging>=24,<27",  # Validación PEP 440 para prepareRelease
     "dnspython>=2.8,<3",  # Consultas DNS estructuradas y multiplataforma
     "pyreadline3; platform_system == 'Windows'",
 ]

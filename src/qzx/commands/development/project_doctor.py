@@ -6,14 +6,9 @@ ProjectDoctor Command - Comprehensive analysis of a project's stack, configurati
 """
 
 import os
-import sys
 import subprocess
 import shutil
 import re
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
@@ -115,7 +110,7 @@ class ProjectDoctorCommand(CommandBase):
                 check=False
             )
             is_git = res.returncode == 0 and res.stdout.strip() == "true"
-        except:
+        except Exception:
             pass
             
         if is_git:
@@ -151,7 +146,7 @@ class ProjectDoctorCommand(CommandBase):
                     dependencies = pkg_data.get("dependencies", {})
                     dev_dependencies = pkg_data.get("devDependencies", {})
                     deps_info["count"] += len(dependencies) + len(dev_dependencies)
-            except:
+            except Exception:
                 pass
         if "requirements.txt" in files_in_root:
             deps_info["manifests_found"].append("requirements.txt")
@@ -159,7 +154,7 @@ class ProjectDoctorCommand(CommandBase):
                 with open(os.path.join(abs_path, "requirements.txt"), 'r', encoding='utf-8') as f:
                     reqs = [l for l in f.readlines() if l.strip() and not l.strip().startswith("#")]
                     deps_info["count"] += len(reqs)
-            except:
+            except Exception:
                 pass
         if "pyproject.toml" in files_in_root:
             deps_info["manifests_found"].append("pyproject.toml")
@@ -169,7 +164,7 @@ class ProjectDoctorCommand(CommandBase):
                     # simple dependency counting for pyproject.toml
                     deps = re.findall(r'(?m)^\s*["\']?([a-zA-Z0-9_\-\[\]]+)["\']?\s*=', content)
                     deps_info["count"] += len(deps) // 2 # rough approximation
-            except:
+            except Exception:
                 pass
         if "Cargo.toml" in files_in_root:
             deps_info["manifests_found"].append("Cargo.toml")
@@ -265,7 +260,7 @@ class ProjectDoctorCommand(CommandBase):
                             "path": os.path.relpath(file_path, abs_path),
                             "size_bytes": f_size
                         })
-                except:
+                except Exception:
                     pass
             if scanned_files_count > 5000:
                 break

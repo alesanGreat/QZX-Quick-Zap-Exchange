@@ -188,18 +188,17 @@ class CommandLoader:
             )
 
         validate_loaded_command(entry, command_class)
-        for lookup_name in [entry["name"], *entry["aliases"]]:
-            normalized = lookup_name.lower()
-            existing = self.commands.get(normalized)
-            if existing is not None and existing is not command_class:
-                raise CommandIndexError(
-                    "Indexed lookup '{}' conflicts with a command already "
-                    "loaded from '{}'.".format(
-                        lookup_name,
-                        existing.__module__,
-                    )
+        normalized = entry["name"].lower()
+        existing = self.commands.get(normalized)
+        if existing is not None and existing is not command_class:
+            raise CommandIndexError(
+                "Indexed command '{}' conflicts with a command already "
+                "loaded from '{}'.".format(
+                    entry["name"],
+                    existing.__module__,
                 )
-            self.commands[normalized] = command_class
+            )
+        self.commands[normalized] = command_class
         return command_class
     
     def _load_command_from_module(self, module_name):
@@ -244,28 +243,6 @@ class CommandLoader:
 
                     # Register the command by its lowercase name
                     self.commands[command_name] = obj
-                    
-                    # Handle aliases if present
-                    if hasattr(command_instance, 'aliases') and command_instance.aliases:
-                        for alias in command_instance.aliases:
-                            alias_lower = alias.lower()
-                            if alias_lower == command_name:
-                                continue
-                            # Never let an alias replace a command registered earlier.
-                            existing_alias = self.commands.get(alias_lower)
-                            if existing_alias is not None and existing_alias is not obj:
-                                self.registration_warnings.append(
-                                    "Alias '{}' from {} conflicts with {}".format(
-                                        alias,
-                                        obj.__module__,
-                                        existing_alias.__module__,
-                                    )
-                                )
-                                continue
-                            self.commands[alias_lower] = obj
-                            # Solo mostrar mensaje de alias si se solicita (--verbose o similar)
-                            if len(sys.argv) > 2 and '--verbose' in sys.argv:
-                                print(f"Registered alias: {alias_lower} -> {command_name} ({module_name})")
                     
                     # Print registration info solo en modo verbose
                     if len(sys.argv) > 2 and '--verbose' in sys.argv:
@@ -346,7 +323,7 @@ class CommandLoader:
         return self.commands
 
     def get_command_maturity(self, command_name):
-        """Return lifecycle details for a canonical name or accepted alias."""
+        """Return lifecycle details for a canonical command name."""
         from .command_lifecycle import command_maturity
 
         entry = indexed_command(command_name)
@@ -359,7 +336,7 @@ class CommandLoader:
         return indexed_command_records()
 
     def get_known_command_names(self):
-        """Return canonical and alias lookup names without full discovery."""
+        """Return canonical lookup names without full discovery."""
         return indexed_command_names()
     
     def list_commands(self):

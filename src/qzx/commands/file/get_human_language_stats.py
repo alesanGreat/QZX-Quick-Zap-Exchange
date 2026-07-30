@@ -9,17 +9,13 @@ Using the centralized recursive file finder utility
 import os
 import re
 import json
-import glob
 from collections import defaultdict
 from pathlib import Path
-import sys
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FUNCTION_WORDS_DIR = PROJECT_ROOT / "resources" / "function_words"
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
+from qzx.core.recursive_findfiles_utils import find_files
 
 class GetHumanLanguageStatsFromFileCommand(CommandBase):
     """
@@ -34,7 +30,6 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
     """
     
     name = "getHumanLanguageStats"
-    aliases = ["getHumanLanguageStatsFromFile"]
     description = (
         "Analyzes files to estimate human-language distribution, with "
         "wildcard and recursive search support."
@@ -81,31 +76,31 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx getHumanLanguageStatsFromFile myfile.txt',
+            'command': 'qzx getHumanLanguageStats myfile.txt',
             'description': 'Analyze language distribution in a text file'
         },
         {
-            'command': 'qzx getHumanLanguageStatsFromFile code.py -i',
+            'command': 'qzx getHumanLanguageStats code.py -i',
             'description': 'Analyze a Python file, ignoring code comments using flag'
         },
         {
-            'command': 'qzx getHumanLanguageStatsFromFile "*.md" false 3',
+            'command': 'qzx getHumanLanguageStats "*.md" false 3',
             'description': 'Analyze all Markdown files in current directory'
         },
         {
-            'command': 'qzx getHumanLanguageStatsFromFile "docs/*.txt" -i',
+            'command': 'qzx getHumanLanguageStats "docs/*.txt" -i',
             'description': 'Analyze text files in docs directory, ignoring comments'
         },
         {
-            'command': 'qzx getHumanLanguageStatsFromFile "src/**/*.py" -r',
+            'command': 'qzx getHumanLanguageStats "src/**/*.py" -r',
             'description': 'Analyze all Python files recursively in src directory using -r flag'
         },
         {
-            'command': 'qzx getHumanLanguageStatsFromFile "**/*.py" -r -i',
+            'command': 'qzx getHumanLanguageStats "**/*.py" -r -i',
             'description': 'Analyze all Python files recursively, ignoring comments, using flags'
         },
         {
-            'command': 'qzx getHumanLanguageStatsFromFile "**/*.py" -r --show_files_match',
+            'command': 'qzx getHumanLanguageStats "**/*.py" -r --show_files_match',
             'description': 'Analyze all Python files recursively and show the list of files found'
         }
     ]
@@ -459,7 +454,7 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
                 try:
                     with open(file_path, 'r', encoding='latin-1') as f:
                         content = f.read()
-                except:
+                except Exception:
                     return {"error": "Could not read file - may be binary"}
             
             # Strip comments if requested and if we have patterns for this file type

@@ -1,884 +1,512 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-FindFiles Command - Advanced file search utility
-Using the centralized recursive file finder utility
-"""
+"""Find files by name and metadata with one structured result contract."""
 
+import datetime
 import os
 import re
-import fnmatch
-import time
-import datetime
-import json
-from pathlib import Path
-from typing import List, Dict, Any, Union, Optional, Tuple, Set
 
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
+from qzx.core.recursive_findfiles_utils import find_files
+
 
 class FindFilesCommand(CommandBase):
-    """
-    Command for advanced file searching with multiple filtering options
-    
-    Supports flags:
-    -r, -R, --recursive: Enable unlimited recursive directory search
-    -rN, --recursiveN: Enable recursive directory search up to N levels deep
-    
-    This version uses the centralized recursive file finder utility.
-    """
-    
+    """Search for files without mixing in directory listings or content grep."""
+
     name = "findFiles"
-    description = "Advanced file search with multiple filtering options (like find + grep combined)"
+    description = (
+        "Finds files by name, depth, size, and modification date with "
+        "structured metadata"
+    )
     category = "file"
-    
+
     parameters = [
         {
-            'name': 'search_path',
-            'description': 'Path to start the search from',
-            'required': False,
-            'default': "."
+            "name": "search_path",
+            "description": "Directory where the search starts",
+            "required": False,
+            "default": ".",
         },
         {
-            'name': 'pattern',
-            'description': 'File name pattern to search for (supports glob syntax: *.txt, data-???.csv)',
-            'required': False,
-            'default': "*"
+            "name": "pattern",
+            "description": (
+                "File name glob such as *.txt or data-???.csv; defaults to all files"
+            ),
+            "required": False,
+            "default": "*",
         },
         {
-            'name': 'recursive',
-            'description': 'Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep',
-            'required': False,
-            'default': '-r'
+            "name": "recursive",
+            "description": (
+                "Search depth: -r for unlimited, false for this directory only, "
+                "or -rN for N levels"
+            ),
+            "required": False,
+            "default": "-r",
         },
         {
-            'name': 'max_depth',
-            'description': 'Maximum directory depth to search (null for unlimited)',
-            'required': False,
-            'default': None
+            "name": "min_size",
+            "description": "Minimum size, for example 500KB, 10MiB, or bytes",
+            "required": False,
+            "default": None,
         },
         {
-            'name': 'type',
-            'description': 'Filter by type: "f" (files), "d" (directories), or "l" (links)',
-            'required': False,
-            'default': None
+            "name": "max_size",
+            "description": "Maximum size, for example 2GB, 20MiB, or bytes",
+            "required": False,
+            "default": None,
         },
         {
-            'name': 'size',
-            'description': 'Filter by size (e.g., +1M for >1MB, -500K for <500KB, 10K for exactly 10KB)',
-            'required': False,
-            'default': None
+            "name": "modified_after",
+            "description": (
+                'Only files modified at or after YYYY-MM-DD, "today", or "yesterday"'
+            ),
+            "required": False,
+            "default": None,
         },
         {
-            'name': 'min_size',
-            'description': 'Minimum file size in bytes or with KB/MB/GB suffix',
-            'required': False,
-            'default': None
+            "name": "modified_before",
+            "description": (
+                'Only files modified before YYYY-MM-DD, "today", or "yesterday"'
+            ),
+            "required": False,
+            "default": None,
         },
         {
-            'name': 'max_size',
-            'description': 'Maximum file size in bytes or with KB/MB/GB suffix',
-            'required': False,
-            'default': None
+            "name": "exclude",
+            "description": "Comma-separated file-name globs to exclude",
+            "required": False,
+            "default": None,
         },
         {
-            'name': 'mtime',
-            'description': 'Filter by modification time (e.g., +7 for >7 days old, -2 for <2 days old)',
-            'required': False,
-            'default': None
+            "name": "exclude_dirs",
+            "description": "Comma-separated directory-name globs to skip",
+            "required": False,
+            "default": None,
         },
         {
-            'name': 'newer_than',
-            'description': 'Files newer than specified date (YYYY-MM-DD) or "today", "yesterday"',
-            'required': False,
-            'default': None
+            "name": "sort_by",
+            "description": "Sort by path, name, size, or modified",
+            "required": False,
+            "default": "path",
         },
         {
-            'name': 'older_than',
-            'description': 'Files older than specified date (YYYY-MM-DD) or "today", "yesterday"',
-            'required': False,
-            'default': None
+            "name": "descending",
+            "description": "Reverse the selected sort order (true/false)",
+            "required": False,
+            "default": False,
         },
         {
-            'name': 'contains',
-            'description': 'Only include files containing this text',
-            'required': False,
-            'default': None
+            "name": "limit",
+            "description": "Maximum number of files returned after sorting",
+            "required": False,
+            "default": None,
         },
-        {
-            'name': 'contains_regex',
-            'description': 'Only include files matching this regex pattern',
-            'required': False,
-            'default': None
-        },
-        {
-            'name': 'case_sensitive',
-            'description': 'Make content searches case sensitive (true/false)',
-            'required': False,
-            'default': False
-        },
-        {
-            'name': 'exclude',
-            'description': 'Exclude file/directory patterns (comma-separated: *.bak,*.tmp)',
-            'required': False,
-            'default': None
-        },
-        {
-            'name': 'exclude_dir',
-            'description': 'Exclude directory patterns (comma-separated: .git,.vscode)',
-            'required': False,
-            'default': None
-        },
-        {
-            'name': 'follow_symlinks',
-            'description': 'Follow symbolic links (true/false)',
-            'required': False,
-            'default': False
-        },
-        {
-            'name': 'sort_by',
-            'description': 'Sort by: name, path, size, mtime (modification time), or none',
-            'required': False,
-            'default': 'path'
-        },
-        {
-            'name': 'reverse_sort',
-            'description': 'Reverse the sorting order (true/false)',
-            'required': False,
-            'default': False
-        },
-        {
-            'name': 'format',
-            'description': 'Output format: "full" (default), "name" (filename only), "detailed" (full details), "json", "csv"',
-            'required': False,
-            'default': 'full'
-        },
-        {
-            'name': 'limit',
-            'description': 'Maximum number of results to return',
-            'required': False,
-            'default': None
-        }
     ]
-    
+
     examples = [
         {
-            'command': 'qzx findFiles . *.py',
-            'description': 'Find all Python files in current directory and subdirectories'
+            "command": 'qzx findFiles . "*.py" --exclude-dirs ".git,.venv"',
+            "description": "Find Python files recursively while skipping common metadata directories",
         },
         {
-            'command': 'qzx findFiles /src *.js false',
-            'description': 'Find all JavaScript files in /src without searching subdirectories'
+            "command": (
+                'qzx findFiles Downloads "*" --min-size 100MiB '
+                "--sort-by size --descending true --limit 20"
+            ),
+            "description": "Return the 20 largest matching files of at least 100 MiB",
         },
         {
-            'command': 'qzx findFiles . * true 2 f',
-            'description': 'Find all files up to 2 levels deep'
+            "command": (
+                'qzx findFiles logs "*.log" --modified-after 2026-07-01 '
+                "--recursive false"
+            ),
+            "description": "Find recently modified log files in one directory",
         },
-        {
-            'command': 'qzx findFiles . *.txt null f +1M',
-            'description': 'Find all text files larger than 1MB'
-        },
-        {
-            'command': 'qzx findFiles . * null null null null null null -7',
-            'description': 'Find files modified within the last 7 days'
-        },
-        {
-            'command': 'qzx findFiles . *.log null null null null null today null',
-            'description': 'Find log files created or modified today'
-        },
-        {
-            'command': 'qzx findFiles . *.py null null null null null null null TODO',
-            'description': 'Find Python files containing the word "TODO"'
-        },
-        {
-            'command': 'qzx findFiles . * null null null null null null null null "def\\s+\\w+"',
-            'description': 'Find files containing function definitions using regex'
-        },
-        {
-            'command': 'qzx findFiles . * null null null null null null null null null false "*.tmp,*.bak"',
-            'description': 'Find all files excluding temp and backup files'
-        },
-        {
-            'command': 'qzx findFiles . * true null null null null null null null null null null .git,node_modules',
-            'description': 'Find all files excluding .git and node_modules directories'
-        }
     ]
 
-    _parse_recursive_parameter = staticmethod(parse_recursive_parameter)
-    
-    def execute(self, search_path=".", pattern="*", recursive="-r", max_depth=None, type=None,
-                size=None, min_size=None, max_size=None, mtime=None, newer_than=None, older_than=None,
-                contains=None, contains_regex=None, case_sensitive=False, exclude=None, exclude_dir=None,
-                follow_symlinks=False, sort_by='path', reverse_sort=False, format='full', limit=None):
-        """
-        Advanced file search with multiple filtering options
-        
-        Args:
-            search_path (str): Path to start the search from
-            pattern (str): File name pattern to search for (supports glob syntax)
-            recursive: Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep
-            max_depth (int): Maximum directory depth to search (None for unlimited)
-            type (str): Filter by type: "f" (files), "d" (directories), or "l" (links)
-            size (str): Filter by size (e.g., +1M for >1MB, -500K for <500KB)
-            min_size (str): Minimum file size in bytes or with KB/MB/GB suffix
-            max_size (str): Maximum file size in bytes or with KB/MB/GB suffix
-            mtime (str): Filter by modification time (e.g., +7 for >7 days old)
-            newer_than (str): Files newer than specified date (YYYY-MM-DD)
-            older_than (str): Files older than specified date (YYYY-MM-DD)
-            contains (str): Only include files containing this text
-            contains_regex (str): Only include files matching this regex pattern
-            case_sensitive (bool): Make content searches case sensitive
-            exclude (str): Exclude file/directory patterns (comma-separated)
-            exclude_dir (str): Exclude directory patterns (comma-separated)
-            follow_symlinks (bool): Follow symbolic links
-            sort_by (str): Sort by: name, path, size, mtime, or none
-            reverse_sort (bool): Reverse the sorting order
-            format (str): Output format: "full", "name", "detailed", "json", "csv"
-            limit (int): Maximum number of results to return
-            
-        Returns:
-            Search results based on specified format
-        """
+    def execute(
+        self,
+        search_path=".",
+        pattern="*",
+        recursive="-r",
+        min_size=None,
+        max_size=None,
+        modified_after=None,
+        modified_before=None,
+        exclude=None,
+        exclude_dirs=None,
+        sort_by="path",
+        descending=False,
+        limit=None,
+    ):
+        """Find files and return complete, consistently structured metadata."""
         try:
-            # Process flags in command arguments if they exist
-            import sys
-            args = sys.argv
-            recursive_flags = ['-r', '-R', '--recursive']
-            recursive_found = any(flag in args for flag in recursive_flags)
-            
-            # Normalizar parámetros
-            if search_path is None:
-                search_path = "."
-            
-            if pattern is None:
-                pattern = "*"
-                
-            if recursive is None:
-                recursive = "-r"
-            
-            # Parse recursive parameter - convert string flags or handle boolean
-            if isinstance(recursive, str):
-                recursive = parse_recursive_parameter(recursive)
-            elif recursive_found:
-                recursive = True
-            
-            # Para compatibilidad: si recursion_depth y max_depth están definidos, usar el más restrictivo
-            if recursive is not None and max_depth is not None and max_depth != "null":
-                try:
-                    max_depth = int(max_depth)
-                    # Usar el menor de los dos valores
-                    if isinstance(recursive, int) and recursive > 0:
-                        recursive = min(recursive, max_depth)
-                    elif recursive is True or recursive is None:
-                        recursive = max_depth
-                except ValueError:
-                    pass  # If max_depth is invalid, just use recursive as is
-            elif max_depth is not None and max_depth != "null":
-                try:
-                    recursive = int(max_depth)
-                except ValueError:
-                    pass  # If max_depth is invalid, keep original recursive value
-                
-            # Convertir parámetros a tipos apropiados
-            if isinstance(case_sensitive, str):
-                case_sensitive = case_sensitive.lower() in ('true', 'yes', 'y', '1')
-            
-            if isinstance(follow_symlinks, str):
-                follow_symlinks = follow_symlinks.lower() in ('true', 'yes', 'y', '1')
-            
-            if isinstance(reverse_sort, str):
-                reverse_sort = reverse_sort.lower() in ('true', 'yes', 'y', '1')
-            
-            if limit == "null":
-                limit = None
-            elif limit is not None:
-                try:
-                    limit = int(limit)
-                except ValueError:
-                    limit = None
-
-            # Parsear todos los demás parámetros
-            size_constraint = self._parse_size(size)
-            min_size_constraint = self._parse_size(min_size)
-            max_size_constraint = self._parse_size(max_size)
-            mtime_constraint = self._parse_mtime(mtime)
-            newer_than_timestamp = self._parse_date(newer_than)
-            older_than_timestamp = self._parse_date(older_than)
-            
-            # Compilar expresión regular si se proporciona
-            compiled_regex = None
-            if contains_regex and contains_regex != "null":
-                try:
-                    flags = 0 if case_sensitive else re.IGNORECASE
-                    compiled_regex = re.compile(contains_regex, flags)
-                except re.error:
-                    return {'success': False, 'error': f"Invalid regex pattern: {contains_regex}"}
-            
-            # Procesamiento de patrones de exclusión
-            exclude_patterns = self._parse_patterns(exclude)
-            exclude_dir_patterns = self._parse_patterns(exclude_dir)
-            
-            # Inicializar variables para resultados
-            results = []
-            total_size = 0
-            
-            # Verificar que el directorio existe
-            if not os.path.exists(search_path):
-                return {'success': False, 'error': f"Path not found: {search_path}"}
-            
-            # Determinar qué tipo de entradas buscar
-            file_type = None
-            if type == 'f':
-                file_type = 'f'  # Sólo archivos
-            elif type == 'd':
-                file_type = 'd'  # Sólo directorios
-            elif type == 'l':
-                file_type = 'l'  # Sólo enlaces simbólicos
-            # Si type no está especificado, buscaremos todos los tipos
-            
-            # Crear el patrón de búsqueda completo combinando ruta y patrón
-            search_pattern = os.path.join(search_path, pattern)
-            
-            # Definir callbacks para procesar los archivos y directorios encontrados
-            def on_file_found(file_path):
-                file_name = os.path.basename(file_path)
-                
-                # Verificar si el archivo debe ser excluido
-                if self._should_exclude(file_name, exclude_patterns):
-                    return
-                
-                try:
-                    # Para enlaces simbólicos, necesitamos un manejo especial
-                    if type == 'l' and not os.path.islink(file_path):
-                        return
-                    
-                    file_stat = os.stat(file_path) if not type == 'l' else os.lstat(file_path)
-                    
-                    # Calcular la profundidad relativa
-                    rel_path = os.path.relpath(os.path.dirname(file_path), search_path)
-                    current_depth = 0 if rel_path == '.' else rel_path.count(os.sep) + 1
-                
-                    # Verificar si cumple con todas las restricciones
-                    if self._check_constraints(file_path, file_stat, size_constraint, min_size_constraint, max_size_constraint, 
-                                              mtime_constraint, newer_than_timestamp, older_than_timestamp,
-                                              contains, compiled_regex, case_sensitive):
-                        # Crear información detallada del archivo
-                        file_info = self._create_entry_info(file_path, file_name, "file", file_stat, current_depth)
-                        results.append(file_info)
-                        nonlocal total_size
-                        total_size += file_stat.st_size
-                        
-                except (PermissionError, FileNotFoundError):
-                    # Ignorar archivos a los que no podemos acceder
-                    pass
-            
-            def on_dir_found(dir_path):
-                dir_name = os.path.basename(dir_path)
-                
-                # Si estamos excluyendo este directorio y no lo estamos buscando específicamente, ignorarlo
-                if self._should_exclude(dir_name, exclude_dir_patterns) and type != 'd':
-                    return
-                
-                # Si estamos buscando sólo archivos, no procesar directorios
-                if type == 'f':
-                    return
-                
-                try:
-                    # Para enlaces simbólicos, necesitamos un manejo especial
-                    if type == 'l' and not os.path.islink(dir_path):
-                        return
-                    
-                    dir_stat = os.stat(dir_path) if not type == 'l' else os.lstat(dir_path)
-                    
-                    # Calcular la profundidad relativa
-                    rel_path = os.path.relpath(os.path.dirname(dir_path), search_path)
-                    current_depth = 0 if rel_path == '.' else rel_path.count(os.sep) + 1
-                    
-                    # Si estamos buscando directorios específicamente o todos los tipos, verificar restricciones
-                    if type == 'd' or type is None or type == 'l':
-                        if self._check_constraints(dir_path, dir_stat, size_constraint, min_size_constraint, max_size_constraint, 
-                                                 mtime_constraint, newer_than_timestamp, older_than_timestamp,
-                                                 contains, compiled_regex, case_sensitive):
-                            # Crear información detallada del directorio
-                            dir_info = self._create_entry_info(dir_path, dir_name, "directory", dir_stat, current_depth)
-                            results.append(dir_info)
-                except (PermissionError, FileNotFoundError):
-                    # Ignorar directorios a los que no podemos acceder
-                    pass
-            
-            # Usar la función find_files centralizada para buscar archivos y directorios
-            for _ in find_files(
-                file_path_pattern=search_pattern,
-                recursive=recursive,
-                file_type=file_type,
-                exclude_patterns=exclude_patterns,
-                exclude_dirs=exclude_dir_patterns,
-                on_file_found=on_file_found,
-                on_dir_found=on_dir_found
-            ):
-                # Si tenemos un límite de resultados y lo hemos alcanzado, detener la búsqueda
-                if limit is not None and len(results) >= limit:
-                    break
-            
-            # Ordenar resultados según se solicite
-            if sort_by != 'none':
-                results = self._sort_results(results, sort_by, reverse_sort)
-                
-            # Aplicar límite si está configurado
-            if limit is not None and limit > 0:
-                results = results[:limit]
-            
-            # Preparar mensaje para el resultado
-            recursion_message = ""
-            if recursive is True:
-                recursion_message = " (recursive)"
-            elif isinstance(recursive, int) and recursive > 0:
-                recursion_message = f" (up to {recursive} levels deep)"
-            
-            if len(results) == 0:
-                message = f"No matching items found in '{search_path}'{recursion_message}"
-            else:
-                message = f"Found {len(results)} items in '{search_path}'{recursion_message}"
-                
-                # Formatear a tamaño legible
-                total_size_readable = self._format_bytes(total_size)
-                message += f", total size: {total_size_readable}"
-            
-            # Formatear resultados según el formato solicitado
-            formatted_results = self._format_results(results, format)
-            recursive_display = (
-                "unlimited"
-                if recursive is None
-                else "none"
-                if recursive == 0
-                else recursive
+            root = os.path.abspath(os.fspath(search_path or "."))
+        except TypeError:
+            return self._failure(
+                "invalid_search_path",
+                "Search path must be a filesystem path.",
+                search_path=search_path,
             )
-            
-            return {
-                'success': True,
-                'message': message,
-                'search_path': search_path,
-                'pattern': pattern,
-                'recursive': recursive_display,
-                'count': len(results),
-                'total_size': total_size,
-                'total_size_readable': self._format_bytes(total_size),
-                'results': formatted_results
-            }
-        
-        except Exception as e:
-            import traceback
-            return {
-                'success': False,
-                'error': f"Error during file search: {str(e)}",
-                'traceback': traceback.format_exc()
-            }
-    
-    def _create_entry_info(self, path, name, entry_type, stat, depth):
-        """
-        Crea un objeto con la información del archivo o directorio
-        
-        Args:
-            path (str): Ruta del archivo o directorio
-            name (str): Nombre del archivo o directorio
-            entry_type (str): Tipo de entrada (file, directory, link)
-            stat (os.stat_result): Estadísticas del archivo o directorio
-            depth (int): Profundidad relativa al directorio de búsqueda inicial
-            
-        Returns:
-            dict: Información del archivo o directorio
-        """
-        return {
-            "name": name,
-            "path": path,
-            "type": entry_type,
-            "depth": depth,
-            "size": stat.st_size,
-            "size_readable": self._format_bytes(stat.st_size),
-            "mtime": stat.st_mtime,
-            "mtime_readable": datetime.datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-        }
-    
-    def _check_constraints(self, file_path, file_stat, size_constraint, min_size, max_size, 
-                          mtime_constraint, newer_than, older_than, contains, contains_regex, case_sensitive):
-        """Verificar si un archivo cumple con todas las restricciones especificadas"""
-        # Check size constraints
-        if not self._check_size_constraint(file_stat.st_size, size_constraint, min_size, max_size):
-            return False
-            
-        # Check modification time constraints
-        if not self._check_time_constraint(file_stat.st_mtime, mtime_constraint, newer_than, older_than):
-            return False
-            
-        # Check content constraints (only for files, not directories)
-        if (contains or contains_regex) and os.path.isfile(file_path):
-            if not self._check_content(file_path, contains, contains_regex, case_sensitive):
-                return False
-                
-        return True
-    
-    def _parse_size(self, size_str):
-        """
-        Parse a size string to bytes
-        
-        Args:
-            size_str (str): Size string (e.g., "+1M", "-500K")
-            
-        Returns:
-            tuple: (operation, size_in_bytes) or None if invalid
-        """
-        if not size_str or size_str == "null":
-            return None
-        
-        # Determine operation
-        op = None
-        if size_str.startswith('+'):
-            op = '>'
-            size_str = size_str[1:]
-        elif size_str.startswith('-'):
-            op = '<'
-            size_str = size_str[1:]
-        else:
-            op = '='
-        
-        # Parse size value
-        size_value = 0
-        try:
-            if size_str.lower().endswith('k'):
-                size_value = float(size_str[:-1]) * 1024
-            elif size_str.lower().endswith('kb'):
-                size_value = float(size_str[:-2]) * 1024
-            elif size_str.lower().endswith('m'):
-                size_value = float(size_str[:-1]) * 1024 * 1024
-            elif size_str.lower().endswith('mb'):
-                size_value = float(size_str[:-2]) * 1024 * 1024
-            elif size_str.lower().endswith('g'):
-                size_value = float(size_str[:-1]) * 1024 * 1024 * 1024
-            elif size_str.lower().endswith('gb'):
-                size_value = float(size_str[:-2]) * 1024 * 1024 * 1024
-            else:
-                size_value = float(size_str)
-            
-            return (op, int(size_value))
-        except ValueError:
-            return None
-    
-    def _parse_mtime(self, mtime_str):
-        """
-        Parse an mtime string to days
-        
-        Args:
-            mtime_str (str): mtime string (e.g., "+7", "-2")
-            
-        Returns:
-            tuple: (operation, days) or None if invalid
-        """
-        if not mtime_str or mtime_str == "null":
-            return None
-        
-        # Determine operation
-        op = None
-        if mtime_str.startswith('+'):
-            op = '>'  # Older than
-            mtime_str = mtime_str[1:]
-        elif mtime_str.startswith('-'):
-            op = '<'  # Newer than
-            mtime_str = mtime_str[1:]
-        else:
-            op = '='  # Exactly
-        
-        # Parse days value
-        try:
-            days = float(mtime_str)
-            return (op, days)
-        except ValueError:
-            return None
-    
-    def _parse_date(self, date_str):
-        """
-        Parse a date string to timestamp
-        
-        Args:
-            date_str (str): Date string (e.g., "2023-01-01", "today", "yesterday")
-            
-        Returns:
-            float: Timestamp or None if invalid
-        """
-        if not date_str or date_str == "null":
-            return None
-        
-        try:
-            if date_str.lower() == 'today':
-                # Get start of today
-                today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                return today.timestamp()
-            elif date_str.lower() == 'yesterday':
-                # Get start of yesterday
-                yesterday = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
-                return yesterday.timestamp()
-            else:
-                # Parse YYYY-MM-DD format
-                year, month, day = map(int, date_str.split('-'))
-                date = datetime.datetime(year, month, day)
-                return date.timestamp()
-        except (ValueError, TypeError):
-            return None
-    
-    def _parse_patterns(self, patterns_string):
-        """
-        Parse comma-separated patterns into a list
-        
-        Args:
-            patterns_string: Comma-separated patterns (e.g., "*.txt,*.py")
-            
-        Returns:
-            list: List of parsed patterns or empty list if input is invalid
-        """
-        try:
-            if not patterns_string:
-                return []
-                
-            if isinstance(patterns_string, list):
-                return [p for p in patterns_string if p and isinstance(p, str)]
-                
-            if isinstance(patterns_string, str):
-                # Dividir por comas y quitar espacios
-                patterns = [p.strip() for p in patterns_string.split(',')]
-                # Filtrar patrones vacíos
-                patterns = [p for p in patterns if p]
-                return patterns
-                
-            return []
-        except Exception:
-            # En caso de error, devolver lista vacía
-            return []
-    
-    def _should_exclude(self, name, exclude_patterns):
-        """
-        Check if a name matches any of the exclude patterns
-        
-        Args:
-            name (str): File or directory name to check
-            exclude_patterns (list): List of patterns to exclude
-            
-        Returns:
-            bool: True if the name should be excluded
-        """
-        try:
-            if not name or not exclude_patterns:
-                return False
-                
-            # Asegurar que name es string
-            if not isinstance(name, str):
-                try:
-                    name = str(name)
-                except:
-                    return False
-                    
-            # Iterar sobre los patrones
-            for pattern in exclude_patterns:
-                try:
-                    if pattern and fnmatch.fnmatch(name, pattern):
-                        return True
-                except Exception:
-                    # Ignorar errores en patterns individuales
-                    continue
-                    
-            return False
-        except Exception:
-            # En caso de cualquier excepción, no excluir
-            return False
-    
-    def _check_size_constraint(self, file_size, size_constraint, min_size, max_size):
-        """
-        Check if a file size meets the size constraints
-        
-        Args:
-            file_size (int): File size in bytes
-            size_constraint (tuple): (operation, size_in_bytes) or None
-            min_size (tuple): (operation, size_in_bytes) or None
-            max_size (tuple): (operation, size_in_bytes) or None
-            
-        Returns:
-            bool: True if size meets constraints
-        """
-        # Check size constraint
-        if size_constraint:
-            op, value = size_constraint
-            if op == '>' and file_size <= value:
-                return False
-            elif op == '<' and file_size >= value:
-                return False
-            elif op == '=' and file_size != value:
-                return False
-        
-        # Check min size
-        if min_size:
-            _, value = min_size
-            if file_size < value:
-                return False
-        
-        # Check max size
-        if max_size:
-            _, value = max_size
-            if file_size > value:
-                return False
-        
-        return True
-    
-    def _check_time_constraint(self, file_mtime, mtime_constraint, newer_than, older_than):
-        """
-        Check if a file mtime meets the time constraints
-        
-        Args:
-            file_mtime (float): File modification time
-            mtime_constraint (tuple): (operation, days) or None
-            newer_than (float): Newer than timestamp or None
-            older_than (float): Older than timestamp or None
-            
-        Returns:
-            bool: True if mtime meets constraints
-        """
-        now = time.time()
-        
-        # Check mtime constraint
-        if mtime_constraint:
-            op, days = mtime_constraint
-            days_in_seconds = days * 24 * 60 * 60
-            file_age_in_seconds = now - file_mtime
-            
-            if op == '>' and file_age_in_seconds <= days_in_seconds:
-                return False
-            elif op == '<' and file_age_in_seconds >= days_in_seconds:
-                return False
-            elif op == '=' and abs(file_age_in_seconds - days_in_seconds) > 24 * 60 * 60:  # Within one day
-                return False
-        
-        # Check newer than
-        if newer_than and file_mtime < newer_than:
-            return False
-        
-        # Check older than
-        if older_than and file_mtime > older_than:
-            return False
-        
-        return True
-    
-    def _check_content(self, file_path, contains, contains_regex, case_sensitive):
-        """
-        Check if a file contains specified text or matches regex
-        
-        Args:
-            file_path (str): Path to the file
-            contains (str): Text to search for
-            contains_regex (re.Pattern): Compiled regex pattern
-            case_sensitive (bool): Whether search is case sensitive
-            
-        Returns:
-            bool: True if content matches constraints
-        """
-        try:
-            # Skip binary files
-            if self._is_binary(file_path):
-                return False
-            
-            # Read file content
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                content = f.read()
-            
-            # Check text search
-            if contains:
-                if case_sensitive:
-                    return contains in content
-                else:
-                    return contains.lower() in content.lower()
-            
-            # Check regex search
-            if contains_regex:
-                return bool(contains_regex.search(content))
-            
-            return True
-        except (PermissionError, FileNotFoundError, UnicodeDecodeError):
-            return False
-    
-    def _is_binary(self, file_path, sample_size=4096):
-        """
-        Check if a file is binary by reading a sample
-        
-        Args:
-            file_path (str): Path to the file
-            sample_size (int): Sample size to check
-            
-        Returns:
-            bool: True if file appears to be binary
-        """
-        try:
-            with open(file_path, 'rb') as f:
-                sample = f.read(sample_size)
-                
-            # Check for null bytes or high proportion of non-printable chars
-            text_chars = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x7F)))
-            return bool(sample.translate(None, text_chars))
-        except (PermissionError, FileNotFoundError):
-            return True  # Assume binary if we can't read it
-    
-    def _format_results(self, results, format_type):
-        """
-        Format results based on specified format
-        
-        Args:
-            results (list): List of result dictionaries
-            format_type (str): Format type
-            
-        Returns:
-            Formatted results
-        """
-        if format_type == 'full':
-            return [item['path'] for item in results]
-        
-        elif format_type == 'name':
-            return [item['name'] for item in results]
-        
-        elif format_type == 'detailed':
-            formatted = []
-            for item in results:
-                item_type = item['type']
-                size_str = item['size_readable'] if item_type == 'file' else ''
-                mtime_str = item['mtime_readable']
-                formatted.append(f"{item_type[:1]}\t{size_str}\t{mtime_str}\t{item['path']}")
-            return formatted
-        
-        elif format_type == 'json':
-            return results
-        
-        elif format_type == 'csv':
-            formatted = ['type,name,path,size,size_readable,mtime,mtime_readable']
-            for item in results:
-                formatted.append(f"{item['type']},{item['name']},{item['path']},{item['size']},{item['size_readable']},{item['mtime']},{item['mtime_readable']}")
-            return formatted
-        
-        return results
-    
-    def _sort_results(self, results, sort_by, reverse_sort):
-        """
-        Sort results based on specified sort criteria
-        
-        Args:
-            results (list): List of result dictionaries
-            sort_by (str): Sort by: name, path, size, mtime, or none
-            reverse_sort (bool): Reverse the sorting order
-        """
-        if sort_by == 'name':
-            results.sort(key=lambda x: x['name'], reverse=reverse_sort)
-        elif sort_by == 'path':
-            results.sort(key=lambda x: x['path'], reverse=reverse_sort)
-        elif sort_by == 'size':
-            results.sort(key=lambda x: x['size'], reverse=reverse_sort)
-        elif sort_by == 'mtime':
-            results.sort(key=lambda x: x['mtime'], reverse=reverse_sort)
-        else:
-            # Continue without sorting if an invalid sort_by is provided
-            pass
 
-        return results
+        if not os.path.exists(root):
+            return self._failure(
+                "path_not_found",
+                f"Search directory does not exist: {root}",
+                search_path=root,
+            )
+        if not os.path.isdir(root):
+            return self._failure(
+                "not_a_directory",
+                f"Search path is not a directory: {root}",
+                search_path=root,
+            )
+        if not isinstance(pattern, str) or not pattern.strip():
+            return self._failure(
+                "invalid_pattern",
+                "Pattern must be a non-empty file-name glob.",
+                search_path=root,
+            )
+
+        try:
+            recursion_depth = self._parse_recursion(recursive)
+            min_size_bytes = self._parse_size_limit(min_size, "min_size")
+            max_size_bytes = self._parse_size_limit(max_size, "max_size")
+            modified_after_ts = self._parse_date_limit(
+                modified_after, "modified_after"
+            )
+            modified_before_ts = self._parse_date_limit(
+                modified_before, "modified_before"
+            )
+            excluded_files = self._parse_patterns(exclude, "exclude")
+            excluded_dirs = self._parse_patterns(exclude_dirs, "exclude_dirs")
+            descending_value = self._parse_boolean_parameter(
+                descending, "descending"
+            )
+            limit_value = self._parse_limit(limit)
+        except ValueError as exc:
+            return self._failure(
+                "invalid_parameter",
+                str(exc),
+                search_path=root,
+                pattern=pattern,
+            )
+
+        if min_size_bytes is not None and max_size_bytes is not None:
+            if min_size_bytes > max_size_bytes:
+                return self._failure(
+                    "invalid_size_range",
+                    "min_size cannot be greater than max_size.",
+                    search_path=root,
+                    pattern=pattern,
+                )
+        if modified_after_ts is not None and modified_before_ts is not None:
+            if modified_after_ts >= modified_before_ts:
+                return self._failure(
+                    "invalid_date_range",
+                    "modified_after must be earlier than modified_before.",
+                    search_path=root,
+                    pattern=pattern,
+                )
+
+        normalized_sort = str(sort_by).strip().lower()
+        sort_keys = {
+            "path": lambda item: os.path.normcase(item["path"]),
+            "name": lambda item: os.path.normcase(item["name"]),
+            "size": lambda item: item["size_bytes"],
+            "modified": lambda item: item["modified_timestamp"],
+        }
+        if normalized_sort not in sort_keys:
+            return self._failure(
+                "invalid_sort",
+                "sort_by must be one of: path, name, size, modified.",
+                search_path=root,
+                pattern=pattern,
+            )
+
+        results = []
+        skipped_unreadable = 0
+        warning_paths = []
+        search_pattern = os.path.join(root, pattern)
+
+        try:
+            for file_path in find_files(
+                file_path_pattern=search_pattern,
+                recursive=recursion_depth,
+                exclude_patterns=excluded_files,
+                exclude_dirs=excluded_dirs,
+                file_type="f",
+            ):
+                try:
+                    file_stat = os.stat(file_path)
+                except (FileNotFoundError, OSError):
+                    skipped_unreadable += 1
+                    if len(warning_paths) < 20:
+                        warning_paths.append(os.path.abspath(file_path))
+                    continue
+
+                if min_size_bytes is not None and file_stat.st_size < min_size_bytes:
+                    continue
+                if max_size_bytes is not None and file_stat.st_size > max_size_bytes:
+                    continue
+                if (
+                    modified_after_ts is not None
+                    and file_stat.st_mtime < modified_after_ts
+                ):
+                    continue
+                if (
+                    modified_before_ts is not None
+                    and file_stat.st_mtime >= modified_before_ts
+                ):
+                    continue
+
+                absolute_path = os.path.abspath(file_path)
+                relative_path = os.path.relpath(absolute_path, root)
+                results.append(
+                    {
+                        "name": os.path.basename(absolute_path),
+                        "path": absolute_path,
+                        "relative_path": relative_path,
+                        "depth": self._file_depth(relative_path),
+                        "size_bytes": file_stat.st_size,
+                        "size_readable": self._format_bytes(file_stat.st_size),
+                        "modified_timestamp": file_stat.st_mtime,
+                        "modified_at": datetime.datetime.fromtimestamp(
+                            file_stat.st_mtime
+                        )
+                        .astimezone()
+                        .isoformat(timespec="seconds"),
+                    }
+                )
+        except OSError as exc:
+            return self._failure(
+                "search_failed",
+                f"File search could not be completed: {exc}",
+                search_path=root,
+                pattern=pattern,
+            )
+
+        results.sort(key=sort_keys[normalized_sort], reverse=descending_value)
+        matched_count = len(results)
+        matched_size_bytes = sum(item["size_bytes"] for item in results)
+        if limit_value is not None:
+            results = results[:limit_value]
+        returned_size_bytes = sum(item["size_bytes"] for item in results)
+        truncated = len(results) < matched_count
+
+        recursion_label = (
+            "unlimited"
+            if recursion_depth is None
+            else "none"
+            if recursion_depth == 0
+            else recursion_depth
+        )
+        if matched_count:
+            message = (
+                f"Found {matched_count} matching file"
+                f"{'s' if matched_count != 1 else ''} in '{root}'. "
+                f"Returning {len(results)} file"
+                f"{'s' if len(results) != 1 else ''} totaling "
+                f"{self._format_bytes(returned_size_bytes)}."
+            )
+        else:
+            message = f"No files matched '{pattern}' in '{root}'."
+
+        warnings = []
+        if skipped_unreadable:
+            warnings.append(
+                {
+                    "code": "unreadable_files_skipped",
+                    "message": (
+                        f"Skipped {skipped_unreadable} file"
+                        f"{'s' if skipped_unreadable != 1 else ''} that changed "
+                        "or could not be read during the search."
+                    ),
+                    "sample_paths": warning_paths,
+                    "sample_truncated": skipped_unreadable > len(warning_paths),
+                }
+            )
+
+        return {
+            "success": True,
+            "message": message,
+            "search_path": root,
+            "pattern": pattern,
+            "recursive": recursion_label,
+            "filters": {
+                "min_size_bytes": min_size_bytes,
+                "max_size_bytes": max_size_bytes,
+                "modified_after": modified_after,
+                "modified_before": modified_before,
+                "exclude": excluded_files,
+                "exclude_dirs": excluded_dirs,
+            },
+            "sort": {
+                "by": normalized_sort,
+                "descending": descending_value,
+            },
+            "matched_count": matched_count,
+            "matched_size_bytes": matched_size_bytes,
+            "matched_size_readable": self._format_bytes(matched_size_bytes),
+            "count": len(results),
+            "total_size_bytes": returned_size_bytes,
+            "total_size_readable": self._format_bytes(returned_size_bytes),
+            "limit": limit_value,
+            "truncated": truncated,
+            "skipped_unreadable": skipped_unreadable,
+            "warnings": warnings,
+            "results": results,
+        }
+
+    @staticmethod
+    def _failure(error_code, message, **details):
+        return {
+            "success": False,
+            "message": message,
+            "error": message,
+            "error_code": error_code,
+            "details": details,
+        }
+
+    @staticmethod
+    def _parse_recursion(value):
+        if value is None or value is True:
+            return None
+        if value is False:
+            return 0
+        if isinstance(value, int):
+            if value < 0:
+                raise ValueError("recursive depth cannot be negative.")
+            return value
+        if not isinstance(value, str):
+            raise ValueError(
+                "recursive must be -r, false, or a non-negative depth such as -r2."
+            )
+
+        normalized = value.strip().lower()
+        if normalized in {"-r", "--recursive", "true", "yes", "unlimited"}:
+            return None
+        if normalized in {"false", "no", "none", "0", "off"}:
+            return 0
+        match = re.fullmatch(r"(?:-r|--recursive)(\d+)", normalized)
+        if match:
+            return int(match.group(1))
+        if normalized.isdigit():
+            return int(normalized)
+        raise ValueError(
+            "recursive must be -r, false, or a non-negative depth such as -r2."
+        )
+
+    @staticmethod
+    def _parse_size_limit(value, name):
+        if value is None or value == "":
+            return None
+        if isinstance(value, bool):
+            raise ValueError(f"{name} must be a non-negative size.")
+        if isinstance(value, (int, float)):
+            if value < 0:
+                raise ValueError(f"{name} cannot be negative.")
+            return int(value)
+        if not isinstance(value, str):
+            raise ValueError(f"{name} must be a number or size such as 10MiB.")
+
+        match = re.fullmatch(
+            r"\s*(\d+(?:\.\d+)?)\s*(B|KB|KIB|MB|MIB|GB|GIB|TB|TIB)?\s*",
+            value,
+            re.IGNORECASE,
+        )
+        if not match:
+            raise ValueError(
+                f"{name} must be a non-negative number or size such as 10MiB."
+            )
+        number = float(match.group(1))
+        unit = (match.group(2) or "B").upper()
+        multipliers = {
+            "B": 1,
+            "KB": 1024,
+            "KIB": 1024,
+            "MB": 1024**2,
+            "MIB": 1024**2,
+            "GB": 1024**3,
+            "GIB": 1024**3,
+            "TB": 1024**4,
+            "TIB": 1024**4,
+        }
+        return int(number * multipliers[unit])
+
+    @staticmethod
+    def _parse_date_limit(value, name):
+        if value is None or value == "":
+            return None
+        if not isinstance(value, str):
+            raise ValueError(f"{name} must use YYYY-MM-DD, today, or yesterday.")
+        normalized = value.strip().lower()
+        today = datetime.datetime.now().astimezone().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        if normalized == "today":
+            return today.timestamp()
+        if normalized == "yesterday":
+            return (today - datetime.timedelta(days=1)).timestamp()
+        try:
+            parsed = datetime.datetime.strptime(normalized, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ValueError(
+                f"{name} must use YYYY-MM-DD, today, or yesterday."
+            ) from exc
+        return parsed.astimezone().timestamp()
+
+    @staticmethod
+    def _parse_patterns(value, name):
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        if isinstance(value, (list, tuple)) and all(
+            isinstance(item, str) for item in value
+        ):
+            return [item.strip() for item in value if item.strip()]
+        raise ValueError(f"{name} must be a comma-separated list of globs.")
+
+    @staticmethod
+    def _parse_boolean_parameter(value, name):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "yes", "1", "on"}:
+                return True
+            if normalized in {"false", "no", "0", "off"}:
+                return False
+        raise ValueError(f"{name} must be true or false.")
+
+    @staticmethod
+    def _parse_limit(value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, bool):
+            raise ValueError("limit must be a positive integer.")
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("limit must be a positive integer.") from exc
+        if parsed <= 0:
+            raise ValueError("limit must be a positive integer.")
+        return parsed
+
+    @staticmethod
+    def _file_depth(relative_path):
+        parent = os.path.dirname(relative_path)
+        return 0 if not parent else len(parent.split(os.sep))
+
+    @staticmethod
+    def _format_bytes(size_bytes):
+        size = float(size_bytes)
+        units = ("B", "KiB", "MiB", "GiB", "TiB", "PiB")
+        unit_index = 0
+        while size >= 1024 and unit_index < len(units) - 1:
+            size /= 1024
+            unit_index += 1
+        return f"{size:.2f} {units[unit_index]}"

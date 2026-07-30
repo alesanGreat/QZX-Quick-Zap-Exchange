@@ -41,6 +41,27 @@ def test_local_launcher_emits_parseable_json_from_checkout():
     assert payload["meta"]["command"] == "version"
 
 
+def test_local_launcher_propagates_command_not_found_exit_code():
+    """Both launchers must preserve the CLI's automation-friendly status."""
+    environment = os.environ.copy()
+    environment["QZX_TELEMETRY"] = "0"
+    completed = subprocess.run(
+        [*_launcher_command(), "qzx-command-that-does-not-exist", "--json"],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert completed.returncode == 127, completed.stderr or completed.stdout
+    assert completed.stderr == ""
+    payload = json.loads(completed.stdout)
+    assert payload["success"] is False
+    assert payload["error_code"] == "command_not_found"
+
+
 def test_local_launcher_uses_fast_human_welcome(tmp_path):
     """The no-argument launcher should greet before loading the full CLI."""
     environment = os.environ.copy()

@@ -6,10 +6,6 @@ This is a test Python file with code and mixed language comments.
 Este es un archivo Python de prueba con código y comentarios en idiomas mezclados.
 """
 
-import os
-import sys
-import json
-from datetime import datetime
 
 # English comment: This function calculates the factorial of a number
 # Comentario en español: Esta función calcula el factorial de un número

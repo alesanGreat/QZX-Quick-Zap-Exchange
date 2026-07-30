@@ -7,7 +7,6 @@ Example of using the recursive_findfiles_utils module in a command
 
 import os
 import time
-from typing import List, Dict, Any, Optional
 import sys
 from pathlib import Path
 
@@ -15,7 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
+from qzx.core.recursive_findfiles_utils import find_files
 
 class ExampleFindCommand(CommandBase):
     """

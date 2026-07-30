@@ -6,12 +6,7 @@ ClearScreen Command - Clears the terminal screen
 """
 
 import os
-import sys
 import platform
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
@@ -21,7 +16,6 @@ class ClearScreenCommand(CommandBase):
     """
     
     name = "clearScreen"
-    aliases = ["cls", "clear", "clrscr"]
     description = "Clears the terminal screen"
     category = "system"
     
@@ -29,12 +23,8 @@ class ClearScreenCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx ClearScreen',
+            'command': 'qzx clearScreen',
             'description': 'Clear the terminal screen'
-        },
-        {
-            'command': 'qzx cls',
-            'description': 'Clear the terminal screen (using alias)'
         }
     ]
     
@@ -76,10 +66,10 @@ class ClearScreenCommand(CommandBase):
                     "screen_cleared": True,
                     "warning": error_message
                 }
-            except:
+            except Exception:
                 return {
                     "success": False,
                     "error": error_message,
                     "message": f"Failed to clear screen: {str(e)}",
                     "screen_cleared": False
-                } 
+                }

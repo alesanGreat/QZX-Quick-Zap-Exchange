@@ -17,7 +17,6 @@ class WelcomeCommand(CommandBase):
     """
     
     name = "welcome"
-    aliases = ["hello", "hi"]
     description = (
         "Displays the QZX welcome immediately, with optional system details"
     )

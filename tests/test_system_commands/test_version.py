@@ -6,12 +6,12 @@
 import platform
 
 from qzx import __version__
-from qzx.commands.system.version import QZXVersionCommand
+from qzx.commands.system.version import VersionCommand
 from qzx.core.command_loader import CommandLoader
 
 
 def test_execute_reports_the_real_runtime_and_command_catalog():
-    result = QZXVersionCommand().execute()
+    result = VersionCommand().execute()
 
     assert result["success"] is True
     assert result["version"] == __version__

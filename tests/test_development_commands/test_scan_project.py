@@ -5,7 +5,6 @@
 Tests for the ScanProject command
 """
 
-import os
 import json
 from qzx.commands.development.scan_project import ScanProjectCommand
 

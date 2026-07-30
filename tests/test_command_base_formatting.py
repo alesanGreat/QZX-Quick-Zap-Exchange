@@ -1,7 +1,7 @@
 """Tests for shared command-level value formatting."""
 
 from qzx.commands.file.find_duplicate_files import FindDuplicateFilesCommand
-from qzx.commands.file.is_file_empty import WonderIfFileEmptyCommand
+from qzx.commands.file.is_file_empty import IsFileEmptyCommand
 from qzx.core.command_base import CommandBase
 
 
@@ -40,7 +40,7 @@ def test_default_byte_units_preserve_the_historical_qzx_format():
 
 def test_commands_can_preserve_their_historical_final_unit():
     assert FindDuplicateFilesCommand()._format_bytes(1024**4) == "1024.00 GB"
-    assert WonderIfFileEmptyCommand()._format_bytes(1024**5) == "1.00 PB"
+    assert IsFileEmptyCommand()._format_bytes(1024**5) == "1.00 PB"
 
 
 def test_shared_invocation_metadata_cannot_be_spoofed_by_a_command():

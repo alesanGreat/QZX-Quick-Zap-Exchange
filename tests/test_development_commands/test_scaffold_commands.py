@@ -6,17 +6,17 @@ Tests for the various scaffolding commands
 """
 
 import os
-from qzx.commands.development.scaffold_python import MakeScaffProgramPythonCommand
-from qzx.commands.development.scaffold_rust import MakeScaffProgramRustCommand
-from qzx.commands.development.scaffold_javascript import MakeScaffProgramJavascriptCommand
-from qzx.commands.development.scaffold_typescript import MakeScaffProgramTypescriptCommand
-from qzx.commands.development.scaffold_php import MakeScaffProgramPhpCommand
-from qzx.commands.development.scaffold_c import MakeScaffProgramCCommand
-from qzx.commands.development.scaffold_cpp import MakeScaffProgramCppCommand
-from qzx.commands.development.scaffold_go import MakeScaffProgramGoCommand
-from qzx.commands.development.scaffold_java import MakeScaffProgramJavaCommand
-from qzx.commands.development.scaffold_kotlin import MakeScaffProgramKotlinCommand
-from qzx.commands.development.scaffold_csharp import MakeScaffProgramCsharpCommand
+from qzx.commands.development.scaffold_python import ScaffoldPythonCommand
+from qzx.commands.development.scaffold_rust import ScaffoldRustCommand
+from qzx.commands.development.scaffold_javascript import ScaffoldJavaScriptCommand
+from qzx.commands.development.scaffold_typescript import ScaffoldTypeScriptCommand
+from qzx.commands.development.scaffold_php import ScaffoldPhpCommand
+from qzx.commands.development.scaffold_c import ScaffoldCCommand
+from qzx.commands.development.scaffold_cpp import ScaffoldCppCommand
+from qzx.commands.development.scaffold_go import ScaffoldGoCommand
+from qzx.commands.development.scaffold_java import ScaffoldJavaCommand
+from qzx.commands.development.scaffold_kotlin import ScaffoldKotlinCommand
+from qzx.commands.development.scaffold_csharp import ScaffoldCSharpCommand
 
 class TestScaffoldCommands:
     """
@@ -24,7 +24,7 @@ class TestScaffoldCommands:
     """
     
     def test_scaffold_python(self, tmp_path):
-        cmd = MakeScaffProgramPythonCommand()
+        cmd = ScaffoldPythonCommand()
         result = cmd.execute("my_py_app", str(tmp_path), with_tests="true", create_venv="false")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_py_app")
@@ -32,7 +32,7 @@ class TestScaffoldCommands:
         assert os.path.isdir(tmp_path / "my_py_app" / "tests")
 
     def test_scaffold_rust(self, tmp_path):
-        cmd = MakeScaffProgramRustCommand()
+        cmd = ScaffoldRustCommand()
         result = cmd.execute("my_rust_app", str(tmp_path), binary="true", with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_rust_app")
@@ -40,7 +40,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_rust_app" / "src" / "main.rs")
 
     def test_scaffold_javascript(self, tmp_path):
-        cmd = MakeScaffProgramJavascriptCommand()
+        cmd = ScaffoldJavaScriptCommand()
         result = cmd.execute("my_js_app", str(tmp_path), with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my-js-app")
@@ -49,8 +49,21 @@ class TestScaffoldCommands:
         assert os.path.isdir(tmp_path / "my-js-app" / "tests")
         assert os.path.isfile(tmp_path / "my-js-app" / "tests" / "index.test.js")
 
+    def test_scaffold_rejects_ambiguous_boolean_before_creating_project(
+        self, tmp_path
+    ):
+        result = ScaffoldJavaScriptCommand().execute(
+            "ambiguous",
+            str(tmp_path),
+            with_tests="perhaps",
+        )
+
+        assert result["success"] is False
+        assert "with_tests must be true or false" in result["message"]
+        assert not (tmp_path / "ambiguous").exists()
+
     def test_scaffold_typescript(self, tmp_path):
-        cmd = MakeScaffProgramTypescriptCommand()
+        cmd = ScaffoldTypeScriptCommand()
         result = cmd.execute("my_ts_app", str(tmp_path), with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my-ts-app")
@@ -61,7 +74,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my-ts-app" / "tests" / "index.test.ts")
 
     def test_scaffold_php(self, tmp_path):
-        cmd = MakeScaffProgramPhpCommand()
+        cmd = ScaffoldPhpCommand()
         result = cmd.execute("my_php_app", str(tmp_path), with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my-php-app")
@@ -72,7 +85,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my-php-app" / "tests" / "CoreTest.php")
 
     def test_scaffold_c(self, tmp_path):
-        cmd = MakeScaffProgramCCommand()
+        cmd = ScaffoldCCommand()
         result = cmd.execute("my_c_app", str(tmp_path), build_system="cmake")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_c_app")
@@ -80,7 +93,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_c_app" / "src" / "main.c")
 
     def test_scaffold_cpp(self, tmp_path):
-        cmd = MakeScaffProgramCppCommand()
+        cmd = ScaffoldCppCommand()
         result = cmd.execute("my_cpp_app", str(tmp_path))
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_cpp_app")
@@ -88,7 +101,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_cpp_app" / "src" / "main.cpp")
 
     def test_scaffold_go(self, tmp_path):
-        cmd = MakeScaffProgramGoCommand()
+        cmd = ScaffoldGoCommand()
         result = cmd.execute("my_go_app", str(tmp_path), with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_go_app")
@@ -97,7 +110,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_go_app" / "main_test.go")
 
     def test_scaffold_java(self, tmp_path):
-        cmd = MakeScaffProgramJavaCommand()
+        cmd = ScaffoldJavaCommand()
         result = cmd.execute("my_java_app", str(tmp_path), with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_java_app")
@@ -106,7 +119,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_java_app" / "src" / "test" / "java" / "com" / "example" / "my_java_app" / "AppTest.java")
 
     def test_scaffold_kotlin(self, tmp_path):
-        cmd = MakeScaffProgramKotlinCommand()
+        cmd = ScaffoldKotlinCommand()
         result = cmd.execute("my_kotlin_app", str(tmp_path), with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_kotlin_app")
@@ -116,7 +129,7 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_kotlin_app" / "src" / "test" / "kotlin" / "com" / "example" / "my_kotlin_app" / "AppTest.kt")
 
     def test_scaffold_csharp(self, tmp_path):
-        cmd = MakeScaffProgramCsharpCommand()
+        cmd = ScaffoldCSharpCommand()
         result = cmd.execute("my_csharp_app", str(tmp_path), with_tests="true")
         assert result["success"] is True
         assert os.path.isdir(tmp_path / "my_csharp_app")

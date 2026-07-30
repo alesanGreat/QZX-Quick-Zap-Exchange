@@ -250,15 +250,11 @@ Storage
         Returns:
             str: Formatted GPU information, or None if not available
         """
-        # Try to use GetGPULoad command if available
+        # Keep GPU probing optional because it may invoke platform utilities.
         try:
-            # Import dynamically to avoid circular dependencies
-            # This works because this module is not directly imported by GetGPULoad
-            from qzx.commands.system.get_gpu_load import GetGPULoadCommand
+            from qzx.commands.system.get_gpu_info import GetGpuInfoCommand
             
-            # Create instance and execute
-            gpu_command = GetGPULoadCommand()
-            gpu_result = gpu_command.execute(detailed="true")
+            gpu_result = GetGpuInfoCommand().execute(detailed=True)
             
             if not gpu_result or not isinstance(gpu_result, dict) or not gpu_result.get("success", False):
                 return None
@@ -281,37 +277,38 @@ Storage
                 # Memory information if available
                 memory = gpu.get("memory", {})
                 if memory:
-                    if "total" in memory and "used" in memory:
-                        total = memory.get("total", "")
-                        used = memory.get("used", "")
-                        
-                        # Format if numeric values
-                        if isinstance(total, (int, float)) and isinstance(used, (int, float)):
-                            total = self._format_bytes(total)
-                            used = self._format_bytes(used)
-                        
-                        gpu_line += f" | Memory: {used}/{total}"
-                    elif "total" in memory:
-                        total = memory.get("total", "")
-                        if isinstance(total, (int, float)):
-                            total = self._format_bytes(total)
-                        gpu_line += f" | Memory: {total}"
+                    if "total_mib" in memory:
+                        total = memory["total_mib"]
+                        used = memory.get("used_mib")
+                        gpu_line += (
+                            f" | Memory: {used}/{total} MiB"
+                            if used is not None
+                            else f" | Memory: {total} MiB"
+                        )
+                    elif "total_readable" in memory:
+                        gpu_line += (
+                            f" | Memory: {memory['total_readable']}"
+                        )
+                    elif "reported" in memory:
+                        gpu_line += f" | Memory: {memory['reported']}"
                 
                 # Temperature and utilization if available
-                if "temperature" in gpu:
-                    gpu_line += f" | Temp: {gpu['temperature']}"
+                if "temperature_celsius" in gpu:
+                    gpu_line += (
+                        f" | Temp: {gpu['temperature_celsius']} °C"
+                    )
                 
-                if "utilization" in gpu:
-                    gpu_line += f" | Usage: {gpu['utilization']}"
+                if "utilization_percent" in gpu:
+                    gpu_line += (
+                        f" | Usage: {gpu['utilization_percent']}%"
+                    )
                 
                 if result:
                     result += "\n"
                 result += gpu_line
             
             return result
-        except Exception as e:
-            # If there's an error, simply return None
-            print(f"Error getting GPU information: {e}")
+        except Exception:
             return None
     
     def _format_bytes(self, bytes_val):

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+import stat
 
 
 def path_variants(path):
@@ -61,6 +62,28 @@ def file_sha256(path):
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def files_identical(first_path, second_path, chunk_size=1024 * 1024):
+    """Compare two regular, non-symlink files without trusting a digest."""
+    first_path = Path(first_path)
+    second_path = Path(second_path)
+    first_stat = first_path.stat(follow_symlinks=False)
+    second_stat = second_path.stat(follow_symlinks=False)
+    if (
+        not stat.S_ISREG(first_stat.st_mode)
+        or not stat.S_ISREG(second_stat.st_mode)
+        or first_stat.st_size != second_stat.st_size
+    ):
+        return False
+    with first_path.open("rb") as first, second_path.open("rb") as second:
+        while True:
+            first_chunk = first.read(chunk_size)
+            second_chunk = second.read(chunk_size)
+            if first_chunk != second_chunk:
+                return False
+            if not first_chunk:
+                return True
 
 
 def _is_within(candidate, parent):

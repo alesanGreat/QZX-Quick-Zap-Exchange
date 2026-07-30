@@ -12,13 +12,12 @@ from qzx.core.command_loader import CommandLoader
 from qzx import __version__
 from qzx.identity import product_identity
 
-class QZXVersionCommand(CommandBase):
+class VersionCommand(CommandBase):
     """
     Command to display the current version of QZX
     """
     
     name = "version"
-    aliases = ["qzxVersion", "--version"]
     description = "Displays the current version of QZX and system information"
     category = "system"
     

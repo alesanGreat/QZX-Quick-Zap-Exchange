@@ -2,32 +2,26 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramC Command - Creates a basic scaffolding for a C program
+ScaffoldC Command - Creates a basic scaffolding for a C program
 """
 
 import os
-import shutil
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
-class MakeScaffProgramCCommand(CommandBase):
+class ScaffoldCCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a C program.
     Creates a new C project with standard directory structure and basic files.
     """
     
     name = "scaffoldC"
-    aliases = ["cScaff", "newC", "createC", "makeScaffProgramC"]
     description = "Creates a basic scaffolding for a C program"
     category = "development"
     
@@ -60,15 +54,15 @@ class MakeScaffProgramCCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx makeScaffProgramC my_project',
+            'command': 'qzx scaffoldC my_project',
             'description': 'Creates a new C project with Makefile in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramC my_project /path/to/dir true cmake',
+            'command': 'qzx scaffoldC my_project /path/to/dir true cmake',
             'description': 'Creates a new C project with CMake and tests in the specified directory'
         },
         {
-            'command': 'qzx cScaff network_tool . false none',
+            'command': 'qzx scaffoldC network_tool . false none',
             'description': 'Creates a C project without tests or build system in the current directory'
         }
     ]
@@ -88,8 +82,7 @@ class MakeScaffProgramCCommand(CommandBase):
         """
         try:
             # Convert string parameters to appropriate types
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
             
             # Normalize build system value
             build_system = build_system.lower()

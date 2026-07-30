@@ -2,31 +2,25 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramTypescript Command - Creates a basic scaffolding for a TypeScript program
+ScaffoldTypeScript Command - Creates a basic scaffolding for a TypeScript program
 """
 
 import os
-import shutil
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
-class MakeScaffProgramTypescriptCommand(CommandBase):
+class ScaffoldTypeScriptCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a TypeScript program.
     Creates a new TypeScript project with standard directory structure and basic files.
     """
     
-    name = "scaffoldTypescript"
-    aliases = ["tsScaff", "newTs", "createTs", "makeScaffProgramTypescript"]
+    name = "scaffoldTypeScript"
     description = "Creates a basic scaffolding for a TypeScript program"
     category = "development"
     
@@ -53,11 +47,11 @@ class MakeScaffProgramTypescriptCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx makeScaffProgramTypescript my_ts_project',
+            'command': 'qzx scaffoldTypeScript my_ts_project',
             'description': 'Creates a new TypeScript project named "my_ts_project" in the current directory'
         },
         {
-            'command': 'qzx tsScaff backend_api_ts /path/to/dir true',
+            'command': 'qzx scaffoldTypeScript backend_api_ts /path/to/dir true',
             'description': 'Creates a new TypeScript project with Jest/ts-jest tests in the specified directory'
         }
     ]
@@ -76,8 +70,7 @@ class MakeScaffProgramTypescriptCommand(CommandBase):
         """
         try:
             # Convert string parameters to appropriate types
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
             
             # Normalize and validate project name
             project_name = normalize_project_name(

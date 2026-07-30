@@ -5,7 +5,6 @@
 Tests for the InspectImage command
 """
 
-import os
 from qzx.commands.file.inspect_image import InspectImageCommand
 
 class TestInspectImageCommand:

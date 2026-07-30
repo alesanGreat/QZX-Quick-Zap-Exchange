@@ -5,7 +5,6 @@
 Tests for the GetFileHash command
 """
 
-import os
 import hashlib
 from qzx.commands.file.get_file_hash import GetFileHashCommand
 

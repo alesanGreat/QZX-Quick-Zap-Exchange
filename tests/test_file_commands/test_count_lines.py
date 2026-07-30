@@ -2,19 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Test for the CountLinesInFile command
+Test for the CountLines command
 """
 
-from qzx.commands.file.count_lines_in_file import CountLinesInFileCommand
+from qzx.commands.file.count_lines import CountLinesCommand
 
-class TestCountLinesInFileCommand:
+class TestCountLinesCommand:
     """
-    Tests for the CountLinesInFile command
+    Tests for the CountLines command
     """
     
     def setup_method(self):
         """Setup for each test"""
-        self.command = CountLinesInFileCommand()
+        self.command = CountLinesCommand()
     
     def test_parse_recursive_parameter(self):
         """Test interpretation of the recursive parameter"""

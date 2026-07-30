@@ -2,25 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-WonderIfFileEmpty Command - Checks if a file is empty
+IsFileEmpty Command - Checks if a file is empty
 """
 
 import os
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
-class WonderIfFileEmptyCommand(CommandBase):
+class IsFileEmptyCommand(CommandBase):
     """
     Command to check if a file is empty (has zero bytes)
     """
     
     name = "isFileEmpty"
-    aliases = ["wonderIfFileEmpty"]
     description = "Checks if a file is empty (has zero bytes)"
     category = "file"
     _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
@@ -41,11 +35,11 @@ class WonderIfFileEmptyCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx wonderIfFileEmpty /path/to/file.txt',
+            'command': 'qzx isFileEmpty /path/to/file.txt',
             'description': 'Check if file.txt is completely empty (zero bytes)'
         },
         {
-            'command': 'qzx wonderIfFileEmpty /path/to/file.txt true',
+            'command': 'qzx isFileEmpty /path/to/file.txt true',
             'description': 'Check if file.txt is empty or contains only whitespace'
         }
     ]

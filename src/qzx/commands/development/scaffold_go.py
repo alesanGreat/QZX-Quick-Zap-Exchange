@@ -2,32 +2,27 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramGo Command - Creates a basic scaffolding for a Go program
+ScaffoldGo Command - Creates a basic scaffolding for a Go program
 """
 
 import os
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
 
-class MakeScaffProgramGoCommand(CommandBase):
+class ScaffoldGoCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a Go program.
     Creates a new Go project with standard directory structure and basic files.
     """
 
     name = "scaffoldGo"
-    aliases = ["goScaff", "newGo", "createGo", "makeScaffProgramGo"]
     description = "Creates a basic scaffolding for a Go program"
     category = "development"
 
@@ -60,15 +55,15 @@ class MakeScaffProgramGoCommand(CommandBase):
 
     examples = [
         {
-            'command': 'qzx makeScaffProgramGo my_project',
+            'command': 'qzx scaffoldGo my_project',
             'description': 'Creates a new Go project named "my_project" in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramGo my_project /path/to/dir true github.com/example/my_project',
+            'command': 'qzx scaffoldGo my_project /path/to/dir true github.com/example/my_project',
             'description': 'Creates a new Go project with custom module path in the specified directory'
         },
         {
-            'command': 'qzx goScaff api_service . false',
+            'command': 'qzx scaffoldGo api_service . false',
             'description': 'Creates a new Go project named "api_service" without tests'
         }
     ]
@@ -87,8 +82,7 @@ class MakeScaffProgramGoCommand(CommandBase):
             Dictionary with the operation results and status
         """
         try:
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
 
             project_name = normalize_project_name(
                 project_name,

@@ -30,7 +30,6 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
     """
     
     name = "getProgrammingLanguageStats"
-    aliases = ["getProgrammingLanguageStatsFromFile"]
     description = "Analyzes files to determine the programming language and provides statistics about the code. Supports wildcards and recursive directory search."
     category = "file"
     _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
@@ -63,27 +62,27 @@ class GetProgrammingLanguageStatsFromFileCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx getProgrammingLanguageStatsFromFile script.py',
+            'command': 'qzx getProgrammingLanguageStats script.py',
             'description': 'Analyze a Python file to determine language statistics'
         },
         {
-            'command': 'qzx getProgrammingLanguageStatsFromFile app.js true',
+            'command': 'qzx getProgrammingLanguageStats app.js true',
             'description': 'Analyze a JavaScript file with detailed statistics'
         },
         {
-            'command': 'qzx getProgrammingLanguageStatsFromFile code.cpp false "cpp,c,python"',
+            'command': 'qzx getProgrammingLanguageStats code.cpp false "cpp,c,python"',
             'description': 'Analyze a C++ file specifically checking for C++, C and Python patterns'
         },
         {
-            'command': 'qzx getProgrammingLanguageStatsFromFile "*.js" -r',
+            'command': 'qzx getProgrammingLanguageStats "*.js" -r',
             'description': 'Analyze all JavaScript files in current directory and all subdirectories'
         },
         {
-            'command': 'qzx getProgrammingLanguageStatsFromFile "src/**/*.py" -r',
+            'command': 'qzx getProgrammingLanguageStats "src/**/*.py" -r',
             'description': 'Analyze all Python files in src directory and subdirectories with detailed stats'
         },
         {
-            'command': 'qzx getProgrammingLanguageStatsFromFile "*.py" true null -r2',
+            'command': 'qzx getProgrammingLanguageStats "*.py" true null -r2',
             'description': 'Analyze all Python files in current directory and up to 2 levels of subdirectories with detailed stats'
         }
     ]

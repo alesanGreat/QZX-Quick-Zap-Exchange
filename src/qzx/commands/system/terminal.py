@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Terminal/Shell Command - Interactive shell for executing QZX commands
+Terminal Command - Interactive prompt for executing QZX commands
 """
 
 import os
@@ -25,10 +25,6 @@ try:
 except ImportError:
     readline = None
 
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.command_loader import CommandLoader
@@ -36,13 +32,12 @@ from qzx.core.command_loader import CommandLoader
 # Import the TerminalWelcome for welcome screen
 from qzx.commands.system.terminal_welcome import TerminalWelcome
 
-class QZXTerminalCommand(CommandBase):
+class TerminalCommand(CommandBase):
     """
     Interactive terminal/shell for QZX commands
     """
     
     name = "terminal"
-    aliases = ["term", "shell", "console", "repl"]
     description = "Launches an interactive terminal/shell for QZX commands"
     category = "system"
     
@@ -74,8 +69,8 @@ class QZXTerminalCommand(CommandBase):
             'description': 'Launch the QZX interactive terminal with default settings'
         },
         {
-            'command': 'qzx Shell',
-            'description': 'Launch the QZX interactive terminal using the Shell alias'
+            'command': 'qzx terminal "Agent> "',
+            'description': 'Launch the QZX interactive terminal with an agent prompt'
         },
         {
             'command': 'qzx Terminal "MyQZX> "',
@@ -355,14 +350,8 @@ class QZXTerminal(cmd.Cmd):
             for category, cmds in sorted(commands_by_category.items()):
                 print(f"\n{category.upper()}:")
                 
-                # Get unique commands (avoid duplicates from aliases)
-                unique_cmds = {}
-                for cmd_name, desc in cmds:
-                    if desc not in unique_cmds.values():
-                        unique_cmds[cmd_name] = desc
-                
                 # Print sorted commands
-                for cmd_name, desc in sorted(unique_cmds.items()):
+                for cmd_name, desc in sorted(cmds):
                     print(f"  {cmd_name.ljust(20)} - {desc}")
             
             # Show terminal-specific commands
@@ -398,10 +387,6 @@ class QZXTerminal(cmd.Cmd):
             if cmd_instance:
                 print(f"\nCommand: {cmd_name}")
                 print(f"Description: {cmd_instance.description}")
-                
-                # Show aliases if present
-                if hasattr(cmd_instance, 'aliases') and cmd_instance.aliases:
-                    print(f"Aliases: {', '.join(cmd_instance.aliases)}")
                 
                 print("\nParameters:")
                 

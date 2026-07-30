@@ -5,7 +5,6 @@
 Tests for the AuditRepository command
 """
 
-import os
 from qzx.commands.development.audit_repository import AuditRepositoryCommand
 
 class TestAuditRepositoryCommand:
@@ -76,3 +75,28 @@ class TestAuditRepositoryCommand:
         
         # Risk level should be critical due to secret
         assert details["summary"]["risk_level"] == "critical"
+
+    def test_audit_repository_does_not_treat_contact_uris_as_local_files(
+        self, tmp_path
+    ):
+        """Non-file contact links are valid Markdown destinations, not paths."""
+        (tmp_path / "LICENSE").write_text("MIT License", encoding="utf-8")
+        (tmp_path / ".gitignore").write_text(
+            "node_modules\n.env\n__pycache__\ndist\nbuild\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "README.md").write_text(
+            "\n".join(
+                (
+                    "[Email](mailto:qzx@example.com)",
+                    "[Telephone](tel:+15551234567)",
+                    "[Chat](xmpp:qzx@example.com)",
+                )
+            ),
+            encoding="utf-8",
+        )
+
+        result = self.command.execute(path=str(tmp_path))
+
+        assert result["success"] is True
+        assert result["details"]["broken_links"] == []

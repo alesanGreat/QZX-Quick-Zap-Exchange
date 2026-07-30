@@ -2,32 +2,26 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramCpp Command - Creates a basic scaffolding for a C++ program
+ScaffoldCpp Command - Creates a basic scaffolding for a C++ program
 """
 
 import os
-import shutil
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
-class MakeScaffProgramCppCommand(CommandBase):
+class ScaffoldCppCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a C++ program.
     Creates a new C++ project with standard directory structure and basic files.
     """
     
     name = "scaffoldCpp"
-    aliases = ["cppScaff", "newCpp", "createCpp", "makeScaffProgramCpp"]
     description = "Creates a basic scaffolding for a C++ program"
     category = "development"
     
@@ -66,15 +60,15 @@ class MakeScaffProgramCppCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx makeScaffProgramCpp my_project',
+            'command': 'qzx scaffoldCpp my_project',
             'description': 'Creates a new C++ project using CMake in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramCpp my_project /path/to/dir true make 20',
+            'command': 'qzx scaffoldCpp my_project /path/to/dir true make 20',
             'description': 'Creates a new C++ project using Make, C++20 and tests in the specified directory'
         },
         {
-            'command': 'qzx cppScaff util_library . false none 17',
+            'command': 'qzx scaffoldCpp util_library . false none 17',
             'description': 'Creates a C++ project without tests or build system in the current directory using C++17'
         }
     ]
@@ -95,8 +89,7 @@ class MakeScaffProgramCppCommand(CommandBase):
         """
         try:
             # Convert string parameters to appropriate types
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
             
             # Normalize and validate build system value
             build_system = build_system.lower()

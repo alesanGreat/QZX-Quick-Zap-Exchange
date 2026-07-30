@@ -5,15 +5,10 @@
 CheckUrlStatus Command - Validates HTTP connectivity and measures response metrics for a target URL
 """
 
-import sys
 import time
 import urllib.request
 import urllib.error
 import urllib.parse
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 

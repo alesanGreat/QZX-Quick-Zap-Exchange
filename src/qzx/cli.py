@@ -13,9 +13,6 @@ import re
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 from qzx.core.command_loader import CommandLoader
 from qzx.core.command_index import CommandIndexError
 from qzx.first_run import claim_first_run_attribution
@@ -76,19 +73,27 @@ class QZX:
                 },
             }
         if cmd_obj:
-            if normalized_command in {"list", "listcommands", "qzxlistcommands"}:
+            if normalized_command == "listcommands":
                 cmd_obj.command_loader = self.command_loader
             return cmd_obj.invoke(args)
         
         import difflib
 
         registered = self.command_loader.get_known_command_names()
-        suggestions = difflib.get_close_matches(
+        canonical_by_normalized = {
+            registered_name.lower(): registered_name
+            for registered_name in registered
+        }
+        normalized_suggestions = difflib.get_close_matches(
             normalized_command,
-            sorted(registered),
+            sorted(canonical_by_normalized),
             n=5,
             cutoff=0.5,
         )
+        suggestions = [
+            canonical_by_normalized[name]
+            for name in normalized_suggestions
+        ]
         suggestion_text = (
             " Did you mean: {}?".format(", ".join(suggestions))
             if suggestions
@@ -98,7 +103,7 @@ class QZX:
             "success": False,
             "error": "Command not found: {}".format(command),
             "error_code": "command_not_found",
-            "message": "Command '{}' was not found.{} Use 'qzx list' to see available commands.".format(
+            "message": "Command '{}' was not found.{} Use 'qzx listCommands' to see available commands.".format(
                 command,
                 suggestion_text,
             ),
@@ -113,17 +118,17 @@ class QZX:
     
     def show_help(self, command=None):
         """Show help through the canonical public help command."""
-        from qzx.commands.system.qzx_help import qzxHelp
+        from qzx.commands.system.help import HelpCommand
 
-        help_command = qzxHelp()
+        help_command = HelpCommand()
         help_command.command_loader = self.command_loader
         return help_command.execute(command)
     
     def list_commands(self, filter_text=None):
         """List all available commands using the canonical list command."""
-        from qzx.commands.system.qzx_list_commands import qzxListCommands
+        from qzx.commands.system.list_commands import ListCommandsCommand
 
-        command = qzxListCommands()
+        command = ListCommandsCommand()
         command.command_loader = self.command_loader
         return command.format_result(command.execute(filter_text))
 
@@ -527,6 +532,13 @@ def _parse_cli_request(arguments):
 
     command = filtered_args[0] if filtered_args else "welcome"
     command_args = filtered_args[1:] if filtered_args else []
+    if command in {"--help", "-h"}:
+        command = "help"
+    elif command in {"--version", "-V"}:
+        command = "version"
+    elif any(arg in {"--help", "-h"} for arg in command_args):
+        command_args = [command]
+        command = "help"
     return json_output, command, command_args
 
 

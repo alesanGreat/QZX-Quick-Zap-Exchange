@@ -2,30 +2,24 @@
 # -*- coding: utf-8 -*-
 
 """
-WonderFileTypeMagic Command - Identifies file type based on its magic number (file signature)
+DetectFileType Command - Identifies file type based on its magic number (file signature)
 """
 
 import os
-import sys
-from pathlib import Path
 
 try:
     import magic
 except ImportError:  # Optional dependency; discovery must remain side-effect free.
     magic = None
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 from qzx.core.command_base import CommandBase
 
-class WonderFileTypeMagicCommand(CommandBase):
+class DetectFileTypeCommand(CommandBase):
     """
     Command to identify file type based on its magic number (file signature)
     """
     
     name = "detectFileType"
-    aliases = ["wonderFileTypeMagic"]
     description = "Identifies file type based on its magic number (file signature) rather than extension"
     category = "file"
     _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
@@ -46,11 +40,11 @@ class WonderFileTypeMagicCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx wonderFileTypeMagic image.jpg',
+            'command': 'qzx detectFileType image.jpg',
             'description': 'Identify the real type of image.jpg based on its contents'
         },
         {
-            'command': 'qzx wonderFileTypeMagic unknown.bin true',
+            'command': 'qzx detectFileType unknown.bin true',
             'description': 'Identify an unknown file with detailed MIME information'
         }
     ]

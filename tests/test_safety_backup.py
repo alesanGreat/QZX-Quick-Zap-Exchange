@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from qzx.commands.file.delete_file import DeleteFileCommand
+from qzx.commands.file.delete_path import DeletePathCommand
 from qzx.core.command_base import CommandBase
 from qzx.core.safety_backup import create_safety_backup
 
@@ -150,7 +150,7 @@ def test_delete_apply_archives_content_before_removal(monkeypatch, tmp_path):
     backup_directory = tmp_path / "backups"
     _configure_backup_directory(monkeypatch, backup_directory)
 
-    result = DeleteFileCommand().invoke(
+    result = DeletePathCommand().invoke(
         [str(source), "--dry_run", "false", "--apply"]
     )
 
@@ -165,7 +165,7 @@ def test_delete_rejects_protected_target_before_backup(monkeypatch, tmp_path):
     backup_directory = tmp_path / "backups"
     _configure_backup_directory(monkeypatch, backup_directory)
 
-    result = DeleteFileCommand().invoke(
+    result = DeletePathCommand().invoke(
         [str(Path.cwd()), "--dry_run", "false", "--apply"]
     )
 
@@ -184,7 +184,7 @@ def test_default_archive_name_and_fastest_zip_compression(tmp_path):
     sanitized = re.sub(r"_+", "_", sanitized).strip("._-")
 
     result = create_safety_backup(
-        "deleteFile",
+        "deletePath",
         source,
         environ={"QZX_BACKUPS_PATH": str(backup_directory)},
         now=fixed_time,
@@ -192,7 +192,7 @@ def test_default_archive_name_and_fastest_zip_compression(tmp_path):
 
     archive_path = Path(result["path"])
     assert archive_path.name == (
-        "QZX-Backup-260723010203-{}-deleteFile.zip".format(
+        "QZX-Backup-260723010203-{}-deletePath.zip".format(
             sanitized[-30:]
         )
     )
@@ -225,7 +225,7 @@ def test_tar_formats_and_compression_are_configurable(
     (source / "item.txt").write_text("important", encoding="utf-8")
 
     result = create_safety_backup(
-        "releaseProject",
+        "prepareRelease",
         source,
         environ={
             "QZX_BACKUPS_PATH": str(tmp_path / "archives"),
@@ -250,7 +250,7 @@ def test_backup_destination_inside_source_is_excluded(tmp_path):
     backup_directory = source / "QZX-Backups"
 
     result = create_safety_backup(
-        "releaseProject",
+        "prepareRelease",
         source,
         environ={"QZX_BACKUPS_PATH": str(backup_directory)},
         now=datetime(2026, 7, 23, 1, 2, 3),

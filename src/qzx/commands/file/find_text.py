@@ -8,10 +8,8 @@ Using the centralized recursive file finder utility
 
 import os
 import re
-import fnmatch
 import colorama
 import sys
-from typing import List, Dict, Any, Union, Optional
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
@@ -186,15 +184,12 @@ class FindTextCommand(CommandBase):
             # Disable colored output on Windows if there are encoding issues
             if colored and sys.platform == 'win32' and sys.stdout.encoding != 'utf-8':
                 try:
-                    # Try a simple colored output
-                    test_colored_string = f"{colorama.Fore.RED}Test{colorama.Style.RESET_ALL}"
-                    print(test_colored_string, end='')
-                    # If no error, clear the line and continue
-                    print('\r' + ' ' * len("Test") + '\r', end='')
-                except UnicodeEncodeError:
-                    # If we got an encoding error, disable colored output
+                    test_colored_string = (
+                        f"{colorama.Fore.RED}Test{colorama.Style.RESET_ALL}"
+                    )
+                    test_colored_string.encode(sys.stdout.encoding or "utf-8")
+                except (LookupError, UnicodeEncodeError):
                     colored = False
-                    print("Warning: Colored output disabled due to terminal encoding limitations")
                     
             # Split target into individual paths
             target_paths = target.split()
@@ -363,7 +358,7 @@ class FindTextCommand(CommandBase):
                     highlight_color = colorama.Fore.RED + colorama.Style.BRIGHT
                     line_num_color = colorama.Fore.GREEN
                     reset_color = colorama.Style.RESET_ALL
-                except:
+                except Exception:
                     # If there's any issue with colorama, disable colors
                     highlight_color = ""
                     line_num_color = ""

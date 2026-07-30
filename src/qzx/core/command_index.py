@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 
 
-COMMAND_INDEX_SCHEMA_VERSION = 1
+COMMAND_INDEX_SCHEMA_VERSION = 2
 COMMAND_INDEX_PATH = (
     Path(__file__).resolve().parents[1] / "resources" / "command-index.json"
 )
@@ -43,7 +43,7 @@ def load_command_index():
 
 
 def validate_command_index_document(document):
-    """Validate index structure, types, ordering, and lookup collisions."""
+    """Validate index structure, types, ordering, and canonical-name uniqueness."""
     if not isinstance(document, dict):
         raise CommandIndexError("Command index must contain one JSON object.")
     if document.get("schema_version") != COMMAND_INDEX_SCHEMA_VERSION:
@@ -62,11 +62,9 @@ def validate_command_index_document(document):
         "name",
         "module",
         "class_name",
-        "aliases",
         "description",
         "category",
     }
-    lookup_owners = {}
     canonical_names = set()
     canonical_order = []
     for index, entry in enumerate(commands):
@@ -99,21 +97,6 @@ def validate_command_index_document(document):
                     entry["class_name"],
                 )
             )
-        aliases = entry["aliases"]
-        if (
-            not isinstance(aliases, list)
-            or any(
-                not isinstance(alias, str) or not alias.strip()
-                for alias in aliases
-            )
-            or len({alias.lower() for alias in aliases}) != len(aliases)
-        ):
-            raise CommandIndexError(
-                "Command '{}' aliases must be unique non-empty strings.".format(
-                    entry["name"]
-                )
-            )
-
         canonical = entry["name"].lower()
         if canonical in canonical_names:
             raise CommandIndexError(
@@ -123,19 +106,6 @@ def validate_command_index_document(document):
             )
         canonical_names.add(canonical)
         canonical_order.append((canonical, entry["name"]))
-        for lookup_name in [entry["name"], *aliases]:
-            normalized = lookup_name.lower()
-            owner = lookup_owners.get(normalized)
-            if owner is not None and owner != entry["name"]:
-                raise CommandIndexError(
-                    "Command index lookup '{}' collides between '{}' and '{}'.".format(
-                        lookup_name,
-                        owner,
-                        entry["name"],
-                    )
-                )
-            lookup_owners[normalized] = entry["name"]
-
     if canonical_order != sorted(canonical_order):
         raise CommandIndexError(
             "Command index entries must be sorted by canonical command name."
@@ -145,25 +115,26 @@ def validate_command_index_document(document):
 
 @lru_cache(maxsize=1)
 def command_index_lookup():
-    """Map every canonical name and effective alias to one metadata record."""
-    lookup = {}
-    for entry in load_command_index()["commands"]:
-        lookup[entry["name"].lower()] = entry
-        for alias in entry["aliases"]:
-            lookup.setdefault(alias.lower(), entry)
-    return lookup
+    """Map every case-insensitive canonical name to one metadata record."""
+    return {
+        entry["name"].lower(): entry
+        for entry in load_command_index()["commands"]
+    }
 
 
 def indexed_command(command_name):
-    """Return indexed metadata for a canonical name or alias."""
+    """Return indexed metadata for a canonical command name."""
     if not isinstance(command_name, str):
         return None
     return command_index_lookup().get(command_name.lower())
 
 
 def indexed_command_names():
-    """Return every effective canonical and alias lookup name."""
-    return tuple(sorted(command_index_lookup()))
+    """Return every canonical command name with its published casing."""
+    return tuple(
+        entry["name"]
+        for entry in indexed_command_records()
+    )
 
 
 def indexed_command_records():
@@ -184,7 +155,6 @@ def build_command_index(command_classes):
                 "name": instance.name,
                 "module": command_class.__module__,
                 "class_name": command_class.__name__,
-                "aliases": list(getattr(instance, "aliases", []) or []),
                 "description": instance.description,
                 "category": instance.category,
             }

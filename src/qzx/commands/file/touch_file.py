@@ -6,11 +6,6 @@ TouchFile Command - Creates an empty file or updates the timestamp of an existin
 """
 
 import os
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 

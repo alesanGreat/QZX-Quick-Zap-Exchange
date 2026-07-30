@@ -5,7 +5,6 @@
 Tests for the traceEnvVar command
 """
 
-import os
 from qzx.commands.development.trace_env_var import TraceEnvVarCommand
 
 class TestTraceEnvVarCommand:

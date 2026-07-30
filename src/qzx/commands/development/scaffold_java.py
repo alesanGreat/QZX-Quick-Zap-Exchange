@@ -2,32 +2,27 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramJava Command - Creates a basic scaffolding for a Java program
+ScaffoldJava Command - Creates a basic scaffolding for a Java program
 """
 
 import os
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
 
-class MakeScaffProgramJavaCommand(CommandBase):
+class ScaffoldJavaCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a Java program.
     Creates a new Java project with Maven and JUnit 5.
     """
 
     name = "scaffoldJava"
-    aliases = ["javaScaff", "newJava", "createJava", "makeScaffProgramJava"]
     description = "Creates a basic scaffolding for a Java program"
     category = "development"
 
@@ -60,11 +55,11 @@ class MakeScaffProgramJavaCommand(CommandBase):
 
     examples = [
         {
-            'command': 'qzx makeScaffProgramJava my_project',
+            'command': 'qzx scaffoldJava my_project',
             'description': 'Creates a new Java project named "my_project" with Maven in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramJava my_project /path/to/dir true',
+            'command': 'qzx scaffoldJava my_project /path/to/dir true',
             'description': 'Creates a new Java project with tests in the specified directory'
         }
     ]
@@ -74,8 +69,7 @@ class MakeScaffProgramJavaCommand(CommandBase):
         Creates a basic scaffolding for a Java program
         """
         try:
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
 
             build_tool = build_tool.lower()
             if build_tool not in ('maven',):

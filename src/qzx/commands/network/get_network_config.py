@@ -6,19 +6,14 @@ GetNetworkConfig Command - Retrieves local network interfaces, DNS settings, pub
 """
 
 import os
-import sys
 import socket
 import platform
 import subprocess
 import locale
 import urllib.request
 import json
-from pathlib import Path
 
 import psutil
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 

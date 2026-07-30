@@ -214,14 +214,14 @@ class SystemInfoCommand(CommandBase):
 
     @staticmethod
     def _collect_details():
-        from qzx.commands.system.get_disk_info import GetDiskInfoCommand
-        from qzx.commands.system.get_ram_info import GetRAMInfoCommand
+        from qzx.commands.system.get_disk_space import GetDiskSpaceCommand
+        from qzx.commands.system.get_ram_info import GetRamInfoCommand
 
         details = {}
         warnings = []
         probes = (
-            ("memory", GetRAMInfoCommand(), "ram_info"),
-            ("storage", GetDiskInfoCommand(), None),
+            ("memory", GetRamInfoCommand(), "ram_info"),
+            ("storage", GetDiskSpaceCommand(), None),
         )
         for section, command, payload_field in probes:
             result = command.execute()
@@ -279,7 +279,7 @@ class SystemInfoCommand(CommandBase):
                 ", ".join(available) if available else "none available"
             )
             message += (
-                " GPU discovery stays opt-in through 'qzx getGPULoad' "
+                " GPU discovery stays opt-in through 'qzx getGpuInfo' "
                 "because it may invoke native vendor tools."
             )
         else:

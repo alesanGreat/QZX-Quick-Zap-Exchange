@@ -2,32 +2,27 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramCsharp Command - Creates a basic scaffolding for a C# program
+ScaffoldCSharp Command - Creates a basic scaffolding for a C# program
 """
 
 import os
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
 
-class MakeScaffProgramCsharpCommand(CommandBase):
+class ScaffoldCSharpCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a C# program.
     Creates a new C# console project with .NET SDK and xUnit tests.
     """
 
-    name = "scaffoldCsharp"
-    aliases = ["csharpScaff", "newCsharp", "createCsharp", "makeScaffProgramCsharp", "scaffoldCs"]
+    name = "scaffoldCSharp"
     description = "Creates a basic scaffolding for a C# program"
     category = "development"
 
@@ -60,11 +55,11 @@ class MakeScaffProgramCsharpCommand(CommandBase):
 
     examples = [
         {
-            'command': 'qzx makeScaffProgramCsharp my_project',
+            'command': 'qzx scaffoldCSharp my_project',
             'description': 'Creates a new C# console project named "my_project" in the current directory'
         },
         {
-            'command': 'qzx makeScaffProgramCsharp my_project /path/to/dir true',
+            'command': 'qzx scaffoldCSharp my_project /path/to/dir true',
             'description': 'Creates a new C# project with xUnit tests in the specified directory'
         }
     ]
@@ -74,8 +69,7 @@ class MakeScaffProgramCsharpCommand(CommandBase):
         Creates a basic scaffolding for a C# program
         """
         try:
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
 
             project_type = project_type.lower()
             if project_type not in ('console',):

@@ -2,27 +2,20 @@
 # -*- coding: utf-8 -*-
 
 """
-WonderIfFileIsBinary Command - Checks if a file is binary or plain text
+IsFileBinary Command - Checks if a file is binary or plain text
 """
 
 import os
 import chardet
-import string
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
-class WonderIfFileIsBinaryCommand(CommandBase):
+class IsFileBinaryCommand(CommandBase):
     """
     Command to check if a file is binary or plain text
     """
     
     name = "isFileBinary"
-    aliases = ["wonderIfFileIsBinary"]
     description = "Analyzes a file to determine if it's binary or plain text"
     category = "file"
     _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
@@ -49,15 +42,15 @@ class WonderIfFileIsBinaryCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx wonderIfFileIsBinary script.py',
+            'command': 'qzx isFileBinary script.py',
             'description': 'Check if script.py is a binary file'
         },
         {
-            'command': 'qzx wonderIfFileIsBinary image.jpg',
+            'command': 'qzx isFileBinary image.jpg',
             'description': 'Check if image.jpg is a binary file'
         },
         {
-            'command': 'qzx wonderIfFileIsBinary unknown.dat 4096 5',
+            'command': 'qzx isFileBinary unknown.dat 4096 5',
             'description': 'Check if unknown.dat is binary, using a 4KB sample and 5% threshold'
         }
     ]

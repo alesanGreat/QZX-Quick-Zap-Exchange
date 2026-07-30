@@ -5,7 +5,6 @@
 Tests for the traceCircularImports command
 """
 
-import os
 from qzx.commands.development.trace_circular_imports import TraceCircularImportsCommand
 
 class TestTraceCircularImportsCommand:

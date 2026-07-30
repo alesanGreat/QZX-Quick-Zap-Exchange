@@ -7,14 +7,10 @@ AuditRepository Command - Security and quality audit of a Git repository
 
 import os
 import re
-import sys
 import hashlib
 import subprocess
+import urllib.parse
 import urllib.request
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 
@@ -71,7 +67,7 @@ class AuditRepositoryCommand(CommandBase):
                 check=False
             )
             is_git = res.returncode == 0 and res.stdout.strip() == "true"
-        except:
+        except Exception:
             pass
             
         results = {
@@ -148,7 +144,7 @@ class AuditRepositoryCommand(CommandBase):
                     
                 try:
                     f_size = os.path.getsize(file_path)
-                except:
+                except Exception:
                     continue
                     
                 # 2. Large files check (>500KB)
@@ -185,7 +181,7 @@ class AuditRepositoryCommand(CommandBase):
                             })
                         else:
                             file_hashes[file_hash] = rel_file
-                    except:
+                    except Exception:
                         pass
                         
                 # 4. Secrets audit in text files
@@ -230,7 +226,7 @@ class AuditRepositoryCommand(CommandBase):
                                             "category": "secrets",
                                             "message": f"Hardcoded secret ({desc}) found in {rel_file} at line {line_num}"
                                         })
-                    except:
+                    except Exception:
                         pass
                         
                 # 4b. Markdown link check
@@ -241,6 +237,16 @@ class AuditRepositoryCommand(CommandBase):
                         md_links = re.findall(r'\[([^\]]+)\]\(([^)]+)\)', content)
                         for text, link in md_links:
                             if link.startswith("#"):
+                                continue
+                            parsed_link = urllib.parse.urlsplit(link)
+                            if parsed_link.scheme.lower() in {
+                                "irc",
+                                "ircs",
+                                "mailto",
+                                "sms",
+                                "tel",
+                                "xmpp",
+                            }:
                                 continue
                             is_broken = False
                             reason = ""
@@ -278,7 +284,7 @@ class AuditRepositoryCommand(CommandBase):
                                     "category": "broken_links",
                                     "message": f"Broken documentation link in {rel_file}: {link} ({reason})"
                                 })
-                    except:
+                    except Exception:
                         pass
                         
             if scanned_files > 10000:
@@ -307,7 +313,7 @@ class AuditRepositoryCommand(CommandBase):
                         "category": "gitignore",
                         "message": f"Missing recommended ignores in .gitignore: {', '.join(missing_patterns)}"
                     })
-            except:
+            except Exception:
                 pass
         else:
             results["gitignore_issues"].append({
@@ -343,7 +349,7 @@ class AuditRepositoryCommand(CommandBase):
                             "category": "gitignore",
                             "message": "Security Risk: .env file is tracked and committed in Git!"
                         })
-                except:
+                except Exception:
                     pass
                     
         # 6. Committed binaries in Git
@@ -369,7 +375,7 @@ class AuditRepositoryCommand(CommandBase):
                                 "category": "binaries",
                                 "message": f"Binary/compiled file committed in Git: {tf}"
                             })
-            except:
+            except Exception:
                 pass
                 
         # 7. Basic Dependency Vulnerabilities
@@ -450,7 +456,7 @@ class AuditRepositoryCommand(CommandBase):
                 res = subprocess.run(cmd, cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
                 # Just flag history length
                 pass
-            except:
+            except Exception:
                 pass
                 
         # Calculate Risk Level

@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 """Real-process and policy tests for the native diagnostic boundary."""
 
 import os
 import pathlib
 import sys
 
-from qzx.commands.system.commands_bridge import CommandsBridgeCommand
 from qzx.commands.system.run_diagnostic_command import (
     _BoundedStreamCapture,
     RunDiagnosticCommand,
@@ -57,14 +55,6 @@ def test_declared_result_schema_covers_success_and_failure_shapes():
     assert properties["stderr"] == {"type": "string"}
     assert properties["details"]["type"] == "object"
     assert error_types == {"null", "string"}
-    assert (
-        CommandsBridgeCommand.result_schema["properties"]["deprecated"]
-        == {"type": "boolean"}
-    )
-    assert (
-        CommandsBridgeCommand.result_schema["properties"]["replacement"]
-        == {"type": "string"}
-    )
 
 
 def test_windows_executable_resolution_ignores_a_forged_systemroot(
@@ -256,20 +246,3 @@ def test_timeout_terminates_a_real_process():
     assert result["timed_out"] is True
     assert result["return_code"] is not None
     assert result["duration_seconds"] < 3
-
-
-def test_legacy_bridge_is_explicitly_deprecated_and_removes_shell_actions():
-    directory = CommandsBridgeCommand().execute("pwd")
-    removed = CommandsBridgeCommand().execute("cd", "..")
-    diagnostic = CommandsBridgeCommand().execute("hostname")
-
-    assert directory["success"] is True
-    assert directory["replacement"] == "currentDir"
-    assert directory["stdout"] == str(pathlib.Path.cwd())
-    assert removed["success"] is False
-    assert removed["error_code"] == "legacy_action_removed"
-    assert removed["replacement"] == "terminal"
-    assert diagnostic["success"] is True, diagnostic
-    assert diagnostic["deprecated"] is True
-    assert diagnostic["replacement"] == "runDiagnosticCommand"
-    assert diagnostic["supported_through"] == "QZX 0.2.x"

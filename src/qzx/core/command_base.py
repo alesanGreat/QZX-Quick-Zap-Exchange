@@ -19,9 +19,6 @@ class CommandBase(ABC):
     # Command name (must be overridden by child classes)
     name = "base_command"
     
-    # Command aliases (alternative names)
-    aliases = []
-    
     # Brief command description
     description = "Base command"
     
@@ -132,18 +129,21 @@ class CommandBase(ABC):
 
         if declared_type in {"bool", bool} or isinstance(default, bool):
             parsed_bool = self._parse_bool(value)
-            # Recursion flags such as ``-r`` and ``-r2`` are interpreted by
-            # their commands and must not be collapsed into a boolean here.
             if parsed_bool is not None:
                 return parsed_bool
-            if declared_type in {"bool", bool}:
-                raise ValueError(
-                    "expected true/false for '{}', received '{}'".format(
-                        parameter.get("name", "parameter"),
-                        value,
-                    )
+            # Recursion has a deliberate boolean-or-depth domain. Preserve its
+            # validated depth tokens for the command-specific normalizer.
+            if parameter.get("name") == "recursive" and (
+                re.fullmatch(r"(?:-r|--recursive)\d*", normalized)
+                or re.fullmatch(r"\d+", normalized)
+            ):
+                return value
+            raise ValueError(
+                "expected true/false for '{}', received '{}'".format(
+                    parameter.get("name", "parameter"),
+                    value,
                 )
-            return value
+            )
 
         target_type = declared_type
         if target_type is None and default is not None:
@@ -183,8 +183,7 @@ class CommandBase(ABC):
             for option in self._option_names(parameter):
                 option_map[option] = parameter
 
-        # Backwards-compatible shared flags used throughout the existing
-        # command catalog.
+        # Common flags with one consistent meaning across the command catalog.
         shared_flags = {
             "-r": "recursive",
             "-R": "recursive",
@@ -664,11 +663,6 @@ class CommandBase(ABC):
             f"  {maturity['summary']}",
             ""
         ]
-        
-        # Add aliases if they exist
-        if self.aliases:
-            help_text.append(f"Aliases: {', '.join(self.aliases)}")
-            help_text.append("")
         
         # Add parameters
         if self.parameters:

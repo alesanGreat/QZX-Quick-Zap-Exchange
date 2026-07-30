@@ -173,7 +173,6 @@ class RunDiagnosticCommand(CommandBase):
     """Execute one read-only diagnostic with a strict argument grammar."""
 
     name = "runDiagnosticCommand"
-    aliases = []
     description = (
         "Runs a strictly read-only native system diagnostic from a "
         "platform-specific allowlist"

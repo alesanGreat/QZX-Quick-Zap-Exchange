@@ -2,32 +2,27 @@
 # -*- coding: utf-8 -*-
 
 """
-MakeScaffProgramKotlin Command - Creates a basic scaffolding for a Kotlin program
+ScaffoldKotlin Command - Creates a basic scaffolding for a Kotlin program
 """
 
 import os
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
 
-class MakeScaffProgramKotlinCommand(CommandBase):
+class ScaffoldKotlinCommand(CommandBase):
     """
     Command to generate a basic scaffolding for a Kotlin program.
     Creates a new Kotlin project with Gradle (Kotlin DSL) and JUnit 5.
     """
 
     name = "scaffoldKotlin"
-    aliases = ["kotlinScaff", "newKotlin", "createKotlin", "makeScaffProgramKotlin"]
     description = "Creates a basic scaffolding for a Kotlin program"
     category = "development"
 
@@ -54,11 +49,11 @@ class MakeScaffProgramKotlinCommand(CommandBase):
 
     examples = [
         {
-            'command': 'qzx makeScaffProgramKotlin my_project',
+            'command': 'qzx scaffoldKotlin my_project',
             'description': 'Creates a new Kotlin project named "my_project" with Gradle in the current directory'
         },
         {
-            'command': 'qzx kotlinScaff backend_api /path/to/dir true',
+            'command': 'qzx scaffoldKotlin backend_api /path/to/dir true',
             'description': 'Creates a new Kotlin project with tests in the specified directory'
         }
     ]
@@ -68,8 +63,7 @@ class MakeScaffProgramKotlinCommand(CommandBase):
         Creates a basic scaffolding for a Kotlin program
         """
         try:
-            if isinstance(with_tests, str):
-                with_tests = with_tests.lower() in ('true', 'yes', 'y', '1', 't')
+            with_tests = parse_scaffold_boolean(with_tests, "with_tests")
 
             project_name = normalize_project_name(
                 project_name,

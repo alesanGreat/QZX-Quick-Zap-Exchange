@@ -12,10 +12,6 @@ import tempfile
 import time
 import urllib.parse
 import urllib.request
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 

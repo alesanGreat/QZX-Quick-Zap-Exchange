@@ -8,7 +8,6 @@ Using the centralized recursive file finder utility
 
 import os
 import time
-import re
 import sys
 
 from qzx.core.command_base import CommandBase

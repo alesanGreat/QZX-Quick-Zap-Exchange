@@ -5,7 +5,6 @@
 Tests for the ProjectDoctor command
 """
 
-import os
 from qzx.commands.development.project_doctor import ProjectDoctorCommand
 
 class TestProjectDoctorCommand:

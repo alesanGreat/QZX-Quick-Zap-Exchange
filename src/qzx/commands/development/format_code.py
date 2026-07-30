@@ -8,11 +8,6 @@ using the appropriate formatter (black, prettier, rustfmt, gofmt, php-cs-fixer, 
 
 import os
 import subprocess
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files
@@ -25,7 +20,6 @@ class FormatCodeCommand(CommandBase):
     """
 
     name = "formatCode"
-    aliases = ["fmtCode", "codeFmt", "formatSource"]
     description = "Formats source code files by auto-detecting language and invoking the right formatter"
     category = "development"
     requires_explicit_approval = True

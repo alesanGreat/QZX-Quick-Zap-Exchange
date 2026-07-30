@@ -4,6 +4,7 @@ import pytest
 
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
+    parse_scaffold_boolean,
     prepare_scaffold_project,
 )
 
@@ -86,3 +87,23 @@ def test_prepare_scaffold_project_preserves_validation_errors(tmp_path):
     assert existing_project["error"] == (
         f"Project directory already exists: {tmp_path / 'existing'}"
     )
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (True, True),
+        (False, False),
+        ("yes", True),
+        ("off", False),
+        (1, True),
+        (0, False),
+    ],
+)
+def test_parse_scaffold_boolean_is_explicit(value, expected):
+    assert parse_scaffold_boolean(value, "with_tests") is expected
+
+
+def test_parse_scaffold_boolean_rejects_ambiguous_text():
+    with pytest.raises(ValueError, match="with_tests must be true or false"):
+        parse_scaffold_boolean("perhaps", "with_tests")

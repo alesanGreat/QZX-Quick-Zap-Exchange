@@ -5,7 +5,6 @@
 Tests for the GetProjectTree command
 """
 
-import os
 from qzx.commands.development.get_project_tree import GetProjectTreeCommand
 
 class TestGetProjectTreeCommand:
