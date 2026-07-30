@@ -36,7 +36,7 @@ jobs:
           cache-after-prepare: true
           prepare: |
             set -eu
-            pkg install runtime/python-313 || {
+            pkg install developer/versioning/git runtime/python-313 || {
               status=$?
               test "$status" -eq 4
             }

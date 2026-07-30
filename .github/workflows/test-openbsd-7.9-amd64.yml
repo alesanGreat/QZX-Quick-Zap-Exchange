@@ -36,7 +36,7 @@ jobs:
           cache-after-prepare: true
           prepare: |
             set -eu
-            pkg_add python%3.13 py3-pip py3-psutil py3-chardet py3-colorama
+            pkg_add git python%3.13 py3-pip py3-psutil py3-chardet py3-colorama
 
       - name: Verify platform | OpenBSD 7.9 amd64
         shell: openbsd-7-9-amd64 {0}

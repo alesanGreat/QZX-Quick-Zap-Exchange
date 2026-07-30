@@ -48,7 +48,7 @@ jobs:
           assert platform.python_version().startswith(\"3.13.\")
           assert sysconfig.get_config_var(\"Py_GIL_DISABLED\") != 1
           "
-              apk add --no-cache bind-tools build-base linux-headers openrc
+              apk add --no-cache bind-tools build-base git linux-headers openrc
               python -m pip install pytest -e .
               python -m pytest -q \
                 tests/integration/test_real_system_dependencies.py

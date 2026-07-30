@@ -12,7 +12,6 @@ import base64
 import shlex
 import socket
 import subprocess
-import tarfile
 import time
 import uuid
 
@@ -231,13 +230,17 @@ def test_real_ssh_deployment_backup_integrity_promotion_and_health_check(
     assert not (config["target"] / "old-release.txt").exists()
     assert Path(result["meta"]["safety_backup"]["path"]).exists()
 
-    remote_backup = Path(result["details"]["remote"]["backup_archive"])
-    assert remote_backup.exists()
-    with tarfile.open(remote_backup, "r:gz") as archive:
-        member = f"{config['target'].name}/old-release.txt"
-        assert archive.extractfile(member).read() == (
-            b"previous deployment\n"
-        )
+    remote_backup = result["details"]["remote"]["backup_archive"]
+    member = f"{config['target'].name}/old-release.txt"
+    _run_ssh(config, f"test -f {shlex.quote(remote_backup)}")
+    archived_file = _run_ssh(
+        config,
+        (
+            f"tar -xOzf {shlex.quote(remote_backup)} "
+            f"{shlex.quote(member)}"
+        ),
+    )
+    assert archived_file.stdout == "previous deployment\n"
 
 
 def test_real_failed_health_check_restores_every_previous_remote_file(

@@ -3,14 +3,27 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a3 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Added the Git runtime required by real deployment tests in the specialized
+  Alpine, FreeBSD, OpenBSD, and OmniOS jobs, and made the SSH deployment test
+  verify its remote backup through SSH instead of assuming a shared local
+  filesystem.
+- Restored the package manifest to the last version actually published on
+  PyPI. The `v0.2.2.0.6a2` tag remains an immutable validation snapshot; it
+  was not uploaded to PyPI or published as a GitHub Release.
+
 ## 0.2.2.0.6a2 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 - Restored the executable Git mode of `qzx.sh` after the
   `v0.2.2.0.6a1` validation tag exposed a `Permission denied` failure in
-  Alpine Linux. Alpha 1 remains published and immutable; this follow-up
-  preserves its tag, artifacts, hashes, and release history.
+  Alpine Linux. Alpha 2 itself remained a validation tag after the
+  cross-platform jobs exposed missing Git runtimes; neither alpha 1 nor alpha
+  2 was uploaded to PyPI or published as a GitHub Release.
 
 ## 0.2.2.0.6a1 — 2026-07-30
 

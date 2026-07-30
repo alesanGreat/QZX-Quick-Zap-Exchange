@@ -90,19 +90,19 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.6a1",
+      "version": "0.2.2.0.5",
       "status": "Alpha",
       "channel": "Published package",
-      "released_at": "2026-07-30",
+      "released_at": "2026-07-29",
       "requires_python": ">=3.13",
       "source": "https://pypi.org/pypi/qzx/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.6a1-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.5-py3-none-any.whl",
         "command_names": [
           "about",
           "analyzeComplexity",
+          "projectLanguages",
           "auditRepository",
-          "auditWorkspace",
           "bootstrapProject",
           "changePermissions",
           "checkDependency",
@@ -163,15 +163,12 @@
           "listProcesses",
           "listSystemServices",
           "moveFile",
-          "planProjectBootstrap",
           "projectDoctor",
-          "projectLanguages",
           "qzxHelp",
           "qzxListCommands",
           "readFile",
           "releaseProject",
           "repairWorkspace",
-          "runDiagnosticCommand",
           "runScript",
           "scaffoldC",
           "scaffoldCpp",
@@ -199,7 +196,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.6a2",
+      "version": "0.2.2.0.6a3",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",
