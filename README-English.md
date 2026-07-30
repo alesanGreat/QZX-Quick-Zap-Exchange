@@ -16,6 +16,6 @@ Use these canonical sources:
 - [Command lifecycle](docs/command-lifecycle.md) — Planning, Proof of concept,
   Alpha, Beta, Release Candidate, Stable, Deprecated, and Retired semantics.
 
-PyPI provides QZX pre-release `0.2.2.0.6a7`; the current checkout is the
+PyPI provides QZX pre-release `0.2.2.0.6a8`; the current checkout is the
 `0.2.2.0.6a8`
 Alpha pre-release.

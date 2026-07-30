@@ -7,12 +7,16 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
-- Prepared a corrected publication candidate from the runtime validated in
-  alpha 7, without changing its 96-command interface.
+- Published a corrected distribution from the runtime validated in alpha 7,
+  without changing its 96-command interface.
 - Required the source distribution to be built from the immutable tag on a
   POSIX filesystem and to preserve executable mode `0755` for `qzx.sh`.
 - Added an automated distribution verifier and CI release gate for package
   metadata, attribution, hashes, PyPI rendering, and the Unix launcher mode.
+- Published byte-identical PyPI and GitHub Release artifacts: wheel
+  `120b16787a36719d387bfb282cdefd993abef0028a2b6dba252fd27cc71b8878`
+  and sdist
+  `349c33cbff48444fc49cba9d995870400960a733a0cd0e831345126248e03998`.
 - Preserved `v0.2.2.0.6a7`, its PyPI publication, GitHub pre-release,
   artifacts, and hashes after its immutable source distribution exposed
   `qzx.sh` with non-executable mode `0666`.
