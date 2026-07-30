@@ -69,10 +69,9 @@ def test_public_inspect_port_against_real_listening_socket():
         listener.listen(1)
         port = listener.getsockname()[1]
 
-        result = _require_json_success(
-            _run_qzx("inspectPort", str(port), "false")
-        )
+        result = _require_json_success(_run_qzx("inspectPort", str(port)))
 
     assert result["port"] == port
     assert result["in_use"] is True
-    assert result["killed"] is False
+    assert result["status"] == "in_use"
+    assert "killed" not in result

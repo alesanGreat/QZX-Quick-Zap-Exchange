@@ -48,17 +48,7 @@ def test_invalid_port_range():
     assert "between 1 and 65535" in result["error"]
 
 
-def test_invalid_kill_choice_is_not_silently_treated_as_false():
-    result = InspectPortCommand().execute(12345, kill="sometimes")
-
-    assert result["success"] is False
-    assert result["error_code"] == "invalid_kill"
-    assert result["error"]
-    assert result["remediation"]
-    assert "true or false" in result["message"]
-
-
-def test_detects_a_real_listening_socket_without_killing_it():
+def test_detects_a_real_listening_socket_without_changing_it():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
         listener.bind(("127.0.0.1", 0))
         listener.listen(1)
@@ -69,10 +59,15 @@ def test_detects_a_real_listening_socket_without_killing_it():
     assert result["success"] is True, result
     assert result["port"] == port
     assert result["in_use"] is True
-    assert result["killed"] is False
 
 
-def test_legacy_kill_option_never_terminates_a_controlled_real_child():
+def test_public_contract_only_accepts_the_port_parameter():
+    command = InspectPortCommand()
+
+    assert [parameter["name"] for parameter in command.parameters] == ["port"]
+
+
+def test_inspecting_a_controlled_real_child_never_terminates_it():
     child_code = (
         "import socket,sys,time;"
         "s=socket.socket();"
@@ -92,56 +87,22 @@ def test_legacy_kill_option_never_terminates_a_controlled_real_child():
         inspection = InspectPortCommand().execute(port)
         assert inspection["success"] is True, inspection
         assert inspection["in_use"] is True
-
-        result = InspectPortCommand().execute(port, kill=True)
-
-        assert result["success"] is False
-        assert result["error_code"] == "operation_moved"
-        assert result["status"] == "read_only"
-        assert result["in_use"] is True
-        assert result["killed"] is False
         assert child.poll() is None
-
-        if result["observed_pids"]:
-            suggestions = result["details"]["suggested_commands"]
-            for process in result["processes"]:
-                pid = process["pid"]
-                process_suggestions = [
-                    item
-                    for item in suggestions
-                    if f"killProcess {pid}" in item
-                ]
-                if process["create_time"] is None:
-                    assert process_suggestions == []
-                else:
-                    assert process_suggestions
-                    assert all(
-                        "--expected-create-time" in item
-                        for item in process_suggestions
-                    )
     finally:
         if child.poll() is None:
             child.terminate()
             child.wait(timeout=5)
 
 
-def test_macos_fallback_legacy_kill_returns_guidance_without_termination():
+def test_macos_fallback_is_read_only():
     command = DarwinFallbackInspectPortCommand(listener_pid=424242)
 
-    result = command._execute_fallback(
-        54321,
-        kill_process=True,
-        expected_pid=424242,
-    )
+    result = command._execute_fallback(54321)
 
-    assert result["success"] is False
-    assert result["error_code"] == "operation_moved"
-    assert result["status"] == "read_only"
-    assert result["killed"] is False
+    assert result["success"] is True
+    assert result["status"] == "in_use"
     assert result["observed_pids"] == [424242]
     assert command.terminated is False
-    assert result["details"]["suggested_commands"] == []
-    assert "withheld a termination command" in result["details"]["remediation"]
 
 
 def test_macos_uses_lsof_when_psutil_omits_a_visible_listener(monkeypatch):

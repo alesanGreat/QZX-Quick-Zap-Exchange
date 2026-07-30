@@ -47,7 +47,9 @@ def test_timeout_is_structured_and_retains_partial_output(tmp_path):
         encoding="utf-8",
     )
     command = RunScriptCommand()
-    command.timeout_seconds = 0.1
+    # Leave enough time for a fresh CPython process to start on a loaded CI
+    # host while remaining far below the fixture's five-second sleep.
+    command.timeout_seconds = 0.5
 
     result = command.execute(str(script))
 

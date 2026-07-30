@@ -3,6 +3,18 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a10 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Removed the obsolete `kill` and `expected_pid` compatibility parameters
+  from `inspectPort`; the command now has one explicit, strictly read-only
+  responsibility.
+- Removed the residual `killed` field and migration-only response paths from
+  port inspection results.
+- Revalidated real socket ownership on Windows and the deterministic macOS
+  fallback, and synchronized the complete English/Spanish command page.
+
 ## 0.2.2.0.6a9 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

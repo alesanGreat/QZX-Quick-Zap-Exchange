@@ -7,6 +7,7 @@ import locale
 import platform
 import socket
 import subprocess
+from typing import ClassVar
 
 from qzx.core.command_base import CommandBase
 
@@ -21,33 +22,46 @@ class InspectPortCommand(CommandBase):
     )
     category = "system"
 
+    result_schema: ClassVar[dict[str, object]] = {
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "message": {"type": "string"},
+            "error": {"type": "string"},
+            "error_code": {"type": "string"},
+            "status": {"type": "string", "enum": ["free", "in_use"]},
+            "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+            "in_use": {"type": ["boolean", "null"]},
+            "observed_pids": {
+                "type": "array",
+                "items": {"type": "integer"},
+            },
+            "processes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": True,
+                },
+            },
+            "limitations": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "errors": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+        },
+        "additionalProperties": True,
+    }
+
     parameters = [
         {
             "name": "port",
             "description": "Port number to inspect",
             "required": True,
             "type": "int",
-        },
-        {
-            "name": "kill",
-            "description": (
-                "Deprecated compatibility flag; true returns migration "
-                "guidance and never terminates a process"
-            ),
-            "required": False,
-            "default": False,
-            "type": "bool",
-        },
-        {
-            "name": "expected_pid",
-            "description": (
-                "Deprecated compatibility value used only to explain whether "
-                "the previously observed PID still owns the port"
-            ),
-            "required": False,
-            "default": None,
-            "type": "int",
-        },
+        }
     ]
 
     examples = [
@@ -56,14 +70,8 @@ class InspectPortCommand(CommandBase):
             "description": "Inspect the listener and obtain its PID and creation time",
         },
         {
-            "command": (
-                "qzx killProcess 12345 --expected-create-time "
-                "1750000000.25 --yolo"
-            ),
-            "description": (
-                "After reviewing inspectPort output, terminate that exact "
-                "process with the dedicated command"
-            ),
+            "command": "qzx inspectPort 5432 --json",
+            "description": "Return the complete structured inspection result",
         },
     ]
 
@@ -72,60 +80,28 @@ class InspectPortCommand(CommandBase):
         """Return the host operating-system family."""
         return platform.system()
 
-    def execute(self, port, kill=False, expected_pid=None):
+    def execute(self, port):
         """Inspect a local port and report stable, structured ownership data."""
         port_num = self._parse_port(port)
         if isinstance(port_num, dict):
             return port_num
 
-        kill_requested = self._parse_bool(kill)
-        if kill_requested is None:
-            return {
-                "success": False,
-                "error_code": "invalid_kill",
-                "error": f"kill must be a boolean value, received {kill!r}.",
-                "remediation": (
-                    "Pass false or omit the legacy flag. Use killProcess as a "
-                    "separate, explicit action after inspecting the listener."
-                ),
-                "message": (
-                    "Port inspection did not start because kill must be true "
-                    "or false."
-                ),
-            }
-
-        parsed_expected_pid = self._parse_expected_pid(expected_pid)
-        if isinstance(parsed_expected_pid, dict):
-            return parsed_expected_pid
-
         try:
             import psutil
         except ImportError:
-            return self._execute_fallback(
-                port_num,
-                kill_requested,
-                parsed_expected_pid,
-            )
+            return self._execute_fallback(port_num)
 
         system_name = self._system_name().lower()
 
         # On SunOS, psutil.net_connections can terminate the interpreter
         # instead of raising a recoverable exception.
         if system_name == "sunos":
-            return self._execute_fallback(
-                port_num,
-                kill_requested,
-                parsed_expected_pid,
-            )
+            return self._execute_fallback(port_num)
 
         try:
             connections = psutil.net_connections(kind="inet")
         except Exception:
-            return self._execute_fallback(
-                port_num,
-                kill_requested,
-                parsed_expected_pid,
-            )
+            return self._execute_fallback(port_num)
 
         matching = [
             connection
@@ -141,11 +117,7 @@ class InspectPortCommand(CommandBase):
             # process-wide connection snapshot. Its native lsof query is
             # authoritative for this exact port and avoids a false "free".
             if system_name == "darwin":
-                return self._execute_fallback(
-                    port_num,
-                    kill_requested,
-                    parsed_expected_pid,
-                )
+                return self._execute_fallback(port_num)
             return self._free_port_result(port_num)
 
         pids = sorted(
@@ -166,8 +138,6 @@ class InspectPortCommand(CommandBase):
                 [],
                 [],
                 limitations,
-                kill_requested,
-                parsed_expected_pid,
             )
 
         processes = []
@@ -196,8 +166,6 @@ class InspectPortCommand(CommandBase):
             pids,
             processes,
             limitations,
-            kill_requested,
-            parsed_expected_pid,
             errors=errors,
         )
 
@@ -227,37 +195,6 @@ class InspectPortCommand(CommandBase):
                 ),
             }
         return port_num
-
-    @staticmethod
-    def _parse_expected_pid(expected_pid):
-        if expected_pid in (None, ""):
-            return None
-        try:
-            parsed = int(expected_pid)
-        except (TypeError, ValueError):
-            return {
-                "success": False,
-                "error_code": "invalid_expected_pid",
-                "error": (
-                    "expected_pid must be a positive integer, received "
-                    f"{expected_pid!r}."
-                ),
-                "message": (
-                    "Port inspection did not start because expected_pid was "
-                    "not a positive integer."
-                ),
-            }
-        if parsed <= 0:
-            return {
-                "success": False,
-                "error_code": "invalid_expected_pid",
-                "error": "expected_pid must be a positive integer.",
-                "message": (
-                    "Port inspection did not start because expected_pid was "
-                    "not a positive integer."
-                ),
-            }
-        return parsed
 
     def _inspect_process(self, pid, psutil_module):
         try:
@@ -316,22 +253,10 @@ class InspectPortCommand(CommandBase):
         pids,
         processes,
         limitations,
-        kill_requested,
-        expected_pid,
         *,
         errors=None,
     ):
         observed_pids = sorted(pids)
-        if kill_requested:
-            return self._termination_moved_result(
-                port_num,
-                observed_pids,
-                processes,
-                limitations,
-                expected_pid,
-                errors or [],
-            )
-
         names = [process["name"] for process in processes if process.get("name")]
         owner_summary = ", ".join(names) if names else "an owner not exposed by the OS"
         pid_summary = (
@@ -344,7 +269,6 @@ class InspectPortCommand(CommandBase):
             "status": "in_use",
             "port": port_num,
             "in_use": True,
-            "killed": False,
             "observed_pids": observed_pids,
             "processes": processes,
             "limitations": limitations,
@@ -357,81 +281,12 @@ class InspectPortCommand(CommandBase):
         return result
 
     @staticmethod
-    def _termination_moved_result(
-        port_num,
-        observed_pids,
-        processes,
-        limitations,
-        expected_pid,
-        errors,
-    ):
-        suggestions = []
-        for process in processes:
-            pid = process.get("pid")
-            create_time = process.get("create_time")
-            if pid is None or create_time is None:
-                continue
-            command = (
-                f"qzx killProcess {pid} "
-                f"--expected-create-time {create_time} --yolo"
-            )
-            suggestions.append(command)
-
-        ownership_changed = (
-            expected_pid is not None and expected_pid not in observed_pids
-        )
-        if ownership_changed:
-            ownership_note = (
-                f"The legacy expected PID {expected_pid} no longer owns the "
-                f"port; current PID(s): {observed_pids or 'unavailable'}."
-            )
-        elif observed_pids and not suggestions:
-            ownership_note = (
-                "QZX withheld a termination command because the operating "
-                "system did not expose a process creation timestamp. "
-                "Re-inspect until that identity fingerprint is available."
-            )
-        else:
-            ownership_note = (
-                "Review the listener details, then use the dedicated "
-                "killProcess command if termination is still appropriate."
-            )
-
-        return {
-            "success": False,
-            "status": "read_only",
-            "error_code": "operation_moved",
-            "error": (
-                "inspectPort is read-only; its legacy kill option no longer "
-                "terminates processes."
-            ),
-            "port": port_num,
-            "in_use": True,
-            "killed": False,
-            "expected_pid": expected_pid,
-            "observed_pids": observed_pids,
-            "processes": processes,
-            "limitations": limitations,
-            "errors": errors,
-            "details": {
-                "ownership_changed": ownership_changed,
-                "remediation": ownership_note,
-                "suggested_commands": suggestions,
-            },
-            "message": (
-                "Port inspection completed safely and no process was "
-                f"terminated. {ownership_note}"
-            ),
-        }
-
-    @staticmethod
     def _free_port_result(port_num):
         return {
             "success": True,
             "status": "free",
             "port": port_num,
             "in_use": False,
-            "killed": False,
             "observed_pids": [],
             "processes": [],
             "message": f"Port {port_num} is free.",
@@ -521,12 +376,7 @@ class InspectPortCommand(CommandBase):
                 return result.stdout.strip().splitlines()[0]
         return "unknown"
 
-    def _execute_fallback(
-        self,
-        port_num,
-        kill_process=False,
-        expected_pid=None,
-    ):
+    def _execute_fallback(self, port_num):
         """Inspect using native tools when psutil is unavailable or restricted."""
         system_name = self._system_name().lower()
         is_windows = system_name == "windows"
@@ -576,8 +426,6 @@ class InspectPortCommand(CommandBase):
                     [],
                     [],
                     [limitation],
-                    kill_process,
-                    expected_pid,
                 )
             else:
                 pids, available, inspection_errors = self._lsof_listener_pids(
@@ -590,7 +438,6 @@ class InspectPortCommand(CommandBase):
                         "error": "; ".join(inspection_errors),
                         "port": port_num,
                         "in_use": None,
-                        "killed": False,
                         "message": (
                             f"Could not inspect port {port_num} with lsof: "
                             f"{'; '.join(inspection_errors)}"
@@ -622,8 +469,6 @@ class InspectPortCommand(CommandBase):
                 sorted(pids),
                 processes,
                 limitations,
-                kill_process,
-                expected_pid,
             )
         except (OSError, subprocess.SubprocessError) as exc:
             return {
@@ -632,7 +477,6 @@ class InspectPortCommand(CommandBase):
                 "error": f"{type(exc).__name__}: {exc}",
                 "port": port_num,
                 "in_use": None,
-                "killed": False,
                 "message": (
                     f"Native inspection failed for port {port_num}: "
                     f"{type(exc).__name__}: {exc}"
@@ -652,7 +496,6 @@ class InspectPortCommand(CommandBase):
             "error": diagnostic,
             "port": port_num,
             "in_use": None,
-            "killed": False,
             "message": (
                 f"Could not inspect port {port_num} with {tool_name}: "
                 f"{diagnostic}"
