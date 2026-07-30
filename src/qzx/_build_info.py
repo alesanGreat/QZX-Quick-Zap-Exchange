@@ -1,6 +1,6 @@
 """Generated startup constants; synchronize from product and lifecycle manifests."""
 
-VERSION = "0.2.2.0.6a6"
+VERSION = "0.2.2.0.6a7"
 ATTRIBUTION = "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez."
 WELCOME_MATURITY = {'stage': 'alpha',
  'label': 'Alpha',

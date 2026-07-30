@@ -90,14 +90,14 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.6a2",
+      "version": "0.2.2.0.6a5",
       "status": "Alpha",
       "channel": "Published package",
       "released_at": "2026-07-30",
       "requires_python": ">=3.13",
       "source": "https://pypi.org/pypi/qzx/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.6a2-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.6a5-py3-none-any.whl",
         "command_names": [
           "about",
           "analyzeComplexity",
@@ -199,7 +199,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.6a6",
+      "version": "0.2.2.0.6a7",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",
