@@ -28,6 +28,9 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 - Fixed `getProgrammingLanguageStats` field aggregation and made complete or
   partial per-file failures propagate to the command's top-level status.
   Dictionary fallbacks are also reported as structured warnings.
+- Reworded public descriptions for human-language analysis and HTTP status
+  checks around observable behavior instead of implementation history or
+  misleading ping terminology.
 - Added a pinned Ruff correctness gate and isolated dependency auditing to CI,
   alongside the expanded cross-platform GitHub Actions matrix.
 - Expanded deterministic regression coverage from 276 to 302 passing tests on

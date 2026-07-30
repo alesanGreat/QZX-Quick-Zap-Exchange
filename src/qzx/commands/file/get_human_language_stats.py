@@ -35,7 +35,10 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
     
     name = "getHumanLanguageStats"
     aliases = ["getHumanLanguageStatsFromFile"]
-    description = "Analyzes files to determine the percentage of text in different languages. Improved version using centralized file finder."
+    description = (
+        "Analyzes files to estimate human-language distribution, with "
+        "wildcard and recursive search support."
+    )
     category = "file"
     
     parameters = [

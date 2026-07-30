@@ -23,7 +23,10 @@ class CheckUrlStatusCommand(CommandBase):
     """
     
     name = "checkUrlStatus"
-    description = "Pings an HTTP URL, returning its status code, response time, and basic headers"
+    description = (
+        "Requests an HTTP(S) URL and reports its status code, response time, "
+        "and basic headers."
+    )
     category = "network"
     
     parameters = [
