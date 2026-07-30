@@ -13,9 +13,9 @@ import glob
 from collections import defaultdict
 from pathlib import Path
 import sys
-from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+FUNCTION_WORDS_DIR = PROJECT_ROOT / "resources" / "function_words"
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from qzx.core.command_base import CommandBase
@@ -188,22 +188,21 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
     def _load_function_words(self):
         """Load function words for different languages from JSON files"""
         function_words = {}
-        function_words_dir = Path(__file__).resolve().parents[2] / "resources" / "function_words"
         
         # Check if the directory exists
-        if not os.path.isdir(function_words_dir):
-            print(f"ERROR: FunctionWords directory not found at {function_words_dir}")
+        if not os.path.isdir(FUNCTION_WORDS_DIR):
+            print(f"ERROR: FunctionWords directory not found at {FUNCTION_WORDS_DIR}")
             print(f"Current working directory: {os.getcwd()}")
             print("This command requires the FunctionWords directory to operate correctly.")
             return {}
         
         # Load each JSON file in the directory
         files_found = 0
-        for filename in os.listdir(function_words_dir):
+        for filename in os.listdir(FUNCTION_WORDS_DIR):
             if filename.endswith('.json'):
                 files_found += 1
                 language = os.path.splitext(filename)[0].lower()
-                file_path = os.path.join(function_words_dir, filename)
+                file_path = os.path.join(FUNCTION_WORDS_DIR, filename)
                 
                 try:
                     # print(f"Trying to load dictionary: {file_path}")
@@ -252,7 +251,7 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
                 print(f"ERROR: Found {files_found} dictionary files but failed to load any of them.")
                 print("Check the errors above for more details.")
             else:
-                print(f"ERROR: No dictionary files found in {function_words_dir}")
+                print(f"ERROR: No dictionary files found in {FUNCTION_WORDS_DIR}")
             
         return function_words
     
@@ -276,7 +275,7 @@ class GetHumanLanguageStatsFromFileCommand(CommandBase):
             print("WARNING: No function words dictionaries available.")
             print("Language detection will fall back to character-based analysis, which is less accurate.")
             print("This analysis may incorrectly classify many words as 'english' or 'other'.")
-            print(f"For accurate results, make sure {function_words_dir} contains valid JSON files.")
+            print(f"For accurate results, make sure {FUNCTION_WORDS_DIR} contains valid JSON files.")
             print("Continuing with limited functionality...\n")
             
         # Process flag-style parameters if passed

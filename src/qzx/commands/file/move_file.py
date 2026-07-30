@@ -31,6 +31,9 @@ class MoveFileCommand(CommandBase):
     name = "moveFile"
     description = "Moves or renames a file or directory from source to destination"
     category = "file"
+    requires_explicit_approval = True
+    approval_when_parameter = "force"
+    backup_target_parameter = "destination"
     
     parameters = [
         {
@@ -51,7 +54,7 @@ class MoveFileCommand(CommandBase):
         },
         {
             'name': 'force',
-            'description': 'Whether to overwrite the destination if it exists',
+            'description': 'Replace an existing destination after creating a safety backup',
             'required': False,
             'default': False
         }
@@ -75,10 +78,74 @@ class MoveFileCommand(CommandBase):
             'description': 'Move a directory recursively up to 2 levels deep'
         },
         {
-            'command': 'qzx moveFile sourcedir destinationdir -r true',
-            'description': 'Move a directory recursively and overwrite if exists'
+            'command': 'qzx moveFile sourcedir destinationdir -r --force',
+            'description': 'Replace an existing destination after creating a safety backup'
         }
     ]
+
+    def validate_safety_backup_target(self, target, values):
+        """Reject pointless or ambiguous forced moves before taking a backup."""
+        source = values.get("source")
+        if not source or not os.path.lexists(source):
+            return {
+                "success": False,
+                "error_code": "source_missing",
+                "error": f"Source does not exist: {source}",
+                "message": (
+                    f"Source '{source}' does not exist, so nothing was moved."
+                ),
+                "details": {
+                    "source": os.path.abspath(source) if source else source,
+                    "destination": os.path.abspath(target),
+                    "force": True,
+                },
+            }
+        if not os.path.lexists(target):
+            return {
+                "success": False,
+                "error_code": "overwrite_target_missing",
+                "error": f"Cannot overwrite missing destination: {target}",
+                "message": (
+                    f"Destination '{target}' does not exist. Omit --force to "
+                    "create it without an unnecessary safety backup."
+                ),
+                "details": {
+                    "source": os.path.abspath(source),
+                    "destination": os.path.abspath(target),
+                    "force": True,
+                },
+            }
+        try:
+            same_path = os.path.samefile(source, target)
+        except OSError:
+            same_path = (
+                os.path.normcase(os.path.realpath(source))
+                == os.path.normcase(os.path.realpath(target))
+            )
+        if same_path:
+            return {
+                "success": False,
+                "error_code": "source_equals_destination",
+                "error": "Source and destination resolve to the same path",
+                "message": (
+                    "Source and destination identify the same filesystem "
+                    "object. Choose a different destination."
+                ),
+                "details": {
+                    "source": os.path.abspath(source),
+                    "destination": os.path.abspath(target),
+                    "force": True,
+                },
+            }
+        return None
+
+    @staticmethod
+    def _remove_existing_destination(destination):
+        """Remove one backed-up destination without hiding failures."""
+        if os.path.isdir(destination) and not os.path.islink(destination):
+            shutil.rmtree(destination)
+        else:
+            os.unlink(destination)
     
     def execute(self, source, destination, recursive=None, force=False):
         """
@@ -111,17 +178,35 @@ class MoveFileCommand(CommandBase):
                 recursive = True
             
             # Check if source exists
-            if not os.path.exists(source):
+            if not os.path.lexists(source):
                 return {
                     "success": False,
-                    "error": f"Source '{source}' does not exist"
+                    "error_code": "source_missing",
+                    "error": f"Source '{source}' does not exist",
+                    "message": (
+                        f"Source '{source}' does not exist, so nothing was moved."
+                    ),
+                    "details": {
+                        "source": os.path.abspath(source),
+                        "destination": os.path.abspath(destination),
+                    },
                 }
             
             # Check if destination exists and if we should overwrite
             if os.path.exists(destination) and not force:
                 return {
                     "success": False,
-                    "error": f"Destination '{destination}' already exists. Use force=True to overwrite."
+                    "error_code": "destination_exists",
+                    "error": f"Destination '{destination}' already exists",
+                    "message": (
+                        f"Destination '{destination}' already exists. Use "
+                        "--force to replace it after a safety backup."
+                    ),
+                    "details": {
+                        "source": os.path.abspath(source),
+                        "destination": os.path.abspath(destination),
+                        "force": False,
+                    },
                 }
             
             # Create destination directory if it doesn't exist
@@ -152,11 +237,8 @@ class MoveFileCommand(CommandBase):
             # Move based on type and recursion
             if source_is_dir:
                 # If destination exists and force=True, remove it first
-                if os.path.exists(destination) and force:
-                    if os.path.isdir(destination):
-                        shutil.rmtree(destination)
-                    else:
-                        os.remove(destination)
+                if os.path.lexists(destination) and force:
+                    self._remove_existing_destination(destination)
                 
                 if recursive is False or recursive == 0:
                     # Create only the directory without contents
@@ -200,6 +282,8 @@ class MoveFileCommand(CommandBase):
                     move_with_depth_limit(source, destination)
                     result["message"] = f"Directory '{source}' moved to '{destination}'{recursion_message}"
             else:
+                if os.path.lexists(destination) and force:
+                    self._remove_existing_destination(destination)
                 # Move a single file
                 shutil.move(source, destination)
                 result["message"] = f"File '{source}' moved to '{destination}'"
@@ -208,7 +292,11 @@ class MoveFileCommand(CommandBase):
         except Exception as e:
             return {
                 "success": False,
+                "error_code": "move_failed",
                 "source": source,
                 "destination": destination,
-                "error": str(e)
-            } 
+                "error": f"{type(e).__name__}: {e}",
+                "message": (
+                    f"Move from '{source}' to '{destination}' failed: {e}"
+                ),
+            }

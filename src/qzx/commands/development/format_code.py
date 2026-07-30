@@ -28,6 +28,8 @@ class FormatCodeCommand(CommandBase):
     aliases = ["fmtCode", "codeFmt", "formatSource"]
     description = "Formats source code files by auto-detecting language and invoking the right formatter"
     category = "development"
+    requires_explicit_approval = True
+    backup_target_parameter = "path"
 
     parameters = [
         {
@@ -45,7 +47,7 @@ class FormatCodeCommand(CommandBase):
             'name': 'dry_run',
             'description': 'Check if files would be changed without writing (true/false)',
             'required': False,
-            'default': 'false'
+            'default': False
         }
     ]
 
@@ -63,10 +65,27 @@ class FormatCodeCommand(CommandBase):
             'description': 'Format only Python files in src/'
         },
         {
-            'command': 'qzx formatCode src/ "" true',
+            'command': 'qzx formatCode src/ --dry-run',
             'description': 'Dry-run format to see which files would change'
         }
     ]
+
+    def validate_safety_backup_target(self, target, values):
+        """Require a real formatting target before creating its backup."""
+        if not os.path.lexists(target):
+            return {
+                "success": False,
+                "error_code": "path_not_found",
+                "error": f"Path does not exist: {target}",
+                "message": (
+                    f"Path '{target}' does not exist, so no formatter was run."
+                ),
+                "details": {
+                    "path": os.path.abspath(target),
+                    "dry_run": False,
+                },
+            }
+        return None
 
     # Mapping of language -> file extensions and formatter configuration
     FORMATTERS = {
@@ -145,7 +164,7 @@ class FormatCodeCommand(CommandBase):
         for ext in cfg['extensions']:
             EXTENSION_TO_LANGUAGE[ext] = lang
 
-    def execute(self, path, language='', dry_run='false'):
+    def execute(self, path, language='', dry_run=False):
         """
         Formats source code files by auto-detecting language and invoking the appropriate formatter.
 

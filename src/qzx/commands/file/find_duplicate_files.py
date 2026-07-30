@@ -21,7 +21,7 @@ class FindDuplicateFilesCommand(CommandBase):
     """
     
     name = "findDuplicateFiles"
-    description = "Scans a directory for identical/duplicate files by file size matching and MD5 hashing"
+    description = "Scans a directory for identical files using size, SHA-256, and byte-for-byte verification"
     category = "file"
     _byte_units = ("B", "KB", "MB", "GB")
     
@@ -133,19 +133,41 @@ class FindDuplicateFilesCommand(CommandBase):
             for size, file_list in size_candidates.items():
                 hashes = {}
                 for fp in file_list:
-                    h = self._get_md5(fp)
+                    h = self._get_sha256(fp)
                     if h:
                         if h not in hashes:
                             hashes[h] = []
                         hashes[h].append(fp)
                         
-                # Keep only hashes matching multiple files
+                # A matching digest is only a candidate. Partition every
+                # candidate set with an exact byte comparison before claiming
+                # that files are identical.
                 for h, paths in hashes.items():
-                    if len(paths) > 1:
-                        duplicates[h] = {
+                    exact_groups = []
+                    for path in paths:
+                        for exact_group in exact_groups:
+                            if self._files_identical(path, exact_group[0]):
+                                exact_group.append(path)
+                                break
+                        else:
+                            exact_groups.append([path])
+
+                    duplicate_index = 0
+                    for exact_group in exact_groups:
+                        if len(exact_group) <= 1:
+                            continue
+                        duplicate_index += 1
+                        group_key = (
+                            h
+                            if duplicate_index == 1
+                            else f"{h}:{duplicate_index}"
+                        )
+                        duplicates[group_key] = {
+                            "sha256": h,
+                            "verification": "byte_for_byte",
                             "size_bytes": size,
                             "size_readable": self._format_bytes(size),
-                            "files": sorted(paths)
+                            "files": sorted(exact_group)
                         }
                         
             # 3. Calculate reclaimable space
@@ -172,7 +194,11 @@ class FindDuplicateFilesCommand(CommandBase):
                 sorted_dups = sorted(duplicates.items(), key=lambda x: x[1]["size_bytes"], reverse=True)
                 for h, info in sorted_dups[:5]:
                     rel_paths = [os.path.relpath(p, abs_path) for p in info["files"]]
-                    msg += f"  - [{info['size_readable']}] MD5: {h[:8]}...\n"
+                    msg += (
+                        f"  - [{info['size_readable']}] "
+                        f"SHA-256: {info['sha256'][:12]}... "
+                        "(byte-for-byte verified)\n"
+                    )
                     for rel_p in rel_paths:
                         msg += f"    -> {rel_p}\n"
                 if len(sorted_dups) > 5:
@@ -196,14 +222,30 @@ class FindDuplicateFilesCommand(CommandBase):
                 "message": f"Failed to search for duplicate files: {str(e)}"
             }
             
-    def _get_md5(self, filepath):
-        """Computes MD5 hash of file in chunks"""
-        hash_md5 = hashlib.md5()
+    def _get_sha256(self, filepath):
+        """Compute a SHA-256 content digest in bounded chunks."""
+        content_hash = hashlib.sha256()
         try:
             with open(filepath, "rb") as f:
                 for chunk in iter(lambda: f.read(65536), b""):
-                    hash_md5.update(chunk)
-            return hash_md5.hexdigest()
+                    content_hash.update(chunk)
+            return content_hash.hexdigest()
         except Exception:
             return None
-            
+
+    @staticmethod
+    def _files_identical(first_path, second_path):
+        """Confirm equality without trusting a digest alone."""
+        try:
+            if os.path.getsize(first_path) != os.path.getsize(second_path):
+                return False
+            with open(first_path, "rb") as first, open(second_path, "rb") as second:
+                while True:
+                    first_chunk = first.read(65536)
+                    second_chunk = second.read(65536)
+                    if first_chunk != second_chunk:
+                        return False
+                    if not first_chunk:
+                        return True
+        except OSError:
+            return False

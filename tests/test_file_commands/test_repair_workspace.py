@@ -7,7 +7,15 @@ Tests for the RepairWorkspace command
 
 import os
 import shutil
+import zipfile
 from qzx.commands.file.repair_workspace import RepairWorkspaceCommand
+
+
+class CollidingDigestRepairWorkspaceCommand(RepairWorkspaceCommand):
+    """Deterministic boundary fake for the astronomically rare hash collision."""
+
+    def _get_sha256(self, _filepath):
+        return "collision"
 
 class TestRepairWorkspaceCommand:
     """
@@ -94,6 +102,56 @@ class TestRepairWorkspaceCommand:
         assert len(dups) >= 1
         dup_names = [d["file"] for d in dups]
         assert "file2.txt" in dup_names or "file1.txt" in dup_names
+
+    def test_duplicate_digest_collision_does_not_propose_deletion(
+        self,
+        tmp_path,
+    ):
+        """Different bytes remain safe even if the candidate digest collides."""
+        (tmp_path / "first.bin").write_bytes(b"A" * 1024)
+        (tmp_path / "second.bin").write_bytes(b"B" * 1024)
+
+        result = CollidingDigestRepairWorkspaceCommand().execute(
+            path=str(tmp_path),
+            dry_run=True,
+            categories="duplicates",
+        )
+
+        assert result["success"] is True
+        assert result["details"]["categories"]["duplicates"] == []
+
+    def test_public_apply_creates_workspace_backup_before_mutation(
+        self,
+        monkeypatch,
+        tmp_path,
+    ):
+        """The public invocation must archive the target before deleting files."""
+        temp_file = tmp_path / "debug.log"
+        temp_file.write_text("retain in backup", encoding="utf-8")
+        backup_directory = tmp_path.parent / f"{tmp_path.name}-backups"
+        monkeypatch.setenv("QZX_BACKUPS_PATH", str(backup_directory))
+
+        result = self.command.invoke(
+            [
+                str(tmp_path),
+                "--dry-run",
+                "false",
+                "--categories",
+                "temp",
+                "--apply",
+            ]
+        )
+
+        assert result["success"] is True
+        assert not temp_file.exists()
+        backup = result["meta"]["safety_backup"]
+        assert backup["status"] == "created"
+        with zipfile.ZipFile(backup["path"]) as archive:
+            backed_up_logs = [
+                name for name in archive.namelist() if name.endswith("/debug.log")
+            ]
+            assert len(backed_up_logs) == 1
+            assert archive.read(backed_up_logs[0]) == b"retain in backup"
 
     def test_repair_workspace_reorganizations(self, tmp_path):
         """Test reorganizations detection and execution including reference updates"""

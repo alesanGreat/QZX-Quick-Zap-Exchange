@@ -3,6 +3,31 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.5 — 2026-07-29
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Made HTTP downloads transactional and restricted them to credential-free
+  HTTP(S) URLs, with enforced timeouts, size validation, SHA-256 evidence, and
+  fail-closed backups before replacement.
+- Made ZIP creation atomic so a failed compression cannot truncate or delete a
+  prior archive; existing archives now require an explicit backed-up
+  replacement.
+- Rebuilt ZIP extraction around whole-archive validation, staged writes,
+  expansion limits, conflict preservation, and backed-up overwrites.
+- Required safety backups before forced copies, forced moves, workspace
+  repairs, and real source formatting; preview and dry-run paths remain
+  read-only.
+- Upgraded duplicate detection and repository auditing from MD5 candidates to
+  SHA-256, with byte-for-byte confirmation before reporting or deleting a
+  duplicate.
+- Fixed the missing-language-dictionary fallback in
+  `getHumanLanguageStats`.
+- Added a pinned Ruff correctness gate and isolated dependency auditing to CI,
+  alongside the expanded cross-platform GitHub Actions matrix.
+- Expanded deterministic regression coverage from 276 to 297 passing tests on
+  the certified local CPython 3.13 runtime.
+
 ## 0.2.2.0.4 — 2026-07-29
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

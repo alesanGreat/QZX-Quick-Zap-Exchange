@@ -8,6 +8,13 @@ Tests for the FindDuplicateFiles command
 import os
 from qzx.commands.file.find_duplicate_files import FindDuplicateFilesCommand
 
+
+class CollidingDigestFindDuplicateFilesCommand(FindDuplicateFilesCommand):
+    """Deterministic boundary fake for the astronomically rare hash collision."""
+
+    def _get_sha256(self, _filepath):
+        return "collision"
+
 class TestFindDuplicateFilesCommand:
     """
     Tests for the FindDuplicateFiles command
@@ -102,3 +109,20 @@ class TestFindDuplicateFilesCommand:
         
         # Group D reclaimable: 2KB * (2 - 1) = 2KB. New total reclaimable = 72KB = 73728 bytes
         assert result_tiny["reclaimable_bytes"] == 73728
+
+    def test_digest_collision_does_not_create_false_duplicate_group(
+        self,
+        tmp_path,
+    ):
+        """A digest match alone must never prove that two files are identical."""
+        (tmp_path / "first.bin").write_bytes(b"A" * 2048)
+        (tmp_path / "second.bin").write_bytes(b"B" * 2048)
+
+        result = CollidingDigestFindDuplicateFilesCommand().execute(
+            str(tmp_path),
+            min_size_kb=1,
+        )
+
+        assert result["success"] is True
+        assert result["total_groups"] == 0
+        assert result["duplicate_groups"] == {}

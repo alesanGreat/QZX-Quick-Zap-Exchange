@@ -163,10 +163,10 @@ class AuditRepositoryCommand(CommandBase):
                         "message": f"Large file in repository ({f_size // 1024} KB): {rel_file}"
                     })
                     
-                # 3. Duplicate files check by hash
+                # 3. Duplicate files check by cryptographic content hash
                 if f_size < 5 * 1024 * 1024: # Limit to 5MB to be fast
                     try:
-                        h = hashlib.md5()
+                        h = hashlib.sha256()
                         with open(file_path, 'rb') as fp:
                             for chunk in iter(lambda: fp.read(8192), b''):
                                 h.update(chunk)

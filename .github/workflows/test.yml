@@ -9,6 +9,37 @@ permissions:
   contents: read
 
 jobs:
+  static-analysis:
+    name: QZX static correctness | CPython 3.13
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out QZX
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install standard CPython 3.13
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install static and dependency auditors
+        run: python -m pip install ruff==0.16.0 pip-audit==2.10.1
+
+      - name: Reject undefined names and invalid Python syntax
+        run: python -m ruff check src tests
+
+      - name: Install the QZX runtime dependency set in isolation
+        run: python -m pip install --target "$RUNNER_TEMP/qzx-audit" .
+
+      - name: Reject runtime dependencies with known vulnerabilities
+        run: >-
+          python -m pip_audit
+          --path "$RUNNER_TEMP/qzx-audit"
+          --strict
+          --progress-spinner off
+
   python:
     name: >-
       QZX test suite | ${{ matrix.platform.name }} |

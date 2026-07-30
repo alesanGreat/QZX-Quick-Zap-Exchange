@@ -34,6 +34,8 @@ Use a standard global CPython 3.13.x installation and an editable checkout:
 ```powershell
 python -m pip install --editable .
 python -c "import qzx; print(qzx.__file__)"
+python -m pip install ruff==0.16.0
+python -m ruff check src tests
 python -m pytest -q
 ```
 

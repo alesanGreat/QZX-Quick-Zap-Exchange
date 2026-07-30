@@ -88,3 +88,54 @@ class TestCompressZipCommand:
         with zipfile.ZipFile(zip_file, "r") as z:
             assert "single.txt" in z.namelist()
             assert z.read("single.txt") == b"A" * 50
+
+    def test_existing_archive_is_preserved_without_overwrite(self, tmp_path):
+        source_file = tmp_path / "source.txt"
+        zip_file = tmp_path / "existing.zip"
+        source_file.write_text("new", encoding="utf-8")
+        zip_file.write_bytes(b"original archive bytes")
+
+        result = self.command.execute(str(zip_file), str(source_file))
+
+        assert result["success"] is False
+        assert result["error_code"] == "destination_exists"
+        assert zip_file.read_bytes() == b"original archive bytes"
+
+    def test_source_cannot_be_its_own_destination(self, tmp_path):
+        source_file = tmp_path / "same.zip"
+        source_file.write_bytes(b"keep")
+
+        result = self.command.execute(
+            str(source_file),
+            str(source_file),
+            overwrite=True,
+        )
+
+        assert result["success"] is False
+        assert result["error_code"] == "source_equals_destination"
+        assert source_file.read_bytes() == b"keep"
+
+    def test_public_overwrite_backs_up_existing_archive(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        source_file = tmp_path / "source.txt"
+        zip_file = tmp_path / "existing.zip"
+        backups = tmp_path / "backups"
+        source_file.write_text("new archive content", encoding="utf-8")
+        zip_file.write_bytes(b"original archive bytes")
+        monkeypatch.setenv("QZX_BACKUPS_PATH", str(backups))
+
+        result = self.command.invoke(
+            [str(zip_file), str(source_file), "--overwrite"]
+        )
+
+        assert result["success"] is True
+        assert result["meta"]["safety_backup"]["status"] == "created"
+        with zipfile.ZipFile(zip_file) as archive:
+            assert archive.read("source.txt") == b"new archive content"
+        with zipfile.ZipFile(
+            result["meta"]["safety_backup"]["path"]
+        ) as backup:
+            assert backup.read("existing.zip") == b"original archive bytes"

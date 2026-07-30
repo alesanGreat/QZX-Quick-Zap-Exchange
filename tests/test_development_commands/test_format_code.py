@@ -7,7 +7,21 @@ Tests for the formatCode command
 
 import os
 import shutil
+import zipfile
 from qzx.commands.development.format_code import FormatCodeCommand
+
+
+class DeterministicFormatCodeCommand(FormatCodeCommand):
+    """Use a deterministic local formatter boundary for the safety contract."""
+
+    def _is_tool_available(self, _tool):
+        return True
+
+    def _run_formatter(self, _args, file_path, dry_run):
+        if not dry_run:
+            with open(file_path, "w", encoding="utf-8") as source_file:
+                source_file.write("x = 1\n")
+        return {"ok": True, "would_change": True}
 
 
 class TestFormatCodeCommand:
@@ -116,3 +130,42 @@ class TestFormatCodeCommand:
         assert result["total_files"] == 1
         all_items = result["formatted"] + result["failed"]
         assert all_items[0]["language"] == "python"
+
+    def test_public_format_backs_up_target_before_writing(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        file_path = tmp_path / "script.py"
+        backups = tmp_path / "backups"
+        original = b"x=1\n"
+        file_path.write_bytes(original)
+        monkeypatch.setenv("QZX_BACKUPS_PATH", str(backups))
+
+        result = DeterministicFormatCodeCommand().invoke([str(file_path)])
+
+        assert result["success"] is True
+        assert file_path.read_text(encoding="utf-8") == "x = 1\n"
+        backup_path = result["meta"]["safety_backup"]["path"]
+        with zipfile.ZipFile(backup_path) as archive:
+            assert archive.read("script.py") == original
+
+    def test_public_dry_run_does_not_create_backup(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        file_path = tmp_path / "script.py"
+        backups = tmp_path / "backups"
+        original = "x=1\n"
+        file_path.write_text(original, encoding="utf-8")
+        monkeypatch.setenv("QZX_BACKUPS_PATH", str(backups))
+
+        result = DeterministicFormatCodeCommand().invoke(
+            [str(file_path), "--dry-run"]
+        )
+
+        assert result["success"] is True
+        assert file_path.read_text(encoding="utf-8") == original
+        assert "safety_backup" not in result["meta"]
+        assert not backups.exists()

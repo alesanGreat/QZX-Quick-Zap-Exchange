@@ -24,6 +24,8 @@ class RepairWorkspaceCommand(CommandBase):
     name = "repairWorkspace"
     description = "Scans, reorganizes, and cleans temporary files, build directories, binary artifacts, and duplicate files. (Safe dry-run by default)"
     category = "file"
+    requires_explicit_approval = True
+    backup_target_parameter = "path"
     
     parameters = [
         {
@@ -206,24 +208,31 @@ class RepairWorkspaceCommand(CommandBase):
                     has_dup_pattern = any(p in lower_name for p in [" (1)", " - copy", "_backup", "_copy"])
                     
                     try:
-                        # Hash file contents
-                        h = hashlib.md5()
-                        with open(file_path, 'rb') as fp:
-                            # Read in chunks
-                            for chunk in iter(lambda: fp.read(8192), b''):
-                                h.update(chunk)
-                        file_hash = h.hexdigest()
-                        
-                        if file_hash in found_files_hash:
-                            orig_path = found_files_hash[file_hash]
+                        file_hash = self._get_sha256(file_path)
+                        matching_original = next(
+                            (
+                                original_rel
+                                for original_rel, original_path
+                                in found_files_hash.get(file_hash, [])
+                                if self._files_identical(file_path, original_path)
+                            ),
+                            None,
+                        )
+
+                        if matching_original is not None:
+                            orig_path = matching_original
                             results["categories"]["duplicates"].append({
                                 "file": rel_file,
                                 "duplicate_of": orig_path,
                                 "size_bytes": f_size,
-                                "reason": "identical_hash"
+                                "sha256": file_hash,
+                                "reason": "sha256_and_byte_match"
                             })
                             space_recoverable += f_size
-                            results["actions_proposed"].append(f"Delete duplicate file (identical hash): {rel_file} (Original: {orig_path})")
+                            results["actions_proposed"].append(
+                                "Delete duplicate file (SHA-256 and exact byte "
+                                f"match): {rel_file} (Original: {orig_path})"
+                            )
                         elif has_dup_pattern:
                             # Potential copy based on filename
                             results["categories"]["duplicates"].append({
@@ -233,7 +242,9 @@ class RepairWorkspaceCommand(CommandBase):
                             })
                             results["actions_proposed"].append(f"Review potential copy: {rel_file}")
                         else:
-                            found_files_hash[file_hash] = rel_file
+                            found_files_hash.setdefault(file_hash, []).append(
+                                (rel_file, file_path)
+                            )
                     except:
                         pass
                 
@@ -360,6 +371,29 @@ class RepairWorkspaceCommand(CommandBase):
             "message": "Workspace cleanup scanning complete.",
             "details": results
         }
+
+    @staticmethod
+    def _get_sha256(file_path):
+        """Compute a SHA-256 candidate digest for duplicate detection."""
+        content_hash = hashlib.sha256()
+        with open(file_path, "rb") as source:
+            for chunk in iter(lambda: source.read(65536), b""):
+                content_hash.update(chunk)
+        return content_hash.hexdigest()
+
+    @staticmethod
+    def _files_identical(first_path, second_path):
+        """Require an exact byte match before proposing duplicate deletion."""
+        if os.path.getsize(first_path) != os.path.getsize(second_path):
+            return False
+        with open(first_path, "rb") as first, open(second_path, "rb") as second:
+            while True:
+                first_chunk = first.read(65536)
+                second_chunk = second.read(65536)
+                if first_chunk != second_chunk:
+                    return False
+                if not first_chunk:
+                    return True
 
     def _update_references(self, abs_path, old_rel_path, new_rel_path, old_name, new_name):
         """
