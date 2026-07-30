@@ -45,7 +45,7 @@ and other implementations are not certified.
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
 | Published package | `0.2.2.0.5` | `>=3.13`; standard CPython 3.13.x is certified | Capabilities reconciled with the official wheel |
-| Current checkout | `0.2.2.0.6a3` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
+| Current checkout | `0.2.2.0.6a4` | `>=3.13`; standard CPython 3.13.x is certified | See the generated command catalog |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
