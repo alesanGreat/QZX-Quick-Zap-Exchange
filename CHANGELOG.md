@@ -3,6 +3,20 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a5 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Reconciled the published command inventory with the actual
+  `qzx-0.2.2.0.5` wheel on PyPI. Development-only commands remain documented
+  in the candidate channel without being attributed retroactively to that
+  immutable package.
+- Made the Unix launcher portable to POSIX `sh` instead of assuming
+  `/bin/bash`, so minimal Linux, BSD, Solaris, and illumos environments can
+  execute the same checked-in launcher without an artificial Bash dependency.
+- Preserved `v0.2.2.0.6a4` as an immutable validation tag; alpha 4 was not
+  uploaded to PyPI.
+
 ## 0.2.2.0.6a4 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
@@ -20,8 +34,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   Alpine, FreeBSD, OpenBSD, and OmniOS jobs, and made the SSH deployment test
   verify its remote backup through SSH instead of assuming a shared local
   filesystem.
-- Preserved the immutable validation tags and the public alpha 1 GitHub
-  pre-release; none of these candidates was uploaded to PyPI.
+- Preserved the immutable validation tags and public GitHub pre-releases; no
+  `0.2.2.0.6aN` candidate was uploaded to PyPI.
 
 ## 0.2.2.0.6a2 — 2026-07-30
 
@@ -29,8 +43,9 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 - Restored the executable Git mode of `qzx.sh` after the
   `v0.2.2.0.6a1` validation tag exposed a `Permission denied` failure in
-  Alpine Linux. Alpha 1 remains published and immutable; this follow-up
-  preserves its tag, artifacts, hashes, and release history.
+  Alpine Linux. Alpha 1 remains an immutable public GitHub pre-release, not a
+  PyPI publication; this follow-up preserves its tag, artifacts, hashes, and
+  release history.
 
 ## 0.2.2.0.6a1 — 2026-07-30
 

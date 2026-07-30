@@ -196,7 +196,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.6a4",
+      "version": "0.2.2.0.6a5",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",
