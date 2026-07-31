@@ -90,14 +90,14 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.6a12",
+      "version": "0.2.2.0.6a13",
       "status": "Alpha",
       "channel": "Published package",
       "released_at": "2026-07-30",
       "requires_python": ">=3.13",
       "source": "https://pypi.org/pypi/qzx/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.6a12-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.6a13-py3-none-any.whl",
         "command_names": [
           "about",
           "addPythonDocstrings",
@@ -140,7 +140,6 @@
           "getGpuInfo",
           "getHumanLanguageStats",
           "getNetworkConfig",
-          "getProgrammingLanguageStats",
           "getProjectTree",
           "getRamInfo",
           "getStartupPrograms",
@@ -177,7 +176,6 @@
           "scaffoldPython",
           "scaffoldRust",
           "scaffoldTypeScript",
-          "scanProject",
           "systemDoctor",
           "systemInfo",
           "terminal",

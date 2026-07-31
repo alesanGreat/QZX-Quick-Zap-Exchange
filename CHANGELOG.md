@@ -21,6 +21,13 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 - Reframed command-page safety labels around behavior and built-in
   protections while keeping approval, backup, and external-service boundaries
   explicit.
+- Published the verified 87-command wheel and POSIX-built source distribution
+  to PyPI and as byte-identical assets of the GitHub pre-release.
+- Verified SHA-256
+  `b252a7f1876b0872c0405cdfb77af30967007dcb0d670a5a8e309a6ef44c3cee`
+  for the wheel and
+  `4527f933c6b3dfc5415477b73db843510154f9890e6002ac5cfa559c76cbc050`
+  for the source distribution, including executable mode `0755` for `qzx.sh`.
 
 ## 0.2.2.0.6a12 — 2026-07-30
 
