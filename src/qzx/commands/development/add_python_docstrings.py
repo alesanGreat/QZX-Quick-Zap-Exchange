@@ -124,14 +124,14 @@ class AddPythonDocstringsCommand(CommandBase):
                     absolute_path,
                 )
 
-            overwrite_value = self._strict_bool(overwrite)
+            overwrite_value = self._parse_bool(overwrite)
             if overwrite_value is None:
                 return self._error_result(
                     "invalid_overwrite",
                     f"overwrite must be true or false, got {overwrite!r}.",
                     absolute_path,
                 )
-            dry_run_value = self._strict_bool(dry_run)
+            dry_run_value = self._parse_bool(dry_run)
             if dry_run_value is None:
                 return self._error_result(
                     "invalid_dry_run",
@@ -246,18 +246,6 @@ class AddPythonDocstringsCommand(CommandBase):
                     f"'{file_path}': {exc}"
                 ),
             }
-
-    @staticmethod
-    def _strict_bool(value):
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            normalized = value.strip().lower()
-            if normalized in {"true", "yes", "y", "1", "on"}:
-                return True
-            if normalized in {"false", "no", "n", "0", "off"}:
-                return False
-        return None
 
     @classmethod
     def _validate_file_path(cls, file_path, preview):

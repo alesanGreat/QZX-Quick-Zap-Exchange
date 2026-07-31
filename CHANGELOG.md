@@ -3,6 +3,25 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6a13 — 2026-07-30
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Consolidated `scanProject` into a substantially stronger `projectDoctor`
+  that inspects manifests safely, reports configured workflows without
+  executing project scripts, and distinguishes observed facts from checks
+  that were not run.
+- Removed the overlapping `getProgrammingLanguageStats` implementation and
+  its private heuristic data; `projectLanguages` is now the single focused
+  command for source-language composition.
+- Centralized strict boolean parsing so arbitrary Python objects can no longer
+  become accidental approvals in commands that mutate state or run tools.
+- Added reproducible website evidence for `systemInfo`, `projectDoctor`,
+  `auditWorkspace`, and the non-mutating `repairWorkspace` preview.
+- Reframed command-page safety labels around behavior and built-in
+  protections while keeping approval, backup, and external-service boundaries
+  explicit.
+
 ## 0.2.2.0.6a12 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

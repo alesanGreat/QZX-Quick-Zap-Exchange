@@ -1,576 +1,998 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-ProjectDoctor Command - Comprehensive analysis of a project's stack, configuration, quality, and Git state.
-"""
+"""Read-only project health diagnosis with explicit evidence boundaries."""
 
+import ast
+import json
 import os
-import subprocess
-import shutil
 import re
+import subprocess
+import tomllib
+from collections import Counter
+from pathlib import Path
 
+from packaging.requirements import InvalidRequirement, Requirement
+from packaging.utils import canonicalize_name
+
+from qzx.commands.development.find_unused_code import FindUnusedCodeCommand
+from qzx.commands.development.trace_circular_imports import (
+    TraceCircularImportsCommand,
+)
 from qzx.core.command_base import CommandBase
+from qzx.core.project_validation import inspect_validation_workflows
 from qzx.core.recursive_findfiles_utils import (
     SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
 )
 
-# Import sibling commands if possible
-try:
-    from qzx.commands.development.find_unused_code import FindUnusedCodeCommand
-except ImportError:
-    FindUnusedCodeCommand = None
-
-try:
-    from qzx.commands.development.trace_circular_imports import TraceCircularImportsCommand
-except ImportError:
-    TraceCircularImportsCommand = None
 
 class ProjectDoctorCommand(CommandBase):
-    """
-    Command to run a full diagnostic on a workspace's project health (VCS, tech stack, deps, env, tests, unused-code candidates, circular imports, large files)
-    """
-    
+    """Inspect project health without executing project-owned scripts."""
+
     name = "projectDoctor"
-    description = "Inspects project health: detects tech stack, dependencies, environment configuration, Git state, test suites, circular imports, unused-code candidates, and large files"
+    description = (
+        "Inspects project technologies, dependencies, validation workflows, Git "
+        "state, source quality, and large files without executing project scripts"
+    )
     category = "development"
-    
+
     parameters = [
         {
-            'name': 'path',
-            'description': 'Path to the project directory to diagnose (default: \'.\')',
-            'required': False,
-            'default': '.'
+            "name": "path",
+            "description": "Path to the project directory to diagnose (default: '.')",
+            "required": False,
+            "default": ".",
         }
     ]
-    
+
     examples = [
         {
-            'command': 'qzx projectDoctor',
-            'description': 'Run project health diagnosis for current directory'
+            "command": "qzx projectDoctor",
+            "description": "Diagnose the current project without running its scripts",
         },
         {
-            'command': 'qzx projectDoctor C:/my/project',
-            'description': 'Diagnose project at specified path'
-        }
+            "command": "qzx projectDoctor C:/my/project",
+            "description": "Diagnose the project at the specified path",
+        },
     ]
-    
-    def execute(self, path='.'):
-        """
-        Executes the project doctor analysis
-        """
-        abs_path = os.path.abspath(path)
-        if not os.path.exists(abs_path):
+
+    def execute(self, path="."):
+        """Inspect a project and separate observations from unexecuted checks."""
+        project_root = Path(path).expanduser().resolve()
+        if not project_root.exists():
             return {
                 "success": False,
                 "error": f"Path '{path}' does not exist.",
-                "message": f"Path '{path}' does not exist."
+                "message": f"Cannot diagnose the project because '{path}' does not exist.",
             }
-            
-        results = {
-            "stack": [],
-            "git": "not_available",
-            "dependencies": {},
-            "environment": {},
-            "tests": "none_detected",
-            "code_quality": {},
-            "build_check": "not_applicable",
-            "files": [],
-            "summary": {
-                "health_score": 100,
-                "issues": []
+        if not project_root.is_dir():
+            return {
+                "success": False,
+                "error": f"Path '{path}' is not a directory.",
+                "message": (
+                    f"Cannot diagnose '{path}': projectDoctor requires a directory."
+                ),
             }
-        }
-        
-        # 1. Tech Stack Detection
-        files_in_root = os.listdir(abs_path) if os.path.isdir(abs_path) else []
-        stack = []
-        if "pyproject.toml" in files_in_root or "requirements.txt" in files_in_root or "setup.py" in files_in_root:
-            stack.append("Python")
-        if "package.json" in files_in_root:
-            stack.append("Node.js/JavaScript")
-            # Check for TS
-            if "tsconfig.json" in files_in_root:
-                stack.append("TypeScript")
-        if "Cargo.toml" in files_in_root:
-            stack.append("Rust")
-        if "composer.json" in files_in_root:
-            stack.append("PHP")
-        if "CMakeLists.txt" in files_in_root or "Makefile" in files_in_root:
-            stack.append("C++")
-            
-        results["stack"] = stack
-        
-        # 2. Git Status
-        is_git = False
-        try:
-            res = subprocess.run(
-                ["git", "rev-parse", "--is-inside-work-tree"],
-                cwd=abs_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False
+
+        root_names = {entry.name for entry in project_root.iterdir()}
+        pyproject = self._read_document(
+            project_root / "pyproject.toml",
+            tomllib.loads,
+            (tomllib.TOMLDecodeError,),
+        )
+        package_json = self._read_document(
+            project_root / "package.json",
+            json.loads,
+            (json.JSONDecodeError,),
+        )
+        composer_json = self._read_document(
+            project_root / "composer.json",
+            json.loads,
+            (json.JSONDecodeError,),
+        )
+
+        technologies = self._detect_technologies(project_root, root_names)
+        dependencies = self._inspect_dependencies(
+            project_root,
+            pyproject,
+            package_json,
+            composer_json,
+        )
+        environment = self._inspect_environment(root_names)
+        validation = inspect_validation_workflows(
+            project_root,
+            root_names,
+            technologies,
+            pyproject,
+            package_json,
+            composer_json,
+        )
+        version_control = self._inspect_git(project_root)
+        source_analysis = self._inspect_source(project_root)
+        file_scan = self._scan_large_files(project_root)
+
+        issues = self._build_issues(
+            technologies=technologies,
+            dependencies=dependencies,
+            validation=validation,
+            version_control=version_control,
+            source_analysis=source_analysis,
+            file_scan=file_scan,
+        )
+        summary = self._build_summary(issues, validation)
+
+        issue_count = summary["issue_count"]
+        pending_count = len(summary["verification"]["configured_but_not_run"])
+        if issue_count:
+            message = (
+                f"Project diagnosis completed with {issue_count} observed "
+                f"issue{'s' if issue_count != 1 else ''}."
             )
-            is_git = res.returncode == 0 and res.stdout.strip() == "true"
-        except Exception:
-            pass
-            
-        if is_git:
-            git_info = {"branch": "unknown", "clean": True, "untracked_count": 0, "commits_ahead": 0}
-            try:
-                # Get branch
-                b_res = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
-                git_info["branch"] = b_res.stdout.strip()
-                
-                # Check clean / untracked
-                s_res = subprocess.run(["git", "status", "--porcelain"], cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
-                status_lines = s_res.stdout.splitlines()
-                modified = [l for l in status_lines if not l.startswith("??")]
-                untracked = [l for l in status_lines if l.startswith("??")]
-                
-                git_info["clean"] = len(modified) == 0
-                git_info["untracked_count"] = len(untracked)
-                git_info["modified_count"] = len(modified)
-                
-                results["git"] = git_info
-            except Exception as e:
-                results["git"] = {"error": str(e)}
-                
-        # 3. Dependencies
-        deps_info = {"count": 0, "manifests_found": []}
-        if "package.json" in files_in_root:
-            deps_info["manifests_found"].append("package.json")
-            # Parse package.json (mock or light parse)
-            try:
-                import json
-                with open(os.path.join(abs_path, "package.json"), 'r', encoding='utf-8') as f:
-                    pkg_data = json.load(f)
-                    dependencies = pkg_data.get("dependencies", {})
-                    dev_dependencies = pkg_data.get("devDependencies", {})
-                    deps_info["count"] += len(dependencies) + len(dev_dependencies)
-            except Exception:
-                pass
-        if "requirements.txt" in files_in_root:
-            deps_info["manifests_found"].append("requirements.txt")
-            try:
-                with open(os.path.join(abs_path, "requirements.txt"), 'r', encoding='utf-8') as f:
-                    reqs = [l for l in f.readlines() if l.strip() and not l.strip().startswith("#")]
-                    deps_info["count"] += len(reqs)
-            except Exception:
-                pass
-        if "pyproject.toml" in files_in_root:
-            deps_info["manifests_found"].append("pyproject.toml")
-            try:
-                with open(os.path.join(abs_path, "pyproject.toml"), 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    # simple dependency counting for pyproject.toml
-                    deps = re.findall(r'(?m)^\s*["\']?([a-zA-Z0-9_\-\[\]]+)["\']?\s*=', content)
-                    deps_info["count"] += len(deps) // 2 # rough approximation
-            except Exception:
-                pass
-        if "Cargo.toml" in files_in_root:
-            deps_info["manifests_found"].append("Cargo.toml")
-        if "composer.json" in files_in_root:
-            deps_info["manifests_found"].append("composer.json")
-            
-        results["dependencies"] = deps_info
-        
-        # 4. Environment Config
-        env_info = {"env_file_present": False, "env_example_present": False}
-        if ".env" in files_in_root:
-            env_info["env_file_present"] = True
-        if ".env.example" in files_in_root:
-            env_info["env_example_present"] = True
-        results["environment"] = env_info
-        
-        # 5. Tests Check
-        test_folders = [d for d in files_in_root if d in ("tests", "test", "spec")]
-        test_configs = [f for f in files_in_root if any(cfg in f for cfg in ("pytest", "jest", "phpunit", "vitest"))]
-        if test_folders or test_configs or "Rust" in stack:
-            test_results = self._run_tests(abs_path, test_folders, test_configs, stack)
-            results["tests"] = {
-                "detected": True,
-                "folders": test_folders,
-                "configs": test_configs,
-                "execution": test_results
-            }
         else:
-            results["tests"] = {
-                "detected": False,
-                "message": "No test suite configurations or folders detected."
-            }
-            
-        # 6. Code Quality (Lint configs, unused-code candidates, circular imports)
-        quality_info = {
-            "lint_configs": [f for f in files_in_root if any(cfg in f for cfg in ("eslint", "prettier", "flake8", "pylint", "tsconfig"))],
-            "unused_code": "not_run",
-            "circular_imports": "not_run",
-            "lint_execution": {"executed": False, "status": "skipped"},
-            "type_checking": {"executed": False, "status": "skipped"}
-        }
-        
-        # Run lint & type checking tools
-        lint_res, type_res = self._run_lint_and_types(abs_path, files_in_root)
-        quality_info["lint_execution"] = lint_res
-        quality_info["type_checking"] = type_res
-        
-        # Unused-code check (reusing FindUnusedCodeCommand)
-        if FindUnusedCodeCommand:
-            try:
-                cmd = FindUnusedCodeCommand()
-                unused_res = cmd.execute(scan_path=abs_path)
-                if unused_res.get("success"):
-                    quality_info["unused_code"] = {
-                        "scan_path": abs_path,
-                        "candidate_symbols_count": unused_res.get(
-                            "candidate_symbols_count",
-                            0,
-                        ),
-                        "candidate_symbols": unused_res.get(
-                            "candidate_symbols",
-                            [],
-                        )[:10],
-                    }
-            except Exception as e:
-                quality_info["unused_code"] = {"error": str(e)}
-                
-        # Circular imports check (reusing TraceCircularImportsCommand)
-        if TraceCircularImportsCommand:
-            try:
-                cmd = TraceCircularImportsCommand()
-                ci_res = cmd.execute(scan_path=abs_path)
-                if ci_res.get("success"):
-                    quality_info["circular_imports"] = {
-                        "scan_path": abs_path,
-                        "cycles_count": ci_res.get("cycles_count", 0),
-                        "cycles": ci_res.get("cycles", [])
-                    }
-            except Exception as e:
-                quality_info["circular_imports"] = {"error": str(e)}
-                
-        results["code_quality"] = quality_info
-        
-        # 6b. Build Check
-        results["build_check"] = self._run_build_check(abs_path, stack)
-        
-        # 7. Large Files Check (>1MB)
-        large_files = []
-        scanned_files_count = 0
-        for root, dirs, files in os.walk(abs_path):
-            dirs[:] = [
-                directory
-                for directory in dirs
-                if directory not in SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES
-                and directory not in (".dropbox", ".dropbox.cache")
-            ]
-            for f in files:
-                scanned_files_count += 1
-                if scanned_files_count > 5000:
-                    break
-                file_path = os.path.join(root, f)
-                try:
-                    f_size = os.path.getsize(file_path)
-                    if f_size > 1024 * 1024:  # >1MB
-                        large_files.append({
-                            "path": os.path.relpath(file_path, abs_path),
-                            "size_bytes": f_size
-                        })
-                except Exception:
-                    pass
-            if scanned_files_count > 5000:
-                break
-        results["files"] = large_files
-        
-        # 8. Summary & Issues List
-        issues = []
-        score = 100
-        
-        # Stack issues
-        if not stack:
-            issues.append(("No known stack identified", "Could not identify standard Python/Node/Rust/PHP/C++ codebase configs.", "medium"))
-            score -= 10
-            
-        # Git issues
-        if not is_git:
-            issues.append(("No Git repository", "Project is not version-controlled with Git.", "medium"))
-            score -= 10
-        elif isinstance(results["git"], dict) and not results["git"].get("clean", True):
-            issues.append(("Uncommitted changes", "Git has modified or untracked changes.", "low"))
-            score -= 5
-            
-        # Env issues
-        if env_info["env_example_present"] and not env_info["env_file_present"]:
-            issues.append(("Missing .env file", "A .env.example exists, but no local .env file was found.", "high"))
-            score -= 15
-            
-        # Test issues
-        if not results["tests"].get("detected", False):
-            issues.append(("No tests found", "No unit test folders or configurations detected.", "medium"))
-            score -= 10
-        elif isinstance(results["tests"], dict) and results["tests"].get("execution", {}).get("status") == "failed":
-            issues.append(("Tests failed", f"Unit tests execution failed in project.", "high"))
-            score -= 15
-            
-        # Unused-code candidates / circular import issues
-        if isinstance(quality_info["unused_code"], dict) and quality_info["unused_code"].get("candidate_symbols_count", 0) > 0:
-            count = quality_info["unused_code"]["candidate_symbols_count"]
-            issues.append((
-                "Unused code candidates",
-                f"Static analysis found {count} definitions without visible references; review dynamic uses before removal.",
-                "low",
-            ))
-            score -= 5
-            
-        if isinstance(quality_info["circular_imports"], dict) and quality_info["circular_imports"].get("cycles_count", 0) > 0:
-            count = quality_info["circular_imports"]["cycles_count"]
-            issues.append(("Circular imports detected", f"Found {count} circular dependency cycles in Python code.", "medium"))
-            score -= 10
-            
-        # Lint / type check execution failure scoring
-        if quality_info.get("lint_execution", {}).get("status") == "failed":
-            issues.append(("Lint check failed", f"Linting rules violations found.", "medium"))
-            score -= 5
-            
-        if quality_info.get("type_checking", {}).get("status") == "failed":
-            issues.append(("Type checking failed", f"Static type checker reported errors.", "medium"))
-            score -= 10
-            
-        # Build check failure scoring
-        if isinstance(results["build_check"], dict) and results["build_check"].get("status") == "failed":
-            issues.append(("Build failed", f"Project compilation / build command failed.", "high"))
-            score -= 20
-            
-        # Large files issues
-        if large_files:
-            issues.append(("Large files present", f"Detected {len(large_files)} files exceeding 1MB in size.", "low"))
-            score -= 5
-            
-        results["summary"] = {"health_score": max(0, min(100, score)), "issues": [{"title": title, "description": desc, "severity": sev} for title, desc, sev in issues]}
-        
+            message = "Project diagnosis completed with no observed issues."
+        if pending_count:
+            message += (
+                f" {pending_count} configured validation "
+                f"workflow{'s were' if pending_count != 1 else ' was'} discovered "
+                "but not executed; run the suggested commands before treating the "
+                "project as release-ready."
+            )
+        else:
+            message += (
+                " No executable validation workflow was discovered, so release "
+                "readiness was not assessed."
+            )
+
         return {
             "success": True,
-            "message": "Project doctor diagnostics complete.",
-            "details": results
+            "message": message,
+            "details": {
+                "path": str(project_root),
+                "technologies": technologies,
+                "dependencies": dependencies,
+                "environment": environment,
+                "validation": validation,
+                "version_control": version_control,
+                "source_analysis": source_analysis,
+                "file_scan": file_scan,
+                "summary": summary,
+            },
         }
-        
-    def _run_lint_and_types(self, abs_path, files_in_root):
-        lint_results = {"executed": False, "status": "skipped", "output": ""}
-        type_results = {"executed": False, "status": "skipped", "output": ""}
-        
-        # Determine if node modules / npx is available
-        has_npx = shutil.which("npx") or shutil.which("npx.cmd")
-        
-        # Check node project lint
-        if "package.json" in files_in_root and has_npx:
-            # Check eslint configuration presence
-            has_eslint_config = any(f.startswith(".eslintrc") or "eslint.config" in f for f in files_in_root)
-            if has_eslint_config:
-                try:
-                    res = subprocess.run(
-                        ["npx", "eslint", ".", "--max-warnings", "0"],
-                        cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15, shell=(os.name == 'nt')
-                    )
-                    lint_results = {
-                        "executed": True,
-                        "tool": "eslint",
-                        "status": "passed" if res.returncode == 0 else "failed",
-                        "output": res.stdout[:1000] + res.stderr[:500]
-                    }
-                except Exception as e:
-                    lint_results = {"executed": True, "tool": "eslint", "status": "error", "output": str(e)}
-            
-            # Check tsconfig presence for typecheck
-            if "tsconfig.json" in files_in_root:
-                try:
-                    res = subprocess.run(
-                        ["npx", "tsc", "--noEmit"],
-                        cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20, shell=(os.name == 'nt')
-                    )
-                    type_results = {
-                        "executed": True,
-                        "tool": "tsc",
-                        "status": "passed" if res.returncode == 0 else "failed",
-                        "output": res.stdout[:1000] + res.stderr[:500]
-                    }
-                except Exception as e:
-                    type_results = {"executed": True, "tool": "tsc", "status": "error", "output": str(e)}
-                    
-        # Check Python lint
-        elif "requirements.txt" in files_in_root or "pyproject.toml" in files_in_root:
-            # Check for local venv flake8 or mypy
-            venv_bin = os.path.join(abs_path, "venv", "Scripts") if os.name == 'nt' else os.path.join(abs_path, "venv", "bin")
-            flake8_path = shutil.which("flake8", path=venv_bin) or shutil.which("flake8")
-            mypy_path = shutil.which("mypy", path=venv_bin) or shutil.which("mypy")
-            
-            if flake8_path:
-                try:
-                    res = subprocess.run(
-                        [flake8_path, "."],
-                        cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15
-                    )
-                    lint_results = {
-                        "executed": True,
-                        "tool": "flake8",
-                        "status": "passed" if res.returncode == 0 else "failed",
-                        "output": res.stdout[:1000] + res.stderr[:500]
-                    }
-                except Exception as e:
-                    lint_results = {"executed": True, "tool": "flake8", "status": "error", "output": str(e)}
-                    
-            if mypy_path:
-                try:
-                    res = subprocess.run(
-                        [mypy_path, "."],
-                        cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20
-                    )
-                    type_results = {
-                        "executed": True,
-                        "tool": "mypy",
-                        "status": "passed" if res.returncode == 0 else "failed",
-                        "output": res.stdout[:1000] + res.stderr[:500]
-                    }
-                except Exception as e:
-                    type_results = {"executed": True, "tool": "mypy", "status": "error", "output": str(e)}
-                    
-        return lint_results, type_results
-        
-    def _run_tests(self, abs_path, test_folders, test_configs, stack):
-        test_results = {"executed": False, "status": "skipped", "output": ""}
-        
-        # Check Python / pytest
-        if "Python" in stack:
-            venv_bin = os.path.join(abs_path, "venv", "Scripts") if os.name == 'nt' else os.path.join(abs_path, "venv", "bin")
-            pytest_path = shutil.which("pytest", path=venv_bin) or shutil.which("pytest")
-            if pytest_path:
-                try:
-                    res = subprocess.run(
-                        [pytest_path, "-v"],
-                        cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20
-                    )
-                    test_results = {
-                        "executed": True,
-                        "framework": "pytest",
-                        "status": "passed" if res.returncode == 0 else "failed",
-                        "output": res.stdout[:1000] + res.stderr[:500]
-                    }
-                except Exception as e:
-                    test_results = {"executed": True, "framework": "pytest", "status": "error", "output": str(e)}
-                    
-        # Check Node.js / Jest or Vitest
-        elif "Node.js/JavaScript" in stack or "TypeScript" in stack:
-            has_npx = shutil.which("npx") or shutil.which("npx.cmd")
-            if has_npx:
-                # Detect framework from configs
-                framework = "npm test"
-                cmd = ["npm", "test"]
-                is_npx_cmd = False
-                
-                # Check for vitest config
-                has_vitest = any("vitest" in f for f in test_configs)
-                has_jest = any("jest" in f for f in test_configs)
-                
-                if has_vitest:
-                    framework = "vitest"
-                    cmd = ["npx", "vitest", "run"]
-                    is_npx_cmd = True
-                elif has_jest:
-                    framework = "jest"
-                    cmd = ["npx", "jest", "--passWithNoTests"]
-                    is_npx_cmd = True
-                    
-                try:
-                    res = subprocess.run(
-                        cmd,
-                        cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30, shell=(os.name == 'nt' or not is_npx_cmd)
-                    )
-                    test_results = {
-                        "executed": True,
-                        "framework": framework,
-                        "status": "passed" if res.returncode == 0 else "failed",
-                        "output": res.stdout[:1000] + res.stderr[:500]
-                    }
-                except Exception as e:
-                    test_results = {"executed": True, "framework": framework, "status": "error", "output": str(e)}
-                    
-        # Check Rust
-        elif "Rust" in stack:
-            try:
-                res = subprocess.run(
-                    ["cargo", "test"],
-                    cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30
+
+    @staticmethod
+    def _read_document(path, parser, parse_errors):
+        if not path.is_file():
+            return None
+        try:
+            return parser(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, *parse_errors) as exc:
+            return {"_qzx_parse_error": str(exc)}
+
+    @staticmethod
+    def _detect_technologies(project_root, root_names):
+        technologies = []
+        if {
+            "pyproject.toml",
+            "setup.py",
+            "setup.cfg",
+            "Pipfile",
+        } & root_names or any(
+            name.startswith("requirements") and name.endswith(".txt")
+            for name in root_names
+        ):
+            technologies.append("Python")
+        if "package.json" in root_names:
+            technologies.append("Node.js")
+        if "tsconfig.json" in root_names:
+            technologies.append("TypeScript")
+        if "Cargo.toml" in root_names:
+            technologies.append("Rust")
+        if "go.mod" in root_names:
+            technologies.append("Go")
+        if "composer.json" in root_names or any(
+            entry.is_file() and entry.suffix.casefold() == ".php"
+            for entry in project_root.iterdir()
+        ):
+            technologies.append("PHP")
+        if {"CMakeLists.txt", "Makefile", "meson.build"} & root_names:
+            technologies.append("C/C++")
+        if {
+            "Dockerfile",
+            "compose.yml",
+            "compose.yaml",
+            "docker-compose.yml",
+            "docker-compose.yaml",
+        } & root_names:
+            technologies.append("Docker")
+        return technologies
+
+    def _inspect_dependencies(
+        self,
+        project_root,
+        pyproject,
+        package_json,
+        composer_json,
+    ):
+        manifests = []
+        if (project_root / "pyproject.toml").is_file():
+            manifests.append(self._parse_pyproject_dependencies(pyproject))
+        if (project_root / "setup.py").is_file():
+            manifests.append(self._parse_setup_dependencies(project_root / "setup.py"))
+        for requirements_path in sorted(project_root.glob("requirements*.txt")):
+            if requirements_path.is_file():
+                manifests.append(
+                    self._parse_requirements_dependencies(requirements_path)
                 )
-                test_results = {
-                    "executed": True,
-                    "framework": "cargo test",
-                    "status": "passed" if res.returncode == 0 else "failed",
-                    "output": res.stdout[:1000] + res.stderr[:500]
-                }
-            except Exception as e:
-                test_results = {"executed": True, "framework": "cargo test", "status": "error", "output": str(e)}
-                
-        # Check PHP / phpunit
-        elif "PHP" in stack:
-            phpunit_path = os.path.join(abs_path, "vendor", "bin", "phpunit")
-            if not os.path.exists(phpunit_path):
-                phpunit_path = shutil.which("phpunit")
-            if phpunit_path:
-                try:
-                    res = subprocess.run(
-                        [phpunit_path],
-                        cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20
-                    )
-                    test_results = {
-                        "executed": True,
-                        "framework": "phpunit",
-                        "status": "passed" if res.returncode == 0 else "failed",
-                        "output": res.stdout[:1000] + res.stderr[:500]
+        if (project_root / "package.json").is_file():
+            manifests.append(
+                self._parse_mapping_dependency_groups(
+                    "package.json",
+                    "node",
+                    package_json,
+                    {
+                        "runtime": "dependencies",
+                        "development": "devDependencies",
+                        "optional": "optionalDependencies",
+                        "peer": "peerDependencies",
+                    },
+                )
+            )
+        if (project_root / "composer.json").is_file():
+            manifests.append(
+                self._parse_mapping_dependency_groups(
+                    "composer.json",
+                    "php",
+                    composer_json,
+                    {
+                        "runtime": "require",
+                        "development": "require-dev",
+                    },
+                )
+            )
+        if (project_root / "Cargo.toml").is_file():
+            cargo = self._read_document(
+                project_root / "Cargo.toml",
+                tomllib.loads,
+                (tomllib.TOMLDecodeError,),
+            )
+            manifests.append(
+                self._parse_mapping_dependency_groups(
+                    "Cargo.toml",
+                    "rust",
+                    cargo,
+                    {
+                        "runtime": "dependencies",
+                        "development": "dev-dependencies",
+                        "build": "build-dependencies",
+                    },
+                )
+            )
+        if (project_root / "go.mod").is_file():
+            manifests.append(self._parse_go_mod(project_root / "go.mod"))
+
+        unique_packages = {}
+        parse_errors = []
+        total_declarations = 0
+        for manifest in manifests:
+            total_declarations += manifest.get("declaration_count", 0)
+            for package_name in manifest.get("packages", []):
+                unique_packages.setdefault(
+                    canonicalize_name(package_name),
+                    package_name,
+                )
+            if manifest["status"] == "error":
+                parse_errors.append(
+                    {
+                        "manifest": manifest["path"],
+                        "error": manifest["error"],
                     }
-                except Exception as e:
-                    test_results = {"executed": True, "framework": "phpunit", "status": "error", "output": str(e)}
-                    
-        return test_results
-        
-    def _run_build_check(self, abs_path, stack):
-        build_results = {"executed": False, "status": "skipped", "output": ""}
-        
-        if "Node.js/JavaScript" in stack or "TypeScript" in stack:
-            pkg_json = os.path.join(abs_path, "package.json")
-            if os.path.exists(pkg_json):
-                # Check if build script exists
-                try:
-                    import json
-                    with open(pkg_json, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                    if "build" in data.get("scripts", {}):
-                        # Use pnpm or npm
-                        cmd = ["pnpm", "run", "build"] if (shutil.which("pnpm") or shutil.which("pnpm.cmd")) else ["npm", "run", "build"]
-                        res = subprocess.run(
-                            cmd,
-                            cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40, shell=(os.name == 'nt')
+                )
+
+        return {
+            "manifest_count": len(manifests),
+            "manifests_found": [manifest["path"] for manifest in manifests],
+            "total_declaration_count": total_declarations,
+            "unique_declared_package_count": len(unique_packages),
+            "unique_packages": sorted(unique_packages.values(), key=str.casefold),
+            "parse_errors": parse_errors,
+            "manifests": manifests,
+            "counting_note": (
+                "Declaration totals include repeated packages across manifests and "
+                "dependency groups; unique_declared_package_count deduplicates "
+                "normalized package names."
+            ),
+        }
+
+    def _parse_pyproject_dependencies(self, data):
+        if not isinstance(data, dict) or "_qzx_parse_error" in data:
+            error = (
+                data.get("_qzx_parse_error", "Invalid TOML document")
+                if isinstance(data, dict)
+                else "Invalid TOML document"
+            )
+            return self._dependency_record(
+                "pyproject.toml",
+                "python",
+                error=error,
+            )
+
+        groups = {}
+        project = data.get("project", {})
+        if isinstance(project, dict):
+            groups["runtime"] = project.get("dependencies", [])
+            optional = project.get("optional-dependencies", {})
+            if isinstance(optional, dict):
+                groups["optional"] = [
+                    requirement
+                    for requirements in optional.values()
+                    if isinstance(requirements, list)
+                    for requirement in requirements
+                ]
+        build_system = data.get("build-system", {})
+        if isinstance(build_system, dict):
+            groups["build"] = build_system.get("requires", [])
+
+        poetry = data.get("tool", {}).get("poetry", {})
+        if isinstance(poetry, dict):
+            poetry_runtime = poetry.get("dependencies", {})
+            if isinstance(poetry_runtime, dict):
+                groups.setdefault("runtime", [])
+                groups["runtime"].extend(
+                    name
+                    for name in poetry_runtime
+                    if name.casefold() != "python"
+                )
+            poetry_dev = poetry.get("dev-dependencies", {})
+            if isinstance(poetry_dev, dict):
+                groups.setdefault("development", [])
+                groups["development"].extend(poetry_dev)
+            poetry_groups = poetry.get("group", {})
+            if isinstance(poetry_groups, dict):
+                for group_name, group_data in poetry_groups.items():
+                    dependencies = (
+                        group_data.get("dependencies", {})
+                        if isinstance(group_data, dict)
+                        else {}
+                    )
+                    if isinstance(dependencies, dict):
+                        scope = (
+                            "development"
+                            if group_name.casefold() in {"dev", "test", "lint"}
+                            else "optional"
                         )
-                        build_results = {
-                            "executed": True,
-                            "command": " ".join(cmd),
-                            "status": "passed" if res.returncode == 0 else "failed",
-                            "output": res.stdout[:1000] + res.stderr[:500]
-                        }
-                except Exception as e:
-                    build_results = {"executed": True, "status": "error", "output": str(e)}
-                    
-        elif "Rust" in stack:
-            try:
-                res = subprocess.run(
-                    ["cargo", "build"],
-                    cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=45
+                        groups.setdefault(scope, [])
+                        groups[scope].extend(dependencies)
+
+        return self._dependency_record("pyproject.toml", "python", groups)
+
+    def _parse_setup_dependencies(self, path):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            assignments = {}
+            setup_call = None
+            for node in tree.body:
+                if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                    targets = (
+                        node.targets
+                        if isinstance(node, ast.Assign)
+                        else [node.target]
+                    )
+                    value = node.value
+                    for target in targets:
+                        if isinstance(target, ast.Name):
+                            try:
+                                assignments[target.id] = ast.literal_eval(value)
+                            except (ValueError, TypeError):
+                                continue
+                if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+                    function = node.value.func
+                    if (
+                        isinstance(function, ast.Name)
+                        and function.id == "setup"
+                        or isinstance(function, ast.Attribute)
+                        and function.attr == "setup"
+                    ):
+                        setup_call = node.value
+
+            groups = {}
+            if setup_call is not None:
+                keywords = {keyword.arg: keyword.value for keyword in setup_call.keywords}
+                runtime = self._literal_or_assignment(
+                    keywords.get("install_requires"),
+                    assignments,
                 )
-                build_results = {
-                    "executed": True,
-                    "command": "cargo build",
-                    "status": "passed" if res.returncode == 0 else "failed",
-                    "output": res.stdout[:1000] + res.stderr[:500]
+                optional = self._literal_or_assignment(
+                    keywords.get("extras_require"),
+                    assignments,
+                )
+                if isinstance(runtime, (list, tuple, set)):
+                    groups["runtime"] = list(runtime)
+                if isinstance(optional, dict):
+                    groups["optional"] = [
+                        requirement
+                        for requirements in optional.values()
+                        if isinstance(requirements, (list, tuple, set))
+                        for requirement in requirements
+                    ]
+            return self._dependency_record("setup.py", "python", groups)
+        except (OSError, UnicodeError, SyntaxError) as exc:
+            return self._dependency_record(
+                "setup.py",
+                "python",
+                error=str(exc),
+            )
+
+    @staticmethod
+    def _literal_or_assignment(node, assignments):
+        if node is None:
+            return None
+        if isinstance(node, ast.Name):
+            return assignments.get(node.id)
+        try:
+            return ast.literal_eval(node)
+        except (ValueError, TypeError):
+            return None
+
+    def _parse_requirements_dependencies(self, path):
+        try:
+            requirements = []
+            for line in path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if (
+                    not stripped
+                    or stripped.startswith("#")
+                    or stripped.startswith(("-r", "--requirement", "-c", "--constraint"))
+                ):
+                    continue
+                requirements.append(stripped)
+            return self._dependency_record(
+                path.name,
+                "python",
+                {"runtime": requirements},
+            )
+        except (OSError, UnicodeError) as exc:
+            return self._dependency_record(
+                path.name,
+                "python",
+                error=str(exc),
+            )
+
+    def _parse_mapping_dependency_groups(
+        self,
+        path,
+        ecosystem,
+        data,
+        group_keys,
+    ):
+        if not isinstance(data, dict) or "_qzx_parse_error" in data:
+            error = (
+                data.get("_qzx_parse_error", "Invalid dependency manifest")
+                if isinstance(data, dict)
+                else "Invalid dependency manifest"
+            )
+            return self._dependency_record(path, ecosystem, error=error)
+        groups = {}
+        for scope, key in group_keys.items():
+            values = data.get(key, {})
+            if isinstance(values, dict):
+                groups[scope] = list(values)
+        return self._dependency_record(path, ecosystem, groups)
+
+    def _parse_go_mod(self, path):
+        try:
+            modules = []
+            in_require_block = False
+            for line in path.read_text(encoding="utf-8").splitlines():
+                stripped = line.split("//", 1)[0].strip()
+                if stripped == "require (":
+                    in_require_block = True
+                    continue
+                if in_require_block and stripped == ")":
+                    in_require_block = False
+                    continue
+                if stripped.startswith("require "):
+                    stripped = stripped.removeprefix("require ").strip()
+                elif not in_require_block:
+                    continue
+                if stripped:
+                    modules.append(stripped.split()[0])
+            return self._dependency_record(
+                "go.mod",
+                "go",
+                {"runtime": modules},
+            )
+        except (OSError, UnicodeError) as exc:
+            return self._dependency_record("go.mod", "go", error=str(exc))
+
+    def _dependency_record(self, path, ecosystem, groups=None, error=None):
+        if error is not None:
+            return {
+                "path": path,
+                "ecosystem": ecosystem,
+                "status": "error",
+                "declaration_count": 0,
+                "group_counts": {},
+                "packages": [],
+                "error": error,
+            }
+
+        normalized_groups = {}
+        packages = {}
+        for scope, values in (groups or {}).items():
+            if not isinstance(values, (list, tuple, set)):
+                continue
+            names = []
+            for value in values:
+                name = self._dependency_name(value, ecosystem)
+                if name:
+                    names.append(name)
+                    packages.setdefault(canonicalize_name(name), name)
+            normalized_groups[scope] = names
+        group_counts = {
+            scope: len(values)
+            for scope, values in normalized_groups.items()
+            if values
+        }
+        return {
+            "path": path,
+            "ecosystem": ecosystem,
+            "status": "parsed",
+            "declaration_count": sum(group_counts.values()),
+            "group_counts": group_counts,
+            "packages": sorted(packages.values(), key=str.casefold),
+        }
+
+    @staticmethod
+    def _dependency_name(value, ecosystem):
+        if not isinstance(value, str):
+            return None
+        candidate = value.strip()
+        if not candidate:
+            return None
+        if ecosystem in {"node", "php", "go", "rust"}:
+            package_name = candidate.split()[0]
+            if re.fullmatch(r"@?[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*", package_name):
+                return package_name
+        try:
+            return Requirement(candidate).name
+        except InvalidRequirement:
+            match = re.match(r"[A-Za-z0-9][A-Za-z0-9._-]*", candidate)
+            return match.group(0) if match else None
+
+    @staticmethod
+    def _inspect_environment(root_names):
+        local_names = [
+            name
+            for name in (".env", ".env.local", ".env.development", ".env.test")
+            if name in root_names
+        ]
+        template_names = [
+            name
+            for name in (".env.example", ".env.template", ".env.sample", "env.example")
+            if name in root_names
+        ]
+        return {
+            "local_files": local_names,
+            "template_files": template_names,
+            "local_configuration_present": bool(local_names),
+            "template_present": bool(template_names),
+            "values_inspected": False,
+            "note": (
+                "Only environment filenames are reported; projectDoctor never "
+                "reads or returns environment values."
+            ),
+        }
+
+    def _inspect_git(self, project_root):
+        probe = self._run_git(project_root, "rev-parse", "--show-toplevel")
+        if probe["status"] == "unavailable":
+            return {
+                "status": "unavailable",
+                "reason": probe["error"],
+            }
+        if probe["status"] == "error":
+            return {
+                "status": "not_repository",
+                "reason": "Git did not identify a repository for this path.",
+            }
+
+        repository_root = probe["stdout"]
+        branch_result = self._run_git(
+            project_root,
+            "rev-parse",
+            "--abbrev-ref",
+            "HEAD",
+        )
+        status_result = self._run_git(
+            project_root,
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+        )
+        status_lines = (
+            status_result["stdout"].splitlines()
+            if status_result["status"] == "ok"
+            else []
+        )
+        untracked_count = sum(line.startswith("??") for line in status_lines)
+        changed_count = len(status_lines) - untracked_count
+
+        upstream_result = self._run_git(
+            project_root,
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{upstream}",
+        )
+        upstream = (
+            upstream_result["stdout"]
+            if upstream_result["status"] == "ok"
+            else None
+        )
+        commits_ahead = None
+        commits_behind = None
+        if upstream:
+            divergence = self._run_git(
+                project_root,
+                "rev-list",
+                "--left-right",
+                "--count",
+                f"HEAD...{upstream}",
+            )
+            if divergence["status"] == "ok":
+                parts = divergence["stdout"].split()
+                if len(parts) == 2 and all(part.isdigit() for part in parts):
+                    commits_ahead = int(parts[0])
+                    commits_behind = int(parts[1])
+
+        branch = (
+            branch_result["stdout"]
+            if branch_result["status"] == "ok"
+            else "unknown"
+        )
+        return {
+            "status": "inspected",
+            "repository_root": repository_root,
+            "branch": branch,
+            "detached_head": branch == "HEAD",
+            "clean": not status_lines,
+            "changed_count": changed_count,
+            "untracked_count": untracked_count,
+            "upstream": upstream,
+            "commits_ahead": commits_ahead,
+            "commits_behind": commits_behind,
+        }
+
+    @staticmethod
+    def _run_git(project_root, *arguments):
+        try:
+            result = subprocess.run(
+                ["git", *arguments],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=8,
+                check=False,
+            )
+        except FileNotFoundError:
+            return {
+                "status": "unavailable",
+                "stdout": "",
+                "error": "Git is not installed or is not available on PATH.",
+            }
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {
+                "status": "unavailable",
+                "stdout": "",
+                "error": str(exc),
+            }
+        return {
+            "status": "ok" if result.returncode == 0 else "error",
+            "stdout": result.stdout.strip(),
+            "error": result.stderr.strip(),
+        }
+
+    @staticmethod
+    def _inspect_source(project_root):
+        unused_result = FindUnusedCodeCommand().execute(scan_path=str(project_root))
+        if unused_result.get("success"):
+            unused_code = {
+                "status": (
+                    "attention"
+                    if unused_result.get("candidate_symbols_count", 0)
+                    else "passed"
+                ),
+                "candidate_symbols_count": unused_result.get(
+                    "candidate_symbols_count",
+                    0,
+                ),
+                "candidate_symbols": unused_result.get("candidate_symbols", [])[:10],
+                "interpretation": (
+                    "Candidates have no statically visible references; review dynamic "
+                    "uses before removal."
+                ),
+            }
+        else:
+            unused_code = {
+                "status": "error",
+                "error": unused_result.get(
+                    "message",
+                    "Unused-code analysis failed without an explanation.",
+                ),
+            }
+
+        circular_result = TraceCircularImportsCommand().execute(
+            scan_path=str(project_root)
+        )
+        if circular_result.get("success"):
+            circular_imports = {
+                "status": (
+                    "attention"
+                    if circular_result.get("cycles_count", 0)
+                    else "passed"
+                ),
+                "cycles_count": circular_result.get("cycles_count", 0),
+                "cycles": circular_result.get("cycles", []),
+            }
+        else:
+            circular_imports = {
+                "status": "error",
+                "error": circular_result.get(
+                    "message",
+                    "Circular-import analysis failed without an explanation.",
+                ),
+            }
+        return {
+            "unused_code": unused_code,
+            "circular_imports": circular_imports,
+        }
+
+    def _scan_large_files(self, project_root):
+        threshold_bytes = 1024 * 1024
+        maximum_files = 5000
+        excluded = {
+            name.casefold()
+            for name in SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES
+        } | {".git", ".dropbox", ".dropbox.cache", "artifacts"}
+        large_files = []
+        scanned_files = 0
+        error_count = 0
+        scan_complete = True
+
+        for root, directories, files in os.walk(project_root):
+            root_path = Path(root)
+            directories[:] = [
+                directory
+                for directory in directories
+                if directory.casefold() not in excluded
+                and not (root_path / directory).is_symlink()
+            ]
+            for filename in files:
+                if scanned_files >= maximum_files:
+                    scan_complete = False
+                    break
+                scanned_files += 1
+                file_path = root_path / filename
+                try:
+                    size_bytes = file_path.stat().st_size
+                except OSError:
+                    error_count += 1
+                    continue
+                if size_bytes > threshold_bytes:
+                    large_files.append(
+                        {
+                            "path": str(file_path.relative_to(project_root)),
+                            "size_bytes": size_bytes,
+                            "size_formatted": self._format_bytes(size_bytes),
+                        }
+                    )
+            if not scan_complete:
+                break
+
+        return {
+            "scanned_file_count": scanned_files,
+            "maximum_file_count": maximum_files,
+            "scan_complete": scan_complete,
+            "error_count": error_count,
+            "large_file_threshold_bytes": threshold_bytes,
+            "large_file_threshold_formatted": self._format_bytes(threshold_bytes),
+            "large_file_count": len(large_files),
+            "large_files": large_files,
+        }
+
+    @staticmethod
+    def _build_issues(
+        technologies,
+        dependencies,
+        validation,
+        version_control,
+        source_analysis,
+        file_scan,
+    ):
+        issues = []
+
+        def add(code, severity, title, description, remediation):
+            issues.append(
+                {
+                    "code": code,
+                    "severity": severity,
+                    "title": title,
+                    "description": description,
+                    "remediation": remediation,
                 }
-            except Exception as e:
-                build_results = {"executed": True, "command": "cargo build", "status": "error", "output": str(e)}
-                
-        return build_results
+            )
+
+        if not technologies:
+            add(
+                "unknown_technology",
+                "medium",
+                "No supported project technology detected",
+                "No conventional Python, Node.js, PHP, Rust, Go, C/C++, or Docker marker was found.",
+                "Add the canonical manifest for the project or inspect the intended root directory.",
+            )
+        if dependencies["parse_errors"]:
+            add(
+                "dependency_manifest_parse_error",
+                "medium",
+                "One or more dependency manifests could not be parsed",
+                f"{len(dependencies['parse_errors'])} manifest parse error(s) prevent a complete dependency inventory.",
+                "Correct the reported manifest syntax and run projectDoctor again.",
+            )
+        if technologies and not validation["tests"]["configured"]:
+            add(
+                "tests_not_configured",
+                "medium",
+                "No test workflow detected",
+                "The project technology was identified, but no conventional test folder, configuration, or script was found.",
+                "Add a maintained test workflow appropriate for the detected technology.",
+            )
+        if version_control["status"] == "not_repository":
+            add(
+                "git_not_detected",
+                "low",
+                "Git repository not detected",
+                "The inspected path is not inside a Git working tree.",
+                "Use version control for maintained source projects or confirm that this directory is intentionally unversioned.",
+            )
+        elif version_control["status"] == "unavailable":
+            add(
+                "git_unavailable",
+                "low",
+                "Git state could not be inspected",
+                version_control["reason"],
+                "Install Git or make it available on PATH, then repeat the diagnosis.",
+            )
+        elif not version_control.get("clean", True):
+            add(
+                "git_worktree_changed",
+                "info",
+                "Git working tree has local changes",
+                (
+                    f"{version_control['changed_count']} tracked change(s) and "
+                    f"{version_control['untracked_count']} untracked path(s) were observed."
+                ),
+                "Review the diff and untracked paths before a release or deployment.",
+            )
+
+        unused_code = source_analysis["unused_code"]
+        if unused_code["status"] == "attention":
+            add(
+                "unused_code_candidates",
+                "low",
+                "Unused-code candidates require review",
+                f"Static analysis found {unused_code['candidate_symbols_count']} definition(s) without visible references.",
+                "Review dynamic imports and framework registration before removing any candidate.",
+            )
+        elif unused_code["status"] == "error":
+            add(
+                "unused_code_analysis_error",
+                "medium",
+                "Unused-code analysis failed",
+                unused_code["error"],
+                "Resolve the analysis error and repeat projectDoctor.",
+            )
+
+        circular_imports = source_analysis["circular_imports"]
+        if circular_imports["status"] == "attention":
+            add(
+                "circular_imports",
+                "medium",
+                "Circular imports detected",
+                f"Static analysis found {circular_imports['cycles_count']} circular dependency cycle(s).",
+                "Move shared contracts to a lower-level module or invert the dependency.",
+            )
+        elif circular_imports["status"] == "error":
+            add(
+                "circular_import_analysis_error",
+                "medium",
+                "Circular-import analysis failed",
+                circular_imports["error"],
+                "Resolve the analysis error and repeat projectDoctor.",
+            )
+
+        if not file_scan["scan_complete"]:
+            add(
+                "file_scan_incomplete",
+                "low",
+                "File scan reached its safety limit",
+                f"The scan stopped after {file_scan['maximum_file_count']} files.",
+                "Inspect a narrower project root or use focused file commands for the remaining tree.",
+            )
+        if file_scan["error_count"]:
+            add(
+                "file_scan_errors",
+                "low",
+                "Some file metadata could not be read",
+                f"{file_scan['error_count']} file metadata read(s) failed.",
+                "Review permissions or transient file locks and repeat the scan.",
+            )
+        if file_scan["large_file_count"]:
+            add(
+                "large_files",
+                "low",
+                "Large files detected",
+                f"{file_scan['large_file_count']} file(s) exceed {file_scan['large_file_threshold_formatted']}.",
+                "Confirm each large file is intentional and appropriate for source, deployment, or project storage.",
+            )
+
+        return issues
+
+    @staticmethod
+    def _build_summary(issues, validation):
+        severity_counts = Counter(issue["severity"] for issue in issues)
+        material_issues = [
+            issue for issue in issues if issue["severity"] != "info"
+        ]
+        if severity_counts["high"]:
+            status = "critical"
+        elif severity_counts["medium"]:
+            status = "attention"
+        elif severity_counts["low"]:
+            status = "review"
+        else:
+            status = "no_issues_observed"
+
+        configured_not_run = [
+            name
+            for name in ("tests", "lint", "type_checking", "build")
+            if validation[name]["status"] == "configured_not_run"
+        ]
+        suggested_commands = list(
+            dict.fromkeys(
+                command
+                for name in configured_not_run
+                for command in validation[name]["commands"]
+            )
+        )
+        verification_level = "partial" if configured_not_run else "limited"
+
+        return {
+            "status": status,
+            "issue_count": len(material_issues),
+            "informational_count": severity_counts["info"],
+            "issue_counts_by_severity": {
+                severity: severity_counts[severity]
+                for severity in ("high", "medium", "low", "info")
+            },
+            "issues": issues,
+            "verification": {
+                "level": verification_level,
+                "release_readiness": "not_assessed",
+                "verified_areas": [
+                    "technology and manifest discovery",
+                    "dependency declaration inventory",
+                    "Git working-tree state when Git is available",
+                    "static unused-code candidates",
+                    "static circular-import analysis",
+                    "bounded large-file scan",
+                ],
+                "configured_but_not_run": configured_not_run,
+                "suggested_commands": suggested_commands,
+                "reason": (
+                    "The command performs read-only inspection and never executes "
+                    "project-owned validation or build scripts."
+                ),
+            },
+        }

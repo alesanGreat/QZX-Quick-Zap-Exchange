@@ -113,7 +113,7 @@ class KillProcessCommand(CommandBase):
                 pid=parsed_pid,
             )
 
-        force_value = self._strict_bool(force)
+        force_value = self._parse_bool(force)
         if force_value is None:
             return self._failure(
                 "invalid_force",
@@ -294,18 +294,6 @@ class KillProcessCommand(CommandBase):
                 f"{method}; QZX verified that it exited."
             ),
         }
-
-    @staticmethod
-    def _strict_bool(value):
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            normalized = value.strip().lower()
-            if normalized in {"true", "yes", "y", "1", "on"}:
-                return True
-            if normalized in {"false", "no", "n", "0", "off"}:
-                return False
-        return None
 
     def _protected_reason(self, process, process_name, psutil_module):
         pid = process.pid

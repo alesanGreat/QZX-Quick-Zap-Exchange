@@ -289,13 +289,6 @@
       "category": "network"
     },
     {
-      "name": "getProgrammingLanguageStats",
-      "module": "qzx.commands.file.get_programming_language_stats",
-      "class_name": "GetProgrammingLanguageStatsFromFileCommand",
-      "description": "Analyzes files to determine the programming language and provides statistics about the code. Supports wildcards and recursive directory search.",
-      "category": "file"
-    },
-    {
       "name": "getProjectTree",
       "module": "qzx.commands.development.get_project_tree",
       "class_name": "GetProjectTreeCommand",
@@ -432,7 +425,7 @@
       "name": "projectDoctor",
       "module": "qzx.commands.development.project_doctor",
       "class_name": "ProjectDoctorCommand",
-      "description": "Inspects project health: detects tech stack, dependencies, environment configuration, Git state, test suites, circular imports, unused-code candidates, and large files",
+      "description": "Inspects project technologies, dependencies, validation workflows, Git state, source quality, and large files without executing project scripts",
       "category": "development"
     },
     {
@@ -545,13 +538,6 @@
       "module": "qzx.commands.development.scaffold_typescript",
       "class_name": "ScaffoldTypeScriptCommand",
       "description": "Creates a basic scaffolding for a TypeScript program",
-      "category": "development"
-    },
-    {
-      "name": "scanProject",
-      "module": "qzx.commands.development.scan_project",
-      "class_name": "ScanProjectCommand",
-      "description": "Scans a project root to identify technologies, scripts, configuration files, and missing environment keys",
       "category": "development"
     },
     {

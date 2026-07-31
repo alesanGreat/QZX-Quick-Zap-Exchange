@@ -85,6 +85,28 @@ def _run_cli(*arguments, environment_overrides=None):
     )
 
 
+def test_shared_boolean_parser_accepts_only_explicit_boolean_values():
+    accepted = {
+        True: True,
+        False: False,
+        "true": True,
+        "YES": True,
+        "1": True,
+        "on": True,
+        "t": True,
+        "false": False,
+        "NO": False,
+        "0": False,
+        "off": False,
+        "f": False,
+    }
+    for raw_value, expected in accepted.items():
+        assert CommandBase._parse_bool(raw_value) is expected
+
+    for raw_value in (None, 1, 0, [], {}, "sometimes", ""):
+        assert CommandBase._parse_bool(raw_value) is None
+
+
 def test_discovery_is_complete_and_collision_free():
     loader = CommandLoader()
     commands = loader.discover_commands()

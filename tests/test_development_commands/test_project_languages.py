@@ -140,8 +140,10 @@ class TestProjectLanguagesCommand:
         loader = CommandLoader()
 
         canonical = loader.get_command("projectLanguages")
-        retired_name = loader.get_command("auditLanguages")
+        retired_alias = loader.get_command("auditLanguages")
+        retired_duplicate = loader.get_command("getProgrammingLanguageStats")
 
         assert canonical is not None
-        assert retired_name is None
+        assert retired_alias is None
+        assert retired_duplicate is None
         assert canonical.name == "projectLanguages"

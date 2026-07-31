@@ -179,9 +179,9 @@ class PrepareReleaseCommand(CommandBase):
                 path=str(project_path),
             )
 
-        dry_run_value = self._strict_bool(dry_run)
-        changelog_value = self._strict_bool(update_changelog)
-        clean_git_value = self._strict_bool(require_clean_git)
+        dry_run_value = self._parse_bool(dry_run)
+        changelog_value = self._parse_bool(update_changelog)
+        clean_git_value = self._parse_bool(require_clean_git)
         if dry_run_value is None:
             return self._invalid_bool("dry_run", dry_run, project_path)
         if changelog_value is None:
@@ -771,18 +771,6 @@ class PrepareReleaseCommand(CommandBase):
                 os.unlink(temporary_name)
             except FileNotFoundError:
                 pass
-
-    @staticmethod
-    def _strict_bool(value):
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            normalized = value.strip().lower()
-            if normalized in {"true", "yes", "y", "1", "on"}:
-                return True
-            if normalized in {"false", "no", "n", "0", "off"}:
-                return False
-        return None
 
     def _invalid_bool(self, name, value, project_path):
         return self._failure(

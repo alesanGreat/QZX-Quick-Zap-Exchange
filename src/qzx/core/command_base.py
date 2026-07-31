@@ -98,7 +98,7 @@ class CommandBase(ABC):
         if isinstance(value, bool):
             return value
         if not isinstance(value, str):
-            return bool(value)
+            return None
 
         normalized = value.strip().lower()
         if normalized in {"true", "yes", "y", "1", "on", "t"}:

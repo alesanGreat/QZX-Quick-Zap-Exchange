@@ -35,7 +35,7 @@ qzx getCurrentDateTime
 qzx getCurrentDateTime --output-format iso --json
 ```
 
-This source release is QZX `0.2.2.0.6a12` and requires Python `>=3.13`.
+This source release is QZX `0.2.2.0.6a13` and requires Python `>=3.13`.
 A normal `python -m pip install qzx` selects the latest final release; add
 `--pre` to opt into the newest pre-release. PyPI is authoritative for which
 version those commands currently select.
@@ -46,7 +46,7 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.6a12` | `>=3.13`; standard CPython 3.13.x is certified | 89 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.6a13` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -113,7 +113,6 @@ The following examples require the development checkout and must not be
 recommended after only `pip install qzx`:
 
 ```bash
-qzx scanProject . --json
 qzx projectDoctor . --json
 qzx systemDoctor --json
 qzx auditRepository . --json

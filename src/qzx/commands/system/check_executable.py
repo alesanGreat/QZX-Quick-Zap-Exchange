@@ -61,18 +61,6 @@ class CheckExecutableCommand(CommandBase):
         self._runner = runner
 
     @staticmethod
-    def _parse_bool(value):
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            normalized = value.strip().lower()
-            if normalized in {"true", "1", "yes", "y", "on"}:
-                return True
-            if normalized in {"false", "0", "no", "n", "off"}:
-                return False
-        return None
-
-    @staticmethod
     def _extract_version(output):
         match = re.search(
             r"(?:version\s+)?"
