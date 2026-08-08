@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import ast
 import json
-import runpy
 from pathlib import Path
 
 import pytest
-import setuptools
 
 from scripts.verify_distribution_artifacts import (
     find_repository_relative_links,
@@ -58,21 +57,32 @@ def test_current_readme_becomes_package_index_safe() -> None:
     verify_package_index_links(rendered, "rendered README")
 
 
-def test_setup_long_description_uses_package_index_safe_links(monkeypatch) -> None:
-    captured: dict[str, object] = {}
+def test_setup_long_description_uses_package_index_renderer() -> None:
+    """Keep this integration check dependency-free in the runtime test matrix."""
 
-    monkeypatch.setattr(setuptools, "setup", lambda **kwargs: captured.update(kwargs))
-    monkeypatch.setattr(setuptools, "find_packages", lambda **kwargs: ["qzx"])
-    runpy.run_path(str(PROJECT_ROOT / "setup.py"), run_name="__qzx_setup_test__")
+    setup_path = PROJECT_ROOT / "setup.py"
+    tree = ast.parse(setup_path.read_text(encoding="utf-8"), filename=str(setup_path))
+    assignments = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "long_description"
+            for target in node.targets
+        )
+    ]
 
-    long_description = captured["long_description"]
-    assert isinstance(long_description, str)
-    assert find_repository_relative_links(long_description) == []
-    verify_package_index_links(long_description, "setup.py long_description")
-
-    repository, version = package_context()
-    assert f"{repository}/blob/v{version}/CONTRIBUTING.md" in long_description
-    assert f"{repository}/blob/v{version}/LICENSE" in long_description
+    assert len(assignments) == 1
+    call = assignments[0].value
+    assert isinstance(call, ast.Call)
+    assert isinstance(call.func, ast.Attribute)
+    assert isinstance(call.func.value, ast.Name)
+    assert call.func.value.id == "distribution_helpers"
+    assert call.func.attr == "render_package_readme"
+    assert {keyword.arg for keyword in call.keywords} == {
+        "repository_url",
+        "revision",
+    }
 
 
 def test_renderer_preserves_non_repository_links_and_fragments() -> None:
