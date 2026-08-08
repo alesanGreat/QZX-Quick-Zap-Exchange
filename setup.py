@@ -27,16 +27,34 @@ if test_environment_spec is None or test_environment_spec.loader is None:
     raise RuntimeError("Unable to load the QZX test-environment synchronizer.")
 test_environment_sync = importlib.util.module_from_spec(test_environment_spec)
 test_environment_spec.loader.exec_module(test_environment_sync)
+
+DISTRIBUTION_HELPERS_PATH = (
+    PROJECT_ROOT / "scripts" / "verify_distribution_artifacts.py"
+)
+distribution_helpers_spec = importlib.util.spec_from_file_location(
+    "qzx_distribution_helpers",
+    DISTRIBUTION_HELPERS_PATH,
+)
+if distribution_helpers_spec is None or distribution_helpers_spec.loader is None:
+    raise RuntimeError("Unable to load the QZX distribution helpers.")
+distribution_helpers = importlib.util.module_from_spec(distribution_helpers_spec)
+distribution_helpers_spec.loader.exec_module(distribution_helpers)
+
 test_environment_manifest = test_environment_sync.load_manifest()
 test_environment_sync.validate_manifest(
     test_environment_manifest,
     validate_workflows=False,
 )
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = test_environment_sync.render_readme_content(
+with (PROJECT_ROOT / "README.md").open("r", encoding="utf-8") as fh:
+    source_readme = test_environment_sync.render_readme_content(
         fh.read(),
         test_environment_manifest,
     )
+long_description = distribution_helpers.render_package_readme(
+    source_readme,
+    repository_url=PRODUCT_URLS["repository"],
+    revision=f"v{DEVELOPMENT_CHANNEL['version']}",
+)
 
 # Dependencias específicas de la plataforma
 install_requires = [

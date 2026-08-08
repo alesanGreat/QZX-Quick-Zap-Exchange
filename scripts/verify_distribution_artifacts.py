@@ -8,10 +8,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import tarfile
 import zipfile
 from email.parser import Parser
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from urllib.parse import quote, urlsplit
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +30,106 @@ RESULT_CONTRACT_WHEEL_PATH = (
     "qzx/resources/schemas/result-contract-v1.schema.json"
 )
 GOLDEN_CORE_WHEEL_PATH = "qzx/resources/golden-core.json"
+_INLINE_MARKDOWN_DESTINATION = re.compile(
+    r"(?P<prefix>\]\()"
+    r"(?P<destination><[^>\r\n]+>|[^)\s]+)"
+    r"(?P<suffix>(?:\s+(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|\([^\)\r\n]*\)))?\))"
+)
+_REFERENCE_MARKDOWN_DESTINATION = re.compile(
+    r"^(?P<prefix>[ \t]{0,3}\[[^\]\r\n]+\]:[ \t]*)"
+    r"(?P<destination><[^>\r\n]+>|\S+)"
+    r"(?P<suffix>[ \t]*(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|\([^\)\r\n]*\))?[ \t]*)$",
+    re.MULTILINE,
+)
+
+
+def _unwrap_markdown_destination(destination: str) -> tuple[str, bool]:
+    if destination.startswith("<") and destination.endswith(">"):
+        return destination[1:-1], True
+    return destination, False
+
+
+def is_repository_relative_destination(destination: str) -> bool:
+    """Return whether one Markdown destination depends on repository context."""
+    raw, _ = _unwrap_markdown_destination(destination)
+    if not raw or raw.startswith(("#", "/", "\\")):
+        return False
+    parsed = urlsplit(raw)
+    return not parsed.scheme and not parsed.netloc
+
+
+def _repository_url_for_destination(
+    destination: str,
+    *,
+    repository_url: str,
+    revision: str,
+) -> str:
+    raw, wrapped = _unwrap_markdown_destination(destination)
+    if not is_repository_relative_destination(destination):
+        return destination
+
+    parsed = urlsplit(raw)
+    parts: list[str] = []
+    for part in PurePosixPath(parsed.path).parts:
+        if part in ("", "."):
+            continue
+        if part == "..":
+            raise ValueError(
+                f"Package README link escapes the repository root: {destination!r}."
+            )
+        parts.append(part)
+    if not parts:
+        return destination
+
+    encoded_path = quote(
+        "/".join(parts),
+        safe="/%:@!$&'()*+,;=-._~",
+    )
+    encoded_revision = quote(revision, safe="")
+    absolute = (
+        f"{repository_url.rstrip('/')}/blob/{encoded_revision}/{encoded_path}"
+    )
+    if parsed.query:
+        absolute += f"?{parsed.query}"
+    if parsed.fragment:
+        absolute += f"#{parsed.fragment}"
+    return f"<{absolute}>" if wrapped else absolute
+
+
+def find_repository_relative_links(markdown: str) -> list[str]:
+    """Return repository-relative inline and reference Markdown destinations."""
+    destinations: list[str] = []
+    for pattern in (_INLINE_MARKDOWN_DESTINATION, _REFERENCE_MARKDOWN_DESTINATION):
+        destinations.extend(
+            match.group("destination")
+            for match in pattern.finditer(markdown)
+            if is_repository_relative_destination(match.group("destination"))
+        )
+    return destinations
+
+
+def render_package_readme(
+    markdown: str,
+    *,
+    repository_url: str,
+    revision: str,
+) -> str:
+    """Convert repository-relative Markdown links to immutable repository URLs."""
+    if not repository_url.startswith(("https://", "http://")):
+        raise ValueError("repository_url must be an absolute HTTP(S) URL.")
+    if not revision.strip():
+        raise ValueError("revision must not be empty.")
+
+    def replace(match: re.Match[str]) -> str:
+        destination = _repository_url_for_destination(
+            match.group("destination"),
+            repository_url=repository_url,
+            revision=revision,
+        )
+        return f"{match.group('prefix')}{destination}{match.group('suffix')}"
+
+    rendered = _INLINE_MARKDOWN_DESTINATION.sub(replace, markdown)
+    return _REFERENCE_MARKDOWN_DESTINATION.sub(replace, rendered)
 
 
 def verify_golden_core_registry(text: str, context: str) -> int:
@@ -135,6 +237,41 @@ def verify_release_description(
         raise ValueError(
             f"{context} does not identify its immutable source release; "
             f"expected {marker!r}."
+        )
+
+
+def verify_package_index_links(text: str, context: str) -> None:
+    """Reject Markdown links that a package index would resolve against itself."""
+    patterns = (
+        re.compile(
+            r"\]\((?P<destination><[^>\r\n]+>|[^)\s]+)"
+            r"(?:\s+(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|\([^\)\r\n]*\)))?\)"
+        ),
+        re.compile(
+            r"^[ \t]{0,3}\[[^\]\r\n]+\]:[ \t]*"
+            r"(?P<destination><[^>\r\n]+>|\S+)",
+            re.MULTILINE,
+        ),
+    )
+    relative: list[str] = []
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            destination = match.group("destination")
+            raw = (
+                destination[1:-1]
+                if destination.startswith("<") and destination.endswith(">")
+                else destination
+            )
+            if not raw or raw.startswith(("#", "/", "\\")):
+                continue
+            parsed = urlsplit(raw)
+            if not parsed.scheme and not parsed.netloc:
+                relative.append(destination)
+    if relative:
+        destinations = ", ".join(sorted(set(relative)))
+        raise ValueError(
+            f"{context} contains repository-relative Markdown links that "
+            f"PyPI cannot resolve: {destinations}."
         )
 
 
@@ -250,6 +387,7 @@ def verify_wheel(
         expected_version=expected_version,
         context=wheel_path.name,
     )
+    verify_package_index_links(metadata_text, wheel_path.name)
     verify_result_contract_schema(
         result_contract_schema,
         f"{wheel_path.name}:{RESULT_CONTRACT_WHEEL_PATH}",
@@ -393,6 +531,10 @@ def verify_sdist(
         metadata_text,
         expected_version=expected_version,
         context=f"{sdist_path.name} PKG-INFO",
+    )
+    verify_package_index_links(
+        metadata_text,
+        f"{sdist_path.name} PKG-INFO",
     )
     verify_release_description(
         readme_text,

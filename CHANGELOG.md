@@ -22,6 +22,10 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   five commands explicitly record that no representative caller-controlled
   failure applies instead of manufacturing an infrastructure fault for a green
   dashboard badge.
+- Fixed PyPI-facing README links by converting repository-relative Markdown
+  destinations to immutable release-tag URLs during package metadata rendering;
+  release verification now rejects relative links in wheel `METADATA` and sdist
+  `PKG-INFO` before publication, preventing the `/project/qzx/...` 404 pattern.
 
 ## 0.2.2.0.7a2 — 2026-08-08
 
