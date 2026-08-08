@@ -9,7 +9,6 @@ import argparse
 import hashlib
 import json
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -261,10 +260,17 @@ def merge(paths: list[Path]) -> dict[str, Any]:
             }
         )
 
+    captured_times = sorted(
+        document["captured_at"] for _, document in documents
+    )
     summary = {
         "schema_version": SCHEMA_VERSION,
         "evidence_type": SUMMARY_TYPE,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": captured_times[-1],
+        "evidence_window": {
+            "first_captured_at": captured_times[0],
+            "last_captured_at": captured_times[-1],
+        },
         "source_revision": next(iter(revisions)),
         "qzx_version": next(iter(versions)),
         "golden_core": {

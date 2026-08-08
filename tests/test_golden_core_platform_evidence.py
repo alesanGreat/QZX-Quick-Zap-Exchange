@@ -156,7 +156,14 @@ def test_merge_accepts_three_declared_systems(tmp_path):
     ]
 
     summary = merge(files)
+    summary_reversed = merge(list(reversed(files)))
 
+    assert summary == summary_reversed
+    assert summary["generated_at"] == "2026-08-08T00:00:00+00:00"
+    assert summary["evidence_window"] == {
+        "first_captured_at": "2026-08-08T00:00:00+00:00",
+        "last_captured_at": "2026-08-08T00:00:00+00:00",
+    }
     assert summary["evidence_type"] == "qzx_golden_core_platform_summary"
     assert summary["source_revision"] == SOURCE_REVISION
     assert summary["summary"]["environment_count"] == 3
