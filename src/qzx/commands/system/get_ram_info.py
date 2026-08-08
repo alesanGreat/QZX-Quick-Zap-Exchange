@@ -26,7 +26,19 @@ class GetRamInfoCommand(CommandBase):
             'description': 'Get detailed information about system memory usage'
         }
     ]
-    
+
+    def __init__(
+        self,
+        virtual_memory_provider=None,
+        swap_memory_provider=None,
+    ):
+        """Allow deterministic providers without patching psutil at runtime."""
+
+        self._virtual_memory = (
+            virtual_memory_provider or psutil.virtual_memory
+        )
+        self._swap_memory = swap_memory_provider or psutil.swap_memory
+
     def execute(self):
         """
         Gets information about system RAM
@@ -36,8 +48,8 @@ class GetRamInfoCommand(CommandBase):
         """
         try:
             # Get memory information
-            virtual_memory = psutil.virtual_memory()
-            swap = psutil.swap_memory()
+            virtual_memory = self._virtual_memory()
+            swap = self._swap_memory()
             
             # Prepare the output
             ram_info = {

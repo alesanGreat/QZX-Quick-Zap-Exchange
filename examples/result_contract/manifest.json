@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "contract": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json",
+  "cases": [
+    {
+      "id": "valid_success",
+      "file": "valid-success.json",
+      "expected_conformant": true,
+      "expected_violations": []
+    },
+    {
+      "id": "valid_failure",
+      "file": "valid-failure.json",
+      "expected_conformant": true,
+      "expected_violations": []
+    },
+    {
+      "id": "invalid_missing_message",
+      "file": "invalid-missing-message.json",
+      "expected_conformant": false,
+      "expected_violations": [
+        "message must be a non-empty string."
+      ]
+    },
+    {
+      "id": "invalid_success_string",
+      "file": "invalid-success-string.json",
+      "expected_conformant": false,
+      "expected_violations": [
+        "success must be a boolean."
+      ]
+    },
+    {
+      "id": "invalid_failure_without_error",
+      "file": "invalid-failure-without-error.json",
+      "expected_conformant": false,
+      "expected_violations": [
+        "A failed result must include error or error_code."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "details": {
+    "value": 42
+  },
+  "meta": {
+    "schema_version": 1
+  }
+}

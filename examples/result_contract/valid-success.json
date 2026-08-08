@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "message": "Found 2 matching files.",
+  "details": {
+    "matched_count": 2,
+    "truncated": false
+  },
+  "warnings": [],
+  "meta": {
+    "schema_version": 1,
+    "command": "findFiles",
+    "duration_ms": 12.5
+  }
+}

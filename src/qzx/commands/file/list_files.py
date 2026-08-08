@@ -8,7 +8,6 @@ Using the centralized recursive file finder utility
 
 import os
 import time
-import sys
 
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
@@ -89,21 +88,23 @@ class ListFilesCommand(CommandBase):
             Dictionary with the list of files and metadata
         """
         try:
-            # Process flags in command arguments if they exist
-            args = sys.argv
-            recursive_flags = ['-r', '-R', '--recursive']
-            recursive_found = any(flag in args for flag in recursive_flags)
-            
-            # Parse recursive parameter - convert string flags or handle boolean
-            if recursive_found and recursive is None:
-                recursive = True
-            recursive = parse_recursive_parameter(recursive)
-            
+            recursion_depth = parse_recursive_parameter(recursive)
+            recursive_enabled = (
+                recursion_depth is None or recursion_depth > 0
+            )
+
             # Ensure directory exists
             if not os.path.exists(directory_path):
+                message = f"Directory '{directory_path}' not found."
                 return {
                     "success": False,
-                    "message": f"Directory '{directory_path}' not found"
+                    "error": message,
+                    "error_code": "path_not_found",
+                    "message": message,
+                    "details": {
+                        "directory": directory_path,
+                        "pattern": pattern,
+                    },
                 }
             
             # If directory_path is a file (not a directory), list just that file if it matches the pattern
@@ -117,7 +118,8 @@ class ListFilesCommand(CommandBase):
                         "success": True,
                         "directory": os.path.dirname(directory_path) or ".",
                         "pattern": pattern,
-                        "recursive": recursive,
+                        "recursive": recursive_enabled,
+                        "recursion_depth": recursion_depth,
                         "files": [
                             {
                                 "name": filename,
@@ -136,7 +138,8 @@ class ListFilesCommand(CommandBase):
                         "success": True,
                         "directory": os.path.dirname(directory_path) or ".",
                         "pattern": pattern,
-                        "recursive": recursive,
+                        "recursive": recursive_enabled,
+                        "recursion_depth": recursion_depth,
                         "files": [],
                         "message": f"No files found matching '{pattern}' in '{os.path.dirname(directory_path) or '.'}'"
                     }
@@ -180,7 +183,7 @@ class ListFilesCommand(CommandBase):
             # Find all files and directories using the centralized finder
             for _ in find_files(
                 file_path_pattern=search_pattern,
-                recursive=recursive,
+                recursive=recursion_depth,
                 file_type=None,  # Get both files and directories
                 on_file_found=on_file_found,
                 on_dir_found=on_dir_found
@@ -193,7 +196,7 @@ class ListFilesCommand(CommandBase):
             # Create readable message about the results
             if len(files_info) == 0:
                 message = f"No files found matching '{pattern}' in '{directory_path}'"
-                if recursive:
+                if recursive_enabled:
                     message += " (including subdirectories)"
             else:
                 # Count files and directories separately
@@ -207,7 +210,7 @@ class ListFilesCommand(CommandBase):
                 else:
                     message = f"Found {file_count} file{'s' if file_count != 1 else ''} and {dir_count} director{'ies' if dir_count != 1 else 'y'} matching '{pattern}' in '{directory_path}'"
                     
-                if recursive:
+                if recursive_enabled:
                     message += " (including subdirectories)"
                     
             # Return the result
@@ -215,15 +218,23 @@ class ListFilesCommand(CommandBase):
                 "success": True,
                 "directory": directory_path,
                 "pattern": pattern,
-                "recursive": recursive,
+                "recursive": recursive_enabled,
+                "recursion_depth": recursion_depth,
                 "files": files_info,
-                "message": message
+                "message": message,
             }
-            
-        except Exception as e:
+
+        except Exception as exception:
+            message = f"Error listing files: {exception}"
             return {
                 "success": False,
-                "message": f"Error listing files: {str(e)}"
+                "error": message,
+                "error_code": "list_files_failed",
+                "message": message,
+                "details": {
+                    "directory": directory_path,
+                    "pattern": pattern,
+                },
             }
     
     def _format_size(self, size_bytes):

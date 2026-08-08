@@ -43,7 +43,19 @@ class GetDiskSpaceCommand(CommandBase):
             'description': 'Get information about the /home partition (Linux/Mac)'
         }
     ]
-    
+
+    def __init__(
+        self,
+        disk_usage_provider=None,
+        disk_partitions_provider=None,
+    ):
+        """Allow deterministic providers without patching psutil at runtime."""
+
+        self._disk_usage = disk_usage_provider or psutil.disk_usage
+        self._disk_partitions = (
+            disk_partitions_provider or psutil.disk_partitions
+        )
+
     def execute(self, path=None):
         """
         Gets disk space information for the specified path or all disks
@@ -58,7 +70,7 @@ class GetDiskSpaceCommand(CommandBase):
             if path:
                 # Get information for a specific path
                 if os.path.exists(path):
-                    disk_usage = psutil.disk_usage(path)
+                    disk_usage = self._disk_usage(path)
                     
                     # Create disk info with raw values for additional processing
                     disk_info = {
@@ -94,9 +106,9 @@ class GetDiskSpaceCommand(CommandBase):
             else:
                 # Get all disk partitions
                 disks = []
-                for partition in psutil.disk_partitions(all=False):
+                for partition in self._disk_partitions(all=False):
                     try:
-                        usage = psutil.disk_usage(partition.mountpoint)
+                        usage = self._disk_usage(partition.mountpoint)
                         disks.append({
                             'device': partition.device,
                             'mountpoint': partition.mountpoint,

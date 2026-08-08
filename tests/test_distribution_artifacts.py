@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import tarfile
 import zipfile
 
@@ -10,6 +11,7 @@ import pytest
 
 from scripts.verify_distribution_artifacts import (
     ATTRIBUTION,
+    GOLDEN_CORE_WHEEL_PATH,
     RESULT_CONTRACT_SCHEMA_ID,
     RESULT_CONTRACT_WHEEL_PATH,
     release_readme_marker,
@@ -25,6 +27,57 @@ RESULT_CONTRACT_SCHEMA = (
     '"required":["success","message"],'
     '"additionalProperties":true}'
 )
+GOLDEN_CORE_COMMANDS = [
+    "version",
+    "listCommands",
+    "help",
+    "getCurrentDateTime",
+    "getCurrentDirectory",
+    "systemInfo",
+    "getDiskSpace",
+    "getRamInfo",
+    "listFiles",
+    "findFiles",
+    "findText",
+    "getFileHash",
+    "getGitStatus",
+    "projectDoctor",
+    "checkUrlStatus",
+]
+GOLDEN_CORE_REGISTRY = json.dumps({
+    "schema_version": 1,
+    "name": "QZX Golden Core",
+    "status": "candidate",
+    "target_maturity": "beta",
+    "commands": [
+        {"name": name}
+        for name in GOLDEN_CORE_COMMANDS
+    ],
+})
+CONFORMANCE_CASES = [
+    ("valid_success", "valid-success.json", True),
+    ("valid_failure", "valid-failure.json", True),
+    ("invalid_missing_message", "invalid-missing-message.json", False),
+    ("invalid_success_string", "invalid-success-string.json", False),
+    (
+        "invalid_failure_without_error",
+        "invalid-failure-without-error.json",
+        False,
+    ),
+]
+CONFORMANCE_MANIFEST = json.dumps({
+    "schema_version": 1,
+    "contract": RESULT_CONTRACT_SCHEMA_ID,
+    "cases": [
+        {
+            "id": case_id,
+            "file": filename,
+            "expected_conformant": expected,
+            "expected_violations": [],
+        }
+        for case_id, filename, expected in CONFORMANCE_CASES
+    ],
+})
 
 
 def metadata_text(description_version=VERSION) -> str:
@@ -63,6 +116,10 @@ def build_fixture_distributions(
             RESULT_CONTRACT_WHEEL_PATH,
             RESULT_CONTRACT_SCHEMA,
         )
+        archive.writestr(
+            GOLDEN_CORE_WHEEL_PATH,
+            GOLDEN_CORE_REGISTRY,
+        )
 
     sdist = dist_dir / f"qzx-{VERSION}.tar.gz"
     root = f"qzx-{VERSION}"
@@ -98,6 +155,47 @@ def build_fixture_distributions(
             f"{root}/scripts/validate_result_contract.py",
             "#!/usr/bin/env python\n",
         )
+        add_tar_text(
+            archive,
+            f"{root}/src/qzx/resources/golden-core.json",
+            GOLDEN_CORE_REGISTRY,
+        )
+        add_tar_text(
+            archive,
+            f"{root}/docs/golden-core.md",
+            "# QZX Golden Core\n",
+        )
+        add_tar_text(
+            archive,
+            f"{root}/docs/result-contract-adoption.md",
+            "# Adopting QZX Result Contract v1\n",
+        )
+        add_tar_text(
+            archive,
+            f"{root}/ADOPTERS.md",
+            "# QZX Result Contract adopters\n",
+        )
+        add_tar_text(
+            archive,
+            f"{root}/scripts/run_result_contract_conformance.py",
+            "#!/usr/bin/env python\n",
+        )
+        add_tar_text(
+            archive,
+            f"{root}/scripts/verify_golden_core.py",
+            "#!/usr/bin/env python\n",
+        )
+        add_tar_text(
+            archive,
+            f"{root}/examples/result_contract/manifest.json",
+            CONFORMANCE_MANIFEST,
+        )
+        for _, filename, _ in CONFORMANCE_CASES:
+            add_tar_text(
+                archive,
+                f"{root}/examples/result_contract/{filename}",
+                '{"success":true,"message":"fixture"}',
+            )
     return wheel, sdist
 
 
@@ -117,7 +215,15 @@ def test_distribution_verifier_accepts_executable_posix_launcher(tmp_path):
         artifact["result_contract_schema"] == RESULT_CONTRACT_SCHEMA_ID
         for artifact in result["artifacts"]
     )
+    assert all(
+        artifact["golden_core_commands"] == 15
+        for artifact in result["artifacts"]
+    )
     assert result["artifacts"][1]["qzx_sh_mode"] == "0755"
+    assert (
+        result["artifacts"][1]["result_contract_conformance_cases"]
+        == 5
+    )
 
 
 def test_distribution_verifier_rejects_windows_sdist_launcher_mode(tmp_path):

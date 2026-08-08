@@ -1,0 +1,16 @@
+{
+  "success": false,
+  "message": "The requested file was not found.",
+  "error": "No file exists at the requested path.",
+  "error_code": "file_not_found",
+  "details": {
+    "requested_path": "missing.txt",
+    "remediation": "Verify the path and try again."
+  },
+  "warnings": [],
+  "meta": {
+    "schema_version": 1,
+    "command": "readFile",
+    "duration_ms": 0.8
+  }
+}

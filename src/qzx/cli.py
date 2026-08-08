@@ -78,23 +78,7 @@ class QZX:
                 cmd_obj.command_loader = self.command_loader
             return cmd_obj.invoke(args)
         
-        import difflib
-
-        registered = self.command_loader.get_known_command_names()
-        canonical_by_normalized = {
-            registered_name.lower(): registered_name
-            for registered_name in registered
-        }
-        normalized_suggestions = difflib.get_close_matches(
-            normalized_command,
-            sorted(canonical_by_normalized),
-            n=5,
-            cutoff=0.5,
-        )
-        suggestions = [
-            canonical_by_normalized[name]
-            for name in normalized_suggestions
-        ]
+        suggestions = self.command_loader.suggest_command_names(command)
         suggestion_text = (
             " Did you mean: {}?".format(", ".join(suggestions))
             if suggestions

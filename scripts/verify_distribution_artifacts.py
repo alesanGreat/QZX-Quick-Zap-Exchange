@@ -27,6 +27,75 @@ RESULT_CONTRACT_SCHEMA_ID = (
 RESULT_CONTRACT_WHEEL_PATH = (
     "qzx/resources/schemas/result-contract-v1.schema.json"
 )
+GOLDEN_CORE_WHEEL_PATH = "qzx/resources/golden-core.json"
+
+
+def verify_golden_core_registry(text: str, context: str) -> int:
+    """Reject artifacts without the canonical Golden Core candidate registry."""
+
+    try:
+        registry = json.loads(text)
+    except json.JSONDecodeError as exception:
+        raise ValueError(f"{context} contains invalid Golden Core JSON.") from exception
+    commands = registry.get("commands") if isinstance(registry, dict) else None
+    names = [
+        item.get("name")
+        for item in commands
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    ] if isinstance(commands, list) else []
+    if (
+        not isinstance(registry, dict)
+        or registry.get("schema_version") != 1
+        or registry.get("name") != "QZX Golden Core"
+        or registry.get("status") != "candidate"
+        or registry.get("target_maturity") != "beta"
+        or len(names) != 15
+        or len(set(names)) != len(names)
+    ):
+        raise ValueError(
+            f"{context} does not contain the canonical 15-command "
+            "QZX Golden Core candidate registry."
+        )
+    return len(names)
+
+
+def verify_conformance_manifest(text: str, context: str) -> int:
+    """Reject sdists without the positive and negative v1 fixture manifest."""
+
+    try:
+        manifest = json.loads(text)
+    except json.JSONDecodeError as exception:
+        raise ValueError(f"{context} contains invalid conformance JSON.") from exception
+    cases = manifest.get("cases") if isinstance(manifest, dict) else None
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("schema_version") != 1
+        or manifest.get("contract") != RESULT_CONTRACT_SCHEMA_ID
+        or not isinstance(cases, list)
+    ):
+        raise ValueError(f"{context} is not the QZX Result Contract v1 suite.")
+    ids: list[str] = []
+    positive = 0
+    negative = 0
+    for case in cases:
+        if (
+            not isinstance(case, dict)
+            or not isinstance(case.get("id"), str)
+            or not isinstance(case.get("file"), str)
+            or not isinstance(case.get("expected_conformant"), bool)
+            or not isinstance(case.get("expected_violations"), list)
+        ):
+            raise ValueError(f"{context} contains a malformed conformance case.")
+        ids.append(case["id"])
+        if case["expected_conformant"]:
+            positive += 1
+        else:
+            negative += 1
+    if len(cases) != 5 or len(set(ids)) != 5 or positive != 2 or negative != 3:
+        raise ValueError(
+            f"{context} must contain the canonical 2 positive and 3 negative cases."
+        )
+    return len(cases)
 
 
 def verify_result_contract_schema(text: str, context: str) -> None:
@@ -147,14 +216,23 @@ def verify_wheel(
             raise ValueError(
                 f"{wheel_path.name} must contain exactly one METADATA file."
             )
-        if RESULT_CONTRACT_WHEEL_PATH not in names:
+        missing_resources = [
+            name
+            for name in (RESULT_CONTRACT_WHEEL_PATH, GOLDEN_CORE_WHEEL_PATH)
+            if name not in names
+        ]
+        if missing_resources:
             raise ValueError(
-                f"{wheel_path.name} does not contain "
-                f"{RESULT_CONTRACT_WHEEL_PATH}."
+                f"{wheel_path.name} is missing packaged resources: "
+                + ", ".join(missing_resources)
+                + "."
             )
         metadata_text = archive.read(metadata_names[0]).decode("utf-8")
         result_contract_schema = archive.read(
             RESULT_CONTRACT_WHEEL_PATH
+        ).decode("utf-8")
+        golden_core_registry = archive.read(
+            GOLDEN_CORE_WHEEL_PATH
         ).decode("utf-8")
 
     verify_metadata(
@@ -176,11 +254,16 @@ def verify_wheel(
         result_contract_schema,
         f"{wheel_path.name}:{RESULT_CONTRACT_WHEEL_PATH}",
     )
+    golden_core_commands = verify_golden_core_registry(
+        golden_core_registry,
+        f"{wheel_path.name}:{GOLDEN_CORE_WHEEL_PATH}",
+    )
     return {
         "filename": wheel_path.name,
         "size_bytes": wheel_path.stat().st_size,
         "sha256": sha256(wheel_path),
         "result_contract_schema": RESULT_CONTRACT_SCHEMA_ID,
+        "golden_core_commands": golden_core_commands,
     }
 
 
@@ -214,13 +297,45 @@ def verify_sdist(
             "result-contract-v1.schema.json"
         )
         specification_name = f"{root}/docs/result-contract-v1.md"
+        adoption_name = f"{root}/docs/result-contract-adoption.md"
         validator_name = f"{root}/scripts/validate_result_contract.py"
+        conformance_runner_name = (
+            f"{root}/scripts/run_result_contract_conformance.py"
+        )
+        golden_core_name = f"{root}/src/qzx/resources/golden-core.json"
+        golden_core_doc_name = f"{root}/docs/golden-core.md"
+        golden_core_verifier_name = f"{root}/scripts/verify_golden_core.py"
+        adopters_name = f"{root}/ADOPTERS.md"
+        conformance_manifest_name = (
+            f"{root}/examples/result_contract/manifest.json"
+        )
+        conformance_case_names = [
+            f"{root}/examples/result_contract/valid-success.json",
+            f"{root}/examples/result_contract/valid-failure.json",
+            f"{root}/examples/result_contract/invalid-missing-message.json",
+            f"{root}/examples/result_contract/invalid-success-string.json",
+            (
+                f"{root}/examples/result_contract/"
+                "invalid-failure-without-error.json"
+            ),
+        ]
         required_members = {
             "PKG-INFO": metadata_member,
             "README.md": readme_member,
             schema_name: members.get(schema_name),
             specification_name: members.get(specification_name),
+            adoption_name: members.get(adoption_name),
             validator_name: members.get(validator_name),
+            conformance_runner_name: members.get(conformance_runner_name),
+            golden_core_name: members.get(golden_core_name),
+            golden_core_doc_name: members.get(golden_core_doc_name),
+            golden_core_verifier_name: members.get(golden_core_verifier_name),
+            adopters_name: members.get(adopters_name),
+            conformance_manifest_name: members.get(conformance_manifest_name),
+            **{
+                name: members.get(name)
+                for name in conformance_case_names
+            },
         }
         missing = [
             name
@@ -236,15 +351,25 @@ def verify_sdist(
         metadata_handle = archive.extractfile(metadata_member)
         readme_handle = archive.extractfile(readme_member)
         schema_handle = archive.extractfile(required_members[schema_name])
+        golden_core_handle = archive.extractfile(
+            required_members[golden_core_name]
+        )
+        conformance_handle = archive.extractfile(
+            required_members[conformance_manifest_name]
+        )
         if (
             metadata_handle is None
             or readme_handle is None
             or schema_handle is None
+            or golden_core_handle is None
+            or conformance_handle is None
         ):
             raise ValueError(f"{sdist_path.name} contains unreadable metadata.")
         metadata_text = metadata_handle.read().decode("utf-8")
         readme_text = readme_handle.read().decode("utf-8")
         result_contract_schema = schema_handle.read().decode("utf-8")
+        golden_core_registry = golden_core_handle.read().decode("utf-8")
+        conformance_manifest = conformance_handle.read().decode("utf-8")
 
     verify_metadata(
         parse_metadata(metadata_text, sdist_path.name),
@@ -270,12 +395,22 @@ def verify_sdist(
         result_contract_schema,
         f"{sdist_path.name}:{schema_name}",
     )
+    golden_core_commands = verify_golden_core_registry(
+        golden_core_registry,
+        f"{sdist_path.name}:{golden_core_name}",
+    )
+    conformance_cases = verify_conformance_manifest(
+        conformance_manifest,
+        f"{sdist_path.name}:{conformance_manifest_name}",
+    )
     return {
         "filename": sdist_path.name,
         "size_bytes": sdist_path.stat().st_size,
         "sha256": sha256(sdist_path),
         "qzx_sh_mode": f"{launcher_mode:04o}",
         "result_contract_schema": RESULT_CONTRACT_SCHEMA_ID,
+        "golden_core_commands": golden_core_commands,
+        "result_contract_conformance_cases": conformance_cases,
     }
 
 

@@ -53,8 +53,10 @@
     "documentation_en": "https://qzx.yumbale.com/en/",
     "documentation_es": "https://qzx.yumbale.com/es/",
     "command_catalog": "https://qzx.yumbale.com/en/commands",
+    "golden_core": "https://qzx.yumbale.com/en/golden-core",
     "result_contract": "https://qzx.yumbale.com/en/result-contract",
     "result_contract_schema": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json",
+    "result_contract_adoption": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/result-contract-adoption.md",
     "compatibility": "https://qzx.yumbale.com/en/compatibility",
     "security": "https://qzx.yumbale.com/en/security",
     "telemetry_policy": "https://qzx.yumbale.com/en/security",
@@ -197,7 +199,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.6",
+      "version": "0.2.2.0.7a1",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",
@@ -225,7 +227,7 @@
   "documentation": {
     "channel": "development",
     "repository_branch": "main",
-    "snapshot_date": "2026-08-07",
+    "snapshot_date": "2026-08-08",
     "source_revision_environment_variable": "QZX_DOCS_COMMIT",
     "exact_revision_fallback": "A deterministic SHA-256 digest of command source files is embedded in the generated command catalog when Git metadata is unavailable."
   },

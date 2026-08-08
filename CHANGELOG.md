@@ -3,6 +3,27 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.7a1 — 2026-08-08
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Established QZX Golden Core as a machine-readable candidate cohort of 15
+  high-frequency read-only commands, with a public verifier and explicit
+  readiness dimensions for tests, safety review, result contracts, real
+  execution evidence, platform coverage, release quality, and lifecycle review.
+- Kept every Golden Core command honestly at its existing Alpha lifecycle stage;
+  selection is a focus mechanism, not a compatibility guarantee, certification,
+  paid edition, industry-standard claim, or evidence of external adoption.
+- Added positive and negative QZX Result Contract v1 conformance fixtures plus
+  a dependency-free runner that checks exact acceptance and rejection behavior.
+- Added an adoption guide, an evidence-gated `ADOPTERS.md` register that begins
+  with no independent adopters, and a structured GitHub intake form for native
+  producers, adapters, consumers, and bounded interoperability pilots.
+- Expanded the canonical safe evidence workflow for Golden Core identity,
+  interface discovery, environment, storage, memory, directory inventory, text
+  search, and file-integrity commands without automating native or external
+  evidence that still needs a controlled environment.
+
 ## 0.2.2.0.6 — 2026-08-07
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

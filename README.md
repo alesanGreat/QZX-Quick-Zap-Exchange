@@ -16,6 +16,7 @@ optional and never unlock features or change the product experience.
 
 [Website](https://qzx.yumbale.com/en/) ·
 [Command documentation](https://qzx.yumbale.com/en/commands) ·
+[QZX Golden Core](https://qzx.yumbale.com/en/golden-core) ·
 [QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract) ·
 [Recorded output](https://qzx.yumbale.com/en/qzx-in-action) ·
 [Compatibility](https://qzx.yumbale.com/en/compatibility) ·
@@ -36,7 +37,7 @@ qzx getCurrentDateTime
 qzx getCurrentDateTime --output-format iso --json
 ```
 
-This source release is QZX `0.2.2.0.6` and requires Python `>=3.13`.
+This source release is QZX `0.2.2.0.7a1` and requires Python `>=3.13`.
 A normal `python -m pip install qzx` selects the latest final release; add
 `--pre` to opt into the newest pre-release. PyPI is authoritative for which
 version those commands currently select.
@@ -47,7 +48,7 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.6` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.7a1` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -77,6 +78,17 @@ qzx getCurrentDateTime --output-format iso --json \
   | python scripts/validate_result_contract.py -
 ```
 
+Run the positive and negative reference fixtures with:
+
+```bash
+python scripts/run_result_contract_conformance.py
+```
+
+Independent implementations and bounded pilots can follow the
+[adoption guide](docs/result-contract-adoption.md). Only public, reviewable,
+authorized evidence is listed in [ADOPTERS.md](ADOPTERS.md); QZX itself is the
+reference implementation and is not counted as independent adoption.
+
 The CLI prints `message` by default. Pass `--json` to print the complete
 structured result:
 
@@ -87,6 +99,17 @@ qzx findFiles examples/qzx_in_action "*.txt" -r --json
 
 Command lookup is case-insensitive. Documentation uses each command's canonical
 lower-camel-case spelling.
+
+### Golden Core is a focus cohort, not a maturity claim
+
+The [QZX Golden Core](docs/golden-core.md) selects 15 high-frequency read-only
+commands for deeper tests, contract review, captured evidence, and platform
+validation. All selected commands remain Alpha until their individual evidence
+supports promotion. Verify the packaged registry with:
+
+```bash
+python scripts/verify_golden_core.py
+```
 
 ### Command maturity is explicit
 

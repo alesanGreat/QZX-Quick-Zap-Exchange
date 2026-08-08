@@ -331,6 +331,23 @@ class CommandLoader:
             return None
         return command_maturity(entry["name"])
 
+    def suggest_command_names(self, command_name, limit=5, cutoff=0.5):
+        """Return close canonical command names without importing commands."""
+        import difflib
+
+        normalized_name = str(command_name or "").lower()
+        canonical_by_normalized = {
+            name.lower(): name
+            for name in self.get_known_command_names()
+        }
+        matches = difflib.get_close_matches(
+            normalized_name,
+            sorted(canonical_by_normalized),
+            n=max(0, int(limit)),
+            cutoff=float(cutoff),
+        )
+        return [canonical_by_normalized[name] for name in matches]
+
     def get_indexed_commands(self):
         """Return canonical metadata without importing command modules."""
         return indexed_command_records()

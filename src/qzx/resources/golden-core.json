@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "name": "QZX Golden Core",
+  "status": "candidate",
+  "target_maturity": "beta",
+  "selected_on": "2026-08-08",
+  "maintainer": "Alejandro Sánchez",
+  "purpose": "Concentrate testing, contract review, real execution evidence, and compatibility work on a small set of high-frequency read-only commands before making stronger maturity promises.",
+  "purpose_es": "Concentrar pruebas, revisión de contratos, evidencia de ejecución real y trabajo de compatibilidad en un conjunto pequeño de comandos frecuentes y de solo lectura antes de hacer promesas de madurez más fuertes.",
+  "disclaimer": "Golden Core is a development focus cohort, not a separate edition, compatibility guarantee, certification, industry standard, or claim of external adoption. Every command keeps its independent lifecycle stage.",
+  "disclaimer_es": "Golden Core es una cohorte de enfoque para el desarrollo, no una edición separada, garantía de compatibilidad, certificación, estándar industrial ni afirmación de adopción externa. Cada comando conserva su etapa independiente de madurez.",
+  "selection_principles": [
+    {
+      "en": "The command is present in the current public QZX command index.",
+      "es": "El comando está presente en el índice público vigente de QZX."
+    },
+    {
+      "en": "The reviewed operation is read-only and does not require elevated privileges.",
+      "es": "La operación revisada es de solo lectura y no requiere privilegios elevados."
+    },
+    {
+      "en": "The command does not share user data with an external service.",
+      "es": "El comando no comparte datos del usuario con un servicio externo."
+    },
+    {
+      "en": "The capability is useful in common agent, automation, or developer workflows.",
+      "es": "La capacidad resulta útil en flujos habituales de agentes, automatización o desarrollo."
+    },
+    {
+      "en": "The cohort covers identity, discovery, environment, files, repositories, projects, and one bounded network observation.",
+      "es": "La cohorte cubre identidad, descubrimiento, entorno, archivos, repositorios, proyectos y una observación de red acotada."
+    },
+    {
+      "en": "Inclusion exposes evidence gaps instead of hiding them.",
+      "es": "La inclusión expone las brechas de evidencia en lugar de ocultarlas."
+    }
+  ],
+  "readiness_dimensions": [
+    {
+      "id": "behavioral_tests",
+      "description": "Maintained behavioral tests exercise the public command contract.",
+      "description_es": "Pruebas de comportamiento mantenidas ejercitan el contrato público del comando."
+    },
+    {
+      "id": "policy_review",
+      "description": "The safety and external-effect classification is reviewed against the current transitive implementation digest.",
+      "description_es": "La clasificación de seguridad y efectos externos se revisa contra el digest transitivo vigente de la implementación."
+    },
+    {
+      "id": "success_evidence",
+      "description": "A complete successful --json execution is captured and bound to the current implementation digest.",
+      "description_es": "Se captura una ejecución exitosa completa con --json y se vincula al digest vigente de la implementación."
+    },
+    {
+      "id": "failure_evidence",
+      "description": "At least one representative failure or boundary result is captured when the command has a meaningful failure path.",
+      "description_es": "Se captura al menos un fallo o resultado de límite representativo cuando el comando tiene una vía de error significativa."
+    },
+    {
+      "id": "result_contract_review",
+      "description": "The implementation-backed result schema and documented domain fields are reviewed.",
+      "description_es": "Se revisan el esquema de resultados respaldado por la implementación y los campos de dominio documentados."
+    },
+    {
+      "id": "platform_evidence",
+      "description": "Real execution evidence covers the operating systems and dependencies relevant to the command.",
+      "description_es": "La evidencia de ejecución real cubre los sistemas operativos y dependencias relevantes para el comando."
+    },
+    {
+      "id": "release_quality",
+      "description": "No known release-blocking defect remains for the documented scope.",
+      "description_es": "No queda ningún defecto conocido que bloquee una publicación dentro del alcance documentado."
+    },
+    {
+      "id": "lifecycle_review",
+      "description": "A machine-validated lifecycle review justifies any promotion beyond Alpha.",
+      "description_es": "Una revisión de madurez validada por máquina justifica cualquier promoción posterior a Alpha."
+    }
+  ],
+  "commands": [
+    {
+      "name": "version",
+      "role": "identity",
+      "rationale": "Lets an agent bind every later observation to the exact installed QZX version.",
+      "rationale_es": "Permite que un agente vincule cada observación posterior con la versión exacta de QZX instalada."
+    },
+    {
+      "name": "listCommands",
+      "role": "capability_discovery",
+      "rationale": "Makes the installed executable surface discoverable instead of relying on a prompt or remote documentation.",
+      "rationale_es": "Hace descubrible la superficie ejecutable instalada sin depender de un prompt ni de documentación remota."
+    },
+    {
+      "name": "help",
+      "role": "interface_discovery",
+      "rationale": "Exposes parameters, examples, safety notes, and maturity before an operation is delegated.",
+      "rationale_es": "Expone parámetros, ejemplos, notas de seguridad y madurez antes de delegar una operación."
+    },
+    {
+      "name": "getCurrentDateTime",
+      "role": "temporal_context",
+      "rationale": "Provides timezone-aware date, calendar, and timestamp context without platform-specific shell syntax.",
+      "rationale_es": "Ofrece fecha, calendario y timestamps con zona horaria sin sintaxis de shell específica de cada plataforma."
+    },
+    {
+      "name": "getCurrentDirectory",
+      "role": "workspace_context",
+      "rationale": "Gives the current path and bounded directory context that agents frequently need before acting.",
+      "rationale_es": "Entrega la ruta actual y contexto acotado del directorio que los agentes necesitan con frecuencia antes de actuar."
+    },
+    {
+      "name": "systemInfo",
+      "role": "environment_context",
+      "rationale": "Identifies the operating system, architecture, Python runtime, user context, and optional resource details.",
+      "rationale_es": "Identifica sistema operativo, arquitectura, runtime de Python, contexto de usuario y detalles opcionales de recursos."
+    },
+    {
+      "name": "getDiskSpace",
+      "role": "storage_capacity",
+      "rationale": "Reports raw and human-readable storage capacity before workflows create or transform data.",
+      "rationale_es": "Informa capacidad de almacenamiento cruda y legible antes de que un flujo cree o transforme datos."
+    },
+    {
+      "name": "getRamInfo",
+      "role": "memory_capacity",
+      "rationale": "Reports current memory capacity and pressure for workload and troubleshooting decisions.",
+      "rationale_es": "Informa capacidad y presión actuales de memoria para decisiones de carga y diagnóstico."
+    },
+    {
+      "name": "listFiles",
+      "role": "directory_inventory",
+      "rationale": "Provides a familiar bounded file listing with wildcard and depth controls.",
+      "rationale_es": "Ofrece un listado de archivos familiar y acotado con controles de comodines y profundidad."
+    },
+    {
+      "name": "findFiles",
+      "role": "file_discovery",
+      "rationale": "Finds files with explicit depth, size, date, exclusion, sorting, and truncation metadata.",
+      "rationale_es": "Encuentra archivos con profundidad, tamaño, fecha, exclusiones, ordenamiento y truncamiento explícitos."
+    },
+    {
+      "name": "findText",
+      "role": "content_search",
+      "rationale": "Searches text with explicit matching, context, filtering, and result limits.",
+      "rationale_es": "Busca texto con coincidencia, contexto, filtros y límites de resultados explícitos."
+    },
+    {
+      "name": "getFileHash",
+      "role": "integrity_observation",
+      "rationale": "Produces a reproducible cryptographic digest for identity and transfer verification.",
+      "rationale_es": "Produce un digest criptográfico reproducible para verificar identidad y transferencias."
+    },
+    {
+      "name": "getGitStatus",
+      "role": "repository_state",
+      "rationale": "Summarizes branch, remote, changes, and recent history without modifying the repository.",
+      "rationale_es": "Resume rama, remoto, cambios e historial reciente sin modificar el repositorio."
+    },
+    {
+      "name": "projectDoctor",
+      "role": "project_diagnostics",
+      "rationale": "Performs bounded static project inspection while keeping project-owned validation commands explicitly unexecuted.",
+      "rationale_es": "Realiza una inspección estática acotada del proyecto y mantiene explícitamente sin ejecutar las validaciones propias del proyecto."
+    },
+    {
+      "name": "checkUrlStatus",
+      "role": "endpoint_observation",
+      "rationale": "Adds one bounded network capability for HTTP status, latency, and basic response-header evidence.",
+      "rationale_es": "Añade una capacidad de red acotada para estado HTTP, latencia y evidencia básica de cabeceras de respuesta."
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+name: Result Contract adoption report
+description: Submit reviewable evidence from an independent QZX Result Contract v1 implementation or pilot.
+title: "[Result Contract adoption]: "
+labels:
+  - result-contract
+  - adoption
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for providing evidence. A report is not treated as adoption merely because it was submitted. QZX reviews the named implementation, version, fixtures, limitations, and permission before adding an entry to ADOPTERS.md.
+  - type: input
+    id: implementation
+    attributes:
+      label: Implementation or pilot name
+      placeholder: Example CLI adapter
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Exact version or immutable revision
+      description: Use a release, tag, commit, image digest, or other reviewable revision.
+      placeholder: v1.2.0 or commit abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: adoption_mode
+    attributes:
+      label: Adoption mode
+      options:
+        - Native producer
+        - Adapter
+        - Consumer only
+        - Bounded interoperability pilot
+    validations:
+      required: true
+  - type: input
+    id: evidence_url
+    attributes:
+      label: Public evidence URL
+      description: Repository, report, fixtures, or another reviewable source boundary. Do not include credentials or private URLs.
+      placeholder: https://github.com/example/project/tree/v1.2.0/conformance
+    validations:
+      required: true
+  - type: textarea
+    id: success_result
+    attributes:
+      label: Conforming success evidence
+      description: Include the exact validation command, exit status, and sanitized result or a stable link to them.
+    validations:
+      required: true
+  - type: textarea
+    id: failure_result
+    attributes:
+      label: Conforming failure evidence
+      description: Required when the producer can fail. Explain when no failure result applies.
+    validations:
+      required: true
+  - type: textarea
+    id: environments
+    attributes:
+      label: Tested environments
+      description: Operating systems, runtimes, architectures, agents, transports, permissions, and relevant dependencies actually exercised.
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Extensions, lossy mappings, and limitations
+      description: State unsupported cases, deviations, security boundaries, and claims this report does not make.
+    validations:
+      required: true
+  - type: input
+    id: correction_contact
+    attributes:
+      label: Correction contact or issue URL
+      placeholder: https://github.com/example/project/issues
+    validations:
+      required: true
+  - type: checkboxes
+    id: permission
+    attributes:
+      label: Permission and accuracy
+      options:
+        - label: I am authorized to submit this evidence and permit QZX to identify the named implementation or organization in ADOPTERS.md.
+          required: true
+        - label: I understand that core conformance does not certify security, domain correctness, platform compatibility, or endorsement by QZX.
+          required: true
+        - label: I removed secrets, private paths, personal data, and confidential material from this report.
+          required: true

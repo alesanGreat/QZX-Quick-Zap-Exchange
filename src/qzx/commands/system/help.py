@@ -101,8 +101,24 @@ Naming:
                 }
             }
         
+        requested_name = str(command)
+        suggestions = self.command_loader.suggest_command_names(requested_name)
+        suggestion_text = (
+            " Did you mean: {}?".format(", ".join(suggestions))
+            if suggestions
+            else ""
+        )
         return {
             "success": False,
-            "error": f"Command not found: {command}",
-            "message": f"Command not found: {command}"
+            "error": f"Command not found: {requested_name}",
+            "error_code": "command_not_found",
+            "message": (
+                f"Command '{requested_name}' was not found."
+                f"{suggestion_text} Use 'qzx listCommands' to see available "
+                "commands."
+            ),
+            "details": {
+                "requested": requested_name,
+                "suggestions": suggestions,
+            },
         }
