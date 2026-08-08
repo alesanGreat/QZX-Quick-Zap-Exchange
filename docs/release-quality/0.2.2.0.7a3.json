@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "evidence_type": "qzx_golden_core_release_quality",
+  "status": "verified",
+  "evidence_scope": "The exact published QZX Alpha release, its immutable tag and artifacts, the successful digest-bound Golden Core CI matrix, and the absence of known release-blocking issues for the attested command implementations.",
+  "release": {
+    "version": "0.2.2.0.7a3",
+    "tag": "v0.2.2.0.7a3",
+    "source_revision": "fd2634dcf0d679767d4f9b8da65073fb2a73b992",
+    "status": "Alpha",
+    "released_at": "2026-08-08",
+    "pypi": {
+      "published": true,
+      "requires_python": ">=3.13",
+      "url": "https://pypi.org/project/qzx/0.2.2.0.7a3/"
+    },
+    "github": {
+      "url": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/releases/tag/v0.2.2.0.7a3",
+      "prerelease": true,
+      "draft": false,
+      "asset_count": 3
+    },
+    "artifacts": {
+      "wheel": {
+        "filename": "qzx-0.2.2.0.7a3-py3-none-any.whl",
+        "sha256": "sha256:c200c16372dcb349ff4ae0b07e01f11fab88816caa57758b6597cc7f6c0df45d",
+        "size_bytes": 393957
+      },
+      "sdist": {
+        "filename": "qzx-0.2.2.0.7a3.tar.gz",
+        "sha256": "sha256:ed015e73c5364dff6ebae5499383a413d0e44b285de99d893a6574a8afe8dedd",
+        "size_bytes": 389108
+      }
+    }
+  },
+  "ci": {
+    "run_id": 31282316874,
+    "url": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/actions/runs/31282316874",
+    "workflow": "Cross-platform tests",
+    "source_revision": "fd2634dcf0d679767d4f9b8da65073fb2a73b992",
+    "conclusion": "success",
+    "environment_count": 10,
+    "command_environment_runs": 150,
+    "failed_command_runs": 0,
+    "platform_aggregate_sha256": "sha256:a00976a559737ec4f97c3ac5d5f58e53a386894ce336df04795ca29bb0815cd3",
+    "platform_summary_file_sha256": "sha256:1a35080d206d6d03fd8f66ca245156c4f8f3f3a9df15316c7b495d0867fb9a39"
+  },
+  "commands": {
+    "version": {
+      "implementation_digest": "sha256:2b32988d3c6e39d353ea54d8eeb4f6c7a772fbba9df9b39b98e3c24536dc4056",
+      "release_blockers": []
+    },
+    "listCommands": {
+      "implementation_digest": "sha256:d15104ccbf410be663e833ed569523fb9ec8b5809dfe730b714057eeeddd7536",
+      "release_blockers": []
+    },
+    "help": {
+      "implementation_digest": "sha256:fceb426c08ccc8285f9c13a965047cc9474eba273a8b03e0769d136bb6481e49",
+      "release_blockers": []
+    },
+    "getCurrentDateTime": {
+      "implementation_digest": "sha256:73f18539cfc47ed040e9311b30a9c50c9c7e31c199f506e4c04b17c02e92f18d",
+      "release_blockers": []
+    },
+    "getCurrentDirectory": {
+      "implementation_digest": "sha256:25a924554c5c8c9b0258dfe39b81273c47757e13d3aa99d8253525c0789bd1b1",
+      "release_blockers": []
+    },
+    "systemInfo": {
+      "implementation_digest": "sha256:a6e35ca620f4fdb9a45d323f102d7883ef8f8260d4fdf32f3950c065cd35cb3b",
+      "release_blockers": []
+    },
+    "getDiskSpace": {
+      "implementation_digest": "sha256:0165975096b0da85db6cc4c358dd2225ad2e84c1520a351d1611916e99272cf9",
+      "release_blockers": []
+    },
+    "getRamInfo": {
+      "implementation_digest": "sha256:f81e0ab5dc8ca2ef2e5004d96b04aa664a5d340c7841362b4e0cfcbf52ab0d82",
+      "release_blockers": []
+    },
+    "listFiles": {
+      "implementation_digest": "sha256:77469dfcf9aadd034518c6e5eda705d08cc3bb4e41e03778be514f582f0ac54d",
+      "release_blockers": []
+    },
+    "findFiles": {
+      "implementation_digest": "sha256:679b038db80bb20508643ec9dae93acbef6889bc3a2f43f05bc3193021e1d301",
+      "release_blockers": []
+    },
+    "findText": {
+      "implementation_digest": "sha256:62d59b46443b1150db3015438c924992b344952386854708c77c2b13553349bd",
+      "release_blockers": []
+    },
+    "getFileHash": {
+      "implementation_digest": "sha256:7c3bd40a835e9f9c8a67c8f1e8d9772d97e24bc01204522881ece5638b68938a",
+      "release_blockers": []
+    },
+    "getGitStatus": {
+      "implementation_digest": "sha256:8269fdb845b2ed5e0eab3a72717ee0b93d35856928b61594d040174bc9a38341",
+      "release_blockers": []
+    },
+    "projectDoctor": {
+      "implementation_digest": "sha256:c6a9a8a8dabe3c63b09f9784e3c3e1c022697689c7034fb7a30d7fb4a685daa0",
+      "release_blockers": []
+    },
+    "checkUrlStatus": {
+      "implementation_digest": "sha256:3372d6335cc1cd0e9dc807cff10b317fc19186d5004c033a510db683daa8f758",
+      "release_blockers": []
+    }
+  },
+  "quality_gates": {
+    "exact_release_tag_verified": true,
+    "distribution_artifacts_verified": true,
+    "twine_check_passed": true,
+    "pypi_artifacts_verified": true,
+    "github_release_assets_verified": true,
+    "ci_matrix_passed": true,
+    "digest_bound_platform_evidence_verified": true,
+    "result_contract_verified": true,
+    "zero_known_release_blockers": true,
+    "blocking_issue_label": "release-blocker",
+    "known_release_blockers": [],
+    "open_nonblocking_work": [
+      {
+        "number": 1,
+        "title": "[Result Contract adoption] Independent implementation or pilot evidence",
+        "url": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/1",
+        "labels": [
+          "adoption",
+          "help wanted",
+          "result-contract"
+        ],
+        "blocking": false
+      },
+      {
+        "number": 3,
+        "title": "[Golden Core] Independent platform and failure evidence",
+        "url": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/3",
+        "labels": [
+          "golden-core",
+          "help wanted"
+        ],
+        "blocking": false
+      }
+    ]
+  },
+  "evidence_cutoff": "2026-08-08T22:46:49.965606+00:00",
+  "limitations": [
+    "This attestation is bound to the exact command implementation digests recorded here; code changes invalidate it for the changed command.",
+    "A release-quality attestation is not a certification, universal compatibility guarantee, claim of external adoption, or automatic Beta promotion.",
+    "Open work without the release-blocker label remains visible but does not by itself state that the published release is defective."
+  ],
+  "attestation_sha256": "sha256:01e865ea4b817f272ae281e0557d8210055b21b1cbaf5e9f68b2bb376463ab2a"
+}

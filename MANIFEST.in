@@ -13,6 +13,7 @@ include scripts/merge_golden_core_platform_evidence.py
 include scripts/run_result_contract_conformance.py
 include scripts/validate_result_contract.py
 include scripts/verify_golden_core.py
+include scripts/verify_golden_core_release_quality.py
 include scripts/verify_distribution_artifacts.py
 recursive-include src/qzx/resources *.json
 recursive-include examples/result_contract *.json
@@ -21,6 +22,7 @@ prune tests
 include docs/philosophy.md
 include docs/command-lifecycle.md
 include docs/golden-core.md
+include docs/release-quality/0.2.2.0.7a3.json
 include docs/result-contract-adoption.md
 include docs/result-contract-v1.md
 include docs/reference/commands-generated.md

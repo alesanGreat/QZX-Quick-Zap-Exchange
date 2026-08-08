@@ -69,7 +69,9 @@ A Golden Core command is evaluated across independent dimensions:
 - representative failure or boundary evidence where meaningful;
 - a reviewed implementation-backed result contract;
 - real platform evidence for the relevant operating systems and dependencies;
-- no known release-blocking defect in the documented scope;
+- a machine-verifiable release-quality attestation bound to an exact published
+  release, verified artifacts, current implementation digests, successful CI,
+  and zero known `release-blocker` issues;
 - a machine-validated lifecycle review for any promotion beyond Alpha.
 
 Passing one dimension never substitutes for another. Mocked unit tests do not
@@ -149,6 +151,37 @@ regardless of input order, download directory, or host line-ending convention.
 The aggregate proves only the exact revision, command implementation digests,
 environments, fixtures, arguments, and observed results; it is not a universal
 compatibility guarantee or an automatic Beta promotion.
+
+## Release-quality attestation
+
+Release quality is a separate, fail-closed evidence layer. The canonical Golden
+Core registry points to one public JSON attestation for an exact published
+release. The verifier requires the immutable tag, wheel and source distribution,
+PyPI hashes, GitHub Release asset hashes, `twine check`, a successful CI matrix,
+digest-bound platform evidence, the Result Contract gate, and zero open issues
+carrying the `release-blocker` label.
+
+The current attestation is stored under `docs/release-quality/` and can be
+validated without trusting the website:
+
+```bash
+python scripts/verify_golden_core_release_quality.py --verify-git --json
+```
+
+Open issues without the `release-blocker` label remain visible as non-blocking
+work. That distinction is intentional: an adoption request or a request for
+additional independent evidence is not silently converted into a known defect.
+Conversely, a real release-blocking defect must receive the explicit label and
+will make the attestation fail.
+
+The attestation is bound per command to the canonical implementation digest. A
+later development version may reuse the release-quality evidence only while the
+attested command implementation is byte-semantically identical under QZX's
+portable fingerprint. Changing one command invalidates the release-quality gate
+for that command without erasing valid evidence for unrelated commands.
+
+Release quality still does **not** promote maturity. Beta requires a separate
+lifecycle review that justifies the stronger interface and behavior promise.
 
 ## Promotion and change policy
 

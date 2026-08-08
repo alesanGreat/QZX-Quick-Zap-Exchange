@@ -294,6 +294,41 @@ def validate_golden_core(
                 + "."
             )
 
+    release_quality_policy = registry.get("release_quality_policy")
+    if not isinstance(release_quality_policy, dict):
+        errors.append("Golden Core must declare release_quality_policy.")
+    else:
+        attestation_path = release_quality_policy.get("attestation_path")
+        blocking_label = release_quality_policy.get("blocking_issue_label")
+        if (
+            not _nonempty_text(attestation_path)
+            or not str(attestation_path).startswith("docs/release-quality/")
+            or not str(attestation_path).endswith(".json")
+            or ".." in str(attestation_path).split("/")
+        ):
+            errors.append(
+                "release_quality_policy.attestation_path must be a safe docs/release-quality JSON path."
+            )
+        if not _nonempty_text(blocking_label):
+            errors.append(
+                "release_quality_policy.blocking_issue_label must be non-empty text."
+            )
+        for flag in (
+            "requires_exact_release_tag",
+            "requires_verified_distribution_hashes",
+            "requires_successful_ci",
+            "requires_digest_bound_platform_evidence",
+            "requires_zero_known_release_blockers",
+        ):
+            if release_quality_policy.get(flag) is not True:
+                errors.append(
+                    f"release_quality_policy.{flag} must be true."
+                )
+        if not _nonempty_text(release_quality_policy.get("note")):
+            errors.append("release_quality_policy.note must be non-empty text.")
+        if not _nonempty_text(release_quality_policy.get("note_es")):
+            errors.append("release_quality_policy.note_es must be non-empty text.")
+
     if catalog_path is not None:
         catalog = load_json(catalog_path, "generated command catalog")
         catalog_commands = catalog.get("commands")

@@ -102,3 +102,18 @@ def test_golden_core_failure_evidence_policy_classifies_every_command():
         item["reason"].strip() and item["reason_es"].strip()
         for item in not_applicable.values()
     )
+
+
+def test_golden_core_release_quality_policy_is_fail_closed():
+    registry = load_golden_core()
+    policy = registry["release_quality_policy"]
+
+    assert policy["attestation_path"] == "docs/release-quality/0.2.2.0.7a3.json"
+    assert policy["blocking_issue_label"] == "release-blocker"
+    assert policy["requires_exact_release_tag"] is True
+    assert policy["requires_verified_distribution_hashes"] is True
+    assert policy["requires_successful_ci"] is True
+    assert policy["requires_digest_bound_platform_evidence"] is True
+    assert policy["requires_zero_known_release_blockers"] is True
+    assert policy["note"].strip()
+    assert policy["note_es"].strip()

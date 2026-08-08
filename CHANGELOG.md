@@ -3,6 +3,22 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.7a4 — 2026-08-08
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Added a machine-verifiable Golden Core release-quality attestation that binds
+  an exact published release to its immutable tag, verified wheel and source
+  distribution hashes, successful CI evidence, and current per-command
+  implementation digests.
+- Defined `release-blocker` as an explicit fail-closed issue classification:
+  open work remains visible without becoming a release defect by implication,
+  while any issue carrying that label prevents a verified release-quality
+  attestation.
+- Kept release quality independent from lifecycle promotion. A command can have
+  verified release quality while remaining Alpha until a separate lifecycle
+  review justifies the stronger Beta stability promise.
+
 ## 0.2.2.0.7a3 — 2026-08-08
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

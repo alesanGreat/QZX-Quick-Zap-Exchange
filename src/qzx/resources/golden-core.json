@@ -68,8 +68,8 @@
     },
     {
       "id": "release_quality",
-      "description": "No known release-blocking defect remains for the documented scope.",
-      "description_es": "No queda ningún defecto conocido que bloquee una publicación dentro del alcance documentado."
+      "description": "A machine-verifiable attestation binds an exact published release, verified artifacts, successful CI/platform evidence, zero known release blockers, and the current command implementation digest.",
+      "description_es": "Una atestación verificable por máquina vincula una publicación exacta, artefactos verificados, evidencia CI/plataforma exitosa, cero bloqueos conocidos de release y el digest vigente de implementación del comando."
     },
     {
       "id": "lifecycle_review",
@@ -112,6 +112,17 @@
         "reason_es": "El comando no tiene entrada de dominio controlada por quien llama; forzar un fallo de psutil o del sistema operativo sería una avería de infraestructura, no un ejemplo útil del contrato."
       }
     }
+  },
+  "release_quality_policy": {
+    "attestation_path": "docs/release-quality/0.2.2.0.7a3.json",
+    "blocking_issue_label": "release-blocker",
+    "requires_exact_release_tag": true,
+    "requires_verified_distribution_hashes": true,
+    "requires_successful_ci": true,
+    "requires_digest_bound_platform_evidence": true,
+    "requires_zero_known_release_blockers": true,
+    "note": "Release quality is resolved only by an explicit attestation for an exact published release. The attestation must remain bound to each command implementation digest and does not promote lifecycle maturity by itself.",
+    "note_es": "La calidad de release solo se resuelve mediante una atestación explícita de una publicación exacta. La atestación debe permanecer vinculada al digest de implementación de cada comando y no promociona por sí sola la madurez."
   },
   "commands": [
     {
