@@ -52,9 +52,11 @@ The Golden Core therefore has two goals:
 | `checkUrlStatus` | Endpoint observation | Adds one bounded HTTP status, latency, and header observation. |
 
 The cohort deliberately includes commands with different evidence challenges.
-For example, `checkUrlStatus` needs a controlled external endpoint, and
-`getGitStatus` needs representative native Git execution. These gaps are
-visible work, not reasons to fabricate a passing score.
+`checkUrlStatus` requires an authorized endpoint and `getGitStatus` requires a
+representative native Git repository. The current readiness board records
+controlled loopback HTTP and disposable Git-fixture captures for both commands;
+those local results close the successful-capture dimension but do not become
+cross-platform evidence or justify Beta promotion by themselves.
 
 ## Readiness dimensions
 
