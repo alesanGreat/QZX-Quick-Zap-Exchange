@@ -242,3 +242,53 @@ jobs:
         run: >-
           python -m pytest -q
           --ignore=tests/integration/test_real_system_dependencies.py
+
+      - name: Capture sanitized Golden Core platform evidence
+        run: >-
+          python scripts/capture_golden_core_platform_evidence.py
+          --output "${{ runner.temp }}/golden-core-platform-evidence.json"
+          --environment-id "${{ matrix.platform.runner }}-${{ matrix.platform.python_architecture }}"
+          --environment-name "${{ matrix.platform.name }}"
+
+      - name: Upload Golden Core platform evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-core-platform-${{ matrix.platform.runner }}-${{ matrix.platform.python_architecture }}
+          path: ${{ runner.temp }}/golden-core-platform-evidence.json
+          if-no-files-found: error
+          retention-days: 90
+
+  golden-core-platform-evidence:
+    name: QZX Golden Core platform evidence summary
+    needs: python
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out QZX
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install standard CPython 3.13
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Download every matrix evidence record
+        uses: actions/download-artifact@v4
+        with:
+          pattern: golden-core-platform-*
+          path: ${{ runner.temp }}/golden-core-platform-records
+
+      - name: Validate and merge the matrix evidence
+        run: >-
+          python scripts/merge_golden_core_platform_evidence.py
+          "${{ runner.temp }}/golden-core-platform-records"
+          --output "${{ runner.temp }}/golden-core-platform-summary.json"
+
+      - name: Publish the validated evidence summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-core-platform-evidence-summary
+          path: ${{ runner.temp }}/golden-core-platform-summary.json
+          if-no-files-found: error
+          retention-days: 90

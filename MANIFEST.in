@@ -8,6 +8,8 @@ include qzx.sh
 include scripts/sync_command_index.py
 include scripts/sync_runtime_metadata.py
 include scripts/sync_test_environments.py
+include scripts/capture_golden_core_platform_evidence.py
+include scripts/merge_golden_core_platform_evidence.py
 include scripts/run_result_contract_conformance.py
 include scripts/validate_result_contract.py
 include scripts/verify_golden_core.py

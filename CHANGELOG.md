@@ -3,6 +3,29 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.7a2 — 2026-08-08
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Added a sanitized Golden Core platform-evidence capturer that executes all 15
+  selected commands through the real CLI on each CI host while using only
+  disposable file, Git, project, and loopback HTTP fixtures.
+- Added a fail-closed evidence merger that requires one immutable source
+  revision, one QZX version, the complete Golden Core command set, valid result
+  hashes, and observed Windows, Linux, and macOS runs before producing an
+  aggregate compatibility record.
+- Extended the existing GitHub Actions matrix to publish one reviewable evidence
+  artifact per Windows, Linux, and macOS environment and a separately validated
+  cross-platform summary instead of treating a green test badge as sufficient
+  compatibility evidence.
+- Added tests that reject private-path leakage, missing declared platforms,
+  duplicate or tampered evidence, invalid result metadata, and incomplete
+  command assertions.
+- Preserved the Golden Core candidate boundary: platform evidence records only
+  the exact host, source revision, fixtures, arguments, and results observed;
+  it does not create a universal compatibility guarantee or automatic Beta
+  promotion.
+
 ## 0.2.2.0.7a1 — 2026-08-08
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

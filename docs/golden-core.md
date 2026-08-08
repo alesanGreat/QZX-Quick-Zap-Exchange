@@ -97,6 +97,35 @@ The verifier fails when a selected name disappears, stops being publicly
 executable, requires QZX high-risk approval, declares a mutation backup target,
 or conflicts with the reviewed catalog supplied by the workspace.
 
+## Platform evidence pipeline
+
+The existing GitHub Actions matrix runs the Golden Core evidence capturer after
+the normal tests on Windows, Linux, and macOS. Each runner executes all 15
+commands through the real CLI with disposable file, project, Git, and loopback
+HTTP fixtures, then uploads one sanitized JSON record. A separate job downloads
+those records and refuses to produce an aggregate unless they share one source
+revision, one QZX version, valid result hashes, the complete command set, and
+observed Windows, Linux, and macOS hosts.
+
+The public tools are:
+
+```bash
+python scripts/capture_golden_core_platform_evidence.py \
+  --output evidence.json \
+  --environment-id <stable-id> \
+  --environment-name "<display name>"
+
+python scripts/merge_golden_core_platform_evidence.py \
+  <evidence-file-or-directory> \
+  --output summary.json
+```
+
+Raw records may include real operating-system, architecture, Python, resource,
+and command-result facts. They replace private paths, usernames, hostnames, and
+ephemeral loopback ports before hashing and upload. The aggregate proves only
+the exact revision, environments, fixtures, arguments, and observed results; it
+is not a universal compatibility guarantee or an automatic Beta promotion.
+
 ## Promotion and change policy
 
 The target is Beta, not an automatic promotion. A command advances only after

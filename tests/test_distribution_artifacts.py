@@ -187,6 +187,16 @@ def build_fixture_distributions(
         )
         add_tar_text(
             archive,
+            f"{root}/scripts/capture_golden_core_platform_evidence.py",
+            "#!/usr/bin/env python\n",
+        )
+        add_tar_text(
+            archive,
+            f"{root}/scripts/merge_golden_core_platform_evidence.py",
+            "#!/usr/bin/env python\n",
+        )
+        add_tar_text(
+            archive,
             f"{root}/examples/result_contract/manifest.json",
             CONFORMANCE_MANIFEST,
         )

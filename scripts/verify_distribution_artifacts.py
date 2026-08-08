@@ -305,6 +305,12 @@ def verify_sdist(
         golden_core_name = f"{root}/src/qzx/resources/golden-core.json"
         golden_core_doc_name = f"{root}/docs/golden-core.md"
         golden_core_verifier_name = f"{root}/scripts/verify_golden_core.py"
+        platform_capture_name = (
+            f"{root}/scripts/capture_golden_core_platform_evidence.py"
+        )
+        platform_merge_name = (
+            f"{root}/scripts/merge_golden_core_platform_evidence.py"
+        )
         adopters_name = f"{root}/ADOPTERS.md"
         conformance_manifest_name = (
             f"{root}/examples/result_contract/manifest.json"
@@ -330,6 +336,8 @@ def verify_sdist(
             golden_core_name: members.get(golden_core_name),
             golden_core_doc_name: members.get(golden_core_doc_name),
             golden_core_verifier_name: members.get(golden_core_verifier_name),
+            platform_capture_name: members.get(platform_capture_name),
+            platform_merge_name: members.get(platform_merge_name),
             adopters_name: members.get(adopters_name),
             conformance_manifest_name: members.get(conformance_manifest_name),
             **{
