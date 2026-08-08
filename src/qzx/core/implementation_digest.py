@@ -122,11 +122,18 @@ def implementation_source_paths(cmd_class: type[Any]) -> tuple[str, ...]:
     return tuple(sorted(source_paths))
 
 
+def canonicalize_source_bytes(raw: bytes) -> bytes:
+    """Normalize UTF-8 text so fingerprints are independent of checkout EOLs."""
+
+    text = raw.decode("utf-8-sig")
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
 @lru_cache(maxsize=None)
 def source_bytes(relative_path: str) -> bytes:
-    """Read immutable source bytes once per fingerprinting process."""
+    """Read source text once and normalize it to portable UTF-8/LF bytes."""
 
-    return (PROJECT_ROOT / relative_path).read_bytes()
+    return canonicalize_source_bytes((PROJECT_ROOT / relative_path).read_bytes())
 
 
 def digest_source_paths(relative_paths: list[str] | tuple[str, ...]) -> str:

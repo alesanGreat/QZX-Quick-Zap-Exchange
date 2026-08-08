@@ -9,6 +9,7 @@ import copy
 
 from qzx.core.command_loader import CommandLoader
 from qzx.core.implementation_digest import (
+    canonicalize_source_bytes,
     command_implementation_digest,
     command_implementation_digest_for_lifecycle,
     implementation_source_paths,
@@ -20,6 +21,19 @@ def command_class(name: str):
     command = CommandLoader().get_command(name)
     assert command is not None
     return type(command)
+
+
+def test_source_fingerprint_normalizes_utf8_bom_and_line_endings():
+    lf = b"alpha\nbeta\n"
+    crlf = b"alpha\r\nbeta\r\n"
+    cr = b"alpha\rbeta\r"
+    bom_crlf = b"\xef\xbb\xbf" + crlf
+
+    expected = b"alpha\nbeta\n"
+    assert canonicalize_source_bytes(lf) == expected
+    assert canonicalize_source_bytes(crlf) == expected
+    assert canonicalize_source_bytes(cr) == expected
+    assert canonicalize_source_bytes(bom_crlf) == expected
 
 
 def test_implementation_digest_is_stable_and_source_scoped():

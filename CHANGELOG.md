@@ -13,8 +13,10 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 - Upgraded Golden Core platform evidence to bind every observed command result
   to its exact implementation digest; the merger now rejects cross-run code
   drift even when version and Git revision metadata appear otherwise coherent.
-- Preserved the previous digest identities for all 87 commands while removing
-  the duplicate fingerprint implementation from the website generator.
+- Normalized fingerprint source text to UTF-8 with LF line endings so the same
+  maintained command code has one identity across Windows, Linux, and macOS;
+  this deliberately migrates the 87 digest values without changing command
+  behavior and eliminates checkout line endings as false code drift.
 - Classified Golden Core failure evidence by meaning rather than by score: ten
   commands now capture a reproducible caller-visible failure or boundary, while
   five commands explicitly record that no representative caller-controlled
