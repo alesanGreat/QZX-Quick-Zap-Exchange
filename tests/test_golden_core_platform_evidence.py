@@ -25,6 +25,7 @@ from scripts.verify_golden_core import load_golden_core
 
 
 SOURCE_REVISION = "a" * 40
+SCRIPT_ROOT = Path(__file__).resolve().parents[1] / "scripts"
 
 
 def evidence_document(system: str, environment_id: str) -> dict:
@@ -114,6 +115,17 @@ def write_document(path: Path, document: dict) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def test_evidence_cli_writers_force_utf8_lf_bytes():
+    for filename in (
+        "capture_golden_core_platform_evidence.py",
+        "merge_golden_core_platform_evidence.py",
+    ):
+        source = (SCRIPT_ROOT / filename).read_text(encoding="utf-8")
+        assert "arguments.output.write_bytes(" in source
+        assert "arguments.output.write_text(" not in source
+        assert '(json.dumps(document, ensure_ascii=False, indent=2) + "\\n")' in source
 
 
 def test_sanitizer_removes_private_identity_paths_and_ephemeral_ports(tmp_path):

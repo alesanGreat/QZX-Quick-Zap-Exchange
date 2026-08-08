@@ -623,9 +623,10 @@ def main() -> int:
     arguments = parse_args()
     document = capture(arguments.environment_id, arguments.environment_name)
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
-    arguments.output.write_text(
-        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
+    arguments.output.write_bytes(
+        (json.dumps(document, ensure_ascii=False, indent=2) + "\n").encode(
+            "utf-8"
+        )
     )
     print(
         "Captured {} Golden Core commands on {} ({}).".format(
