@@ -1,0 +1,2 @@
+QZX evidence fixture
+Structured output is explicit.

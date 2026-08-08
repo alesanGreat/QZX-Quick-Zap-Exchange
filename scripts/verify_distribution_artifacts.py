@@ -21,6 +21,32 @@ PRODUCT_MANIFEST_PATH = (
 ATTRIBUTION = (
     "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez."
 )
+RESULT_CONTRACT_SCHEMA_ID = (
+    "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
+)
+RESULT_CONTRACT_WHEEL_PATH = (
+    "qzx/resources/schemas/result-contract-v1.schema.json"
+)
+
+
+def verify_result_contract_schema(text: str, context: str) -> None:
+    """Reject artifacts without the canonical QZX Result Contract v1 schema."""
+
+    try:
+        schema = json.loads(text)
+    except json.JSONDecodeError as exception:
+        raise ValueError(f"{context} contains invalid JSON Schema.") from exception
+    if (
+        not isinstance(schema, dict)
+        or schema.get("$id") != RESULT_CONTRACT_SCHEMA_ID
+        or schema.get("$schema")
+        != "https://json-schema.org/draft/2020-12/schema"
+        or schema.get("required") != ["success", "message"]
+        or schema.get("additionalProperties") is not True
+    ):
+        raise ValueError(
+            f"{context} does not contain QZX Result Contract v1."
+        )
 
 
 def release_readme_marker(version: str) -> str:
@@ -111,16 +137,25 @@ def verify_wheel(
 ) -> dict[str, object]:
     """Inspect the wheel metadata and packaged long description."""
     with zipfile.ZipFile(wheel_path) as archive:
+        names = set(archive.namelist())
         metadata_names = [
             name
-            for name in archive.namelist()
+            for name in names
             if name.endswith(".dist-info/METADATA")
         ]
         if len(metadata_names) != 1:
             raise ValueError(
                 f"{wheel_path.name} must contain exactly one METADATA file."
             )
+        if RESULT_CONTRACT_WHEEL_PATH not in names:
+            raise ValueError(
+                f"{wheel_path.name} does not contain "
+                f"{RESULT_CONTRACT_WHEEL_PATH}."
+            )
         metadata_text = archive.read(metadata_names[0]).decode("utf-8")
+        result_contract_schema = archive.read(
+            RESULT_CONTRACT_WHEEL_PATH
+        ).decode("utf-8")
 
     verify_metadata(
         parse_metadata(metadata_text, wheel_path.name),
@@ -137,10 +172,15 @@ def verify_wheel(
         expected_version=expected_version,
         context=wheel_path.name,
     )
+    verify_result_contract_schema(
+        result_contract_schema,
+        f"{wheel_path.name}:{RESULT_CONTRACT_WHEEL_PATH}",
+    )
     return {
         "filename": wheel_path.name,
         "size_bytes": wheel_path.stat().st_size,
         "sha256": sha256(wheel_path),
+        "result_contract_schema": RESULT_CONTRACT_SCHEMA_ID,
     }
 
 
@@ -169,16 +209,42 @@ def verify_sdist(
 
         metadata_member = members.get(f"{root}/PKG-INFO")
         readme_member = members.get(f"{root}/README.md")
-        if metadata_member is None or readme_member is None:
+        schema_name = (
+            f"{root}/src/qzx/resources/schemas/"
+            "result-contract-v1.schema.json"
+        )
+        specification_name = f"{root}/docs/result-contract-v1.md"
+        validator_name = f"{root}/scripts/validate_result_contract.py"
+        required_members = {
+            "PKG-INFO": metadata_member,
+            "README.md": readme_member,
+            schema_name: members.get(schema_name),
+            specification_name: members.get(specification_name),
+            validator_name: members.get(validator_name),
+        }
+        missing = [
+            name
+            for name, member in required_members.items()
+            if member is None or not member.isfile()
+        ]
+        if missing:
             raise ValueError(
-                f"{sdist_path.name} must contain PKG-INFO and README.md."
+                f"{sdist_path.name} is missing required release files: "
+                + ", ".join(missing)
+                + "."
             )
         metadata_handle = archive.extractfile(metadata_member)
         readme_handle = archive.extractfile(readme_member)
-        if metadata_handle is None or readme_handle is None:
+        schema_handle = archive.extractfile(required_members[schema_name])
+        if (
+            metadata_handle is None
+            or readme_handle is None
+            or schema_handle is None
+        ):
             raise ValueError(f"{sdist_path.name} contains unreadable metadata.")
         metadata_text = metadata_handle.read().decode("utf-8")
         readme_text = readme_handle.read().decode("utf-8")
+        result_contract_schema = schema_handle.read().decode("utf-8")
 
     verify_metadata(
         parse_metadata(metadata_text, sdist_path.name),
@@ -200,11 +266,16 @@ def verify_sdist(
         expected_version=expected_version,
         context=f"{sdist_path.name} README.md",
     )
+    verify_result_contract_schema(
+        result_contract_schema,
+        f"{sdist_path.name}:{schema_name}",
+    )
     return {
         "filename": sdist_path.name,
         "size_bytes": sdist_path.stat().st_size,
         "sha256": sha256(sdist_path),
         "qzx_sh_mode": f"{launcher_mode:04o}",
+        "result_contract_schema": RESULT_CONTRACT_SCHEMA_ID,
     }
 
 

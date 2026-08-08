@@ -16,6 +16,7 @@ optional and never unlock features or change the product experience.
 
 [Website](https://qzx.yumbale.com/en/) ·
 [Command documentation](https://qzx.yumbale.com/en/commands) ·
+[QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract) ·
 [Recorded output](https://qzx.yumbale.com/en/qzx-in-action) ·
 [Compatibility](https://qzx.yumbale.com/en/compatibility) ·
 [Security and telemetry](https://qzx.yumbale.com/en/security) ·
@@ -28,14 +29,14 @@ operations present in the installed command catalog.
 ## Install the published package
 
 ```bash
-python -m pip install --pre qzx
+python -m pip install --upgrade qzx
 qzx listCommands
 qzx help findFiles
 qzx getCurrentDateTime
 qzx getCurrentDateTime --output-format iso --json
 ```
 
-This source release is QZX `0.2.2.0.6a13` and requires Python `>=3.13`.
+This source release is QZX `0.2.2.0.6` and requires Python `>=3.13`.
 A normal `python -m pip install qzx` selects the latest final release; add
 `--pre` to opt into the newest pre-release. PyPI is authoritative for which
 version those commands currently select.
@@ -46,7 +47,7 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.6a13` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.6` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -59,6 +60,22 @@ Every public command returns an object with at least:
 - `message`: a descriptive human-readable summary;
 - command-specific evidence such as paths, counts, units, versions,
   diagnostics, causes, or remediation when available.
+
+This stable core is published as the open
+[QZX Result Contract v1](docs/result-contract-v1.md), with a downloadable
+[JSON Schema](https://qzx.yumbale.com/schemas/result-contract-v1.schema.json).
+Other tools may implement the result envelope without adopting the QZX command
+vocabulary. Compatibility describes the JSON shape; it does not imply
+endorsement, safe execution, or complete command parity.
+
+The CLI validates its final envelope before printing it. Validate a saved or
+piped document from a source checkout without a third-party dependency:
+
+```bash
+python scripts/validate_result_contract.py result.json
+qzx getCurrentDateTime --output-format iso --json \
+  | python scripts/validate_result_contract.py -
+```
 
 The CLI prints `message` by default. Pass `--json` to print the complete
 structured result:
@@ -107,15 +124,15 @@ Before a consequential operation, inspect the installed help and the
 platform availability, native dependencies, mutation classification, backup
 requirements, and preview support.
 
-## Development-only commands
+## Develop QZX from source
 
-The following examples require the development checkout and must not be
-recommended after only `pip install qzx`:
+The published package and the development checkout may differ while a new
+release is being prepared. Ask the installed runtime for its actual command
+catalog instead of assuming a command is present:
 
 ```bash
-qzx projectDoctor . --json
-qzx systemDoctor --json
-qzx auditRepository . --json
+qzx version --json
+qzx listCommands --json
 ```
 
 Install the checkout for development:

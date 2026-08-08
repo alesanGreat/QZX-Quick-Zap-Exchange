@@ -7,10 +7,12 @@ include qzx.sh
 include scripts/sync_command_index.py
 include scripts/sync_runtime_metadata.py
 include scripts/sync_test_environments.py
+include scripts/validate_result_contract.py
 include scripts/verify_distribution_artifacts.py
 recursive-include src/qzx/resources *.json
 prune docs
 prune tests
 include docs/philosophy.md
 include docs/command-lifecycle.md
+include docs/result-contract-v1.md
 include docs/reference/commands-generated.md

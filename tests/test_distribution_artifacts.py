@@ -10,6 +10,8 @@ import pytest
 
 from scripts.verify_distribution_artifacts import (
     ATTRIBUTION,
+    RESULT_CONTRACT_SCHEMA_ID,
+    RESULT_CONTRACT_WHEEL_PATH,
     release_readme_marker,
     verify_distributions,
 )
@@ -17,6 +19,12 @@ from scripts.verify_distribution_artifacts import (
 
 VERSION = "9.8.7a6"
 REQUIRES_PYTHON = ">=3.13"
+RESULT_CONTRACT_SCHEMA = (
+    '{"$schema":"https://json-schema.org/draft/2020-12/schema",'
+    f'"$id":"{RESULT_CONTRACT_SCHEMA_ID}",'
+    '"required":["success","message"],'
+    '"additionalProperties":true}'
+)
 
 
 def metadata_text(description_version=VERSION) -> str:
@@ -51,6 +59,10 @@ def build_fixture_distributions(
             f"qzx-{VERSION}.dist-info/METADATA",
             metadata_text(description_version),
         )
+        archive.writestr(
+            RESULT_CONTRACT_WHEEL_PATH,
+            RESULT_CONTRACT_SCHEMA,
+        )
 
     sdist = dist_dir / f"qzx-{VERSION}.tar.gz"
     root = f"qzx-{VERSION}"
@@ -71,6 +83,21 @@ def build_fixture_distributions(
             "#!/bin/sh\n",
             mode=launcher_mode,
         )
+        add_tar_text(
+            archive,
+            f"{root}/src/qzx/resources/schemas/result-contract-v1.schema.json",
+            RESULT_CONTRACT_SCHEMA,
+        )
+        add_tar_text(
+            archive,
+            f"{root}/docs/result-contract-v1.md",
+            "# QZX Result Contract v1\n",
+        )
+        add_tar_text(
+            archive,
+            f"{root}/scripts/validate_result_contract.py",
+            "#!/usr/bin/env python\n",
+        )
     return wheel, sdist
 
 
@@ -86,6 +113,10 @@ def test_distribution_verifier_accepts_executable_posix_launcher(tmp_path):
     assert result["success"] is True
     assert result["version"] == VERSION
     assert len(result["artifacts"]) == 2
+    assert all(
+        artifact["result_contract_schema"] == RESULT_CONTRACT_SCHEMA_ID
+        for artifact in result["artifacts"]
+    )
     assert result["artifacts"][1]["qzx_sh_mode"] == "0755"
 
 

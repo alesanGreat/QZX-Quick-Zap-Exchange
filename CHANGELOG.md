@@ -3,6 +3,26 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.6 — 2026-08-07
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Published QZX Result Contract v1 as an open, additive JSON envelope with a
+  JSON Schema 2020-12 document, public specification, and dependency-free
+  validator for commands, automation, MCP servers, and AI-agent tools.
+- Enforced the shared result contract at the final CLI boundary so invalid
+  internal producer output becomes an explicit `invalid_result_contract`
+  failure instead of leaking an ambiguous document.
+- Required wheel and source-distribution verification to prove that the schema,
+  specification, validator, immutable release description, attribution, and
+  executable POSIX launcher are all present in the release artifacts.
+- Closed the `0.2.2.0.6aN` package sequence with a normal PEP 440 distribution
+  so `python -m pip install --upgrade qzx` selects the current 87-command QZX
+  package. QZX remains Alpha software and individual command maturity remains
+  explicit; this publication does not promise a stable API or version 1.0.
+- Added public `qzx_in_action` fixtures and a regression test so the README's
+  first structured-output example works in a fresh repository clone.
+
 ## 0.2.2.0.6a13 — 2026-07-30
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

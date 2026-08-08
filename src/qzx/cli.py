@@ -15,6 +15,7 @@ from pathlib import Path
 
 from qzx.core.command_loader import CommandLoader
 from qzx.core.command_index import CommandIndexError
+from qzx.core.result_contract import ensure_result_contract
 from qzx.first_run import claim_first_run_attribution
 from qzx.identity import product_attribution
 
@@ -583,6 +584,7 @@ def main():
         }
 
     result = _add_first_run_attribution(result, json_output, first_run)
+    result = ensure_result_contract(result)
 
     if json_output:
         progress_output = captured_stdout.getvalue() if captured_stdout else ""

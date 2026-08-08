@@ -78,6 +78,7 @@ setup(
         "Documentation": PRODUCT_URLS["documentation_en"],
         "Spanish Documentation": PRODUCT_URLS["documentation_es"],
         "Command Catalog": PRODUCT_URLS["command_catalog"],
+        "Result Contract": PRODUCT_URLS["result_contract"],
         "Compatibility": PRODUCT_URLS["compatibility"],
         "Security": PRODUCT_URLS["security"],
         "Telemetry Policy": PRODUCT_URLS["telemetry_policy"],
@@ -92,6 +93,7 @@ setup(
         "cli",
         "cross-platform",
         "devops",
+        "json-schema",
         "structured-json",
         "system-administration",
     ],
@@ -105,6 +107,7 @@ setup(
             "resources/test-environments.json",
             "resources/function_words/*.json",
             "resources/programming_languages/*.json",
+            "resources/schemas/*.json",
         ],
     },
     classifiers=[

@@ -53,6 +53,8 @@
     "documentation_en": "https://qzx.yumbale.com/en/",
     "documentation_es": "https://qzx.yumbale.com/es/",
     "command_catalog": "https://qzx.yumbale.com/en/commands",
+    "result_contract": "https://qzx.yumbale.com/en/result-contract",
+    "result_contract_schema": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json",
     "compatibility": "https://qzx.yumbale.com/en/compatibility",
     "security": "https://qzx.yumbale.com/en/security",
     "telemetry_policy": "https://qzx.yumbale.com/en/security",
@@ -64,6 +66,10 @@
     "changelog": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/CHANGELOG.md"
   },
   "output_contract": {
+    "name": "QZX Result Contract",
+    "version": 1,
+    "specification": "https://qzx.yumbale.com/en/result-contract",
+    "schema": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json",
     "default_output": "human_message",
     "human": "The CLI prints the descriptive message by default.",
     "machine": {
@@ -95,6 +101,7 @@
       "channel": "Published package",
       "released_at": "2026-07-30",
       "requires_python": ">=3.13",
+      "install_command": "python -m pip install --pre --upgrade qzx",
       "source": "https://pypi.org/pypi/qzx/json",
       "wheel": {
         "filename": "qzx-0.2.2.0.6a13-py3-none-any.whl",
@@ -190,7 +197,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.6a13",
+      "version": "0.2.2.0.6",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",
