@@ -98,15 +98,15 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.6",
+      "version": "0.2.2.0.7a1",
       "status": "Alpha",
       "channel": "Published package",
-      "released_at": "2026-08-07",
+      "released_at": "2026-08-08",
       "requires_python": ">=3.13",
-      "install_command": "python -m pip install --upgrade qzx",
-      "source": "https://pypi.org/pypi/qzx/0.2.2.0.6/json",
+      "install_command": "python -m pip install --pre --upgrade qzx",
+      "source": "https://pypi.org/pypi/qzx/0.2.2.0.7a1/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.6-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.7a1-py3-none-any.whl",
         "command_names": [
           "about",
           "addPythonDocstrings",
