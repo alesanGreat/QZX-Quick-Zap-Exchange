@@ -155,10 +155,29 @@ def test_merge_accepts_three_declared_systems(tmp_path):
         ),
     ]
 
+    renamed_directory = tmp_path / "renamed"
+    renamed_directory.mkdir()
+    renamed_files = [
+        write_document(
+            renamed_directory / f"record-{index}.json",
+            json.loads(path.read_text(encoding="utf-8")),
+        )
+        for index, path in enumerate(reversed(files), start=1)
+    ]
+
     summary = merge(files)
     summary_reversed = merge(list(reversed(files)))
+    summary_renamed = merge(renamed_files)
 
-    assert summary == summary_reversed
+    assert summary == summary_reversed == summary_renamed
+    assert [
+        environment["source_file"]
+        for environment in summary["environments"]
+    ] == [
+        "macos-15-arm64.json",
+        "ubuntu-24.04-x64.json",
+        "windows-2025-x64.json",
+    ]
     assert summary["generated_at"] == "2026-08-08T00:00:00+00:00"
     assert summary["evidence_window"] == {
         "first_captured_at": "2026-08-08T00:00:00+00:00",

@@ -22,8 +22,9 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   duplicate or tampered evidence, invalid result metadata, and incomplete
   command assertions.
 - Made aggregate evidence deterministic by deriving its evidence window and
-  timestamp from the input captures, so identical records produce the same
-  summary and SHA-256 regardless of merge time or input order.
+  timestamp from the input captures and stable environment IDs, so identical
+  records produce the same summary and SHA-256 regardless of merge time, input
+  order, download directory, or local filenames.
 - Preserved the Golden Core candidate boundary: platform evidence records only
   the exact host, source revision, fixtures, arguments, and results observed;
   it does not create a universal compatibility guarantee or automatic Beta

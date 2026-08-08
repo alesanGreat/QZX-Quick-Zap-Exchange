@@ -256,7 +256,7 @@ def merge(paths: list[Path]) -> dict[str, Any]:
                 "github": environment["github"],
                 "captured_at": document["captured_at"],
                 "evidence_sha256": document["evidence_sha256"],
-                "source_file": path.name,
+                "source_file": f"{environment['id']}.json",
             }
         )
 
