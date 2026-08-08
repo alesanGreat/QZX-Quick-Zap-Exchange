@@ -225,6 +225,75 @@ def validate_golden_core(
             + "."
         )
 
+    failure_policy = registry.get("failure_evidence_policy")
+    if not isinstance(failure_policy, dict):
+        errors.append("Golden Core must declare failure_evidence_policy.")
+    else:
+        required_failures = failure_policy.get("required_commands")
+        not_applicable = failure_policy.get("not_applicable")
+        if not isinstance(required_failures, list) or any(
+            not _nonempty_text(name) for name in required_failures
+        ):
+            errors.append(
+                "failure_evidence_policy.required_commands must be a text array."
+            )
+            required_failures = []
+        if not isinstance(not_applicable, dict):
+            errors.append(
+                "failure_evidence_policy.not_applicable must be an object."
+            )
+            not_applicable = {}
+        else:
+            for name, explanation in not_applicable.items():
+                if not _nonempty_text(name) or not isinstance(explanation, dict):
+                    errors.append(
+                        "Every failure-evidence not_applicable entry must be an object."
+                    )
+                    continue
+                if not _nonempty_text(explanation.get("reason")):
+                    errors.append(
+                        f"Failure evidence N/A reason is missing for {name}."
+                    )
+                if not _nonempty_text(explanation.get("reason_es")):
+                    errors.append(
+                        f"Failure evidence Spanish N/A reason is missing for {name}."
+                    )
+        required_set = set(required_failures)
+        not_applicable_set = set(not_applicable)
+        command_set = set(command_names)
+        duplicated_required = sorted(
+            name
+            for name, count in Counter(required_failures).items()
+            if count > 1
+        )
+        if duplicated_required:
+            errors.append(
+                "Failure-evidence required commands are duplicated: "
+                + ", ".join(duplicated_required)
+                + "."
+            )
+        overlap = sorted(required_set & not_applicable_set)
+        if overlap:
+            errors.append(
+                "Failure evidence cannot be both required and not applicable: "
+                + ", ".join(overlap)
+                + "."
+            )
+        unknown = sorted((required_set | not_applicable_set) - command_set)
+        missing = sorted(command_set - (required_set | not_applicable_set))
+        if unknown:
+            errors.append(
+                "Failure-evidence policy contains unknown commands: "
+                + ", ".join(unknown)
+                + "."
+            )
+        if missing:
+            errors.append(
+                "Failure-evidence policy does not classify commands: "
+                + ", ".join(missing)
+                + "."
+            )
+
     if catalog_path is not None:
         catalog = load_json(catalog_path, "generated command catalog")
         catalog_commands = catalog.get("commands")

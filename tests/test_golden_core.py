@@ -86,3 +86,19 @@ def test_golden_core_readiness_dimensions_are_complete_and_unique():
         "release_quality",
         "lifecycle_review",
     }
+
+
+def test_golden_core_failure_evidence_policy_classifies_every_command():
+    registry = load_golden_core()
+    policy = registry["failure_evidence_policy"]
+    required = policy["required_commands"]
+    not_applicable = policy["not_applicable"]
+
+    assert len(required) == len(set(required)) == 10
+    assert len(not_applicable) == 5
+    assert set(required).isdisjoint(not_applicable)
+    assert set(required) | set(not_applicable) == set(EXPECTED_COMMANDS)
+    assert all(
+        item["reason"].strip() and item["reason_es"].strip()
+        for item in not_applicable.values()
+    )

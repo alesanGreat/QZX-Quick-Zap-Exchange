@@ -76,6 +76,22 @@ Passing one dimension never substitutes for another. Mocked unit tests do not
 become platform evidence, a captured success does not prove every failure path,
 and inclusion in Golden Core does not freeze an interface.
 
+### Failure evidence must be meaningful, not manufactured
+
+Golden Core classifies the failure-or-boundary dimension explicitly. Ten
+commands expose a useful caller-controlled failure boundary and therefore need a
+captured failed result. Five commands (`version`, `listCommands`,
+`getCurrentDirectory`, `systemInfo`, and `getRamInfo`) have no representative
+caller-controlled domain failure in their ordinary interface; their failure
+requirement is marked **not applicable** with a bilingual rationale in the
+canonical registry.
+
+Not-applicable is a resolved assessment, not a successful failure test. QZX does
+not deliberately break an operating-system API, inject a fake `psutil` failure,
+or reinterpret a valid empty result merely to make a dashboard count turn
+green. If a meaningful public failure boundary is introduced later, the policy
+must be updated and the new boundary captured.
+
 ## Verification
 
 From a source checkout:
@@ -102,10 +118,14 @@ or conflicts with the reviewed catalog supplied by the workspace.
 The existing GitHub Actions matrix runs the Golden Core evidence capturer after
 the normal tests on Windows, Linux, and macOS. Each runner executes all 15
 commands through the real CLI with disposable file, project, Git, and loopback
-HTTP fixtures, then uploads one sanitized JSON record. A separate job downloads
-those records and refuses to produce an aggregate unless they share one source
-revision, one QZX version, valid result hashes, the complete command set, and
-observed Windows, Linux, and macOS hosts.
+HTTP fixtures, then uploads one sanitized JSON record. Every command record is
+bound to QZX's canonical transitive implementation digest, not just to the
+repository SHA. A separate job downloads those records and refuses to produce
+an aggregate unless they share one source revision, one QZX version, valid
+result hashes, the complete command set, one implementation digest per command,
+and observed Windows, Linux, and macOS hosts. This makes code drift explicit
+instead of allowing two different implementations to hide behind matching
+release metadata.
 
 The public tools are:
 
@@ -122,9 +142,13 @@ python scripts/merge_golden_core_platform_evidence.py \
 
 Raw records may include real operating-system, architecture, Python, resource,
 and command-result facts. They replace private paths, usernames, hostnames, and
-ephemeral loopback ports before hashing and upload. The aggregate proves only
-the exact revision, environments, fixtures, arguments, and observed results; it
-is not a universal compatibility guarantee or an automatic Beta promotion.
+ephemeral loopback ports before hashing and upload. The JSON writers normalize
+to UTF-8 with LF endings, and the merger derives its timestamp and stable source
+names from the evidence itself, so identical records produce identical bytes
+regardless of input order, download directory, or host line-ending convention.
+The aggregate proves only the exact revision, command implementation digests,
+environments, fixtures, arguments, and observed results; it is not a universal
+compatibility guarantee or an automatic Beta promotion.
 
 ## Promotion and change policy
 

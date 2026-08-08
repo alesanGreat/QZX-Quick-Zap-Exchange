@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 EVIDENCE_TYPE = "qzx_golden_core_platform_run"
 SUMMARY_TYPE = "qzx_golden_core_platform_summary"
 REQUIRED_SYSTEMS = ("Windows", "Linux", "Darwin")
@@ -138,6 +138,19 @@ def validate_evidence(path: Path, document: dict[str, Any]) -> None:
         record = command_records[command_name]
         if not isinstance(record, dict):
             raise ValueError(f"{context}:{command_name} must be an object.")
+        implementation_digest = record.get("implementation_digest")
+        if (
+            not isinstance(implementation_digest, str)
+            or not implementation_digest.startswith("sha256:")
+            or len(implementation_digest) != 71
+            or any(
+                character not in "0123456789abcdef"
+                for character in implementation_digest[7:]
+            )
+        ):
+            raise ValueError(
+                f"{context}:{command_name} has an invalid implementation digest."
+            )
         if record.get("exit_code") != 0:
             raise ValueError(f"{context}:{command_name} did not exit successfully.")
         result = record.get("result")
@@ -222,13 +235,20 @@ def merge(paths: list[Path]) -> dict[str, Any]:
     for command_name in command_names:
         observed_systems: dict[str, int] = defaultdict(int)
         result_hashes: dict[str, str] = {}
+        implementation_digests: set[str] = set()
         for _, document in documents:
             environment = document["environment"]
+            record = document["commands"][command_name]
             observed_systems[environment["system"]] += 1
-            result_hashes[environment["id"]] = document["commands"][command_name][
-                "result_sha256"
-            ]
+            result_hashes[environment["id"]] = record["result_sha256"]
+            implementation_digests.add(record["implementation_digest"])
+        if len(implementation_digests) != 1:
+            raise ValueError(
+                "Platform evidence spans multiple implementation digests for "
+                f"{command_name}."
+            )
         command_summary[command_name] = {
+            "implementation_digest": next(iter(implementation_digests)),
             "environment_count": len(documents),
             "systems": dict(sorted(observed_systems.items())),
             "declared_systems_observed": all(

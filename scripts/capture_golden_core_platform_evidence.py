@@ -32,6 +32,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import qzx  # noqa: E402
+from qzx.core.command_loader import CommandLoader  # noqa: E402
+from qzx.core.implementation_digest import (  # noqa: E402
+    command_implementation_digest,
+)
 from qzx.core.result_contract import (  # noqa: E402
     RESULT_CONTRACT_SCHEMA_URL,
     result_contract_violations,
@@ -42,7 +46,7 @@ from scripts.verify_golden_core import (  # noqa: E402
 )
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 EXPECTED_COMMAND_COUNT = 15
 EXPECTED_QZX_COMMAND_COUNT = 87
 _LOOPBACK_URL_PATTERN = re.compile(r"http://127\.0\.0\.1:\d+")
@@ -504,6 +508,7 @@ def capture(environment_id: str, environment_name: str) -> dict[str, Any]:
     selected = [item["name"] for item in registry["commands"]]
     if len(selected) != EXPECTED_COMMAND_COUNT:
         raise RuntimeError("Golden Core no longer contains exactly 15 commands.")
+    loader = CommandLoader()
 
     with tempfile.TemporaryDirectory(prefix="qzx-golden-core-") as temporary:
         fixture_root = Path(temporary).resolve()
@@ -574,12 +579,21 @@ def capture(environment_id: str, environment_name: str) -> dict[str, Any]:
                 )
             for name in selected:
                 arguments, cwd = commands[name]
-                records[name] = run_qzx(
+                record = run_qzx(
                     name,
                     arguments,
                     cwd=cwd,
                     replacements=replacements,
                 )
+                command = loader.get_command(name)
+                if command is None:
+                    raise RuntimeError(
+                        f"Golden Core command '{name}' could not be loaded."
+                    )
+                record["implementation_digest"] = command_implementation_digest(
+                    type(command)
+                )
+                records[name] = record
 
     environment = environment_facts(environment_id, environment_name)
     result = {

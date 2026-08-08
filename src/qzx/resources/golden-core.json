@@ -77,6 +77,42 @@
       "description_es": "Una revisión de madurez validada por máquina justifica cualquier promoción posterior a Alpha."
     }
   ],
+  "failure_evidence_policy": {
+    "required_commands": [
+      "help",
+      "getCurrentDateTime",
+      "getDiskSpace",
+      "listFiles",
+      "findFiles",
+      "findText",
+      "getFileHash",
+      "getGitStatus",
+      "projectDoctor",
+      "checkUrlStatus"
+    ],
+    "not_applicable": {
+      "version": {
+        "reason": "The command has no caller-controlled domain input; forcing an artificial failure would not represent a useful public boundary.",
+        "reason_es": "El comando no tiene entrada de dominio controlada por quien llama; forzar un fallo artificial no representaría un límite público útil."
+      },
+      "listCommands": {
+        "reason": "An empty filter result is a valid discovery outcome, not a command failure.",
+        "reason_es": "Un filtro sin resultados es un resultado válido de descubrimiento, no un fallo del comando."
+      },
+      "getCurrentDirectory": {
+        "reason": "The command observes the already-established process working directory; deterministic synthetic failure would test the harness more than the public domain contract.",
+        "reason_es": "El comando observa el directorio de trabajo ya establecido del proceso; un fallo sintético determinista probaría más al arnés que al contrato público de dominio."
+      },
+      "systemInfo": {
+        "reason": "The default command has no required domain input; low-level platform API failure is environmental rather than a representative caller boundary.",
+        "reason_es": "El comando predeterminado no tiene entrada de dominio obligatoria; un fallo de API de plataforma sería ambiental y no un límite representativo para quien llama."
+      },
+      "getRamInfo": {
+        "reason": "The command has no caller-controlled domain input; a forced psutil or operating-system failure would be an infrastructure fault, not a useful contract example.",
+        "reason_es": "El comando no tiene entrada de dominio controlada por quien llama; forzar un fallo de psutil o del sistema operativo sería una avería de infraestructura, no un ejemplo útil del contrato."
+      }
+    }
+  },
   "commands": [
     {
       "name": "version",

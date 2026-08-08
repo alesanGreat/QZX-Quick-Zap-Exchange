@@ -41,6 +41,7 @@ def evidence_document(system: str, environment_id: str) -> dict:
             },
         }
         command_records[command_name] = {
+            "implementation_digest": "sha256:" + "1" * 64,
             "arguments": [command_name],
             "exit_code": 0,
             "elapsed_ms": 1.0,
@@ -57,11 +58,11 @@ def evidence_document(system: str, environment_id: str) -> dict:
         }
 
     document = {
-        "schema_version": 1,
+        "schema_version": 2,
         "evidence_type": "qzx_golden_core_platform_run",
         "captured_at": "2026-08-08T00:00:00+00:00",
         "source_revision": SOURCE_REVISION,
-        "qzx_version": "0.2.2.0.7a1",
+        "qzx_version": "0.2.2.0.7a3",
         "result_contract": (
             "https://qzx.yumbale.com/schemas/"
             "result-contract-v1.schema.json"
@@ -211,6 +212,10 @@ def test_merge_accepts_three_declared_systems(tmp_path):
         command["declared_systems_observed"] is True
         for command in summary["commands"].values()
     )
+    assert all(
+        command["implementation_digest"] == "sha256:" + "1" * 64
+        for command in summary["commands"].values()
+    )
     payload = dict(summary)
     observed_hash = payload.pop("aggregate_sha256")
     assert observed_hash == sha256_value(payload)
@@ -229,6 +234,26 @@ def test_merge_rejects_a_missing_declared_system(tmp_path):
     ]
 
     with pytest.raises(ValueError, match="Darwin"):
+        merge(files)
+
+
+def test_merge_rejects_cross_environment_implementation_drift(tmp_path):
+    windows = evidence_document("Windows", "windows-2025-x64")
+    linux = evidence_document("Linux", "ubuntu-24.04-x64")
+    darwin = evidence_document("Darwin", "macos-15-arm64")
+    linux["commands"]["version"]["implementation_digest"] = (
+        "sha256:" + "2" * 64
+    )
+    linux["evidence_sha256"] = sha256_value(
+        {key: value for key, value in linux.items() if key != "evidence_sha256"}
+    )
+    files = [
+        write_document(tmp_path / "windows.json", windows),
+        write_document(tmp_path / "linux.json", linux),
+        write_document(tmp_path / "darwin.json", darwin),
+    ]
+
+    with pytest.raises(ValueError, match="implementation digests for version"):
         merge(files)
 
 

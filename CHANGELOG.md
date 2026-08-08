@@ -3,6 +3,24 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.7a3 — 2026-08-08
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Moved the transitive per-command implementation fingerprint into QZX itself so
+  CI, safety reviews, evidence capture, and website generation share one
+  canonical digest algorithm instead of reimplementing it in private tooling.
+- Upgraded Golden Core platform evidence to bind every observed command result
+  to its exact implementation digest; the merger now rejects cross-run code
+  drift even when version and Git revision metadata appear otherwise coherent.
+- Preserved the previous digest identities for all 87 commands while removing
+  the duplicate fingerprint implementation from the website generator.
+- Classified Golden Core failure evidence by meaning rather than by score: ten
+  commands now capture a reproducible caller-visible failure or boundary, while
+  five commands explicitly record that no representative caller-controlled
+  failure applies instead of manufacturing an infrastructure fault for a green
+  dashboard badge.
+
 ## 0.2.2.0.7a2 — 2026-08-08
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
