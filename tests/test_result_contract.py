@@ -52,6 +52,10 @@ def test_packaged_schema_identifies_the_public_contract():
     assert schema["required"] == ["success", "message"]
     assert schema["properties"]["success"]["type"] == "boolean"
     assert schema["properties"]["message"]["minLength"] == 1
+    assert schema["properties"]["message"]["pattern"] == r"\S"
+    assert schema["properties"]["error"]["pattern"] == r"\S"
+    assert schema["properties"]["warnings"]["items"]["pattern"] == r"\S"
+    assert schema["properties"]["meta"]["properties"]["command"]["pattern"] == r"\S"
     assert schema["additionalProperties"] is True
 
 
@@ -87,10 +91,14 @@ def test_core_validator_rejects_ambiguous_documents():
     violations = result_contract_violations(
         {
             "success": "yes",
-            "message": "",
+            "message": "   ",
             "error_code": "Bad-Code",
-            "warnings": [""],
-            "meta": {"schema_version": 2, "duration_ms": float("inf")},
+            "warnings": ["   "],
+            "meta": {
+                "schema_version": 2,
+                "command": "   ",
+                "duration_ms": float("inf"),
+            },
         }
     )
     assert "success must be a boolean." in violations
@@ -98,6 +106,7 @@ def test_core_validator_rejects_ambiguous_documents():
     assert "error_code must use lower_snake_case when present." in violations
     assert "Every warnings item must be a non-empty string." in violations
     assert "meta.schema_version must equal 1." in violations
+    assert "meta.command must be a non-empty string when present." in violations
     assert "meta.duration_ms must be a finite non-negative number." in violations
 
 

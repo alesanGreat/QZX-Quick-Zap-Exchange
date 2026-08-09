@@ -35,12 +35,31 @@ body:
         - Bounded interoperability pilot
     validations:
       required: true
+  - type: dropdown
+    id: transport_profile
+    attributes:
+      label: Transport or interoperability profile
+      description: Core conformance is transport-independent. Select the profile actually exercised by this evidence.
+      options:
+        - Core contract only
+        - QZX CLI JSON transport profile
+        - QZX MCP 2026-07-28 interoperability profile
+        - Another transport or adapter
+    validations:
+      required: true
   - type: input
     id: evidence_url
     attributes:
       label: Public evidence URL
       description: Repository, report, fixtures, or another reviewable source boundary. Do not include credentials or private URLs.
       placeholder: https://github.com/example/project/tree/v1.2.0/conformance
+    validations:
+      required: true
+  - type: textarea
+    id: transport_evidence
+    attributes:
+      label: Transport and profile evidence
+      description: For MCP, show outputSchema, structuredContent, success/isError consistency, and how protocol errors remain distinct. For another profile, describe its framing and status behavior. Use “core only” when no transport profile is claimed.
     validations:
       required: true
   - type: textarea

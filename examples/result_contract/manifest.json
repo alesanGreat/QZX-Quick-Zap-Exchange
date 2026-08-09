@@ -31,6 +31,14 @@
       ]
     },
     {
+      "id": "invalid_whitespace_message",
+      "file": "invalid-whitespace-message.json",
+      "expected_conformant": false,
+      "expected_violations": [
+        "message must be a non-empty string."
+      ]
+    },
+    {
       "id": "invalid_failure_without_error",
       "file": "invalid-failure-without-error.json",
       "expected_conformant": false,

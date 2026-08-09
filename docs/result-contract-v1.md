@@ -20,28 +20,48 @@ a claim that an external standards body or the wider industry has adopted it.
 Other tools may implement it without using the QZX command vocabulary or QZX
 runtime, subject to the project license and trademark policy.
 
-A producer may describe its output as **QZX Result Contract v1 compatible** when
-all emitted JSON results satisfy the rules below. Compatibility does not imply
+A producer may describe a completed result as **QZX Result Contract v1
+compatible** when the contract object satisfies the machine-readable schema and
+the applicable normative requirements below. Compatibility does not imply
 endorsement, certification, complete command parity, or permission to use the
 QZX name as the producer's product name.
 
+## Normative language and conformance
+
+When the uppercase requirement terms `MUST`, `MUST NOT`, `SHOULD`, `SHOULD NOT`,
+`MAY`, and `OPTIONAL` appear in this document, interpret them according to BCP
+14 (RFC 2119 and RFC 8174). Lowercase uses keep their ordinary English meaning.
+
+- The JSON Schema is normative for the machine-checkable shape of a QZX Result
+  Contract v1 object.
+- This document is normative for semantics that cannot be expressed completely
+  by the schema.
+- **Core producer conformance is transport-independent.** A CLI, MCP server,
+  HTTP API, library, build tool, or adapter may carry the same contract object
+  through different transports.
+- A transport profile MAY add requirements around framing, process exit status,
+  protocol error signaling, or compatibility payloads, but it MUST NOT redefine
+  the meaning or type of the v1 core fields.
+
 ## Stable core
 
-Every result is one JSON object containing:
+Every completed result is one JSON object containing:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `success` | boolean | yes | `true` only when the requested operation completed successfully. |
-| `message` | non-empty string | yes | Complete human-readable summary of the outcome. |
-| `error` | non-empty string | on failure when no `error_code` exists | Human-readable failure description. |
+| `message` | non-empty string | yes | Complete human-readable summary of the outcome. It must contain at least one non-whitespace character. |
+| `error` | non-empty string | on failure when no `error_code` exists | Human-readable failure description containing at least one non-whitespace character. |
 | `error_code` | lower_snake_case string | on failure when no `error` exists | Stable machine-oriented failure identifier. |
 | `details` | object | no | Structured diagnostics, remediation, or domain-specific context. |
-| `warnings` | array of non-empty strings | no | Non-fatal conditions that deserve explicit attention. |
+| `warnings` | array of non-empty strings | no | Non-fatal conditions that deserve explicit attention; each item must contain at least one non-whitespace character. |
 | `meta` | object | no | Shared invocation metadata, including schema version, command, duration, and maturity when available. |
 
-A failed result must contain at least `error` or `error_code`. Producers may add
-command-specific top-level fields and additional metadata. Consumers must ignore
-unknown fields unless a command-specific contract says otherwise.
+When `meta.command` is present, it must contain at least one non-whitespace
+character. A failed result MUST contain at least `error` or `error_code`.
+Producers MAY add command-specific top-level fields and additional metadata.
+Consumers MUST ignore unknown fields unless a command-specific contract says
+otherwise.
 
 ## Successful example
 
@@ -77,30 +97,53 @@ unknown fields unless a command-specific contract says otherwise.
 }
 ```
 
-## Producer rules
+## Core producer requirements
 
-1. Write exactly one JSON document to `stdout` in machine-output mode.
-2. Send progress, diagnostics, and incidental native output to `stderr`.
-3. Never infer success from an empty error field: emit an explicit boolean.
-4. Make `message` useful without requiring the consumer to reconstruct it from
+1. A producer MUST provide exactly one QZX Result Contract object for each
+   completed operation result. A surrounding protocol MAY wrap that object in
+   its own result structure.
+2. A producer MUST emit an explicit boolean `success`; consumers must never
+   need to infer success from the presence or absence of another field.
+3. `message` MUST be useful as a standalone summary and MUST contain at least
+   one non-whitespace character.
+4. A failed result MUST contain at least one of `error` or `error_code`.
+5. A producer SHOULD use stable `error_code` values for failures on which a
+   consumer may branch programmatically.
+6. Command-specific evidence MUST be truthful and typed. A producer MUST NOT
+   invent values for information it could not obtain.
+7. Additive fields MAY evolve compatibly. Removing a required field, changing
+   its type, or changing its meaning requires a new contract version.
+
+## Core consumer requirements
+
+1. A consumer MUST parse the complete contract object before interpreting
    command-specific fields.
-5. Use stable `error_code` values for failures a consumer may branch on.
-6. Keep command-specific evidence truthful and typed; do not fill unavailable
-   fields with invented values.
-7. Add fields compatibly. Removing a required field, changing its type, or
-   changing its meaning requires a new contract version.
+2. A consumer MUST inspect `success` before deciding whether domain-specific
+   output represents a successful operation.
+3. A consumer SHOULD present `message` when a human needs a concise explanation
+   of the outcome.
+4. A consumer SHOULD prefer `error_code` for stable programmatic handling and
+   `error` for diagnostic context.
+5. A consumer relaying a result SHOULD preserve unknown fields and MUST NOT
+   reject a valid v1 result merely because additive fields are unfamiliar.
+6. A consumer MUST NOT treat contract compatibility as proof that an operation
+   is safe, authorized, sandboxed, correct for its domain, or available on every
+   platform.
 
-## Consumer rules
+## QZX CLI JSON transport profile
 
-1. Parse one complete JSON object and reject trailing non-JSON output.
-2. Read `success` before interpreting domain-specific fields.
-3. Present `message` when a human needs a concise explanation.
-4. Use `error_code` for stable programmatic handling and `error` for diagnostic
-   context.
-5. Preserve unknown fields when relaying a result and ignore them when they are
-   not understood.
-6. Do not treat contract compatibility as proof that an operation is safe,
-   authorized, sandboxed, or available on every platform.
+The core contract does not require `stdout`, `stderr`, or a process exit code.
+Those are transport concerns. A CLI that claims the **QZX CLI JSON transport
+profile** has these additional requirements:
+
+1. Machine-output mode MUST write exactly one complete QZX Result Contract JSON
+   document to `stdout`, with no leading or trailing non-JSON output.
+2. Progress, diagnostics, and incidental native output MUST go to `stderr` or
+   another channel that cannot corrupt the JSON document.
+3. The process exit status SHOULD agree with the contract outcome. The v1 core
+   does not assign universal numeric exit codes to domain failures.
+
+QZX itself implements this profile when `--json` is requested.
 
 ## Validation
 
@@ -111,7 +154,7 @@ python scripts/validate_result_contract.py result.json
 python scripts/validate_result_contract.py result.json --json
 ```
 
-Validate a live QZX command without an intermediate file:
+Validate a live QZX CLI result without an intermediate file:
 
 ```bash
 qzx getCurrentDateTime --output-format iso --json \
@@ -122,6 +165,9 @@ The validator has no third-party runtime dependency. The QZX CLI also validates
 its own final envelope before printing it; invalid internal producer output is
 replaced with a conforming `invalid_result_contract` failure instead of leaking
 an ambiguous document.
+
+The public conformance fixtures include both valid documents and documents that
+MUST be rejected, including a whitespace-only `message`.
 
 ## Compatibility and evolution
 
@@ -135,13 +181,15 @@ Compatible evolution may:
 - add new `error_code` values;
 - add command-specific objects;
 - add metadata fields;
-- strengthen documentation without changing field meaning.
+- add transport profiles that preserve the core semantics;
+- strengthen documentation or machine-readable constraints so they match the
+  already-defined field meaning.
 
 A new major contract version is required to:
 
 - remove or rename a required field;
 - change the type or meaning of `success` or `message`;
-- permit multiple documents on `stdout`;
+- change the root contract away from one JSON object per completed result;
 - make a currently optional core field mandatory for all producers;
 - redefine failure semantics incompatibly.
 

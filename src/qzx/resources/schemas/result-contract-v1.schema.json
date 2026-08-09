@@ -16,11 +16,13 @@
     "message": {
       "type": "string",
       "minLength": 1,
+      "pattern": "\\S",
       "description": "A complete human-readable summary of the outcome."
     },
     "error": {
       "type": "string",
       "minLength": 1,
+      "pattern": "\\S",
       "description": "A human-readable failure description when success is false."
     },
     "error_code": {
@@ -36,7 +38,8 @@
       "type": "array",
       "items": {
         "type": "string",
-        "minLength": 1
+        "minLength": 1,
+        "pattern": "\\S"
       },
       "description": "Non-fatal conditions that deserve explicit attention."
     },
@@ -49,7 +52,8 @@
         },
         "command": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "duration_ms": {
           "type": "number",

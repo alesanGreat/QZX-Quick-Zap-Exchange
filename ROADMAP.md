@@ -8,6 +8,11 @@ through separate reviewed operations.
 
 - Align the public repository, PyPI package, website, license, attribution, and
   command counts.
+- Keep QZX Result Contract v1 transport-independent, machine-checkable, and
+  internally consistent across its normative prose, JSON Schema, validator, and
+  conformance fixtures.
+- Maintain the MCP 2026-07-28 interoperability profile so external MCP tools can
+  adopt the QZX result envelope without adopting QZX command names or runtime.
 - Complete the Apache-2.0 rights audit before declaring the license transition
   finished.
 - Keep human terminal output and `--json` as two presentations of the same
@@ -18,8 +23,13 @@ through separate reviewed operations.
 
 ## Next
 
+- Earn the first independently reviewable QZX Result Contract implementation or
+  pilot with public success and failure evidence. Until independent evidence
+  exists, do not describe QZX Result Contract as an industry standard.
+- Recruit pilots who complete a real task and voluntarily report repeat use,
+  prioritizing MCP and non-QZX producers where the mapping solves a real result
+  interoperability problem.
 - Run a small reproducible benchmark on Windows and Linux before expanding it.
-- Recruit pilots who complete a real task and voluntarily report repeat use.
 - Add continuous ARM64 and real macOS evidence when suitable environments are
   available.
 - Improve onboarding from installation to a useful first command.
