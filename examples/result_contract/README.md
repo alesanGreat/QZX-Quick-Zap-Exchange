@@ -31,6 +31,19 @@ python scripts/validate_result_contract.py examples/result_contract/valid-succes
 `manifest.json` is the machine-readable inventory used by the conformance
 runner.
 
+## Minimal TypeScript producer
+
+[`typescript-minimal.ts`](typescript-minimal.ts) shows how an existing
+TypeScript tool can keep its domain-specific fields and add the small QZX
+success/failure envelope without depending on the QZX runtime. The example uses
+a discriminated union so failed results require a stable `error_code` at the
+TypeScript type level.
+
+The example is intentionally transport-neutral. For MCP, place the resulting
+object in `structuredContent`, expose the canonical QZX schema as
+`outputSchema`, and keep MCP `isError` consistent with `!success` as described
+below.
+
 ## MCP 2026-07-28 profile fixtures
 
 | File | Purpose |

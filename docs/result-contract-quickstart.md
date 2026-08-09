@@ -33,6 +33,12 @@ A failed completed operation starts with:
 Keep your existing domain data as additional fields. The contract is additive;
 it does not require throwing useful evidence away.
 
+TypeScript producers can copy the dependency-free
+[`typescript-minimal.ts`](../examples/result_contract/typescript-minimal.ts)
+example. It models success/failure as a discriminated union while preserving
+existing domain fields; it is an implementation example, not a substitute for
+validating emitted JSON against the canonical schema.
+
 Canonical JSON Schema:
 <https://qzx.yumbale.com/schemas/result-contract-v1.schema.json>
 

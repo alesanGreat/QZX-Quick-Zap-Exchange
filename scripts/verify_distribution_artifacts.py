@@ -605,7 +605,7 @@ def verify_sdist(
         example_names = [
             f"{root}/{path.relative_to(PROJECT_ROOT).as_posix()}"
             for path in sorted(RESULT_CONTRACT_EXAMPLES_ROOT.iterdir())
-            if path.is_file() and path.suffix.lower() in {".json", ".md"}
+            if path.is_file() and path.suffix.lower() in {".json", ".md", ".ts"}
         ]
         readme_link_names = [
             f"{root}/{relative_path}"

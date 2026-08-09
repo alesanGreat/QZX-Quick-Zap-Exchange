@@ -195,7 +195,7 @@ def build_fixture_distributions(
                 (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8"),
             )
         for source in sorted((REPOSITORY_ROOT / "examples" / "result_contract").iterdir()):
-            if source.is_file() and source.suffix.lower() in {".json", ".md"}:
+            if source.is_file() and source.suffix.lower() in {".json", ".md", ".ts"}:
                 add_tar_text(
                     archive,
                     f"{root}/examples/result_contract/{source.name}",
