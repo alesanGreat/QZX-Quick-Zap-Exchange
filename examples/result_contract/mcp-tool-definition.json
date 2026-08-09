@@ -1,0 +1,12 @@
+{
+  "name": "get_current_time",
+  "description": "Return the current local time.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
+  }
+}

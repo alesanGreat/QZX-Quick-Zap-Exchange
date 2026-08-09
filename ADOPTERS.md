@@ -12,6 +12,31 @@ No independent adopters are listed yet.
 QZX is the reference implementation. That proves the contract can be used by
 QZX; it does not prove independent interoperability or industry adoption.
 
+### First independent implementation wanted
+
+The immediate adoption target is one small, public, independently reviewable
+implementation or pilot. An MCP 2026-07-28 producer is especially useful
+because the repository now includes success/failure fixtures and a dependency-
+free profile validator for `outputSchema`, `structuredContent`, `isError`, and
+QZX Result Contract consistency.
+
+A useful first pilot does not need to replace an existing result format or
+implement the QZX command vocabulary. It may wrap one real tool, document what
+maps cleanly and what does not, and publish both successful and failed calls.
+Negative findings are welcome; evidence matters more than a favorable outcome.
+
+For the included MCP fixtures:
+
+```bash
+python scripts/validate_mcp_result_contract.py \
+  examples/result_contract/mcp-success.json \
+  --tool-definition examples/result_contract/mcp-tool-definition.json
+```
+
+Independent work can be submitted directly. An organization may also fund a
+bounded interoperability pilot, but payment never guarantees conformance,
+listing, favorable findings, or control of the public contract.
+
 ## Listing requirements
 
 A public entry requires:

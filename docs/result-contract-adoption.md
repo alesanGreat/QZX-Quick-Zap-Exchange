@@ -71,7 +71,7 @@ the completed operation result carried inside it.
 
 ### Tool definition mapping
 
-An MCP tool adopting this profile should expose the QZX Result Contract v1
+An MCP tool claiming this profile MUST expose the QZX Result Contract v1
 schema as its `outputSchema`. The compact example below uses `$ref`; an
 implementation should follow the `$ref` resolution rules of its MCP stack or
 inline the canonical QZX schema during its build when that is more portable.
@@ -163,9 +163,10 @@ narrow:
 | Protocol error such as unknown tool, malformed request, or server-level JSON-RPC failure | Keep the MCP/JSON-RPC protocol error. Do not invent a completed QZX result. |
 | `input_required` / elicitation flow | Continue the MCP flow. Produce a QZX result only when an operation actually reaches a completed result. |
 
-For this QZX MCP profile, a completed result should keep
-`isError == !structuredContent.success`. A mismatch is an interoperability bug:
-it gives the MCP layer and the contract layer contradictory outcomes.
+For this QZX MCP profile, a completed result MUST declare `isError` as an
+explicit boolean and MUST keep `isError == !structuredContent.success`. A
+mismatch is an interoperability bug: it gives the MCP layer and the contract
+layer contradictory outcomes.
 
 ### Why this profile is useful
 
@@ -200,23 +201,46 @@ report must keep those claims separate.
 ## Included conformance suite
 
 The repository contains positive and negative fixtures under
-[`examples/result_contract/`](../examples/result_contract/) and a
-dependency-free runner:
+[`examples/result_contract/`](../examples/result_contract/) and dependency-free
+validators.
+
+Validate the transport-independent core fixtures:
 
 ```bash
 python scripts/run_result_contract_conformance.py
 python scripts/run_result_contract_conformance.py --json
 ```
 
-The suite proves that an implementation agrees with the QZX core validator on
-known examples. It is a baseline, not a substitute for testing the adopter's
-real producer.
-
-A single document can be checked with:
+Validate one core contract object:
 
 ```bash
 python scripts/validate_result_contract.py result.json
 ```
+
+Validate an MCP 2026-07-28 completed tool result or a complete JSON-RPC response:
+
+```bash
+python scripts/validate_mcp_result_contract.py mcp-result.json
+```
+
+Also verify that the MCP tool definition exposes the canonical QZX
+`outputSchema`:
+
+```bash
+python scripts/validate_mcp_result_contract.py mcp-result.json \
+  --tool-definition mcp-tool-definition.json
+```
+
+The MCP validator checks `resultType: "complete"`, QZX conformance of
+`structuredContent`, explicit `isError`, `isError == !success`, and, when a tool
+definition is supplied, the canonical `outputSchema`. A text block that
+serializes the complete `structuredContent` object is reported as backwards-
+compatibility evidence. Because MCP specifies that duplicate text
+representation as a recommendation rather than a requirement, its absence is a
+warning rather than a profile failure.
+
+These checks are a baseline, not a substitute for testing the adopter's real
+producer, client, permissions, transport, and failure behavior.
 
 ## Reporting an implementation
 

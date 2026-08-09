@@ -1,0 +1,18 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "resultType": "complete",
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true,\"message\":\"Operation completed.\"}"
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "message": "Operation completed."
+    },
+    "isError": true
+  }
+}

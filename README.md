@@ -88,6 +88,14 @@ Run the positive and negative reference fixtures with:
 python scripts/run_result_contract_conformance.py
 ```
 
+For an MCP 2026-07-28 implementation, validate a completed tool result and its
+tool definition with the dependency-free MCP profile validator:
+
+```bash
+python scripts/validate_mcp_result_contract.py mcp-result.json \
+  --tool-definition mcp-tool-definition.json
+```
+
 Independent implementations and bounded pilots can follow the
 [adoption guide](docs/result-contract-adoption.md). Only public, reviewable,
 authorized evidence is listed in [ADOPTERS.md](ADOPTERS.md); QZX itself is the
