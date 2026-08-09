@@ -66,12 +66,13 @@ This transport-independent core is published as the open
 [QZX Result Contract v1](docs/result-contract-v1.md), with a downloadable
 [JSON Schema](https://qzx.yumbale.com/schemas/result-contract-v1.schema.json).
 Other tools may implement the result envelope without adopting the QZX command
-vocabulary or runtime. The [adoption guide](docs/result-contract-adoption.md)
-includes an interoperability profile for MCP specification 2026-07-28 that maps
-the QZX schema to MCP `outputSchema`, the contract object to
-`structuredContent`, and completed failures to `isError`. Compatibility
-describes the result contract; it does not imply endorsement, safe execution,
-or complete command parity.
+vocabulary or runtime. Start with the
+[5-minute adoption quickstart](docs/result-contract-quickstart.md); the full
+[adoption guide](docs/result-contract-adoption.md) includes an interoperability
+profile for MCP specification 2026-07-28 that maps the QZX schema to MCP
+`outputSchema`, the contract object to `structuredContent`, and completed
+failures to `isError`. Compatibility describes the result contract; it does not
+imply endorsement, safe execution, or complete command parity.
 
 The CLI validates its final envelope before printing it. Validate a saved or
 piped document from a source checkout without a third-party dependency:

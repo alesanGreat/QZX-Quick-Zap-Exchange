@@ -12,6 +12,11 @@ standard.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+If you want the shortest executable path before reading the full semantics,
+start with the [`5-minute adoption quickstart`](result-contract-quickstart.md).
+It reduces a first experiment to one real success, one real failure, validation,
+and a small reviewable evidence bundle.
+
 ## Adoption modes
 
 ### 1. Native producer

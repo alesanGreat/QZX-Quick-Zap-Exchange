@@ -25,6 +25,11 @@ implement the QZX command vocabulary. It may wrap one real tool, document what
 maps cleanly and what does not, and publish both successful and failed calls.
 Negative findings are welcome; evidence matters more than a favorable outcome.
 
+The shortest path is the
+[`5-minute adoption quickstart`](docs/result-contract-quickstart.md), which
+shows the minimal core and MCP evidence bundle before the full reporting
+requirements below.
+
 For the included MCP fixtures:
 
 ```bash
