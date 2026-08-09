@@ -41,16 +41,24 @@ runner.
 | `mcp-invalid-is-error.json` | Deliberate contradiction between MCP `isError` and QZX `success`. |
 | `mcp-protocol-error.json` | JSON-RPC protocol error that must remain outside a completed QZX result. |
 
-Validate the success fixture and tool definition:
+Validate the complete success/failure pair and tool definition, then write a
+deterministic conformance receipt:
 
 ```bash
-python scripts/validate_mcp_result_contract.py \
-  examples/result_contract/mcp-success.json \
+python scripts/validate_result_contract_evidence.py \
+  --profile mcp-2026-07-28 \
+  --success examples/result_contract/mcp-success.json \
+  --failure examples/result_contract/mcp-failure.json \
   --tool-definition examples/result_contract/mcp-tool-definition.json \
-  --json
+  --report qzx-conformance.json
 ```
 
-Then replace the fixture with output from **one real tool**. The quickest path
+The receipt records SHA-256 digests of the exact evidence files and preserves
+validator warnings and profile facts. External GitHub repositories can run the
+same check with the reusable Composite Action under
+`.github/actions/result-contract-conformance`.
+
+Then replace the fixtures with output from **one real tool**. The quickest path
 to a reviewable independent experiment is documented in
 [`../../docs/result-contract-quickstart.md`](../../docs/result-contract-quickstart.md).
 

@@ -15,12 +15,19 @@ from scripts.run_result_contract_conformance import (
 
 
 def test_reference_conformance_suite_passes_positive_and_negative_cases():
+    manifest = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))
+    expected_positive = sum(
+        1 for case in manifest["cases"] if case["expected_conformant"] is True
+    )
+    expected_negative = sum(
+        1 for case in manifest["cases"] if case["expected_conformant"] is False
+    )
     result = run_conformance()
 
     assert result["success"] is True
-    assert result["details"]["case_count"] == 5
-    assert result["details"]["positive_count"] == 2
-    assert result["details"]["negative_count"] == 3
+    assert result["details"]["case_count"] == len(manifest["cases"])
+    assert result["details"]["positive_count"] == expected_positive
+    assert result["details"]["negative_count"] == expected_negative
     assert result["details"]["failed_count"] == 0
     assert all(case["passed"] for case in result["details"]["cases"])
 

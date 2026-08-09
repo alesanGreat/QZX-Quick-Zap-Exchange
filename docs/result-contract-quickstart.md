@@ -54,7 +54,47 @@ Exit status `0` means the document passes the QZX Result Contract v1 core
 validator. A passing schema does not certify domain correctness, authorization,
 security, or platform compatibility.
 
-## 3. MCP 2026-07-28: use the contract as `outputSchema`
+## 3. Validate the pair and produce a reviewable receipt
+
+The conformance kit validates the semantic roles of both documents — the
+success file must actually contain `success: true` and the failure file must
+actually contain `success: false` — then records SHA-256 digests in a
+deterministic JSON receipt:
+
+```bash
+python scripts/validate_result_contract_evidence.py \
+  --profile core \
+  --success result-contract-evidence/success.json \
+  --failure result-contract-evidence/failure.json \
+  --report result-contract-evidence/qzx-conformance.json
+```
+
+For GitHub Actions, the repository also ships a reusable Composite Action. A
+minimal caller workflow is:
+
+```yaml
+name: QZX Result Contract conformance
+on: [push, pull_request]
+
+jobs:
+  qzx-result-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
+        with:
+          profile: core
+          success: result-contract-evidence/success.json
+          failure: result-contract-evidence/failure.json
+          report: result-contract-evidence/qzx-conformance.json
+```
+
+`@main` is convenient for an initial experiment. Before publishing durable
+adoption evidence, replace it with the full QZX commit SHA that you actually
+validated against. The Action fails the job when the pair does not conform and
+writes the receipt path to the GitHub step output and job summary.
+
+## 4. MCP 2026-07-28: use the contract as `outputSchema`
 
 For an MCP tool, declare the QZX schema as the tool's `outputSchema`:
 
@@ -82,11 +122,21 @@ For a completed tool-execution failure:
 Keep MCP/JSON-RPC **protocol errors** as protocol errors. Do not manufacture a
 completed QZX result for an invalid request or other protocol-level failure.
 
-Validate both the tool definition and completed result with:
+Validate both completed results and the tool definition in one receipt with:
 
 ```bash
-python scripts/validate_mcp_result_contract.py path/to/mcp-result.json \
-  --tool-definition path/to/mcp-tool-definition.json --json
+python scripts/validate_result_contract_evidence.py \
+  --profile mcp-2026-07-28 \
+  --success result-contract-evidence/success.json \
+  --failure result-contract-evidence/failure.json \
+  --tool-definition result-contract-evidence/tool-definition.json \
+  --report result-contract-evidence/qzx-conformance.json
+```
+
+In the Composite Action, use `profile: mcp-2026-07-28` and add:
+
+```yaml
+          tool-definition: result-contract-evidence/tool-definition.json
 ```
 
 The repository includes copyable fixtures under
@@ -94,7 +144,7 @@ The repository includes copyable fixtures under
 definition, completed success, completed failure, contradictory `isError`, and
 protocol-error examples.
 
-## 4. Publish the smallest reviewable evidence bundle
+## 5. Publish the smallest reviewable evidence bundle
 
 A first independent implementation does not need a white paper. A small public
 directory is enough when it contains:
@@ -104,22 +154,24 @@ result-contract-evidence/
   README.md
   tool-definition.json        # when MCP applies
   success.json
-  failure.json                # when the producer can fail
-  validation.txt              # command, exit status, sanitized output
+  failure.json
+  qzx-conformance.json        # generated deterministic receipt
 ```
 
 In `README.md`, state:
 
 - implementation name and immutable version or revision;
-- QZX Result Contract version (`v1`);
+- QZX Result Contract version (`v1`) and QZX validator/action commit SHA;
 - runtime, operating system, transport, and MCP version when applicable;
 - extensions, unsupported cases, lossy mappings, and known limitations;
 - a correction or issue URL.
 
-Negative results are useful. A pilot that finds an ambiguity or rejects the
-profile can be more valuable than an uncritical compatibility claim.
+The generated receipt records the exact input file digests and validator
+findings. Negative results are useful: a pilot that finds an ambiguity or
+rejects the profile can be more valuable than an uncritical compatibility
+claim.
 
-## 5. Report independent evidence
+## 6. Report independent evidence
 
 Use the GitHub issue form **Result Contract adoption report** when the evidence
 is public and reviewable. QZX lists only evidence-backed implementations or

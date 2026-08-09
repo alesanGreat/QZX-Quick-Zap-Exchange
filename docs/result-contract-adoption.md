@@ -199,6 +199,13 @@ A credible adoption report includes:
 7. the operating systems, runtimes, or services actually exercised;
 8. a contact or issue URL for corrections.
 
+When QZX's evidence CLI or Composite Action is used, publish the generated
+`qzx-conformance.json` receipt and identify the full QZX commit SHA that ran the
+validator. The receipt records SHA-256 digests of the exact success, failure,
+and MCP tool-definition files when applicable. An adopter may instead use an
+independent JSON Schema or profile validator; QZX tooling is not a dependency of
+the Result Contract itself.
+
 Passing the core schema does not certify security, authorization, isolation,
 correct domain behavior, platform compatibility, or every extension field. A
 report must keep those claims separate.
@@ -235,6 +242,24 @@ Also verify that the MCP tool definition exposes the canonical QZX
 python scripts/validate_mcp_result_contract.py mcp-result.json \
   --tool-definition mcp-tool-definition.json
 ```
+
+For independent evidence, validate the successful and failed completed results
+together and write one deterministic receipt:
+
+```bash
+python scripts/validate_result_contract_evidence.py \
+  --profile mcp-2026-07-28 \
+  --success result-contract-evidence/success.json \
+  --failure result-contract-evidence/failure.json \
+  --tool-definition result-contract-evidence/tool-definition.json \
+  --report result-contract-evidence/qzx-conformance.json
+```
+
+External GitHub repositories can execute the same pair check through the
+reusable Composite Action in
+[`.github/actions/result-contract-conformance`](../.github/actions/result-contract-conformance/action.yml).
+The quickstart includes a copyable caller workflow. Pin the QZX Action to a full
+commit SHA before publishing durable evidence.
 
 The MCP validator checks `resultType: "complete"`, QZX conformance of
 `structuredContent`, explicit `isError`, `isError == !success`, and, when a tool

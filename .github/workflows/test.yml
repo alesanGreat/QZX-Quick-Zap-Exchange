@@ -69,6 +69,48 @@ jobs:
       - name: Validate package rendering for PyPI
         run: python -m twine check "$RUNNER_TEMP"/qzx-dist/*
 
+  result-contract-conformance-action:
+    name: Result Contract Composite Action smoke | CPython 3.13
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out QZX
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Validate core evidence through the public Composite Action
+        uses: ./.github/actions/result-contract-conformance
+        with:
+          profile: core
+          success: examples/result_contract/valid-success.json
+          failure: examples/result_contract/valid-failure.json
+          report: qzx-core-conformance.json
+
+      - name: Validate MCP evidence through the public Composite Action
+        uses: ./.github/actions/result-contract-conformance
+        with:
+          profile: mcp-2026-07-28
+          success: examples/result_contract/mcp-success.json
+          failure: examples/result_contract/mcp-failure.json
+          tool-definition: examples/result_contract/mcp-tool-definition.json
+          report: qzx-mcp-conformance.json
+
+      - name: Verify generated receipts
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          expected = {
+              "qzx-core-conformance.json": "core",
+              "qzx-mcp-conformance.json": "mcp-2026-07-28",
+          }
+          for filename, profile in expected.items():
+              report = json.loads(Path(filename).read_text(encoding="utf-8"))
+              assert report["success"] is True, report
+              assert report["details"]["profile"] == profile, report
+              assert all(case["conformant"] for case in report["details"]["cases"]), report
+
   python:
     name: >-
       QZX test suite | ${{ matrix.platform.name }} |

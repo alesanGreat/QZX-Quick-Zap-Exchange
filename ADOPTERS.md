@@ -27,16 +27,25 @@ Negative findings are welcome; evidence matters more than a favorable outcome.
 
 The shortest path is the
 [`5-minute adoption quickstart`](docs/result-contract-quickstart.md), which
-shows the minimal core and MCP evidence bundle before the full reporting
-requirements below.
+shows the minimal core, the reusable GitHub Action, and the MCP evidence bundle
+before the full reporting requirements below.
 
-For the included MCP fixtures:
+For the included MCP fixtures, validate the complete success/failure pair and
+produce the same deterministic receipt expected from independent evidence:
 
 ```bash
-python scripts/validate_mcp_result_contract.py \
-  examples/result_contract/mcp-success.json \
-  --tool-definition examples/result_contract/mcp-tool-definition.json
+python scripts/validate_result_contract_evidence.py \
+  --profile mcp-2026-07-28 \
+  --success examples/result_contract/mcp-success.json \
+  --failure examples/result_contract/mcp-failure.json \
+  --tool-definition examples/result_contract/mcp-tool-definition.json \
+  --report qzx-conformance.json
 ```
+
+External GitHub repositories can run the same check through
+[`.github/actions/result-contract-conformance`](.github/actions/result-contract-conformance/action.yml).
+For durable evidence, pin the QZX Action to a full commit SHA rather than a
+floating branch before publishing the result.
 
 Independent work can be submitted directly. An organization may also fund a
 bounded interoperability pilot, but payment never guarantees conformance,

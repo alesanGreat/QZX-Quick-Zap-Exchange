@@ -1,0 +1,218 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""Regression tests for the external QZX Result Contract conformance kit."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "validate_result_contract_evidence.py"
+ACTION_ROOT = REPOSITORY_ROOT / ".github" / "actions" / "result-contract-conformance"
+ACTION_RUNNER = ACTION_ROOT / "run.py"
+ACTION_METADATA = ACTION_ROOT / "action.yml"
+FIXTURE_ROOT = REPOSITORY_ROOT / "examples" / "result_contract"
+
+spec = importlib.util.spec_from_file_location("qzx_evidence_validator", SCRIPT_PATH)
+validator = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(validator)
+
+
+def test_core_success_failure_pair_produces_deterministic_receipt():
+    report = validator.validate_evidence(
+        profile=validator.PROFILE_CORE,
+        success_path=str(FIXTURE_ROOT / "valid-success.json"),
+        failure_path=str(FIXTURE_ROOT / "valid-failure.json"),
+    )
+
+    assert report["success"] is True
+    assert report["details"]["contract_version"] == "v1"
+    assert report["details"]["profile"] == "core"
+    assert report["details"]["mcp_specification"] is None
+    assert [case["actual_success"] for case in report["details"]["cases"]] == [
+        True,
+        False,
+    ]
+    assert all(case["conformant"] for case in report["details"]["cases"])
+    assert all(len(case["sha256"]) == 64 for case in report["details"]["cases"])
+
+
+def test_mcp_success_failure_pair_checks_tool_definition():
+    report = validator.validate_evidence(
+        profile=validator.PROFILE_MCP,
+        success_path=str(FIXTURE_ROOT / "mcp-success.json"),
+        failure_path=str(FIXTURE_ROOT / "mcp-failure.json"),
+        tool_definition_path=str(FIXTURE_ROOT / "mcp-tool-definition.json"),
+    )
+
+    assert report["success"] is True
+    assert report["details"]["mcp_specification"] == "2026-07-28"
+    assert len(report["details"]["tool_definition"]["sha256"]) == 64
+    assert all(
+        case["profile_facts"]["output_schema_checked"] is True
+        for case in report["details"]["cases"]
+    )
+
+
+def test_evidence_pair_rejects_wrong_semantic_roles_and_missing_mcp_definition():
+    reversed_report = validator.validate_evidence(
+        profile=validator.PROFILE_CORE,
+        success_path=str(FIXTURE_ROOT / "valid-failure.json"),
+        failure_path=str(FIXTURE_ROOT / "valid-success.json"),
+    )
+    assert reversed_report["success"] is False
+    assert any(
+        "success evidence must represent success=true." in violation
+        for violation in reversed_report["details"]["cases"][0]["violations"]
+    )
+    assert any(
+        "failure evidence must represent success=false." in violation
+        for violation in reversed_report["details"]["cases"][1]["violations"]
+    )
+
+    mcp_without_definition = validator.validate_evidence(
+        profile=validator.PROFILE_MCP,
+        success_path=str(FIXTURE_ROOT / "mcp-success.json"),
+        failure_path=str(FIXTURE_ROOT / "mcp-failure.json"),
+    )
+    assert mcp_without_definition["success"] is False
+    assert mcp_without_definition["details"]["violations"] == [
+        "The MCP profile requires --tool-definition so outputSchema is reviewable."
+    ]
+
+
+def test_cli_writes_same_receipt_it_prints(tmp_path):
+    report_path = tmp_path / "receipt.json"
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--profile",
+            "mcp-2026-07-28",
+            "--success",
+            str(FIXTURE_ROOT / "mcp-success.json"),
+            "--failure",
+            str(FIXTURE_ROOT / "mcp-failure.json"),
+            "--tool-definition",
+            str(FIXTURE_ROOT / "mcp-tool-definition.json"),
+            "--report",
+            str(report_path),
+            "--json",
+        ],
+        cwd=REPOSITORY_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == json.loads(report_path.read_text(encoding="utf-8"))
+
+
+def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
+    caller_workspace = tmp_path / "caller"
+    caller_workspace.mkdir()
+    for name in ("mcp-success.json", "mcp-failure.json", "mcp-tool-definition.json"):
+        (caller_workspace / name).write_bytes((FIXTURE_ROOT / name).read_bytes())
+
+    report_path = caller_workspace / "qzx-receipt.json"
+    output_path = tmp_path / "github-output.txt"
+    summary_path = tmp_path / "github-summary.md"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "INPUT_PROFILE": "mcp-2026-07-28",
+            "INPUT_SUCCESS": "mcp-success.json",
+            "INPUT_FAILURE": "mcp-failure.json",
+            "INPUT_TOOL_DEFINITION": "mcp-tool-definition.json",
+            "INPUT_REPORT": "qzx-receipt.json",
+            "GITHUB_WORKSPACE": str(caller_workspace),
+            "GITHUB_OUTPUT": str(output_path),
+            "GITHUB_STEP_SUMMARY": str(summary_path),
+        }
+    )
+
+    process = subprocess.run(
+        [sys.executable, str(ACTION_RUNNER)],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert process.returncode == 0, process.stderr
+    assert json.loads(report_path.read_text(encoding="utf-8"))["success"] is True
+    assert "report=qzx-receipt.json" in output_path.read_text(encoding="utf-8")
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "Status: **PASS**" in summary
+    assert "mcp-2026-07-28" in summary
+
+
+def test_composite_action_rejects_workspace_escape_and_output_injection(tmp_path):
+    caller_workspace = tmp_path / "caller"
+    caller_workspace.mkdir()
+    (caller_workspace / "failure.json").write_bytes(
+        (FIXTURE_ROOT / "valid-failure.json").read_bytes()
+    )
+    (caller_workspace / "success.json").write_bytes(
+        (FIXTURE_ROOT / "valid-success.json").read_bytes()
+    )
+    outside_success = tmp_path / "outside-success.json"
+    outside_success.write_bytes((FIXTURE_ROOT / "valid-success.json").read_bytes())
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "INPUT_PROFILE": "core",
+            "INPUT_SUCCESS": str(outside_success),
+            "INPUT_FAILURE": "failure.json",
+            "INPUT_TOOL_DEFINITION": "",
+            "INPUT_REPORT": "qzx-receipt.json",
+            "GITHUB_WORKSPACE": str(caller_workspace),
+            "GITHUB_OUTPUT": str(tmp_path / "github-output.txt"),
+            "GITHUB_STEP_SUMMARY": str(tmp_path / "github-summary.md"),
+        }
+    )
+    escape_process = subprocess.run(
+        [sys.executable, str(ACTION_RUNNER)],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert escape_process.returncode == 2
+    assert "must stay inside GITHUB_WORKSPACE" in escape_process.stderr
+
+    environment["INPUT_SUCCESS"] = "success.json"
+    environment["INPUT_REPORT"] = "receipt.json\ninjected=true"
+    injection_process = subprocess.run(
+        [sys.executable, str(ACTION_RUNNER)],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert injection_process.returncode == 2
+    assert "must not contain line breaks" in injection_process.stderr
+
+
+def test_composite_action_metadata_pins_python_setup_and_exposes_inputs():
+    metadata = ACTION_METADATA.read_text(encoding="utf-8")
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in metadata
+    assert 'python-version: "3.13"' in metadata
+    assert "INPUT_SUCCESS: ${{ inputs.success }}" in metadata
+    assert "INPUT_FAILURE: ${{ inputs.failure }}" in metadata
+    assert "INPUT_TOOL_DEFINITION: ${{ inputs.tool-definition }}" in metadata

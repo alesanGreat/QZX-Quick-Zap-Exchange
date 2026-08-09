@@ -55,6 +55,14 @@ body:
       placeholder: https://github.com/example/project/tree/v1.2.0/conformance
     validations:
       required: true
+  - type: input
+    id: conformance_receipt_url
+    attributes:
+      label: QZX conformance receipt URL (recommended)
+      description: If you used the QZX evidence CLI or Composite Action, link the generated qzx-conformance.json receipt and identify the pinned QZX commit SHA in your evidence README. Leave blank when using an independent validator.
+      placeholder: https://github.com/example/project/blob/v1.2.0/conformance/qzx-conformance.json
+    validations:
+      required: false
   - type: textarea
     id: transport_evidence
     attributes:

@@ -97,10 +97,26 @@ python scripts/validate_mcp_result_contract.py mcp-result.json \
   --tool-definition mcp-tool-definition.json
 ```
 
-Independent implementations and bounded pilots can follow the
-[adoption guide](docs/result-contract-adoption.md). Only public, reviewable,
-authorized evidence is listed in [ADOPTERS.md](ADOPTERS.md); QZX itself is the
-reference implementation and is not counted as independent adoption.
+For a reviewable implementation or pilot, validate one real success and one
+real failure together and generate a deterministic receipt containing the input
+SHA-256 digests:
+
+```bash
+python scripts/validate_result_contract_evidence.py \
+  --profile mcp-2026-07-28 \
+  --success result-contract-evidence/success.json \
+  --failure result-contract-evidence/failure.json \
+  --tool-definition result-contract-evidence/tool-definition.json \
+  --report result-contract-evidence/qzx-conformance.json
+```
+
+The same check is available as the reusable
+[QZX Result Contract conformance Composite Action](.github/actions/result-contract-conformance/action.yml)
+for external GitHub repositories. Independent implementations and bounded
+pilots can follow the [adoption guide](docs/result-contract-adoption.md). Only
+public, reviewable, authorized evidence is listed in [ADOPTERS.md](ADOPTERS.md);
+QZX itself is the reference implementation and is not counted as independent
+adoption.
 
 The CLI prints `message` by default. Pass `--json` to print the complete
 structured result:
