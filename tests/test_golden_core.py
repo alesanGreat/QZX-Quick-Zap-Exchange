@@ -108,7 +108,7 @@ def test_golden_core_release_quality_policy_is_fail_closed():
     registry = load_golden_core()
     policy = registry["release_quality_policy"]
 
-    assert policy["attestation_path"] == "docs/release-quality/0.2.2.0.7a3.json"
+    assert policy["attestation_path"] == "docs/release-quality/0.2.2.0.7a5.json"
     assert policy["blocking_issue_label"] == "release-blocker"
     assert policy["requires_exact_release_tag"] is True
     assert policy["requires_verified_distribution_hashes"] is True

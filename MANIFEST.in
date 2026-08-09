@@ -22,7 +22,7 @@ prune tests
 include docs/philosophy.md
 include docs/command-lifecycle.md
 include docs/golden-core.md
-include docs/release-quality/0.2.2.0.7a3.json
+recursive-include docs/release-quality *.json
 include docs/result-contract-adoption.md
 include docs/result-contract-v1.md
 include docs/reference/commands-generated.md

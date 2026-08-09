@@ -114,7 +114,7 @@
     }
   },
   "release_quality_policy": {
-    "attestation_path": "docs/release-quality/0.2.2.0.7a3.json",
+    "attestation_path": "docs/release-quality/0.2.2.0.7a5.json",
     "blocking_issue_label": "release-blocker",
     "requires_exact_release_tag": true,
     "requires_verified_distribution_hashes": true,

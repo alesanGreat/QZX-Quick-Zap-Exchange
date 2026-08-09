@@ -28,8 +28,8 @@ def test_current_release_quality_attestation_is_valid_in_shallow_checkouts():
     # Source/release workflows can add --verify-git when a full checkout exists.
     assert validate_attestation(document, registry=registry, verify_git=False) == []
     assert document["status"] == "verified"
-    assert document["release"]["version"] == "0.2.2.0.7a3"
-    assert document["release"]["tag"] == "v0.2.2.0.7a3"
+    assert document["release"]["version"] == "0.2.2.0.7a5"
+    assert document["release"]["tag"] == "v0.2.2.0.7a5"
     assert len(document["commands"]) == 15
     assert document["quality_gates"]["known_release_blockers"] == []
     assert document["ci"]["environment_count"] == 10
