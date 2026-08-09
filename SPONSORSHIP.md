@@ -3,6 +3,23 @@
 Support may fund maintenance, documentation, security, compatibility testing,
 infrastructure, or another clearly described public result.
 
+## Current highest-leverage sponsored outcome
+
+QZX's current adoption bottleneck is the first independently reviewable
+implementation or pilot of QZX Result Contract v1. Sponsorship may fund a
+bounded interoperability pilot, including an MCP 2026-07-28 implementation,
+public success/failure evidence, conformance receipts, reusable tests, and a
+written report of deviations or limitations.
+
+Funding alone never counts as adoption, conformance, certification, or
+endorsement. A sponsored implementation may appear in [ADOPTERS.md](ADOPTERS.md)
+only when it independently implements the contract and satisfies the same
+public, reviewable, authorized evidence criteria as an unfunded implementation.
+The sponsor does not control the technical conclusion.
+
+The current support options and illustrative funding bands are published at
+https://qzx.yumbale.com/en/donate.
+
 A sponsor may receive:
 
 - optional, proportionate public recognition;

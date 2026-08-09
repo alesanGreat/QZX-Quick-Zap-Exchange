@@ -113,10 +113,12 @@ python scripts/validate_result_contract_evidence.py \
 The same check is available as the reusable
 [QZX Result Contract conformance Composite Action](.github/actions/result-contract-conformance/action.yml)
 for external GitHub repositories. Independent implementations and bounded
-pilots can follow the [adoption guide](docs/result-contract-adoption.md). Only
-public, reviewable, authorized evidence is listed in [ADOPTERS.md](ADOPTERS.md);
-QZX itself is the reference implementation and is not counted as independent
-adoption.
+pilots can follow the [adoption guide](docs/result-contract-adoption.md).
+Organizations may also [fund a bounded public interoperability pilot](https://qzx.yumbale.com/en/donate)
+under the [sponsorship and independence policy](SPONSORSHIP.md). Funding a pilot
+never counts as adoption or certification: only public, reviewable, authorized
+independent evidence is listed in [ADOPTERS.md](ADOPTERS.md). QZX itself is the
+reference implementation and is not counted as independent adoption.
 
 The CLI prints `message` by default. Pass `--json` to print the complete
 structured result:

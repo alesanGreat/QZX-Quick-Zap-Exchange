@@ -1,6 +1,4 @@
-include README.md
-include README-English.md
-include ADOPTERS.md
+include *.md
 include CITATION.cff
 include codemeta.json
 include LICENSE
@@ -26,6 +24,7 @@ recursive-include examples/result_contract *.json *.md
 recursive-include .github/actions/result-contract-conformance *.yml *.py *.md
 prune docs
 prune tests
+include tests/README.md
 include docs/philosophy.md
 include docs/command-lifecycle.md
 include docs/golden-core.md

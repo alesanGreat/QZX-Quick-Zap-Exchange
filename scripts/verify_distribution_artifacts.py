@@ -22,6 +22,7 @@ PRODUCT_MANIFEST_PATH = (
 )
 CODEMETA_PATH = PROJECT_ROOT / "codemeta.json"
 CITATION_PATH = PROJECT_ROOT / "CITATION.cff"
+README_PATH = PROJECT_ROOT / "README.md"
 ATTRIBUTION = (
     "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez."
 )
@@ -112,6 +113,38 @@ def find_repository_relative_links(markdown: str) -> list[str]:
             if is_repository_relative_destination(match.group("destination"))
         )
     return destinations
+
+
+def canonical_readme_relative_files() -> list[str]:
+    """Return every repository file referenced relatively by the canonical README."""
+    try:
+        markdown = README_PATH.read_text(encoding="utf-8")
+    except OSError as exception:
+        raise ValueError("The canonical QZX README is unreadable.") from exception
+
+    relative_files: set[str] = set()
+    for destination in find_repository_relative_links(markdown):
+        raw, _ = _unwrap_markdown_destination(destination)
+        parsed = urlsplit(raw)
+        parts: list[str] = []
+        for part in PurePosixPath(parsed.path).parts:
+            if part in ("", "."):
+                continue
+            if part == "..":
+                raise ValueError(
+                    f"README link escapes the repository root: {destination!r}."
+                )
+            parts.append(part)
+        if not parts:
+            continue
+        source = PROJECT_ROOT.joinpath(*parts)
+        relative = PurePosixPath(*parts).as_posix()
+        if not source.is_file():
+            raise ValueError(
+                f"README relative link does not resolve to a repository file: {relative}."
+            )
+        relative_files.add(relative)
+    return sorted(relative_files)
 
 
 def render_package_readme(
@@ -494,6 +527,10 @@ def verify_sdist(
             for path in sorted(RESULT_CONTRACT_EXAMPLES_ROOT.iterdir())
             if path.is_file() and path.suffix.lower() in {".json", ".md"}
         ]
+        readme_link_names = [
+            f"{root}/{relative_path}"
+            for relative_path in canonical_readme_relative_files()
+        ]
         required_members = {
             "PKG-INFO": metadata_member,
             "README.md": readme_member,
@@ -520,6 +557,7 @@ def verify_sdist(
             adopters_name: members.get(adopters_name),
             conformance_manifest_name: members.get(conformance_manifest_name),
             **{name: members.get(name) for name in example_names},
+            **{name: members.get(name) for name in readme_link_names},
         }
         missing = [
             name

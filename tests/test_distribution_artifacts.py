@@ -15,6 +15,7 @@ from scripts.verify_distribution_artifacts import (
     GOLDEN_CORE_WHEEL_PATH,
     RESULT_CONTRACT_SCHEMA_ID,
     RESULT_CONTRACT_WHEEL_PATH,
+    canonical_readme_relative_files,
     release_readme_marker,
     verify_distributions,
 )
@@ -93,6 +94,7 @@ def build_fixture_distributions(
     dist_dir,
     launcher_mode=0o755,
     description_version=VERSION,
+    omitted_support_file=None,
 ):
     wheel = dist_dir / f"qzx-{VERSION}-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
@@ -138,7 +140,7 @@ def build_fixture_distributions(
             f"{root}/src/qzx/resources/golden-core.json",
             GOLDEN_CORE_REGISTRY,
         )
-        support_files = [
+        support_files = sorted(set(canonical_readme_relative_files()) | {
             "ADOPTERS.md",
             "CITATION.cff",
             "codemeta.json",
@@ -158,8 +160,10 @@ def build_fixture_distributions(
             ".github/actions/result-contract-conformance/action.yml",
             ".github/actions/result-contract-conformance/run.py",
             ".github/actions/result-contract-conformance/README.md",
-        ]
+        })
         for relative_path in support_files:
+            if relative_path == omitted_support_file:
+                continue
             add_tar_text(
                 archive,
                 f"{root}/{relative_path}",
@@ -206,6 +210,23 @@ def test_distribution_verifier_rejects_windows_sdist_launcher_mode(tmp_path):
     build_fixture_distributions(tmp_path, launcher_mode=0o666)
 
     with pytest.raises(ValueError, match=r"qzx\.sh as 0666.*require 0755"):
+        verify_distributions(
+            tmp_path,
+            expected_version=VERSION,
+            expected_python=REQUIRES_PYTHON,
+        )
+
+
+def test_distribution_verifier_rejects_missing_readme_link_target(tmp_path):
+    build_fixture_distributions(
+        tmp_path,
+        omitted_support_file="SPONSORSHIP.md",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"missing required release files: .*SPONSORSHIP\.md",
+    ):
         verify_distributions(
             tmp_path,
             expected_version=VERSION,
