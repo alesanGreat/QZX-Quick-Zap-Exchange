@@ -17,11 +17,35 @@ Decisions are evaluated against:
 2. usefulness to people and AI agents;
 3. cross-platform evidence and accessibility;
 4. maintainability and compatibility;
-5. the project's open-core guarantee and long-term sustainability.
+5. the [QZX Core Guarantee](QZX_CORE_GUARANTEE.md) and long-term sustainability.
 
 When a proposal is declined, the goal is to explain the technical or product
 reason. No vote, payment, contribution count, or sponsorship automatically
 overrides the maintainer's responsibility for the project.
+
+## QZX Result Contract governance
+
+QZX Result Contract is a public interoperability contract. Anyone may implement
+it, validate against it, publish compatible tooling, or report independent
+evidence without asking QZX for permission or becoming a QZX contributor.
+
+Proposals that change the shared contract should start in a focused public issue
+when disclosure is safe. Review should distinguish implementation convenience
+from interoperability evidence and should consider existing independent
+producers and consumers before changing a public invariant.
+
+Version 1 follows the compatibility rules in
+[`docs/result-contract-v1.md`](docs/result-contract-v1.md): additive evolution
+may preserve v1, while removing a required field or changing the type or meaning
+of a core field requires a new contract version. Published v1 schemas and
+conformance material must not be silently rewritten to mean something
+incompatible.
+
+Adoption reports and sponsored pilots are judged by the same public evidence
+criteria. Conformance, listing in `ADOPTERS.md`, sponsorship, and endorsement
+are separate claims; none purchases control of the specification. Alejandro is
+the current steward and final release authority, while future maintainer roles
+must be documented here before they receive governance authority.
 
 ## Contributions and credit
 
