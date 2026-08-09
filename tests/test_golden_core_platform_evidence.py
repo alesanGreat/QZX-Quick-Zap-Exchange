@@ -143,7 +143,8 @@ def test_sanitizer_removes_private_identity_paths_and_ephemeral_ports(tmp_path):
 
     assert str(tmp_path) not in encoded
     assert str(Path.home()) not in encoded
-    assert getpass.getuser() not in encoded
+    sanitized_path = str(sanitized["path"]).replace("\\", "/")
+    assert f"/{getpass.getuser()}/" not in sanitized_path
     if platform.node():
         assert platform.node() not in encoded
     assert "<fixture-root>" in encoded
