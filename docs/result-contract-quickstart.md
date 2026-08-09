@@ -90,7 +90,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
+      - id: qzx-conformance
+        uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
         with:
           profile: core
           success: result-contract-evidence/success.json
@@ -101,7 +102,10 @@ jobs:
 `@main` is convenient for an initial experiment. Before publishing durable
 adoption evidence, replace it with the full QZX commit SHA that you actually
 validated against. The Action fails the job when the pair does not conform and
-writes the receipt path to the GitHub step output and job summary.
+writes the receipt path plus scalar `conformant`, `profile`, and `receipt_schema`
+outputs for later workflow steps. Its GitHub job summary keeps the PASS/FAIL
+result, receipt metadata, the specification link, and factual creator
+attribution together with the run.
 
 ## 4. MCP 2026-07-28: use the contract as `outputSchema`
 
@@ -180,11 +184,16 @@ findings. Negative results are useful: a pilot that finds an ambiguity or
 rejects the profile can be more valuable than an uncritical compatibility
 claim.
 
-## 6. Report independent evidence
+## 6. Report independent evidence — or start before you are ready
 
-Use the GitHub issue form **Result Contract adoption report** when the evidence
-is public and reviewable. QZX lists only evidence-backed implementations or
-pilots in [`ADOPTERS.md`](../ADOPTERS.md).
+If you are still experimenting, blocked on a mapping, or do not yet have public
+evidence, open the short **Result Contract pilot or integration help** form:
+<https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=result_contract_pilot.yml>.
+A pilot-help issue is an invitation to collaborate, not an adoption claim.
+
+Use the stricter **Result Contract adoption report** only when the evidence is
+public and reviewable. QZX lists only evidence-backed implementations or pilots
+in [`ADOPTERS.md`](../ADOPTERS.md).
 
 QZX does **not** count itself, package downloads, website visits, private
 conversations, expressions of interest, or unverifiable statements as external

@@ -26,6 +26,15 @@ outputs:
   report:
     description: Path to the generated deterministic QZX conformance receipt.
     value: ${{ steps.validate.outputs.report }}
+  conformant:
+    description: "'true' when the selected QZX Result Contract profile conforms; otherwise 'false'."
+    value: ${{ steps.validate.outputs.conformant }}
+  profile:
+    description: QZX Result Contract profile evaluated by the validator.
+    value: ${{ steps.validate.outputs.profile }}
+  receipt_schema:
+    description: Canonical schema URL declared by the generated conformance receipt.
+    value: ${{ steps.validate.outputs.receipt_schema }}
 
 runs:
   using: composite

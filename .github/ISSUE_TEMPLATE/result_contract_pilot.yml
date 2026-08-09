@@ -1,0 +1,69 @@
+name: Result Contract pilot or integration help
+description: Start a small QZX Result Contract v1 experiment, ask an interoperability question, or get help turning one real tool into a reviewable pilot.
+title: "[Result Contract pilot]: "
+labels:
+  - result-contract
+  - adoption
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **You do not need a finished implementation or conformance report to open this issue.** This form is the low-friction starting point for trying QZX Result Contract v1 with one real tool.
+
+        QZX can help you map an existing result shape, choose the core or MCP profile, build a success/failure evidence pair, or understand a failed validation. When your experiment becomes independently reviewable, the separate **Result Contract adoption report** captures the evidence required for listing in `ADOPTERS.md`.
+
+        QZX Result Contract is open and transport-independent. You do not need to adopt QZX command names, the QZX runtime, Python, or any paid service.
+  - type: input
+    id: project
+    attributes:
+      label: Project, tool, or experiment
+      description: A short name is enough. A public repository is helpful but not required at this stage.
+      placeholder: Example MCP weather tool
+    validations:
+      required: true
+  - type: dropdown
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      options:
+        - Try the core Result Contract with one real tool
+        - Try the MCP 2026-07-28 interoperability profile
+        - Map an existing result format to QZX Result Contract
+        - Understand or fix a conformance failure
+        - Explore a bounded interoperability pilot
+        - Ask an implementation question
+    validations:
+      required: true
+  - type: textarea
+    id: current_shape
+    attributes:
+      label: What does your tool return today?
+      description: Paste a small sanitized example, describe the shape, or link public code. Remove secrets, private paths, personal data, and confidential material.
+      placeholder: |
+        Example:
+        {"ok": true, "data": {"temperature": 27}}
+    validations:
+      required: true
+  - type: textarea
+    id: help
+    attributes:
+      label: What would help you move forward?
+      description: Describe the question, blocker, ambiguity, or result you want from this pilot.
+      placeholder: I want to expose the result through MCP structuredContent without replacing my existing domain fields.
+    validations:
+      required: true
+  - type: input
+    id: public_url
+    attributes:
+      label: Public project or evidence URL (optional)
+      description: Repository, documentation, issue, fixture, or report if one already exists.
+      placeholder: https://github.com/example/project
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public issue safety
+      options:
+        - label: I understand this issue is public and I removed secrets, private paths, personal data, and confidential material.
+          required: true

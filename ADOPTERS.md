@@ -47,7 +47,11 @@ External GitHub repositories can run the same check through
 For durable evidence, pin the QZX Action to a full commit SHA rather than a
 floating branch before publishing the result.
 
-Independent work can be submitted directly. An organization may also fund a
+Independent work can be submitted directly. If the implementation is not ready
+for the listing requirements below, use the short
+[Result Contract pilot or integration help form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=result_contract_pilot.yml)
+to ask a mapping question, share a sanitized current result shape, or start a
+one-tool experiment without claiming adoption. An organization may also fund a
 bounded interoperability pilot, but payment never guarantees conformance,
 listing, favorable findings, or control of the public contract.
 

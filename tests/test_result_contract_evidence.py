@@ -184,11 +184,17 @@ def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
     )
     assert process.returncode == 0, process.stderr
     assert json.loads(report_path.read_text(encoding="utf-8"))["success"] is True
-    assert "report=qzx-receipt.json" in output_path.read_text(encoding="utf-8")
+    action_output = output_path.read_text(encoding="utf-8")
+    assert "report=qzx-receipt.json" in action_output
+    assert "conformant=true" in action_output
+    assert "profile=mcp-2026-07-28" in action_output
+    assert f"receipt_schema={validator.CONFORMANCE_RECEIPT_SCHEMA_URL}" in action_output
     summary = summary_path.read_text(encoding="utf-8")
     assert "Status: **PASS**" in summary
     assert "mcp-2026-07-28" in summary
     assert validator.CONFORMANCE_RECEIPT_SCHEMA_URL in summary
+    assert "QZX Result Contract v1" in summary
+    assert "Alejandro Sánchez" in summary
 
 
 def test_composite_action_rejects_workspace_escape_and_output_injection(tmp_path):
@@ -250,3 +256,6 @@ def test_composite_action_metadata_pins_python_setup_and_exposes_inputs():
     assert "INPUT_SUCCESS: ${{ inputs.success }}" in metadata
     assert "INPUT_FAILURE: ${{ inputs.failure }}" in metadata
     assert "INPUT_TOOL_DEFINITION: ${{ inputs.tool-definition }}" in metadata
+    assert "value: ${{ steps.validate.outputs.conformant }}" in metadata
+    assert "value: ${{ steps.validate.outputs.profile }}" in metadata
+    assert "value: ${{ steps.validate.outputs.receipt_schema }}" in metadata

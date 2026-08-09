@@ -104,7 +104,13 @@ def main() -> int:
             "details": {"profile": profile},
         }
 
-    append_line(os.environ.get("GITHUB_OUTPUT", ""), f"report={report_path}")
+    evaluated_profile = str(report.get("details", {}).get("profile", profile))
+    receipt_schema = str(report.get("receipt_schema", "unavailable"))
+    github_output = os.environ.get("GITHUB_OUTPUT", "")
+    append_line(github_output, f"report={report_path}")
+    append_line(github_output, f"conformant={'true' if report.get('success') is True else 'false'}")
+    append_line(github_output, f"profile={evaluated_profile}")
+    append_line(github_output, f"receipt_schema={receipt_schema}")
 
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "")
     if summary_path:
@@ -113,9 +119,11 @@ def main() -> int:
             "## QZX Result Contract conformance",
             "",
             f"- Status: **{status}**",
-            f"- Profile: `{report.get('details', {}).get('profile', profile)}`",
+            f"- Profile: `{evaluated_profile}`",
             f"- Receipt: `{report_path}`",
-            f"- Receipt schema: `{report.get('receipt_schema', 'unavailable')}`",
+            f"- Receipt schema: `{receipt_schema}`",
+            "- Specification: [QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract)",
+            "- QZX: created and maintained by [Alejandro Sánchez](https://qzx.yumbale.com/en/alejandro-sanchez)",
             "",
             report.get("message", "No validator message was produced."),
         ]

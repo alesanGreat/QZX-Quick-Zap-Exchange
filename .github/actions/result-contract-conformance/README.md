@@ -18,7 +18,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 ```yaml
 steps:
   - uses: actions/checkout@v7
-  - uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
+  - id: qzx-conformance
+    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
     with:
       profile: core
       success: result-contract-evidence/success.json
@@ -31,7 +32,8 @@ steps:
 ```yaml
 steps:
   - uses: actions/checkout@v7
-  - uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
+  - id: qzx-conformance
+    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
     with:
       profile: mcp-2026-07-28
       success: result-contract-evidence/success.json
@@ -50,8 +52,19 @@ steps:
 | `tool-definition` | MCP only | MCP tool definition whose `outputSchema` is checked. |
 | `report` | No | Caller-workspace-relative receipt path; defaults to `qzx-result-contract-conformance.json`. |
 
-The `report` output contains the receipt path. The Action also writes a compact
-PASS/FAIL summary to the GitHub job summary.
+## Outputs
+
+| Output | Meaning |
+| --- | --- |
+| `report` | Caller-workspace-relative path to the generated receipt. |
+| `conformant` | `true` only when the selected profile conforms; otherwise `false`. |
+| `profile` | Profile actually evaluated by the validator. |
+| `receipt_schema` | Canonical schema URL declared by the generated receipt. |
+
+These scalar outputs make the Action composable from later workflow steps while
+the JSON receipt remains the durable evidence artifact. The Action also writes
+a compact PASS/FAIL summary with links to the specification and its creator to
+the GitHub job summary.
 
 ## Evidence and security boundary
 
