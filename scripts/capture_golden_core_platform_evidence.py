@@ -180,10 +180,27 @@ def replacement_pairs(fixture_root: Path) -> list[tuple[str, str]]:
 
 
 def sanitize_text(value: str, replacements: list[tuple[str, str]]) -> str:
-    sanitized = value
+    # Replace against the original text in one regex pass. Sequential str.replace
+    # calls can accidentally sanitize the placeholders they just inserted; for
+    # example, a Unix CI user named "root" used to turn <fixture-root> into
+    # <fixture-<user>>. Longest sources win at the same position so a home path
+    # such as /root is preferred over the bare username root.
+    replacement_map: dict[str, str] = {}
     for source, replacement in replacements:
-        sanitized = sanitized.replace(source, replacement)
-        sanitized = sanitized.replace(source.casefold(), replacement)
+        for candidate in (source, source.casefold()):
+            if candidate:
+                replacement_map.setdefault(candidate, replacement)
+
+    if replacement_map:
+        sources = sorted(replacement_map, key=lambda item: (-len(item), item))
+        pattern = re.compile("|".join(re.escape(source) for source in sources))
+        sanitized = pattern.sub(
+            lambda match: replacement_map[match.group(0)],
+            value,
+        )
+    else:
+        sanitized = value
+
     sanitized = _LOOPBACK_URL_PATTERN.sub(
         "http://127.0.0.1:<ephemeral-port>",
         sanitized,

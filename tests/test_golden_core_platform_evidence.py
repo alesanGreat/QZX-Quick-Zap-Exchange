@@ -152,6 +152,20 @@ def test_sanitizer_removes_private_identity_paths_and_ephemeral_ports(tmp_path):
     assert "http://127.0.0.1:<ephemeral-port>/ok" in encoded
 
 
+def test_sanitizer_never_rewrites_inserted_placeholders():
+    sanitized = sanitize_value(
+        {"path": "/tmp/qzx-evidence/root/fixture"},
+        [
+            ("/tmp/qzx-evidence", "<fixture-root>"),
+            ("/root", "<home>"),
+            ("root", "<user>"),
+        ],
+    )
+
+    assert sanitized == {"path": "<fixture-root><home>/fixture"}
+    assert "<fixture-<user>>" not in sanitized["path"]
+
+
 def test_merge_accepts_three_declared_systems(tmp_path):
     files = [
         write_document(

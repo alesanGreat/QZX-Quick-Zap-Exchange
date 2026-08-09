@@ -6,6 +6,7 @@ import io
 import json
 import tarfile
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -54,30 +55,17 @@ GOLDEN_CORE_REGISTRY = json.dumps({
         for name in GOLDEN_CORE_COMMANDS
     ],
 })
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+CONFORMANCE_MANIFEST_PATH = (
+    REPOSITORY_ROOT / "examples" / "result_contract" / "manifest.json"
+)
+CONFORMANCE_DOCUMENT = json.loads(
+    CONFORMANCE_MANIFEST_PATH.read_text(encoding="utf-8")
+)
 CONFORMANCE_CASES = [
-    ("valid_success", "valid-success.json", True),
-    ("valid_failure", "valid-failure.json", True),
-    ("invalid_missing_message", "invalid-missing-message.json", False),
-    ("invalid_success_string", "invalid-success-string.json", False),
-    (
-        "invalid_failure_without_error",
-        "invalid-failure-without-error.json",
-        False,
-    ),
+    (case["id"], case["file"], case["expected_conformant"])
+    for case in CONFORMANCE_DOCUMENT["cases"]
 ]
-CONFORMANCE_MANIFEST = json.dumps({
-    "schema_version": 1,
-    "contract": RESULT_CONTRACT_SCHEMA_ID,
-    "cases": [
-        {
-            "id": case_id,
-            "file": filename,
-            "expected_conformant": expected,
-            "expected_violations": [],
-        }
-        for case_id, filename, expected in CONFORMANCE_CASES
-    ],
-})
 
 
 def metadata_text(description_version=VERSION) -> str:
@@ -147,65 +135,39 @@ def build_fixture_distributions(
         )
         add_tar_text(
             archive,
-            f"{root}/docs/result-contract-v1.md",
-            "# QZX Result Contract v1\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/scripts/validate_result_contract.py",
-            "#!/usr/bin/env python\n",
-        )
-        add_tar_text(
-            archive,
             f"{root}/src/qzx/resources/golden-core.json",
             GOLDEN_CORE_REGISTRY,
         )
-        add_tar_text(
-            archive,
-            f"{root}/docs/golden-core.md",
-            "# QZX Golden Core\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/docs/result-contract-adoption.md",
-            "# Adopting QZX Result Contract v1\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/ADOPTERS.md",
-            "# QZX Result Contract adopters\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/scripts/run_result_contract_conformance.py",
-            "#!/usr/bin/env python\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/scripts/verify_golden_core.py",
-            "#!/usr/bin/env python\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/scripts/capture_golden_core_platform_evidence.py",
-            "#!/usr/bin/env python\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/scripts/merge_golden_core_platform_evidence.py",
-            "#!/usr/bin/env python\n",
-        )
-        add_tar_text(
-            archive,
-            f"{root}/examples/result_contract/manifest.json",
-            CONFORMANCE_MANIFEST,
-        )
-        for _, filename, _ in CONFORMANCE_CASES:
+        support_files = [
+            "ADOPTERS.md",
+            "docs/golden-core.md",
+            "docs/result-contract-v1.md",
+            "docs/result-contract-adoption.md",
+            "docs/result-contract-quickstart.md",
+            "scripts/validate_result_contract.py",
+            "scripts/validate_mcp_result_contract.py",
+            "scripts/validate_result_contract_evidence.py",
+            "scripts/run_result_contract_conformance.py",
+            "scripts/verify_golden_core.py",
+            "scripts/capture_golden_core_platform_evidence.py",
+            "scripts/merge_golden_core_platform_evidence.py",
+            ".github/actions/result-contract-conformance/action.yml",
+            ".github/actions/result-contract-conformance/run.py",
+            ".github/actions/result-contract-conformance/README.md",
+        ]
+        for relative_path in support_files:
             add_tar_text(
                 archive,
-                f"{root}/examples/result_contract/{filename}",
-                '{"success":true,"message":"fixture"}',
+                f"{root}/{relative_path}",
+                (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8"),
             )
+        for source in sorted((REPOSITORY_ROOT / "examples" / "result_contract").iterdir()):
+            if source.is_file() and source.suffix.lower() in {".json", ".md"}:
+                add_tar_text(
+                    archive,
+                    f"{root}/examples/result_contract/{source.name}",
+                    source.read_text(encoding="utf-8"),
+                )
     return wheel, sdist
 
 
@@ -232,7 +194,7 @@ def test_distribution_verifier_accepts_executable_posix_launcher(tmp_path):
     assert result["artifacts"][1]["qzx_sh_mode"] == "0755"
     assert (
         result["artifacts"][1]["result_contract_conformance_cases"]
-        == 5
+        == len(CONFORMANCE_CASES)
     )
 
 
