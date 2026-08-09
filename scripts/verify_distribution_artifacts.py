@@ -20,6 +20,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_MANIFEST_PATH = (
     PROJECT_ROOT / "src" / "qzx" / "resources" / "product-manifest.json"
 )
+CODEMETA_PATH = PROJECT_ROOT / "codemeta.json"
+CITATION_PATH = PROJECT_ROOT / "CITATION.cff"
 ATTRIBUTION = (
     "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez."
 )
@@ -446,6 +448,10 @@ def verify_sdist(
 
         metadata_member = members.get(f"{root}/PKG-INFO")
         readme_member = members.get(f"{root}/README.md")
+        codemeta_name = f"{root}/codemeta.json"
+        citation_name = f"{root}/CITATION.cff"
+        citation_sync_name = f"{root}/scripts/sync_citation.py"
+        codemeta_sync_name = f"{root}/scripts/sync_codemeta.py"
         schema_name = (
             f"{root}/src/qzx/resources/schemas/"
             "result-contract-v1.schema.json"
@@ -491,6 +497,10 @@ def verify_sdist(
         required_members = {
             "PKG-INFO": metadata_member,
             "README.md": readme_member,
+            codemeta_name: members.get(codemeta_name),
+            citation_name: members.get(citation_name),
+            citation_sync_name: members.get(citation_sync_name),
+            codemeta_sync_name: members.get(codemeta_sync_name),
             schema_name: members.get(schema_name),
             specification_name: members.get(specification_name),
             adoption_name: members.get(adoption_name),
@@ -524,6 +534,8 @@ def verify_sdist(
             )
         metadata_handle = archive.extractfile(metadata_member)
         readme_handle = archive.extractfile(readme_member)
+        codemeta_handle = archive.extractfile(required_members[codemeta_name])
+        citation_handle = archive.extractfile(required_members[citation_name])
         schema_handle = archive.extractfile(required_members[schema_name])
         golden_core_handle = archive.extractfile(
             required_members[golden_core_name]
@@ -534,6 +546,8 @@ def verify_sdist(
         if (
             metadata_handle is None
             or readme_handle is None
+            or codemeta_handle is None
+            or citation_handle is None
             or schema_handle is None
             or golden_core_handle is None
             or conformance_handle is None
@@ -541,6 +555,8 @@ def verify_sdist(
             raise ValueError(f"{sdist_path.name} contains unreadable metadata.")
         metadata_text = metadata_handle.read().decode("utf-8")
         readme_text = readme_handle.read().decode("utf-8")
+        codemeta_text = codemeta_handle.read().decode("utf-8")
+        citation_text = citation_handle.read().decode("utf-8")
         result_contract_schema = schema_handle.read().decode("utf-8")
         golden_core_registry = golden_core_handle.read().decode("utf-8")
         conformance_manifest = conformance_handle.read().decode("utf-8")
@@ -551,6 +567,14 @@ def verify_sdist(
         expected_python=expected_python,
         context=sdist_path.name,
     )
+    if codemeta_text != CODEMETA_PATH.read_text(encoding="utf-8"):
+        raise ValueError(
+            f"{sdist_path.name} codemeta.json diverges from the repository projection."
+        )
+    if citation_text != CITATION_PATH.read_text(encoding="utf-8"):
+        raise ValueError(
+            f"{sdist_path.name} CITATION.cff diverges from the repository citation."
+        )
     if ATTRIBUTION not in readme_text or ATTRIBUTION not in metadata_text:
         raise ValueError(
             f"{sdist_path.name} does not contain the required attribution."

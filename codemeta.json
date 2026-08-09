@@ -1,0 +1,60 @@
+{
+  "@context": "https://w3id.org/codemeta/3.1",
+  "@type": "SoftwareSourceCode",
+  "name": "QZX — Quick Zap Exchange",
+  "description": "QZX is a completely free and open-source Python CLI. It gives AI agents and automation one documented command vocabulary for supported operations on Windows, Linux, and macOS, with explicit success or failure and optional structured JSON output.",
+  "applicationCategory": "DeveloperApplication",
+  "applicationSubCategory": "Command-line interface",
+  "author": {
+    "@id": "https://qzx.yumbale.com/#alejandro-sanchez",
+    "@type": "Person",
+    "name": "Alejandro Sánchez",
+    "givenName": "Alejandro",
+    "familyName": "Sánchez",
+    "email": "qzx@yumbale.com",
+    "url": "https://qzx.yumbale.com/en/alejandro-sanchez",
+    "sameAs": [
+      "https://github.com/alesanGreat",
+      "https://pypi.org/user/alesanGreat/",
+      "https://www.linkedin.com/in/alesan/"
+    ]
+  },
+  "maintainer": "https://qzx.yumbale.com/#alejandro-sanchez",
+  "codeRepository": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange",
+  "issueTracker": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues",
+  "continuousIntegration": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/actions",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "version": "0.2.2.0.7a5",
+  "datePublished": "2026-08-08",
+  "developmentStatus": "active",
+  "programmingLanguage": "Python",
+  "runtimePlatform": "CPython 3.13; Python >=3.13",
+  "operatingSystem": [
+    "Windows",
+    "Linux",
+    "macOS"
+  ],
+  "isAccessibleForFree": true,
+  "url": "https://qzx.yumbale.com/",
+  "installUrl": "https://pypi.org/project/qzx/",
+  "readme": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/README.md",
+  "releaseNotes": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/CHANGELOG.md",
+  "relatedLink": [
+    "https://qzx.yumbale.com/en/result-contract",
+    "https://qzx.yumbale.com/en/golden-core",
+    "https://qzx.yumbale.com/en/compatibility",
+    "https://qzx.yumbale.com/en/security"
+  ],
+  "keywords": [
+    "QZX",
+    "QZX Result Contract",
+    "AI agents",
+    "automation",
+    "command-line interface",
+    "cross-platform",
+    "structured JSON",
+    "JSON Schema",
+    "Model Context Protocol",
+    "interoperability"
+  ]
+}

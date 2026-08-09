@@ -140,10 +140,14 @@ def build_fixture_distributions(
         )
         support_files = [
             "ADOPTERS.md",
+            "CITATION.cff",
+            "codemeta.json",
             "docs/golden-core.md",
             "docs/result-contract-v1.md",
             "docs/result-contract-adoption.md",
             "docs/result-contract-quickstart.md",
+            "scripts/sync_citation.py",
+            "scripts/sync_codemeta.py",
             "scripts/validate_result_contract.py",
             "scripts/validate_mcp_result_contract.py",
             "scripts/validate_result_contract_evidence.py",

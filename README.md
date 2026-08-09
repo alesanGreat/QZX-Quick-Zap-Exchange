@@ -301,7 +301,8 @@ availability explicit.
 
 License: [Apache-2.0](LICENSE). The attribution notice is in [NOTICE](NOTICE).
 See [how to contribute](CONTRIBUTING.md), [how to cite QZX](CITATION.cff),
-the [security policy](SECURITY.md), [QZX Core Guarantee](QZX_CORE_GUARANTEE.md),
+[machine-readable CodeMeta 3.1](codemeta.json), the [security policy](SECURITY.md),
+[QZX Core Guarantee](QZX_CORE_GUARANTEE.md),
 [sponsorship independence policy](SPONSORSHIP.md), and
 [name and trademark policy](TRADEMARKS.md). Project participation and direction
 are documented in the [code of conduct](CODE_OF_CONDUCT.md),
