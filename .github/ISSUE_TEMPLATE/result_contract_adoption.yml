@@ -8,7 +8,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for providing evidence. A report is not treated as adoption merely because it was submitted. QZX reviews the named implementation, version, fixtures, limitations, and permission before adding an entry to ADOPTERS.md.
+        Thank you for providing evidence. If you are still preparing it, start with the [5-minute adoption quickstart](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/result-contract-quickstart.md). A report is not treated as adoption merely because it was submitted. QZX reviews the named implementation, version, fixtures, limitations, and permission before adding an entry to ADOPTERS.md.
   - type: input
     id: implementation
     attributes:
