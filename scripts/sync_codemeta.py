@@ -69,6 +69,7 @@ def build_codemeta(manifest: dict[str, Any]) -> dict[str, Any]:
         "releaseNotes": urls["changelog"],
         "relatedLink": [
             urls["result_contract"],
+            urls["result_contract_receipt_schema"],
             urls["golden_core"],
             urls["compatibility"],
             urls["security"],

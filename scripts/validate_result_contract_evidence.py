@@ -30,6 +30,10 @@ from validate_mcp_result_contract import (  # noqa: E402
 )
 
 REPORT_SCHEMA_VERSION = 1
+CONFORMANCE_RECEIPT_SCHEMA_URL = (
+    "https://qzx.yumbale.com/schemas/"
+    "result-contract-conformance-receipt-v1.schema.json"
+)
 PROFILE_CORE = "core"
 PROFILE_MCP = "mcp-2026-07-28"
 
@@ -207,12 +211,14 @@ def validate_evidence(
 
     success = not global_violations and all(case["conformant"] for case in cases)
     return {
+        "receipt_schema": CONFORMANCE_RECEIPT_SCHEMA_URL,
         "success": success,
         "message": (
             "The evidence pair conforms to QZX Result Contract v1."
             if success
             else "The evidence pair does not conform to QZX Result Contract v1."
         ),
+        **({"error_code": "conformance_failed"} if not success else {}),
         "warnings": global_warnings,
         "details": {
             "report_schema_version": REPORT_SCHEMA_VERSION,
@@ -258,6 +264,7 @@ def main() -> int:
         except OSError as exception:
             report["success"] = False
             report["message"] = "The conformance receipt could not be written."
+            report["error_code"] = "receipt_write_failed"
             report["details"]["violations"].append(
                 f"Could not write {args.report}: {exception}"
             )

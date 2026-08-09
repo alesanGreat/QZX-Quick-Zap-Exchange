@@ -110,6 +110,11 @@ python scripts/validate_result_contract_evidence.py \
   --report result-contract-evidence/qzx-conformance.json
 ```
 
+The generated receipt self-identifies the public
+[QZX Result Contract Conformance Receipt v1 schema](https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json),
+so its structure can be checked independently with JSON Schema 2020-12. A
+schema-valid receipt can still record failed conformance.
+
 The same check is available as the reusable
 [QZX Result Contract conformance Composite Action](.github/actions/result-contract-conformance/action.yml)
 for external GitHub repositories. Independent implementations and bounded

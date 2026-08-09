@@ -69,6 +69,15 @@ python scripts/validate_result_contract_evidence.py \
   --report result-contract-evidence/qzx-conformance.json
 ```
 
+Every generated receipt identifies its own versioned JSON Schema at
+`https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.
+That lets reviewers validate the receipt structure with any JSON Schema
+2020-12 implementation without executing QZX. The receipt itself also remains a
+valid QZX Result Contract v1 object: failed receipts carry a stable
+`error_code`. **Receipt schema validity is not an adoption verdict:** a
+structurally valid receipt may intentionally record `success: false`, violations,
+unreadable evidence, or a missing MCP tool definition.
+
 For GitHub Actions, the repository also ships a reusable Composite Action. A
 minimal caller workflow is:
 

@@ -121,6 +121,11 @@ def test_codemeta_links_result_contract_and_machine_discovery_surfaces():
     assert actual["continuousIntegration"].endswith("/actions")
     assert actual["issueTracker"].endswith("/issues")
     assert "https://qzx.yumbale.com/en/result-contract" in actual["relatedLink"]
+    assert (
+        "https://qzx.yumbale.com/schemas/"
+        "result-contract-conformance-receipt-v1.schema.json"
+        in actual["relatedLink"]
+    )
     assert "QZX Result Contract" in actual["keywords"]
     assert "Model Context Protocol" in actual["keywords"]
 

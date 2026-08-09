@@ -98,6 +98,7 @@ setup(
         "Command Catalog": PRODUCT_URLS["command_catalog"],
         "Golden Core": PRODUCT_URLS["golden_core"],
         "Result Contract": PRODUCT_URLS["result_contract"],
+        "Conformance Receipt Schema": PRODUCT_URLS["result_contract_receipt_schema"],
         "Result Contract Adoption": PRODUCT_URLS["result_contract_adoption"],
         "Compatibility": PRODUCT_URLS["compatibility"],
         "Security": PRODUCT_URLS["security"],

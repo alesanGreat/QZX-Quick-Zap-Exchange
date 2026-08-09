@@ -115,6 +115,7 @@ def main() -> int:
             f"- Status: **{status}**",
             f"- Profile: `{report.get('details', {}).get('profile', profile)}`",
             f"- Receipt: `{report_path}`",
+            f"- Receipt schema: `{report.get('receipt_schema', 'unavailable')}`",
             "",
             report.get("message", "No validator message was produced."),
         ]

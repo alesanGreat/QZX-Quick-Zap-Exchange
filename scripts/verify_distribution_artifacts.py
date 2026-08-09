@@ -29,12 +29,19 @@ ATTRIBUTION = (
 RESULT_CONTRACT_SCHEMA_ID = (
     "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
 )
+CONFORMANCE_RECEIPT_SCHEMA_ID = (
+    "https://qzx.yumbale.com/schemas/"
+    "result-contract-conformance-receipt-v1.schema.json"
+)
 RESULT_CONTRACT_MANIFEST_PATH = (
     PROJECT_ROOT / "examples" / "result_contract" / "manifest.json"
 )
 RESULT_CONTRACT_EXAMPLES_ROOT = PROJECT_ROOT / "examples" / "result_contract"
 RESULT_CONTRACT_WHEEL_PATH = (
     "qzx/resources/schemas/result-contract-v1.schema.json"
+)
+CONFORMANCE_RECEIPT_WHEEL_PATH = (
+    "qzx/resources/schemas/result-contract-conformance-receipt-v1.schema.json"
 )
 GOLDEN_CORE_WHEEL_PATH = "qzx/resources/golden-core.json"
 _INLINE_MARKDOWN_DESTINATION = re.compile(
@@ -271,6 +278,63 @@ def verify_result_contract_schema(text: str, context: str) -> None:
         )
 
 
+def verify_conformance_receipt_schema(text: str, context: str) -> None:
+    """Reject artifacts without the canonical QZX conformance receipt schema."""
+
+    try:
+        schema = json.loads(text)
+    except json.JSONDecodeError as exception:
+        raise ValueError(f"{context} contains invalid JSON Schema.") from exception
+    properties = schema.get("properties") if isinstance(schema, dict) else None
+    warnings = properties.get("warnings") if isinstance(properties, dict) else None
+    warning_items = warnings.get("items") if isinstance(warnings, dict) else None
+    details = properties.get("details") if isinstance(properties, dict) else None
+    detail_properties = details.get("properties") if isinstance(details, dict) else None
+    cases = detail_properties.get("cases") if isinstance(detail_properties, dict) else None
+    failure_rules = schema.get("allOf") if isinstance(schema, dict) else None
+    failure_rule = (
+        failure_rules[0]
+        if isinstance(failure_rules, list)
+        and len(failure_rules) == 1
+        and isinstance(failure_rules[0], dict)
+        else {}
+    )
+    if (
+        not isinstance(schema, dict)
+        or schema.get("$id") != CONFORMANCE_RECEIPT_SCHEMA_ID
+        or schema.get("$schema")
+        != "https://json-schema.org/draft/2020-12/schema"
+        or schema.get("required")
+        != ["receipt_schema", "success", "message", "warnings", "details"]
+        or not isinstance(properties, dict)
+        or properties.get("receipt_schema", {}).get("const")
+        != CONFORMANCE_RECEIPT_SCHEMA_ID
+        or properties.get("success", {}).get("type") != "boolean"
+        or properties.get("message", {}).get("minLength") != 1
+        or properties.get("message", {}).get("pattern") != "\\S"
+        or not isinstance(warning_items, dict)
+        or warning_items.get("minLength") != 1
+        or warning_items.get("pattern") != "\\S"
+        or properties.get("error_code", {}).get("pattern")
+        != "^[a-z][a-z0-9_]*$"
+        or failure_rule.get("if", {}).get("properties", {}).get("success", {}).get("const")
+        is not False
+        or failure_rule.get("if", {}).get("required") != ["success"]
+        or failure_rule.get("then", {}).get("required") != ["error_code"]
+        or not isinstance(detail_properties, dict)
+        or detail_properties.get("report_schema_version", {}).get("const") != 1
+        or detail_properties.get("contract_schema", {}).get("const")
+        != RESULT_CONTRACT_SCHEMA_ID
+        or not isinstance(cases, dict)
+        or cases.get("minItems") != 2
+        or cases.get("maxItems") != 2
+        or schema.get("additionalProperties") is not False
+    ):
+        raise ValueError(
+            f"{context} does not contain QZX Result Contract Conformance Receipt v1."
+        )
+
+
 def release_readme_marker(version: str) -> str:
     """Return the exact immutable-release statement required in metadata."""
     return f"This source release is QZX `{version}`"
@@ -406,7 +470,11 @@ def verify_wheel(
             )
         missing_resources = [
             name
-            for name in (RESULT_CONTRACT_WHEEL_PATH, GOLDEN_CORE_WHEEL_PATH)
+            for name in (
+                RESULT_CONTRACT_WHEEL_PATH,
+                CONFORMANCE_RECEIPT_WHEEL_PATH,
+                GOLDEN_CORE_WHEEL_PATH,
+            )
             if name not in names
         ]
         if missing_resources:
@@ -418,6 +486,9 @@ def verify_wheel(
         metadata_text = archive.read(metadata_names[0]).decode("utf-8")
         result_contract_schema = archive.read(
             RESULT_CONTRACT_WHEEL_PATH
+        ).decode("utf-8")
+        conformance_receipt_schema = archive.read(
+            CONFORMANCE_RECEIPT_WHEEL_PATH
         ).decode("utf-8")
         golden_core_registry = archive.read(
             GOLDEN_CORE_WHEEL_PATH
@@ -443,6 +514,10 @@ def verify_wheel(
         result_contract_schema,
         f"{wheel_path.name}:{RESULT_CONTRACT_WHEEL_PATH}",
     )
+    verify_conformance_receipt_schema(
+        conformance_receipt_schema,
+        f"{wheel_path.name}:{CONFORMANCE_RECEIPT_WHEEL_PATH}",
+    )
     golden_core_commands = verify_golden_core_registry(
         golden_core_registry,
         f"{wheel_path.name}:{GOLDEN_CORE_WHEEL_PATH}",
@@ -452,6 +527,7 @@ def verify_wheel(
         "size_bytes": wheel_path.stat().st_size,
         "sha256": sha256(wheel_path),
         "result_contract_schema": RESULT_CONTRACT_SCHEMA_ID,
+        "conformance_receipt_schema": CONFORMANCE_RECEIPT_SCHEMA_ID,
         "golden_core_commands": golden_core_commands,
     }
 
@@ -488,6 +564,10 @@ def verify_sdist(
         schema_name = (
             f"{root}/src/qzx/resources/schemas/"
             "result-contract-v1.schema.json"
+        )
+        receipt_schema_name = (
+            f"{root}/src/qzx/resources/schemas/"
+            "result-contract-conformance-receipt-v1.schema.json"
         )
         specification_name = f"{root}/docs/result-contract-v1.md"
         adoption_name = f"{root}/docs/result-contract-adoption.md"
@@ -539,6 +619,7 @@ def verify_sdist(
             citation_sync_name: members.get(citation_sync_name),
             codemeta_sync_name: members.get(codemeta_sync_name),
             schema_name: members.get(schema_name),
+            receipt_schema_name: members.get(receipt_schema_name),
             specification_name: members.get(specification_name),
             adoption_name: members.get(adoption_name),
             quickstart_name: members.get(quickstart_name),
@@ -575,6 +656,9 @@ def verify_sdist(
         codemeta_handle = archive.extractfile(required_members[codemeta_name])
         citation_handle = archive.extractfile(required_members[citation_name])
         schema_handle = archive.extractfile(required_members[schema_name])
+        receipt_schema_handle = archive.extractfile(
+            required_members[receipt_schema_name]
+        )
         golden_core_handle = archive.extractfile(
             required_members[golden_core_name]
         )
@@ -587,6 +671,7 @@ def verify_sdist(
             or codemeta_handle is None
             or citation_handle is None
             or schema_handle is None
+            or receipt_schema_handle is None
             or golden_core_handle is None
             or conformance_handle is None
         ):
@@ -596,6 +681,7 @@ def verify_sdist(
         codemeta_text = codemeta_handle.read().decode("utf-8")
         citation_text = citation_handle.read().decode("utf-8")
         result_contract_schema = schema_handle.read().decode("utf-8")
+        conformance_receipt_schema = receipt_schema_handle.read().decode("utf-8")
         golden_core_registry = golden_core_handle.read().decode("utf-8")
         conformance_manifest = conformance_handle.read().decode("utf-8")
 
@@ -635,6 +721,10 @@ def verify_sdist(
         result_contract_schema,
         f"{sdist_path.name}:{schema_name}",
     )
+    verify_conformance_receipt_schema(
+        conformance_receipt_schema,
+        f"{sdist_path.name}:{receipt_schema_name}",
+    )
     golden_core_commands = verify_golden_core_registry(
         golden_core_registry,
         f"{sdist_path.name}:{golden_core_name}",
@@ -649,6 +739,7 @@ def verify_sdist(
         "sha256": sha256(sdist_path),
         "qzx_sh_mode": f"{launcher_mode:04o}",
         "result_contract_schema": RESULT_CONTRACT_SCHEMA_ID,
+        "conformance_receipt_schema": CONFORMANCE_RECEIPT_SCHEMA_ID,
         "golden_core_commands": golden_core_commands,
         "result_contract_conformance_cases": conformance_cases,
     }

@@ -12,6 +12,8 @@ import pytest
 
 from scripts.verify_distribution_artifacts import (
     ATTRIBUTION,
+    CONFORMANCE_RECEIPT_SCHEMA_ID,
+    CONFORMANCE_RECEIPT_WHEEL_PATH,
     GOLDEN_CORE_WHEEL_PATH,
     RESULT_CONTRACT_SCHEMA_ID,
     RESULT_CONTRACT_WHEEL_PATH,
@@ -57,6 +59,17 @@ GOLDEN_CORE_REGISTRY = json.dumps({
     ],
 })
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+CONFORMANCE_RECEIPT_SCHEMA_PATH = (
+    REPOSITORY_ROOT
+    / "src"
+    / "qzx"
+    / "resources"
+    / "schemas"
+    / "result-contract-conformance-receipt-v1.schema.json"
+)
+CONFORMANCE_RECEIPT_SCHEMA = CONFORMANCE_RECEIPT_SCHEMA_PATH.read_text(
+    encoding="utf-8"
+)
 CONFORMANCE_MANIFEST_PATH = (
     REPOSITORY_ROOT / "examples" / "result_contract" / "manifest.json"
 )
@@ -107,6 +120,10 @@ def build_fixture_distributions(
             RESULT_CONTRACT_SCHEMA,
         )
         archive.writestr(
+            CONFORMANCE_RECEIPT_WHEEL_PATH,
+            CONFORMANCE_RECEIPT_SCHEMA,
+        )
+        archive.writestr(
             GOLDEN_CORE_WHEEL_PATH,
             GOLDEN_CORE_REGISTRY,
         )
@@ -134,6 +151,14 @@ def build_fixture_distributions(
             archive,
             f"{root}/src/qzx/resources/schemas/result-contract-v1.schema.json",
             RESULT_CONTRACT_SCHEMA,
+        )
+        add_tar_text(
+            archive,
+            (
+                f"{root}/src/qzx/resources/schemas/"
+                "result-contract-conformance-receipt-v1.schema.json"
+            ),
+            CONFORMANCE_RECEIPT_SCHEMA,
         )
         add_tar_text(
             archive,
@@ -193,6 +218,10 @@ def test_distribution_verifier_accepts_executable_posix_launcher(tmp_path):
     assert len(result["artifacts"]) == 2
     assert all(
         artifact["result_contract_schema"] == RESULT_CONTRACT_SCHEMA_ID
+        for artifact in result["artifacts"]
+    )
+    assert all(
+        artifact["conformance_receipt_schema"] == CONFORMANCE_RECEIPT_SCHEMA_ID
         for artifact in result["artifacts"]
     )
     assert all(

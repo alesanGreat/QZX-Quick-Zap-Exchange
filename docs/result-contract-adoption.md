@@ -202,9 +202,16 @@ A credible adoption report includes:
 When QZX's evidence CLI or Composite Action is used, publish the generated
 `qzx-conformance.json` receipt and identify the full QZX commit SHA that ran the
 validator. The receipt records SHA-256 digests of the exact success, failure,
-and MCP tool-definition files when applicable. An adopter may instead use an
-independent JSON Schema or profile validator; QZX tooling is not a dependency of
-the Result Contract itself.
+and MCP tool-definition files when applicable. It also identifies the public
+QZX Result Contract Conformance Receipt v1 schema at
+`https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`,
+so a reviewer can validate the report structure independently of QZX code. The
+receipt itself remains a valid QZX Result Contract v1 object; failed receipts
+carry a stable `error_code`. A schema-valid receipt may still record a failed
+conformance result; receipt structure and implementation conformance are
+separate claims. An adopter may
+instead use an independent JSON Schema or profile validator; QZX tooling is not
+a dependency of the Result Contract itself.
 
 Passing the core schema does not certify security, authorization, isolation,
 correct domain behavior, platform compatibility, or every extension field. A

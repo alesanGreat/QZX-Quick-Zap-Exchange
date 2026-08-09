@@ -56,6 +56,7 @@
     "golden_core": "https://qzx.yumbale.com/en/golden-core",
     "result_contract": "https://qzx.yumbale.com/en/result-contract",
     "result_contract_schema": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json",
+    "result_contract_receipt_schema": "https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json",
     "result_contract_adoption": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/result-contract-adoption.md",
     "compatibility": "https://qzx.yumbale.com/en/compatibility",
     "security": "https://qzx.yumbale.com/en/security",
@@ -72,6 +73,7 @@
     "version": 1,
     "specification": "https://qzx.yumbale.com/en/result-contract",
     "schema": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json",
+    "conformance_receipt_schema": "https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json",
     "default_output": "human_message",
     "human": "The CLI prints the descriptive message by default.",
     "machine": {

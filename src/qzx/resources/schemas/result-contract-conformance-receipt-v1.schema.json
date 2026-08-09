@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json",
+  "title": "QZX Result Contract Conformance Receipt v1",
+  "description": "Machine-readable receipt for a reviewable QZX Result Contract v1 success/failure evidence pair. Every valid receipt also satisfies the QZX Result Contract v1 core envelope. Schema validity means the receipt is structurally interpretable; it does not mean the submitted implementation conforms.",
+  "type": "object",
+  "required": [
+    "receipt_schema",
+    "success",
+    "message",
+    "warnings",
+    "details"
+  ],
+  "properties": {
+    "receipt_schema": {
+      "const": "https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json"
+    },
+    "success": {
+      "type": "boolean"
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "error_code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      }
+    },
+    "details": {
+      "type": "object",
+      "required": [
+        "report_schema_version",
+        "contract_version",
+        "contract_schema",
+        "profile",
+        "mcp_specification",
+        "tool_definition",
+        "violations",
+        "cases"
+      ],
+      "properties": {
+        "report_schema_version": {
+          "const": 1
+        },
+        "contract_version": {
+          "const": "v1"
+        },
+        "contract_schema": {
+          "const": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
+        },
+        "profile": {
+          "enum": [
+            "core",
+            "mcp-2026-07-28"
+          ]
+        },
+        "mcp_specification": {
+          "enum": [
+            null,
+            "2026-07-28"
+          ]
+        },
+        "tool_definition": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/toolDefinition"
+            }
+          ]
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cases": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/case"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "success"
+                    },
+                    "expected_success": {
+                      "const": true
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/case"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "failure"
+                    },
+                    "expected_success": {
+                      "const": false
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "items": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "success": {
+            "const": false
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "then": {
+        "required": [
+          "error_code"
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "toolDefinition": {
+      "type": "object",
+      "required": [
+        "file",
+        "sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "profileFacts": {
+      "type": "object",
+      "properties": {
+        "mcp_specification": {
+          "const": "2026-07-28"
+        },
+        "mcp_tools_spec": {
+          "const": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
+        },
+        "contract": {
+          "const": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
+        },
+        "output_schema_checked": {
+          "type": "boolean"
+        },
+        "backcompat_text_matches": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "case": {
+      "type": "object",
+      "required": [
+        "name",
+        "file",
+        "sha256",
+        "expected_success",
+        "actual_success",
+        "conformant",
+        "violations",
+        "warnings",
+        "profile_facts"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "success",
+            "failure"
+          ]
+        },
+        "file": {
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expected_success": {
+          "type": "boolean"
+        },
+        "actual_success": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "conformant": {
+          "type": "boolean"
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "profile_facts": {
+          "$ref": "#/$defs/profileFacts"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

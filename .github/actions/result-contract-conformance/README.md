@@ -5,7 +5,11 @@ repository without installing QZX as an application dependency.
 
 The Action validates one completed success and one completed failure, writes a
 deterministic JSON receipt with SHA-256 digests of the evidence files, and fails
-the job when the selected profile does not conform.
+the job when the selected profile does not conform. Every receipt identifies the
+public QZX Result Contract Conformance Receipt v1 schema:
+`https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.
+That schema lets a reviewer validate the receipt structure without running QZX;
+a schema-valid receipt can still report failed conformance.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 

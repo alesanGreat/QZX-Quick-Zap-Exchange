@@ -54,8 +54,11 @@ python scripts/validate_result_contract_evidence.py \
 ```
 
 The receipt records SHA-256 digests of the exact evidence files and preserves
-validator warnings and profile facts. External GitHub repositories can run the
-same check with the reusable Composite Action under
+validator warnings and profile facts. It self-identifies the public
+`result-contract-conformance-receipt-v1.schema.json` schema, so reviewers can
+validate the receipt structure independently with JSON Schema 2020-12. A valid
+receipt schema does not imply a passing conformance result. External GitHub
+repositories can run the same check with the reusable Composite Action under
 `.github/actions/result-contract-conformance`.
 
 Then replace the fixtures with output from **one real tool**. The quickest path

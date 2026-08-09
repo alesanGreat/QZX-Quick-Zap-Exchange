@@ -34,6 +34,7 @@ def test_core_success_failure_pair_produces_deterministic_receipt():
     )
 
     assert report["success"] is True
+    assert report["receipt_schema"] == validator.CONFORMANCE_RECEIPT_SCHEMA_URL
     assert report["details"]["contract_version"] == "v1"
     assert report["details"]["profile"] == "core"
     assert report["details"]["mcp_specification"] is None
@@ -84,6 +85,7 @@ def test_evidence_pair_rejects_wrong_semantic_roles_and_missing_mcp_definition()
         failure_path=str(FIXTURE_ROOT / "mcp-failure.json"),
     )
     assert mcp_without_definition["success"] is False
+    assert mcp_without_definition["error_code"] == "conformance_failed"
     assert mcp_without_definition["details"]["violations"] == [
         "The MCP profile requires --tool-definition so outputSchema is reviewable."
     ]
@@ -115,6 +117,37 @@ def test_cli_writes_same_receipt_it_prints(tmp_path):
     )
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == json.loads(report_path.read_text(encoding="utf-8"))
+
+
+def test_cli_write_failure_remains_a_valid_result_contract(tmp_path):
+    report_directory = tmp_path / "receipt-directory"
+    report_directory.mkdir()
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--profile",
+            "core",
+            "--success",
+            str(FIXTURE_ROOT / "valid-success.json"),
+            "--failure",
+            str(FIXTURE_ROOT / "valid-failure.json"),
+            "--report",
+            str(report_directory),
+            "--json",
+        ],
+        cwd=REPOSITORY_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert process.returncode == 1
+    report = json.loads(process.stdout)
+    assert report["success"] is False
+    assert report["error_code"] == "receipt_write_failed"
+    assert report["receipt_schema"] == validator.CONFORMANCE_RECEIPT_SCHEMA_URL
+    assert validator.result_contract_violations(report) == []
 
 
 def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
@@ -155,6 +188,7 @@ def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
     summary = summary_path.read_text(encoding="utf-8")
     assert "Status: **PASS**" in summary
     assert "mcp-2026-07-28" in summary
+    assert validator.CONFORMANCE_RECEIPT_SCHEMA_URL in summary
 
 
 def test_composite_action_rejects_workspace_escape_and_output_injection(tmp_path):

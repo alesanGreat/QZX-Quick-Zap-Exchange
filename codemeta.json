@@ -41,6 +41,7 @@
   "releaseNotes": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/CHANGELOG.md",
   "relatedLink": [
     "https://qzx.yumbale.com/en/result-contract",
+    "https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json",
     "https://qzx.yumbale.com/en/golden-core",
     "https://qzx.yumbale.com/en/compatibility",
     "https://qzx.yumbale.com/en/security"
