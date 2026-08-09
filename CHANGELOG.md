@@ -3,6 +3,21 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## 0.2.2.0.7a5 — 2026-08-08
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Renamed three Golden Core commands while QZX is still Alpha so the public
+  vocabulary reflects the actual action performed: `systemInfo` became
+  `getSystemInfo`, `projectDoctor` became `diagnoseProject`, and `getFileHash`
+  became `calculateFileHash`. No compatibility aliases were retained.
+- Narrowed `version` to package version and stable product identity; host facts
+  remain the responsibility of `getSystemInfo` and capability discovery remains
+  the responsibility of `listCommands`.
+- Preserved Alpha 3 release-quality and platform records as immutable historical
+  evidence while making current readiness digest- and name-sensitive, so renamed
+  or changed commands must earn fresh evidence instead of inheriting it.
+
 ## 0.2.2.0.7a4 — 2026-08-08
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

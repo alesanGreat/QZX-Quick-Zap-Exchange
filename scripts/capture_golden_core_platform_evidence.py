@@ -331,9 +331,9 @@ def command_assertions(name: str, document: dict[str, Any]) -> list[str]:
     if name == "version":
         if document.get("version") != qzx.__version__:
             raise AssertionError("version did not report the installed QZX version.")
-        if document.get("qzx_info", {}).get("command_count") != EXPECTED_QZX_COMMAND_COUNT:
-            raise AssertionError("version did not report 87 commands.")
-        assertions.extend(["version_matches_package", "command_count=87"])
+        if "system_info" in document or "qzx_info" in document:
+            raise AssertionError("version duplicated host or capability discovery data.")
+        assertions.append("version_matches_package")
     elif name == "listCommands":
         if document.get("summary", {}).get("commands") != EXPECTED_QZX_COMMAND_COUNT:
             raise AssertionError("listCommands did not report 87 commands.")
@@ -354,9 +354,9 @@ def command_assertions(name: str, document: dict[str, Any]) -> list[str]:
         if document.get("current_dir") != "<fixture-root>":
             raise AssertionError("getCurrentDirectory did not observe the fixture root.")
         assertions.append("current_dir=<fixture-root>")
-    elif name == "systemInfo":
+    elif name == "getSystemInfo":
         if document.get("system_info", {}).get("os") != platform.system():
-            raise AssertionError("systemInfo did not report the real host OS.")
+            raise AssertionError("getSystemInfo did not report the real host OS.")
         assertions.append("os_matches_runner")
     elif name == "getDiskSpace":
         if not isinstance(document.get("disk_info", {}).get("total_bytes"), int):
@@ -385,12 +385,12 @@ def command_assertions(name: str, document: dict[str, Any]) -> list[str]:
         if document.get("total_matches") != 2:
             raise AssertionError("findText did not report two controlled matches.")
         assertions.append("matches=2")
-    elif name == "getFileHash":
+    elif name == "calculateFileHash":
         expected = hashlib.sha256(
             b"QZX alpha evidence\nsecond line\n"
         ).hexdigest()
         if document.get("hash") != expected:
-            raise AssertionError("getFileHash returned an unexpected digest.")
+            raise AssertionError("calculateFileHash returned an unexpected digest.")
         assertions.append("sha256_matches_fixture")
     elif name == "getGitStatus":
         changes = document.get("changes", {})
@@ -402,13 +402,13 @@ def command_assertions(name: str, document: dict[str, Any]) -> list[str]:
         ):
             raise AssertionError("getGitStatus did not report the fixture state.")
         assertions.append("branch_and_changes_verified")
-    elif name == "projectDoctor":
+    elif name == "diagnoseProject":
         observed_path = document.get("details", {}).get("path")
         if observed_path not in {
             "<fixture-root>/project",
             "<fixture-root>\\project",
         }:
-            raise AssertionError("projectDoctor did not inspect the fixture project.")
+            raise AssertionError("diagnoseProject did not inspect the fixture project.")
         assertions.append("fixture_project_inspected")
     elif name == "checkUrlStatus":
         if document.get("status_code") != 200 or document.get("is_online") is not True:
@@ -525,7 +525,7 @@ def capture(environment_id: str, environment_name: str) -> dict[str, Any]:
                     fixture_root,
                 ),
                 "getCurrentDirectory": (["getCurrentDirectory"], fixture_root),
-                "systemInfo": (["systemInfo"], fixture_root),
+                "getSystemInfo": (["getSystemInfo"], fixture_root),
                 "getDiskSpace": (["getDiskSpace", str(fixture_root)], fixture_root),
                 "getRamInfo": (["getRamInfo"], fixture_root),
                 "listFiles": (
@@ -551,9 +551,9 @@ def capture(environment_id: str, environment_name: str) -> dict[str, Any]:
                     ],
                     fixture_root,
                 ),
-                "getFileHash": (
+                "calculateFileHash": (
                     [
-                        "getFileHash",
+                        "calculateFileHash",
                         str(fixtures["files"] / "alpha.txt"),
                         "sha256",
                     ],
@@ -563,8 +563,8 @@ def capture(environment_id: str, environment_name: str) -> dict[str, Any]:
                     ["getGitStatus", str(fixtures["repository"])],
                     fixture_root,
                 ),
-                "projectDoctor": (
-                    ["projectDoctor", str(fixtures["project"])],
+                "diagnoseProject": (
+                    ["diagnoseProject", str(fixtures["project"])],
                     fixture_root,
                 ),
                 "checkUrlStatus": (

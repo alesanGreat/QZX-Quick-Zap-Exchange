@@ -14,7 +14,7 @@ I am at your service. Ready to assist with your tasks.
 -----------------------------------------------------------------
 Type 'list' to see available commands
 Type 'help <command>' to get help on a specific command
-Type 'systemInfo' to see system information
+Type 'getSystemInfo' to see system information
 Type 'exit' or press Ctrl+D to exit
 =================================================================
 """.format(version)

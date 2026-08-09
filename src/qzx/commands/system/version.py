@@ -1,96 +1,41 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Version Command - Displays the current version of QZX
-"""
+"""Return the installed QZX version and stable product identity."""
 
-import platform
-
-from qzx.core.command_base import CommandBase
-from qzx.core.command_loader import CommandLoader
 from qzx import __version__
+from qzx.core.command_base import CommandBase
 from qzx.identity import product_identity
 
+
 class VersionCommand(CommandBase):
-    """
-    Command to display the current version of QZX
-    """
-    
+    """Report QZX identity without duplicating host or capability discovery."""
+
     name = "version"
-    description = "Displays the current version of QZX and system information"
+    description = "Displays the installed QZX version and product identity"
     category = "system"
-    
+
     parameters = []
-    
+
     examples = [
         {
-            'command': 'qzx version',
-            'description': 'Display the current version of QZX and system information'
+            "command": "qzx version",
+            "description": "Display the installed QZX version and product identity",
         },
         {
-            'command': 'qzx --version',
-            'description': 'Display the current version using the global version flag'
-        }
+            "command": "qzx --version",
+            "description": "Display the installed QZX version using the global flag",
+        },
     ]
-    
-    def execute(self):
-        """
-        Displays the current version of QZX
-        
-        Returns:
-            Dictionary with version information
-        """
-        try:
-            # Get the version from the main QZX class
-            qzx_version = __version__
-            identity = product_identity()
-            
-            # Gather additional system information
-            system_info = {
-                "os": platform.system(),
-                "os_version": platform.version(),
-                "os_release": platform.release(),
-                "machine": platform.machine(),
-                "processor": platform.processor(),
-                "python_version": platform.python_version(),
-                "python_implementation": platform.python_implementation()
-            }
-            
-            # Get QZX installation information
-            qzx_info = {}
-            try:
-                commands = CommandLoader().get_indexed_commands()
-                qzx_info["command_count"] = len(commands)
-            except Exception:
-                # Ignore errors in getting installation info
-                pass
-            
-            # Create a readable summary for the message
-            os_name = system_info.get("os", "Unknown OS")
-            os_version = system_info.get("os_release", "")
-            python_version = system_info.get("python_version", "Unknown")
-            command_count_str = f"{qzx_info.get('command_count', 'Unknown')} commands" if "command_count" in qzx_info else "commands"
 
-            # Message with verbose information
-            message = f"QZX Version {qzx_version} running on {os_name} {os_version} with Python {python_version}. {command_count_str} available."
-            
-            # Prepare the result with explicit success indicator and message
-            result = {
-                "success": True,
-                "message": message,
-                "version": qzx_version,
-                "attribution": identity["attribution"],
-                "license": identity["license"],
-                "system_info": system_info,
-                "qzx_info": qzx_info
-            }
-            
-            return result
-        except Exception as e:
-            # Return structured error with explicit failure indicator
-            return {
-                "success": False,
-                "error": f"Error getting QZX version: {str(e)}",
-                "message": f"Failed to retrieve QZX version information: {str(e)}"
-            }
+    def execute(self):
+        """Return stable package identity; host facts belong to getSystemInfo."""
+
+        identity = product_identity()
+        return {
+            "success": True,
+            "message": f"QZX {__version__} — Quick Zap Exchange.",
+            "version": __version__,
+            "attribution": identity["attribution"],
+            "license": identity["license"],
+        }

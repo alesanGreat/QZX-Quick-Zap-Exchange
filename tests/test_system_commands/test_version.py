@@ -1,29 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Real-environment tests for the QZX version command."""
-
-import platform
+"""Behavioral tests for the narrow QZX version/identity command."""
 
 from qzx import __version__
 from qzx.commands.system.version import VersionCommand
-from qzx.core.command_loader import CommandLoader
+from qzx.identity import product_identity
 
 
-def test_execute_reports_the_real_runtime_and_command_catalog():
+def test_execute_reports_only_stable_qzx_identity():
     result = VersionCommand().execute()
+    identity = product_identity()
 
-    assert result["success"] is True
-    assert result["version"] == __version__
-    assert result["system_info"] == {
-        "os": platform.system(),
-        "os_version": platform.version(),
-        "os_release": platform.release(),
-        "machine": platform.machine(),
-        "processor": platform.processor(),
-        "python_version": platform.python_version(),
-        "python_implementation": platform.python_implementation(),
+    assert result == {
+        "success": True,
+        "message": f"QZX {__version__} — Quick Zap Exchange.",
+        "version": __version__,
+        "attribution": identity["attribution"],
+        "license": identity["license"],
     }
-    commands = CommandLoader().discover_commands()
-    assert result["qzx_info"]["command_count"] == len(set(commands.values()))
-    assert f"running on {platform.system()}" in result["message"]
+    assert "system_info" not in result
+    assert "qzx_info" not in result

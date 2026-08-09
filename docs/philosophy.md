@@ -124,7 +124,7 @@ version. The complete semantics and promotion requirements live in
 
 Consider how this philosophy manifests in the QZX tool:
 
-1. **System Information Commands**: Rather than just returning basic system info, commands like `SystemInfo` provide detailed OS, CPU, memory, and environment data with context.
+1. **System Information Commands**: Rather than just returning basic system info, commands like `getSystemInfo` provide detailed OS, CPU, memory, and environment data with context.
 
 2. **Process Management**: When listing or killing processes, QZX provides context about what's happening, user permissions, and detailed process statistics.
 

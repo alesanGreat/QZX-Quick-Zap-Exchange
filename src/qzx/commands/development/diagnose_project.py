@@ -26,10 +26,10 @@ from qzx.core.recursive_findfiles_utils import (
 )
 
 
-class ProjectDoctorCommand(CommandBase):
+class DiagnoseProjectCommand(CommandBase):
     """Inspect project health without executing project-owned scripts."""
 
-    name = "projectDoctor"
+    name = "diagnoseProject"
     description = (
         "Inspects project technologies, dependencies, validation workflows, Git "
         "state, source quality, and large files without executing project scripts"
@@ -47,11 +47,11 @@ class ProjectDoctorCommand(CommandBase):
 
     examples = [
         {
-            "command": "qzx projectDoctor",
+            "command": "qzx diagnoseProject",
             "description": "Diagnose the current project without running its scripts",
         },
         {
-            "command": "qzx projectDoctor C:/my/project",
+            "command": "qzx diagnoseProject C:/my/project",
             "description": "Diagnose the project at the specified path",
         },
     ]
@@ -70,7 +70,7 @@ class ProjectDoctorCommand(CommandBase):
                 "success": False,
                 "error": f"Path '{path}' is not a directory.",
                 "message": (
-                    f"Cannot diagnose '{path}': projectDoctor requires a directory."
+                    f"Cannot diagnose '{path}': diagnoseProject requires a directory."
                 ),
             }
 
@@ -578,7 +578,7 @@ class ProjectDoctorCommand(CommandBase):
             "template_present": bool(template_names),
             "values_inspected": False,
             "note": (
-                "Only environment filenames are reported; projectDoctor never "
+                "Only environment filenames are reported; diagnoseProject never "
                 "reads or returns environment values."
             ),
         }
@@ -838,7 +838,7 @@ class ProjectDoctorCommand(CommandBase):
                 "medium",
                 "One or more dependency manifests could not be parsed",
                 f"{len(dependencies['parse_errors'])} manifest parse error(s) prevent a complete dependency inventory.",
-                "Correct the reported manifest syntax and run projectDoctor again.",
+                "Correct the reported manifest syntax and run diagnoseProject again.",
             )
         if technologies and not validation["tests"]["configured"]:
             add(
@@ -891,7 +891,7 @@ class ProjectDoctorCommand(CommandBase):
                 "medium",
                 "Unused-code analysis failed",
                 unused_code["error"],
-                "Resolve the analysis error and repeat projectDoctor.",
+                "Resolve the analysis error and repeat diagnoseProject.",
             )
 
         circular_imports = source_analysis["circular_imports"]
@@ -909,7 +909,7 @@ class ProjectDoctorCommand(CommandBase):
                 "medium",
                 "Circular-import analysis failed",
                 circular_imports["error"],
-                "Resolve the analysis error and repeat projectDoctor.",
+                "Resolve the analysis error and repeat diagnoseProject.",
             )
 
         if not file_scan["scan_complete"]:

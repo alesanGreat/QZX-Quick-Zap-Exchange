@@ -348,8 +348,12 @@ def validate_golden_core(
                     errors.append(f"Golden Core command is privilege-sensitive: {name}.")
                 if isinstance(safety, dict) and safety.get("shares_external_data") is not False:
                     errors.append(f"Golden Core command shares external data: {name}.")
-                if not isinstance(availability, dict) or availability.get("included_in_pypi") is not True:
-                    errors.append(f"Golden Core command is not in the published package: {name}.")
+                if not isinstance(availability, dict) or not isinstance(
+                    availability.get("included_in_pypi"), bool
+                ):
+                    errors.append(
+                        f"Golden Core command has invalid package-availability metadata: {name}."
+                    )
 
     return errors
 

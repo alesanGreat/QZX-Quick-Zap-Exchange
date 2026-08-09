@@ -37,14 +37,27 @@ def test_current_release_quality_attestation_is_valid_in_shallow_checkouts():
     assert document["ci"]["failed_command_runs"] == 0
 
 
-def test_release_quality_rejects_stale_command_digest():
+def test_historical_attestation_does_not_require_current_command_names():
+    registry, document = current_attestation()
+    evolved_registry = copy.deepcopy(registry)
+    evolved_registry["commands"][0]["name"] = "futureVersionName"
+
+    assert validate_attestation(document, registry=evolved_registry) == []
+
+
+def test_release_quality_can_explicitly_detect_current_implementation_drift():
     registry, document = current_attestation()
     changed = copy.deepcopy(document)
     changed["commands"]["version"]["implementation_digest"] = "sha256:" + "0" * 64
 
-    errors = validate_attestation(changed, registry=registry)
+    errors = validate_attestation(
+        changed,
+        registry=registry,
+        verify_current_implementations=True,
+    )
 
-    assert any("stale for version" in error for error in errors)
+    assert any("stale for current version" in error for error in errors)
+    assert any("attestation SHA-256 is invalid" in error for error in errors)
 
 
 def test_release_quality_rejects_known_release_blocker():

@@ -14,7 +14,7 @@ def test_fast_and_regular_basic_welcome_share_canonical_text():
     message = TerminalWelcome(qzx_version="test").get_welcome_message()
 
     assert message == basic_welcome_message("test")
-    assert "Type 'systemInfo'" in message
+    assert "Type 'getSystemInfo'" in message
     assert "WonderMyEnvironment" not in message
 
 

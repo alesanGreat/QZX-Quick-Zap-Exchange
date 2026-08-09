@@ -37,6 +37,13 @@
       "category": "file"
     },
     {
+      "name": "calculateFileHash",
+      "module": "qzx.commands.file.calculate_file_hash",
+      "class_name": "CalculateFileHashCommand",
+      "description": "Calculates cryptographic hashes (MD5, SHA-1, SHA-256) of a file",
+      "category": "file"
+    },
+    {
       "name": "changePermissions",
       "module": "qzx.commands.file.change_permissions",
       "class_name": "ChangePermissionsCommand",
@@ -149,6 +156,13 @@
       "category": "file"
     },
     {
+      "name": "diagnoseProject",
+      "module": "qzx.commands.development.diagnose_project",
+      "class_name": "DiagnoseProjectCommand",
+      "description": "Inspects project technologies, dependencies, validation workflows, Git state, source quality, and large files without executing project scripts",
+      "category": "development"
+    },
+    {
       "name": "downloadFile",
       "module": "qzx.commands.file.download_file",
       "class_name": "DownloadFileCommand",
@@ -254,13 +268,6 @@
       "category": "system"
     },
     {
-      "name": "getFileHash",
-      "module": "qzx.commands.file.get_file_hash",
-      "class_name": "GetFileHashCommand",
-      "description": "Calculates cryptographic hashes (MD5, SHA-1, SHA-256) of a file",
-      "category": "file"
-    },
-    {
       "name": "getGitStatus",
       "module": "qzx.commands.development.get_git_status",
       "class_name": "GetGitStatusCommand",
@@ -307,6 +314,13 @@
       "module": "qzx.commands.system.get_startup_programs",
       "class_name": "GetStartupProgramsCommand",
       "description": "Lists all startup programs configured to run on system boot or user login",
+      "category": "system"
+    },
+    {
+      "name": "getSystemInfo",
+      "module": "qzx.commands.system.get_system_info",
+      "class_name": "GetSystemInfoCommand",
+      "description": "Gets portable operating-system, Python, user, and environment information with optional RAM and storage details",
       "category": "system"
     },
     {
@@ -419,13 +433,6 @@
       "module": "qzx.commands.development.prepare_release",
       "class_name": "PrepareReleaseCommand",
       "description": "Plans a release metadata update and can atomically update one manifest plus CHANGELOG.md; it never builds, commits, tags, or publishes",
-      "category": "development"
-    },
-    {
-      "name": "projectDoctor",
-      "module": "qzx.commands.development.project_doctor",
-      "class_name": "ProjectDoctorCommand",
-      "description": "Inspects project technologies, dependencies, validation workflows, Git state, source quality, and large files without executing project scripts",
       "category": "development"
     },
     {
@@ -548,13 +555,6 @@
       "category": "system"
     },
     {
-      "name": "systemInfo",
-      "module": "qzx.commands.system.system_info",
-      "class_name": "SystemInfoCommand",
-      "description": "Gets portable operating-system, Python, user, and environment information with optional RAM and storage details",
-      "category": "system"
-    },
-    {
       "name": "terminal",
       "module": "qzx.commands.system.terminal",
       "class_name": "TerminalCommand",
@@ -600,7 +600,7 @@
       "name": "version",
       "module": "qzx.commands.system.version",
       "class_name": "VersionCommand",
-      "description": "Displays the current version of QZX and system information",
+      "description": "Displays the installed QZX version and product identity",
       "category": "system"
     },
     {

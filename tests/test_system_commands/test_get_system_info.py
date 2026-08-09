@@ -1,14 +1,14 @@
 """Behavioral tests for the consolidated system-information contract."""
 
 from qzx import __version__
-from qzx.commands.system.system_info import SystemInfoCommand
+from qzx.commands.system.get_system_info import GetSystemInfoCommand
 
 
 def test_basic_system_info_is_structured_and_avoids_optional_probes():
     def unexpected_probe():
-        raise AssertionError("basic systemInfo must not run detailed probes")
+        raise AssertionError("basic getSystemInfo must not run detailed probes")
 
-    result = SystemInfoCommand(
+    result = GetSystemInfoCommand(
         details_collector=unexpected_probe
     ).execute()
 
@@ -30,7 +30,7 @@ def test_environment_values_are_opt_in_and_limited_to_the_allowlist():
         "LANG": "qzx-test-language",
     }
 
-    result = SystemInfoCommand(environ=environment).execute(
+    result = GetSystemInfoCommand(environ=environment).execute(
         include_environment=True
     )
 
@@ -41,12 +41,12 @@ def test_environment_values_are_opt_in_and_limited_to_the_allowlist():
     assert variables["LANG"] == "qzx-test-language"
     assert "QZX_SYSTEM_INFO_SECRET_FIXTURE" not in variables
     assert set(variables) <= set(
-        SystemInfoCommand._environment_variable_allowlist
+        GetSystemInfoCommand._environment_variable_allowlist
     )
 
 
 def test_detailed_system_info_runs_real_memory_and_storage_probes():
-    result = SystemInfoCommand().execute(detailed=True)
+    result = GetSystemInfoCommand().execute(detailed=True)
 
     assert result["success"] is True, result
     assert result["details_requested"] is True
@@ -56,7 +56,7 @@ def test_detailed_system_info_runs_real_memory_and_storage_probes():
 
 
 def test_system_info_cli_boolean_contract_is_strict():
-    result = SystemInfoCommand().invoke(["--detailed=maybe"])
+    result = GetSystemInfoCommand().invoke(["--detailed=maybe"])
 
     assert result["success"] is False
     assert result["error_code"] == "usage_error"
@@ -64,7 +64,7 @@ def test_system_info_cli_boolean_contract_is_strict():
 
 
 def test_system_info_direct_boolean_contract_is_structured():
-    result = SystemInfoCommand().execute(detailed="maybe")
+    result = GetSystemInfoCommand().execute(detailed="maybe")
 
     assert result["success"] is False
     assert result["error_code"] == "invalid_boolean"

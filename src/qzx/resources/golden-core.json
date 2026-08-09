@@ -85,9 +85,9 @@
       "listFiles",
       "findFiles",
       "findText",
-      "getFileHash",
+      "calculateFileHash",
       "getGitStatus",
-      "projectDoctor",
+      "diagnoseProject",
       "checkUrlStatus"
     ],
     "not_applicable": {
@@ -103,7 +103,7 @@
         "reason": "The command observes the already-established process working directory; deterministic synthetic failure would test the harness more than the public domain contract.",
         "reason_es": "El comando observa el directorio de trabajo ya establecido del proceso; un fallo sintético determinista probaría más al arnés que al contrato público de dominio."
       },
-      "systemInfo": {
+      "getSystemInfo": {
         "reason": "The default command has no required domain input; low-level platform API failure is environmental rather than a representative caller boundary.",
         "reason_es": "El comando predeterminado no tiene entrada de dominio obligatoria; un fallo de API de plataforma sería ambiental y no un límite representativo para quien llama."
       },
@@ -156,7 +156,7 @@
       "rationale_es": "Entrega la ruta actual y contexto acotado del directorio que los agentes necesitan con frecuencia antes de actuar."
     },
     {
-      "name": "systemInfo",
+      "name": "getSystemInfo",
       "role": "environment_context",
       "rationale": "Identifies the operating system, architecture, Python runtime, user context, and optional resource details.",
       "rationale_es": "Identifica sistema operativo, arquitectura, runtime de Python, contexto de usuario y detalles opcionales de recursos."
@@ -192,7 +192,7 @@
       "rationale_es": "Busca texto con coincidencia, contexto, filtros y límites de resultados explícitos."
     },
     {
-      "name": "getFileHash",
+      "name": "calculateFileHash",
       "role": "integrity_observation",
       "rationale": "Produces a reproducible cryptographic digest for identity and transfer verification.",
       "rationale_es": "Produce un digest criptográfico reproducible para verificar identidad y transferencias."
@@ -204,7 +204,7 @@
       "rationale_es": "Resume rama, remoto, cambios e historial reciente sin modificar el repositorio."
     },
     {
-      "name": "projectDoctor",
+      "name": "diagnoseProject",
       "role": "project_diagnostics",
       "rationale": "Performs bounded static project inspection while keeping project-owned validation commands explicitly unexecuted.",
       "rationale_es": "Realiza una inspección estática acotada del proyecto y mantiene explícitamente sin ejecutar las validaciones propias del proyecto."

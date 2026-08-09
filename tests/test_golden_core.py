@@ -18,15 +18,15 @@ EXPECTED_COMMANDS = [
     "help",
     "getCurrentDateTime",
     "getCurrentDirectory",
-    "systemInfo",
+    "getSystemInfo",
     "getDiskSpace",
     "getRamInfo",
     "listFiles",
     "findFiles",
     "findText",
-    "getFileHash",
+    "calculateFileHash",
     "getGitStatus",
-    "projectDoctor",
+    "diagnoseProject",
     "checkUrlStatus",
 ]
 
@@ -117,3 +117,58 @@ def test_golden_core_release_quality_policy_is_fail_closed():
     assert policy["requires_zero_known_release_blockers"] is True
     assert policy["note"].strip()
     assert policy["note_es"].strip()
+
+
+def test_golden_core_catalog_allows_alpha_commands_to_be_development_only(tmp_path):
+    registry = load_golden_core()
+    commands = {}
+    for name in EXPECTED_COMMANDS:
+        commands[name] = {
+            "safety": {
+                "operation": "read-only",
+                "privilege_sensitive": False,
+                "shares_external_data": False,
+            },
+            "availability": {
+                "included_in_pypi": name not in {
+                    "getSystemInfo",
+                    "calculateFileHash",
+                    "diagnoseProject",
+                }
+            },
+        }
+    catalog_path = tmp_path / "commands.json"
+    catalog_path.write_text(
+        json.dumps({"commands": commands}),
+        encoding="utf-8",
+    )
+
+    assert validate_golden_core(registry, catalog_path=catalog_path) == []
+
+
+def test_golden_core_catalog_rejects_missing_package_availability_metadata(tmp_path):
+    registry = load_golden_core()
+    commands = {
+        name: {
+            "safety": {
+                "operation": "read-only",
+                "privilege_sensitive": False,
+                "shares_external_data": False,
+            },
+            "availability": {"included_in_pypi": True},
+        }
+        for name in EXPECTED_COMMANDS
+    }
+    commands["getSystemInfo"]["availability"] = {}
+    catalog_path = tmp_path / "commands.json"
+    catalog_path.write_text(
+        json.dumps({"commands": commands}),
+        encoding="utf-8",
+    )
+
+    errors = validate_golden_core(registry, catalog_path=catalog_path)
+
+    assert any(
+        "invalid package-availability metadata: getSystemInfo" in error
+        for error in errors
+    )

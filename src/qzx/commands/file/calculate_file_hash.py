@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-GetFileHash Command - Computes MD5, SHA-1, or SHA-256 cryptographic hashes for a file
+CalculateFileHash Command - Computes MD5, SHA-1, or SHA-256 cryptographic hashes for a file
 """
 
 import os
@@ -10,12 +10,12 @@ import hashlib
 
 from qzx.core.command_base import CommandBase
 
-class GetFileHashCommand(CommandBase):
+class CalculateFileHashCommand(CommandBase):
     """
     Command to calculate cryptographic hash values of files
     """
     
-    name = "getFileHash"
+    name = "calculateFileHash"
     description = "Calculates cryptographic hashes (MD5, SHA-1, SHA-256) of a file"
     category = "file"
     
@@ -35,11 +35,11 @@ class GetFileHashCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx getFileHash file.txt',
+            'command': 'qzx calculateFileHash file.txt',
             'description': 'Calculate SHA-256 hash for file.txt'
         },
         {
-            'command': 'qzx getFileHash file.txt md5',
+            'command': 'qzx calculateFileHash file.txt md5',
             'description': 'Calculate MD5 hash for file.txt'
         }
     ]

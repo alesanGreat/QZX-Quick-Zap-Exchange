@@ -2,20 +2,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Tests for the GetFileHash command
+Tests for the CalculateFileHash command
 """
 
 import hashlib
-from qzx.commands.file.get_file_hash import GetFileHashCommand
+from qzx.commands.file.calculate_file_hash import CalculateFileHashCommand
 
-class TestGetFileHashCommand:
+class TestCalculateFileHashCommand:
     """
-    Tests for the GetFileHash command
+    Tests for the CalculateFileHash command
     """
     
     def setup_method(self):
         """Setup for each test"""
-        self.command = GetFileHashCommand()
+        self.command = CalculateFileHashCommand()
         
     def test_format_bytes(self):
         """Test formatting bytes to human-readable size"""

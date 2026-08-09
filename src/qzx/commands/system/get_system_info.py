@@ -12,10 +12,10 @@ from qzx import __version__
 from qzx.core.command_base import CommandBase
 
 
-class SystemInfoCommand(CommandBase):
+class GetSystemInfoCommand(CommandBase):
     """Inspect portable host facts, with costlier sections on demand."""
 
-    name = "systemInfo"
+    name = "getSystemInfo"
     description = (
         "Gets portable operating-system, Python, user, and environment "
         "information with optional RAM and storage details"
@@ -46,15 +46,15 @@ class SystemInfoCommand(CommandBase):
 
     examples = [
         {
-            "command": "qzx systemInfo",
+            "command": "qzx getSystemInfo",
             "description": "Get a fast, portable system summary",
         },
         {
-            "command": "qzx systemInfo --detailed",
+            "command": "qzx getSystemInfo --detailed",
             "description": "Add current RAM and storage details",
         },
         {
-            "command": "qzx systemInfo --include-environment",
+            "command": "qzx getSystemInfo --include-environment",
             "description": "Include selected local environment variables",
         },
     ]

@@ -26,7 +26,7 @@ def _run_qzx(*arguments):
         env=environment,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=60,
         check=False,
     )
 

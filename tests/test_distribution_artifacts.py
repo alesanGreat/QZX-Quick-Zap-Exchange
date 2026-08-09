@@ -33,15 +33,15 @@ GOLDEN_CORE_COMMANDS = [
     "help",
     "getCurrentDateTime",
     "getCurrentDirectory",
-    "systemInfo",
+    "getSystemInfo",
     "getDiskSpace",
     "getRamInfo",
     "listFiles",
     "findFiles",
     "findText",
-    "getFileHash",
+    "calculateFileHash",
     "getGitStatus",
-    "projectDoctor",
+    "diagnoseProject",
     "checkUrlStatus",
 ]
 GOLDEN_CORE_REGISTRY = json.dumps({

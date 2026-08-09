@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Tests for the consolidated, read-only projectDoctor command."""
+"""Tests for the consolidated, read-only diagnoseProject command."""
 
 import json
 
-from qzx.commands.development.project_doctor import ProjectDoctorCommand
+from qzx.commands.development.diagnose_project import DiagnoseProjectCommand
 
 
-class TestProjectDoctorCommand:
+class TestDiagnoseProjectCommand:
     """Exercise truthful discovery and evidence boundaries."""
 
     def setup_method(self):
-        self.command = ProjectDoctorCommand()
+        self.command = DiagnoseProjectCommand()
 
     def test_rejects_nonexistent_path(self):
         result = self.command.execute(path="nonexistent_folder_xyz")

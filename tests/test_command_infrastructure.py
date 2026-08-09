@@ -7,7 +7,6 @@ from qzx.commands.development.analyze_complexity import AnalyzeComplexityCommand
 from qzx.commands.file.change_permissions import ChangePermissionsCommand
 from qzx.commands.system.help import HelpCommand
 from qzx.commands.system.list_commands import ListCommandsCommand
-from qzx.commands.system.version import VersionCommand
 from qzx.core.command_loader import CommandLoader
 from qzx.core.command_index import (
     CommandIndexError,
@@ -139,8 +138,13 @@ def test_command_list_structured_entries_are_deterministically_sorted():
 def test_retired_commands_and_old_names_are_not_available():
     loader = CommandLoader()
 
-    assert loader.get_command("systemInfo").name == "systemInfo"
+    assert loader.get_command("getSystemInfo").name == "getSystemInfo"
+    assert loader.get_command("diagnoseProject").name == "diagnoseProject"
+    assert loader.get_command("calculateFileHash").name == "calculateFileHash"
     for retired_name in (
+        "systemInfo",
+        "projectDoctor",
+        "getFileHash",
         "bootstrapProject",
         "cleanDevCaches",
         "commandsBridge",
@@ -159,11 +163,10 @@ def test_retired_commands_and_old_names_are_not_available():
 def test_command_counts_are_consistent():
     loader = CommandLoader()
     canonical_count = len(set(loader.get_all_commands().values()))
-    version_result = VersionCommand().execute()
     list_result = ListCommandsCommand().execute()
 
-    assert version_result["qzx_info"]["command_count"] == canonical_count
     assert list_result["summary"]["commands"] == canonical_count
+    assert len(load_command_index()["commands"]) == canonical_count
 
 
 def test_boolean_parameter_defaults_are_typed_not_stringly_typed():

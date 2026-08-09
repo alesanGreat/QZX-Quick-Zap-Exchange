@@ -40,15 +40,15 @@ The Golden Core therefore has two goals:
 | `help` | Interface discovery | Exposes parameters, examples, safety notes, and maturity before use. |
 | `getCurrentDateTime` | Temporal context | Returns timezone-aware date and timestamp context portably. |
 | `getCurrentDirectory` | Workspace context | Reports the current path and bounded directory context. |
-| `systemInfo` | Environment context | Identifies OS, architecture, Python, user context, and optional resources. |
+| `getSystemInfo` | Environment context | Identifies OS, architecture, Python, user context, and optional resources. |
 | `getDiskSpace` | Storage capacity | Reports raw and human-readable disk capacity before data-intensive work. |
 | `getRamInfo` | Memory capacity | Reports memory capacity and pressure for workload decisions. |
 | `listFiles` | Directory inventory | Provides wildcard and depth-controlled file inventory. |
 | `findFiles` | File discovery | Adds explicit depth, size, date, exclusions, sorting, and truncation. |
 | `findText` | Content search | Searches text with matching, context, filters, and limits. |
-| `getFileHash` | Integrity observation | Produces reproducible cryptographic file identities. |
+| `calculateFileHash` | Integrity observation | Produces reproducible cryptographic file identities. |
 | `getGitStatus` | Repository state | Summarizes branch, remote, changes, and history without mutation. |
-| `projectDoctor` | Project diagnostics | Performs bounded static inspection without running project-owned workflows. |
+| `diagnoseProject` | Project diagnostics | Performs bounded static inspection without running project-owned workflows. |
 | `checkUrlStatus` | Endpoint observation | Adds one bounded HTTP status, latency, and header observation. |
 
 The cohort deliberately includes commands with different evidence challenges.
@@ -78,12 +78,20 @@ Passing one dimension never substitutes for another. Mocked unit tests do not
 become platform evidence, a captured success does not prove every failure path,
 and inclusion in Golden Core does not freeze an interface.
 
+While QZX remains Alpha, an intentional breaking rename can temporarily make a
+selected command development-only even though the previous published package
+contains its predecessor name. The catalog must expose that availability
+honestly instead of rejecting the whole cohort or pretending the new name is
+already installable from PyPI. Such a command cannot satisfy release quality
+until an exact release containing the current name and implementation is
+published and attested.
+
 ### Failure evidence must be meaningful, not manufactured
 
 Golden Core classifies the failure-or-boundary dimension explicitly. Ten
 commands expose a useful caller-controlled failure boundary and therefore need a
 captured failed result. Five commands (`version`, `listCommands`,
-`getCurrentDirectory`, `systemInfo`, and `getRamInfo`) have no representative
+`getCurrentDirectory`, `getSystemInfo`, and `getRamInfo`) have no representative
 caller-controlled domain failure in their ordinary interface; their failure
 requirement is marked **not applicable** with a bilingual rationale in the
 canonical registry.

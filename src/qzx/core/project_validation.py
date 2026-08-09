@@ -138,7 +138,7 @@ def inspect_validation_workflows(
     return {
         "execution_policy": "discovery_only",
         "execution_note": (
-            "projectDoctor never executes project-owned tests, linters, type "
+            "diagnoseProject never executes project-owned tests, linters, type "
             "checkers, builds, package scripts, hooks, or installers."
         ),
         "tests": tests,

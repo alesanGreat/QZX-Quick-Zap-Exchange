@@ -81,17 +81,15 @@ def configured_attestation_path(registry: dict[str, Any]) -> Path:
     return candidate
 
 
-def expected_command_names(registry: dict[str, Any]) -> list[str]:
-    commands = registry.get("commands")
-    if not isinstance(commands, list):
-        raise ValueError("Golden Core commands must be an array.")
-    names = [
-        item.get("name")
-        for item in commands
-        if isinstance(item, dict) and isinstance(item.get("name"), str)
-    ]
-    if len(names) != 15 or len(set(names)) != 15:
-        raise ValueError("Golden Core must contain exactly 15 unique commands.")
+def attested_command_names(document: dict[str, Any]) -> list[str]:
+    """Return the immutable command cohort recorded by one attestation."""
+
+    commands = document.get("commands")
+    if not isinstance(commands, dict):
+        raise ValueError("Release-quality attestation commands must be an object.")
+    names = [name for name in commands if isinstance(name, str) and name.strip()]
+    if len(names) != 15 or len(set(names)) != 15 or len(names) != len(commands):
+        raise ValueError("Release-quality attestation must contain 15 unique commands.")
     return names
 
 
@@ -119,13 +117,17 @@ def validate_attestation(
     *,
     registry: dict[str, Any] | None = None,
     verify_git: bool = False,
+    verify_current_implementations: bool = False,
 ) -> list[str]:
     """Return deterministic validation errors for one release-quality record."""
 
     registry = registry if registry is not None else load_registry()
     errors: list[str] = []
-    names = expected_command_names(registry)
-    digests = current_command_digests(names)
+    try:
+        names = attested_command_names(document)
+    except ValueError as exception:
+        names = []
+        errors.append(str(exception))
     policy = registry.get("release_quality_policy")
     if not isinstance(policy, dict):
         return ["Golden Core release_quality_policy is missing."]
@@ -239,18 +241,35 @@ def validate_attestation(
 
     commands = document.get("commands")
     if not isinstance(commands, dict) or set(commands) != set(names):
-        errors.append("Release-quality command map must contain exactly the Golden Core commands.")
+        errors.append("Release-quality command map is malformed.")
         commands = {}
     for name in names:
         record = commands.get(name)
         if not isinstance(record, dict):
             errors.append(f"Release-quality command record is missing: {name}.")
             continue
-        observed_digest = record.get("implementation_digest")
-        if observed_digest != digests[name]:
-            errors.append(f"Release-quality implementation digest is stale for {name}.")
+        if not _valid_sha256(record.get("implementation_digest")):
+            errors.append(f"Release-quality implementation digest is invalid for {name}.")
         if record.get("release_blockers") != []:
             errors.append(f"Release-quality command has unresolved blockers: {name}.")
+
+    if verify_current_implementations:
+        loader = CommandLoader()
+        for name in names:
+            command = loader.get_command(name)
+            if command is None:
+                errors.append(
+                    f"Attested command is no longer a current canonical command: {name}."
+                )
+                continue
+            record = commands.get(name)
+            if not isinstance(record, dict):
+                continue
+            current_digest = command_implementation_digest(type(command))
+            if record.get("implementation_digest") != current_digest:
+                errors.append(
+                    f"Release-quality implementation digest is stale for current {name}."
+                )
 
     quality_gates = document.get("quality_gates")
     if not isinstance(quality_gates, dict):
@@ -331,6 +350,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Additionally require the local annotated tag to resolve to source_revision.",
     )
+    parser.add_argument(
+        "--verify-current-implementations",
+        action="store_true",
+        help=(
+            "Also compare the historical attestation with commands currently canonical "
+            "in this checkout. This may intentionally fail after Alpha redesigns."
+        ),
+    )
     parser.add_argument("--json", action="store_true", help="Print machine-readable output.")
     return parser.parse_args()
 
@@ -341,7 +368,12 @@ def main() -> int:
         registry = load_registry()
         path = args.attestation.resolve() if args.attestation else configured_attestation_path(registry)
         document = load_json(path, "Golden Core release-quality attestation")
-        errors = validate_attestation(document, registry=registry, verify_git=args.verify_git)
+        errors = validate_attestation(
+            document,
+            registry=registry,
+            verify_git=args.verify_git,
+            verify_current_implementations=args.verify_current_implementations,
+        )
         result = report(document, errors)
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exception:
         result = {
