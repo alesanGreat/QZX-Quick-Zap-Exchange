@@ -40,27 +40,45 @@ a discriminated union so failed results require a stable `error_code` at the
 TypeScript type level.
 
 The example is intentionally transport-neutral. For MCP, place the resulting
-object in `structuredContent`, expose the canonical QZX schema as
-`outputSchema`, and keep MCP `isError` consistent with `!success` as described
-below.
+object in `structuredContent`, keep MCP `isError` consistent with `!success`,
+and expose the strongest truthful `outputSchema` your SDK can publish. Use the
+canonical QZX schema directly or through `allOf` when supported; object-schema-
+only SDKs can expose the constrained QZX core and receive the explicitly weaker
+`structural_core` evidence mode.
 
 ## MCP structured-output profile fixtures
 
 QZX supports revision-specific MCP profiles for 2025-06-18, 2025-11-25, and
-2026-07-28. The checked-in fixtures use the 2026-07-28 wire shape and therefore
-include `resultType: "complete"`. For a 2025 profile, real evidence may omit that
-field; the `structuredContent`, `isError`, and `outputSchema` invariants remain.
+2026-07-28. The repository now includes both historical 2025 wire evidence
+without `resultType` and 2026-07-28 evidence with `resultType: "complete"`, so an
+adopter does not need to edit a newer fixture to simulate an older server.
 
 | File | Purpose |
 | --- | --- |
-| `mcp-tool-definition.json` | Tool definition exposing QZX Result Contract v1 as `outputSchema`. |
-| `mcp-success.json` | Completed successful MCP tool result. |
-| `mcp-failure.json` | Completed failed MCP tool execution with `isError: true`. |
+| `mcp-tool-definition.json` | Strong `canonical_ref` tool definition using QZX Result Contract v1 as `outputSchema`. |
+| `mcp-structural-tool-definition.json` | SDK-portable `structural_core` tool definition that keeps a domain-shaped object schema. |
+| `mcp-2025-success.json` | Completed 2025-06-18/2025-11-25 success result with no `resultType`. |
+| `mcp-2025-failure.json` | Completed 2025-06-18/2025-11-25 tool-execution failure with no `resultType`. |
+| `mcp-success.json` | Completed MCP 2026-07-28 success with `resultType: "complete"`. |
+| `mcp-failure.json` | Completed MCP 2026-07-28 tool-execution failure with `isError: true`. |
 | `mcp-invalid-is-error.json` | Deliberate contradiction between MCP `isError` and QZX `success`. |
 | `mcp-protocol-error.json` | JSON-RPC protocol error that must remain outside a completed QZX result. |
 
-Validate the complete success/failure pair and tool definition, then write a
-deterministic conformance receipt:
+Validate the portable 2025 case exactly as a maintained object-schema-only MCP
+SDK might expose it:
+
+```bash
+python scripts/validate_result_contract_evidence.py \
+  --profile mcp-2025-11-25 \
+  --success examples/result_contract/mcp-2025-success.json \
+  --failure examples/result_contract/mcp-2025-failure.json \
+  --tool-definition examples/result_contract/mcp-structural-tool-definition.json \
+  --report qzx-conformance.json
+```
+
+That receipt reports `output_schema_mode: structural_core`; it does not pretend
+the canonical QZX schema is embedded in `outputSchema`. To exercise the stronger
+2026 canonical-reference path instead:
 
 ```bash
 python scripts/validate_result_contract_evidence.py \

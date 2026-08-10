@@ -1,0 +1,32 @@
+{
+  "name": "get_current_time",
+  "description": "Return the current local time.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false
+  },
+  "outputSchema": {
+    "type": "object",
+    "required": [
+      "success",
+      "message"
+    ],
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "message": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "error_code": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "output": {
+        "type": "string"
+      }
+    }
+  }
+}

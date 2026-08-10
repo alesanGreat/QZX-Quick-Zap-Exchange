@@ -86,13 +86,13 @@ jobs:
           failure: examples/result_contract/valid-failure.json
           report: qzx-core-conformance.json
 
-      - name: Validate MCP 2025-11-25 evidence through the public Composite Action
+      - name: Validate MCP 2025-11-25 structural evidence through the public Composite Action
         uses: ./.github/actions/result-contract-conformance
         with:
           profile: mcp-2025-11-25
-          success: examples/result_contract/mcp-success.json
-          failure: examples/result_contract/mcp-failure.json
-          tool-definition: examples/result_contract/mcp-tool-definition.json
+          success: examples/result_contract/mcp-2025-success.json
+          failure: examples/result_contract/mcp-2025-failure.json
+          tool-definition: examples/result_contract/mcp-structural-tool-definition.json
           report: qzx-mcp-2025-conformance.json
 
       - name: Validate MCP 2026-07-28 evidence through the public Composite Action
@@ -111,15 +111,21 @@ jobs:
           from pathlib import Path
 
           expected = {
-              "qzx-core-conformance.json": "core",
-              "qzx-mcp-2025-conformance.json": "mcp-2025-11-25",
-              "qzx-mcp-2026-conformance.json": "mcp-2026-07-28",
+              "qzx-core-conformance.json": ("core", None),
+              "qzx-mcp-2025-conformance.json": ("mcp-2025-11-25", "structural_core"),
+              "qzx-mcp-2026-conformance.json": ("mcp-2026-07-28", "canonical_ref"),
           }
-          for filename, profile in expected.items():
+          for filename, (profile, output_schema_mode) in expected.items():
               report = json.loads(Path(filename).read_text(encoding="utf-8"))
               assert report["success"] is True, report
               assert report["details"]["profile"] == profile, report
               assert all(case["conformant"] for case in report["details"]["cases"]), report
+              if output_schema_mode is not None:
+                  modes = {
+                      case["profile_facts"].get("output_schema_mode")
+                      for case in report["details"]["cases"]
+                  }
+                  assert modes == {output_schema_mode}, report
 
   python:
     name: >-

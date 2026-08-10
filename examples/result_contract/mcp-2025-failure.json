@@ -1,0 +1,18 @@
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":false,\"message\":\"The requested path was not found.\",\"error_code\":\"path_not_found\"}"
+      }
+    ],
+    "structuredContent": {
+      "success": false,
+      "message": "The requested path was not found.",
+      "error_code": "path_not_found"
+    },
+    "isError": true
+  }
+}

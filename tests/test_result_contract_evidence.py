@@ -67,44 +67,18 @@ def test_mcp_success_failure_pair_checks_tool_definition():
     )
 
 
-def test_structural_mcp_output_schema_is_visible_in_receipt(tmp_path):
-    tool_definition_path = tmp_path / "tool-definition.json"
-    tool_definition_path.write_text(
-        json.dumps(
-            {
-                "name": "portable-zod-style-tool",
-                "outputSchema": {
-                    "type": "object",
-                    "required": ["success", "message", "isError"],
-                    "properties": {
-                        "success": {"type": "boolean"},
-                        "message": {
-                            "type": "string",
-                            "minLength": 1,
-                            "pattern": "\\S",
-                        },
-                        "error": {
-                            "type": "string",
-                            "minLength": 1,
-                            "pattern": "\\S",
-                        },
-                        "isError": {"type": "boolean"},
-                        "data": {"type": ["object", "null"]},
-                    },
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
-
+def test_structural_mcp_fixture_is_visible_in_2025_receipt():
     report = validator.validate_evidence(
-        profile=validator.PROFILE_MCP,
-        success_path=str(FIXTURE_ROOT / "mcp-success.json"),
-        failure_path=str(FIXTURE_ROOT / "mcp-failure.json"),
-        tool_definition_path=str(tool_definition_path),
+        profile="mcp-2025-11-25",
+        success_path=str(FIXTURE_ROOT / "mcp-2025-success.json"),
+        failure_path=str(FIXTURE_ROOT / "mcp-2025-failure.json"),
+        tool_definition_path=str(
+            FIXTURE_ROOT / "mcp-structural-tool-definition.json"
+        ),
     )
 
     assert report["success"] is True
+    assert report["details"]["mcp_specification"] == "2025-11-25"
     assert all(
         case["profile_facts"]["output_schema_mode"] == "structural_core"
         for case in report["details"]["cases"]
@@ -112,25 +86,15 @@ def test_structural_mcp_output_schema_is_visible_in_receipt(tmp_path):
     assert all(case["warnings"] for case in report["details"]["cases"])
 
 
-def test_legacy_mcp_profiles_accept_completed_results_without_result_type(tmp_path):
-    paths = {}
-    for role in ("success", "failure"):
-        document = json.loads(
-            (FIXTURE_ROOT / f"mcp-{role}.json").read_text(encoding="utf-8")
-        )
-        document["result"].pop("resultType")
-        path = tmp_path / f"mcp-legacy-{role}.json"
-        path.write_text(json.dumps(document), encoding="utf-8")
-        paths[role] = path
-
+def test_legacy_mcp_profiles_accept_checked_in_2025_fixtures():
     for profile, specification in (
         ("mcp-2025-06-18", "2025-06-18"),
         ("mcp-2025-11-25", "2025-11-25"),
     ):
         report = validator.validate_evidence(
             profile=profile,
-            success_path=str(paths["success"]),
-            failure_path=str(paths["failure"]),
+            success_path=str(FIXTURE_ROOT / "mcp-2025-success.json"),
+            failure_path=str(FIXTURE_ROOT / "mcp-2025-failure.json"),
             tool_definition_path=str(FIXTURE_ROOT / "mcp-tool-definition.json"),
         )
         assert report["success"] is True

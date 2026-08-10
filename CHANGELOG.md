@@ -25,6 +25,10 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   Vendr MCP server shape using its current Zod/TypeScript tool-output pattern;
   generated MCP 2025-11-25 success/failure evidence conforms as
   `structural_core` without removing Vendr's existing result fields.
+- Added copyable MCP 2025 success/failure fixtures without `resultType` plus a
+  portable `structural_core` tool definition, and made the public Composite
+  Action smoke test exercise those exact files so the documented 2025 adoption
+  path is continuously tested rather than synthesized only inside unit tests.
 
 ## 0.2.2.0.7a5 — 2026-08-08
 

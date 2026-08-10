@@ -34,31 +34,6 @@ def without_result_type(name):
     return document
 
 
-def structural_tool_definition():
-    return {
-        "name": "example",
-        "outputSchema": {
-            "type": "object",
-            "required": ["success", "message", "isError"],
-            "properties": {
-                "success": {"type": "boolean"},
-                "message": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "\\S",
-                },
-                "error": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "\\S",
-                },
-                "isError": {"type": "boolean"},
-                "data": {"type": ["object", "null"]},
-            },
-        },
-    }
-
-
 def test_success_and_failure_fixtures_conform_with_output_schema():
     tool_definition = load_fixture("mcp-tool-definition.json")
     for fixture_name in ("mcp-success.json", "mcp-failure.json"):
@@ -98,7 +73,7 @@ def test_allof_composition_preserves_canonical_schema_claim():
 def test_structural_output_schema_is_portable_but_reported_as_weaker_evidence():
     violations, warnings, details = validator.validate_mcp_profile(
         load_fixture("mcp-success.json"),
-        structural_tool_definition(),
+        load_fixture("mcp-structural-tool-definition.json"),
     )
     assert violations == []
     assert warnings == [
@@ -111,7 +86,7 @@ def test_structural_output_schema_is_portable_but_reported_as_weaker_evidence():
 
 
 def test_structural_output_schema_rejects_weak_or_bypass_shapes():
-    weak = structural_tool_definition()
+    weak = load_fixture("mcp-structural-tool-definition.json")
     weak["outputSchema"]["properties"]["message"]["pattern"] = "\\S?"
     weak["outputSchema"]["properties"]["success"]["type"] = ["boolean", "null"]
     violations, _, details = validator.validate_mcp_profile(
@@ -139,12 +114,14 @@ def test_structural_output_schema_rejects_weak_or_bypass_shapes():
     assert details["output_schema_mode"] is None
 
 
-def test_legacy_structured_output_profiles_do_not_require_result_type():
+def test_legacy_structured_output_fixtures_do_not_require_result_type():
     tool_definition = load_fixture("mcp-tool-definition.json")
     for specification_version in ("2025-06-18", "2025-11-25"):
-        for fixture_name in ("mcp-success.json", "mcp-failure.json"):
+        for fixture_name in ("mcp-2025-success.json", "mcp-2025-failure.json"):
+            document = load_fixture(fixture_name)
+            assert "resultType" not in document["result"]
             violations, warnings, details = validator.validate_mcp_profile(
-                without_result_type(fixture_name),
+                document,
                 tool_definition,
                 specification_version,
             )
@@ -235,17 +212,12 @@ def test_cli_json_report_accepts_full_jsonrpc_response():
     assert report["details"]["violations"] == []
 
 
-def test_cli_accepts_2025_11_25_result_without_result_type(tmp_path):
-    evidence_path = tmp_path / "mcp-2025-11-25-success.json"
-    evidence_path.write_text(
-        json.dumps(without_result_type("mcp-success.json")),
-        encoding="utf-8",
-    )
+def test_cli_accepts_checked_in_2025_11_25_fixture_without_result_type():
     process = subprocess.run(
         [
             sys.executable,
             str(SCRIPT_PATH),
-            str(evidence_path),
+            str(FIXTURE_ROOT / "mcp-2025-success.json"),
             "--spec-version",
             "2025-11-25",
             "--tool-definition",

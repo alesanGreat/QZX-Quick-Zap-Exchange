@@ -108,8 +108,9 @@ jobs:
 `@main` is convenient for an initial experiment. Before publishing durable
 adoption evidence, replace it with the full QZX commit SHA that you actually
 validated against. The Action fails the job when the pair does not conform and
-writes the receipt path plus scalar `conformant`, `profile`, and `receipt_schema`
-outputs for later workflow steps. Its GitHub job summary keeps the PASS/FAIL
+writes the receipt path plus scalar `conformant`, `profile`, `receipt_schema`,
+and `output_schema_mode` outputs for later workflow steps. Its GitHub job summary
+keeps the PASS/FAIL
 result, receipt metadata, the specification link, and factual creator
 attribution together with the run.
 
@@ -179,9 +180,13 @@ In the Composite Action, use the same revision-specific `profile` and add:
 ```
 
 The repository includes copyable fixtures under
-[`examples/result_contract/`](../examples/result_contract/), including a tool
-definition, completed success, completed failure, contradictory `isError`, and
-protocol-error examples.
+[`examples/result_contract/`](../examples/result_contract/). Use
+`mcp-2025-success.json` / `mcp-2025-failure.json` for real 2025 wire examples
+without `resultType`, `mcp-success.json` / `mcp-failure.json` for the 2026-07-28
+`complete` shape, `mcp-tool-definition.json` for `canonical_ref`, and
+`mcp-structural-tool-definition.json` for the SDK-portable `structural_core`
+case. Contradictory `isError` and protocol-error fixtures remain available for
+negative testing.
 
 ## 5. Publish the smallest reviewable evidence bundle
 
