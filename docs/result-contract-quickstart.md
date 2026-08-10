@@ -113,9 +113,16 @@ outputs for later workflow steps. Its GitHub job summary keeps the PASS/FAIL
 result, receipt metadata, the specification link, and factual creator
 attribution together with the run.
 
-## 4. MCP 2026-07-28: use the contract as `outputSchema`
+## 4. MCP 2025-06-18 and newer: use the contract as `outputSchema`
 
-For an MCP tool, declare the QZX schema as the tool's `outputSchema`:
+MCP 2025-06-18 already supports `outputSchema`, `structuredContent`, and
+`isError`. QZX therefore supports three revision-specific profiles:
+`mcp-2025-06-18`, `mcp-2025-11-25`, and `mcp-2026-07-28`. Choose the profile
+matching the MCP revision your producer actually implements; you do not need to
+upgrade an otherwise-compatible server just to try QZX Result Contract.
+
+When the SDK permits it, the strongest small form is to declare the canonical
+QZX schema as the tool's `outputSchema`:
 
 ```json
 {
@@ -125,6 +132,15 @@ For an MCP tool, declare the QZX schema as the tool's `outputSchema`:
   }
 }
 ```
+
+If an SDK only accepts object-shaped schemas, keep the existing typed domain
+schema and add required `success`/`message` plus an `error` or `error_code`
+field with the QZX constraints. QZX records that portable form as
+`structural_core`; it remains conformant when the submitted success/failure
+results pass the complete canonical contract, but the receipt makes clear that
+`outputSchema` alone is not a full canonical embedding. SDKs that support
+`allOf` can instead compose the QZX `$ref` with their domain schema and receive
+the stronger `canonical_allof` mode.
 
 For a completed successful call:
 
@@ -138,21 +154,25 @@ For a completed tool-execution failure:
 - set `structuredContent.success` to `false`;
 - set MCP `isError` to `true`.
 
-Keep MCP/JSON-RPC **protocol errors** as protocol errors. Do not manufacture a
-completed QZX result for an invalid request or other protocol-level failure.
+For MCP 2026-07-28, a completed result must also carry
+`resultType: "complete"`. Do not add that requirement to 2025-06-18 or
+2025-11-25 evidence. Keep MCP/JSON-RPC **protocol errors** as protocol errors;
+do not manufacture a completed QZX result for an invalid request or other
+protocol-level failure.
 
-Validate both completed results and the tool definition in one receipt with:
+Validate both completed results and the tool definition in one receipt with the
+profile matching the producer. For example:
 
 ```bash
 python scripts/validate_result_contract_evidence.py \
-  --profile mcp-2026-07-28 \
+  --profile mcp-2025-11-25 \
   --success result-contract-evidence/success.json \
   --failure result-contract-evidence/failure.json \
   --tool-definition result-contract-evidence/tool-definition.json \
   --report result-contract-evidence/qzx-conformance.json
 ```
 
-In the Composite Action, use `profile: mcp-2026-07-28` and add:
+In the Composite Action, use the same revision-specific `profile` and add:
 
 ```yaml
           tool-definition: result-contract-evidence/tool-definition.json

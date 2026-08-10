@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Validate the QZX Result Contract v1 MCP 2026-07-28 interoperability profile."""
+"""Validate a QZX Result Contract v1 MCP structured-output profile."""
 
 from __future__ import annotations
 
@@ -23,10 +23,23 @@ from qzx.core.result_contract import (  # noqa: E402
 )
 
 
-MCP_SPECIFICATION_VERSION = "2026-07-28"
-MCP_TOOLS_SPEC_URL = (
-    "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
+MCP_SPECIFICATION_VERSIONS = (
+    "2025-06-18",
+    "2025-11-25",
+    "2026-07-28",
 )
+MCP_SPECIFICATION_VERSION = MCP_SPECIFICATION_VERSIONS[-1]
+MCP_TOOLS_SPEC_URLS = {
+    version: f"https://modelcontextprotocol.io/specification/{version}/server/tools"
+    for version in MCP_SPECIFICATION_VERSIONS
+}
+MCP_TOOLS_SPEC_URL = MCP_TOOLS_SPEC_URLS[MCP_SPECIFICATION_VERSION]
+MCP_RESULT_TYPE_VERSION = "2026-07-28"
+
+OUTPUT_SCHEMA_CANONICAL_REF = "canonical_ref"
+OUTPUT_SCHEMA_CANONICAL_INLINE = "canonical_inline"
+OUTPUT_SCHEMA_CANONICAL_ALLOF = "canonical_allof"
+OUTPUT_SCHEMA_STRUCTURAL_CORE = "structural_core"
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,11 +54,20 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--spec-version",
+        choices=MCP_SPECIFICATION_VERSIONS,
+        default=MCP_SPECIFICATION_VERSION,
+        help=(
+            "MCP specification revision carried by the evidence. Defaults to "
+            f"{MCP_SPECIFICATION_VERSION}."
+        ),
+    )
+    parser.add_argument(
         "--tool-definition",
         help=(
             "Optional JSON file containing the MCP tool definition. When "
-            "provided, outputSchema must use the canonical QZX schema by "
-            "direct $ref or exact inline schema."
+            "provided, outputSchema must either embed the canonical QZX schema "
+            "or expose a compatible structural QZX core surface."
         ),
     )
     parser.add_argument(
@@ -104,49 +126,188 @@ def _backcompat_text_matches(content, structured_content):
     return False
 
 
-def _output_schema_violations(tool_definition):
+def _canonical_output_schema_mode(output_schema):
+    """Return the strongest reviewable canonical-QZX embedding mode, if any."""
+    if not isinstance(output_schema, dict):
+        return None
+
+    if output_schema.get("$ref") == RESULT_CONTRACT_SCHEMA_URL:
+        return OUTPUT_SCHEMA_CANONICAL_REF
+
+    if output_schema == load_result_contract_schema():
+        return OUTPUT_SCHEMA_CANONICAL_INLINE
+
+    all_of = output_schema.get("allOf")
+    if isinstance(all_of, list):
+        for item in all_of:
+            nested_mode = _canonical_output_schema_mode(item)
+            if nested_mode in {
+                OUTPUT_SCHEMA_CANONICAL_REF,
+                OUTPUT_SCHEMA_CANONICAL_INLINE,
+                OUTPUT_SCHEMA_CANONICAL_ALLOF,
+            }:
+                return OUTPUT_SCHEMA_CANONICAL_ALLOF
+
+    return None
+
+
+def _declares_exact_json_type(schema, expected_type):
+    return isinstance(schema, dict) and schema.get("type") == expected_type
+
+
+def _nonblank_string_schema(schema):
+    if not _declares_exact_json_type(schema, "string"):
+        return False
+    min_length = schema.get("minLength")
+    pattern = schema.get("pattern")
+    return (
+        isinstance(min_length, int)
+        and not isinstance(min_length, bool)
+        and min_length >= 1
+        and pattern == "\\S"
+    )
+
+
+def _error_code_schema(schema):
+    if not _declares_exact_json_type(schema, "string"):
+        return False
+    pattern = schema.get("pattern")
+    return pattern == "^[a-z][a-z0-9_]*$"
+
+
+def _structural_output_schema_violations(output_schema):
+    """Check the portable object-schema surface needed for QZX MCP adoption.
+
+    Some maintained MCP SDK 1.x high-level APIs accept only object-shaped output
+    schemas. They cannot portably publish an allOf wrapper around an existing
+    domain schema. This structural mode therefore checks that the advertised
+    output schema makes the stable QZX core fields discoverable and constrained,
+    while actual success/failure evidence is still validated against the full
+    canonical QZX Result Contract v1 schema.
+    """
+    violations = []
+    if not isinstance(output_schema, dict):
+        return ["The MCP tool definition must declare object-valued outputSchema."]
+
+    if output_schema.get("type") != "object":
+        violations.append(
+            "A structural QZX MCP outputSchema must declare type 'object'."
+        )
+
+    required = output_schema.get("required")
+    if not isinstance(required, list):
+        required = []
+    for field in ("success", "message"):
+        if field not in required:
+            violations.append(
+                f"A structural QZX MCP outputSchema must require '{field}'."
+            )
+
+    properties = output_schema.get("properties")
+    if not isinstance(properties, dict):
+        return violations + [
+            "A structural QZX MCP outputSchema must declare object properties."
+        ]
+
+    if not _declares_exact_json_type(properties.get("success"), "boolean"):
+        violations.append(
+            "A structural QZX MCP outputSchema must declare success as exactly boolean."
+        )
+
+    if not _nonblank_string_schema(properties.get("message")):
+        violations.append(
+            "A structural QZX MCP outputSchema must constrain message to a "
+            "non-empty, non-whitespace string (minLength >= 1 and a \\S pattern)."
+        )
+
+    declares_failure_evidence = _nonblank_string_schema(
+        properties.get("error")
+    ) or _error_code_schema(properties.get("error_code"))
+    if not declares_failure_evidence:
+        violations.append(
+            "A structural QZX MCP outputSchema must declare at least one QZX "
+            "failure-evidence field: nonblank string 'error' or canonical "
+            "string 'error_code'."
+        )
+
+    return violations
+
+
+def _assess_output_schema(tool_definition):
+    """Return violations, warnings, and a stable output-schema evidence mode."""
     if not isinstance(tool_definition, dict):
-        return ["The MCP tool definition must be a JSON object."]
+        return ["The MCP tool definition must be a JSON object."], [], None
 
     output_schema = tool_definition.get("outputSchema")
     if not isinstance(output_schema, dict):
         return [
             "The MCP tool definition must declare object-valued outputSchema."
-        ]
+        ], [], None
 
-    if output_schema.get("$ref") == RESULT_CONTRACT_SCHEMA_URL:
-        return []
+    canonical_mode = _canonical_output_schema_mode(output_schema)
+    if canonical_mode is not None:
+        return [], [], canonical_mode
 
-    if output_schema == load_result_contract_schema():
-        return []
+    structural_violations = _structural_output_schema_violations(output_schema)
+    if structural_violations:
+        return structural_violations, [], None
 
-    return [
-        "outputSchema must directly reference the canonical QZX Result "
-        "Contract v1 schema or inline that schema exactly."
-    ]
+    return (
+        [],
+        [
+            "outputSchema exposes the QZX core structurally but does not embed "
+            "the canonical QZX schema. The submitted runtime evidence is "
+            "validated against the full Result Contract, but outputSchema alone "
+            "does not guarantee every QZX invariant."
+        ],
+        OUTPUT_SCHEMA_STRUCTURAL_CORE,
+    )
 
 
-def validate_mcp_profile(document, tool_definition=None):
+def validate_mcp_profile(
+    document,
+    tool_definition=None,
+    specification_version=MCP_SPECIFICATION_VERSION,
+):
     """Return deterministic QZX MCP profile violations, warnings, and facts."""
+    if specification_version not in MCP_TOOLS_SPEC_URLS:
+        raise ValueError(f"Unsupported MCP specification revision: {specification_version}")
+
     result, violations = _extract_tool_result(document)
     warnings = []
 
+    schema_violations = []
+    schema_warnings = []
+    output_schema_mode = None
+    if tool_definition is not None:
+        schema_violations, schema_warnings, output_schema_mode = _assess_output_schema(
+            tool_definition
+        )
+
     details = {
-        "mcp_specification": MCP_SPECIFICATION_VERSION,
-        "mcp_tools_spec": MCP_TOOLS_SPEC_URL,
+        "mcp_specification": specification_version,
+        "mcp_tools_spec": MCP_TOOLS_SPEC_URLS[specification_version],
         "contract": RESULT_CONTRACT_SCHEMA_URL,
         "output_schema_checked": tool_definition is not None,
+        "output_schema_mode": output_schema_mode,
         "backcompat_text_matches": False,
     }
 
     if result is None:
-        if tool_definition is not None:
-            violations.extend(_output_schema_violations(tool_definition))
+        violations.extend(schema_violations)
+        warnings.extend(schema_warnings)
         return violations, warnings, details
 
-    if result.get("resultType") != "complete":
+    result_type = result.get("resultType")
+    if specification_version == MCP_RESULT_TYPE_VERSION:
+        if result_type != "complete":
+            violations.append(
+                "The MCP 2026-07-28 profile applies only to resultType 'complete'."
+            )
+    elif result_type is not None and result_type != "complete":
         violations.append(
-            "The MCP 2026-07-28 profile applies only to resultType 'complete'."
+            f"The MCP {specification_version} profile applies only to completed "
+            "tool results."
         )
 
     content = result.get("content")
@@ -188,14 +349,16 @@ def validate_mcp_profile(document, tool_definition=None):
                 "object. MCP recommends this for backwards compatibility."
             )
 
-    if tool_definition is not None:
-        violations.extend(_output_schema_violations(tool_definition))
+    violations.extend(schema_violations)
+    warnings.extend(schema_warnings)
 
     return violations, warnings, details
 
 
 def main() -> int:
     args = parse_args()
+    specification_version = args.spec_version
+    tools_spec_url = MCP_TOOLS_SPEC_URLS[specification_version]
     try:
         document = load_document(args.path)
         tool_definition = (
@@ -206,15 +369,16 @@ def main() -> int:
         violations, warnings, profile_details = validate_mcp_profile(
             document,
             tool_definition,
+            specification_version,
         )
         result = {
             "success": not violations,
             "message": (
                 "The MCP result conforms to the QZX Result Contract v1 "
-                "MCP 2026-07-28 interoperability profile."
+                f"MCP {specification_version} interoperability profile."
                 if not violations
                 else "The MCP result violates the QZX Result Contract v1 "
-                "MCP 2026-07-28 interoperability profile."
+                f"MCP {specification_version} interoperability profile."
             ),
             "warnings": warnings,
             "details": {
@@ -229,8 +393,8 @@ def main() -> int:
             "error": str(exception),
             "error_code": "invalid_json_input",
             "details": {
-                "mcp_specification": MCP_SPECIFICATION_VERSION,
-                "mcp_tools_spec": MCP_TOOLS_SPEC_URL,
+                "mcp_specification": specification_version,
+                "mcp_tools_spec": tools_spec_url,
                 "contract": RESULT_CONTRACT_SCHEMA_URL,
                 "violations": [],
             },

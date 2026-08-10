@@ -7,9 +7,10 @@ infrastructure, or another clearly described public result.
 
 QZX's current adoption bottleneck is the first independently reviewable
 implementation or pilot of QZX Result Contract v1. Sponsorship may fund a
-bounded interoperability pilot, including an MCP 2026-07-28 implementation,
-public success/failure evidence, conformance receipts, reusable tests, and a
-written report of deviations or limitations.
+bounded interoperability pilot, including an MCP structured-output producer on
+2025-06-18, 2025-11-25, or 2026-07-28, public success/failure evidence,
+conformance receipts, reusable tests, and a written report of deviations or
+limitations.
 
 Funding alone never counts as adoption, conformance, certification, or
 endorsement. A sponsored implementation may appear in [ADOPTERS.md](ADOPTERS.md)

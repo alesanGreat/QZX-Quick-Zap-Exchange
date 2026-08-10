@@ -15,10 +15,14 @@ QZX; it does not prove independent interoperability or industry adoption.
 ### First independent implementation wanted
 
 The immediate adoption target is one small, public, independently reviewable
-implementation or pilot. An MCP 2026-07-28 producer is especially useful
-because the repository now includes success/failure fixtures and a dependency-
-free profile validator for `outputSchema`, `structuredContent`, `isError`, and
-QZX Result Contract consistency.
+implementation or pilot. Any structured-output MCP producer on 2025-06-18,
+2025-11-25, or 2026-07-28 is especially useful because the repository includes
+revision-specific dependency-free profile validation for `outputSchema`,
+`structuredContent`, `isError`, and QZX Result Contract consistency. Receipts
+also record whether the MCP schema relationship is canonical or the weaker
+`structural_core` form, so an adopter does not need to throw away a useful typed
+domain schema just to run a QZX pilot. A producer does not need to upgrade its
+MCP revision merely to try the contract.
 
 A useful first pilot does not need to replace an existing result format or
 implement the QZX command vocabulary. It may wrap one real tool, document what
@@ -66,6 +70,8 @@ A public entry requires:
 - at least one conforming success result and one conforming failure result when
   the producer can fail;
 - the validation command and sanitized result;
+- for MCP profiles, the receipt's `output_schema_mode` and any associated
+  limitations rather than a generic claim that the canonical schema is embedded;
 - the tested environments and known limitations;
 - a correction contact or issue URL.
 

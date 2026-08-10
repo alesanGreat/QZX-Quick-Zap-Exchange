@@ -27,7 +27,7 @@ body:
       label: What are you trying to do?
       options:
         - Try the core Result Contract with one real tool
-        - Try the MCP 2026-07-28 interoperability profile
+        - Try an MCP 2025-06-18+ structured-output interoperability profile
         - Map an existing result format to QZX Result Contract
         - Understand or fix a conformance failure
         - Explore a bounded interoperability pilot

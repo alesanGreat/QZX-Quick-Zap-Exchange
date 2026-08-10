@@ -27,7 +27,16 @@ steps:
       report: result-contract-evidence/qzx-conformance.json
 ```
 
-## MCP 2026-07-28 profile
+## MCP structured-output profiles
+
+Use the profile matching the MCP revision actually implemented by the producer:
+`mcp-2025-06-18`, `mcp-2025-11-25`, or `mcp-2026-07-28`. The two 2025 profiles
+validate completed tool results without requiring `resultType`; MCP 2026-07-28
+requires `resultType: "complete"`. MCP receipts also expose an
+`output_schema_mode`: canonical `$ref`/inline/`allOf` relationships are reported
+separately from the weaker `structural_core` mode used by object-schema-only
+SDKs, where the submitted runtime evidence is validated separately against the
+complete QZX Result Contract.
 
 ```yaml
 steps:
@@ -35,7 +44,7 @@ steps:
   - id: qzx-conformance
     uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
     with:
-      profile: mcp-2026-07-28
+      profile: mcp-2025-11-25
       success: result-contract-evidence/success.json
       failure: result-contract-evidence/failure.json
       tool-definition: result-contract-evidence/tool-definition.json
@@ -46,7 +55,7 @@ steps:
 
 | Input | Required | Meaning |
 | --- | --- | --- |
-| `profile` | No | `core` or `mcp-2026-07-28`; defaults to `core`. |
+| `profile` | No | `core`, `mcp-2025-06-18`, `mcp-2025-11-25`, or `mcp-2026-07-28`; defaults to `core`. |
 | `success` | Yes | Caller-workspace-relative path to a completed successful result. |
 | `failure` | Yes | Caller-workspace-relative path to a completed failed result. |
 | `tool-definition` | MCP only | MCP tool definition whose `outputSchema` is checked. |
@@ -60,6 +69,7 @@ steps:
 | `conformant` | `true` only when the selected profile conforms; otherwise `false`. |
 | `profile` | Profile actually evaluated by the validator. |
 | `receipt_schema` | Canonical schema URL declared by the generated receipt. |
+| `output_schema_mode` | MCP schema evidence mode (`canonical_ref`, `canonical_inline`, `canonical_allof`, `structural_core`), or `not_applicable`. |
 
 These scalar outputs make the Action composable from later workflow steps while
 the JSON receipt remains the durable evidence artifact. The Action also writes

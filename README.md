@@ -68,11 +68,17 @@ This transport-independent core is published as the open
 Other tools may implement the result envelope without adopting the QZX command
 vocabulary or runtime. Start with the
 [5-minute adoption quickstart](docs/result-contract-quickstart.md); the full
-[adoption guide](docs/result-contract-adoption.md) includes an interoperability
-profile for MCP specification 2026-07-28 that maps the QZX schema to MCP
-`outputSchema`, the contract object to `structuredContent`, and completed
-failures to `isError`. Compatibility describes the result contract; it does not
-imply endorsement, safe execution, or complete command parity.
+[adoption guide](docs/result-contract-adoption.md) includes revision-specific
+interoperability profiles for MCP 2025-06-18, 2025-11-25, and 2026-07-28. All
+three carry the QZX contract object in `structuredContent`, make its stable core
+visible through MCP `outputSchema`, and keep completed failures consistent with
+`isError`. Receipts record whether `outputSchema` embeds the canonical schema
+(`canonical_ref`, `canonical_inline`, or `canonical_allof`) or uses the weaker,
+SDK-portable `structural_core` mode whose submitted runtime evidence is validated
+against the complete Result Contract. The 2026-07-28 profile additionally requires
+`resultType: "complete"`; the two 2025 profiles do not invent that field because
+MCP did not require it yet. Compatibility describes the result contract; it
+does not imply endorsement, safe execution, or complete command parity.
 
 The CLI validates its final envelope before printing it. Validate a saved or
 piped document from a source checkout without a third-party dependency:
@@ -89,11 +95,16 @@ Run the positive and negative reference fixtures with:
 python scripts/run_result_contract_conformance.py
 ```
 
-For an MCP 2026-07-28 implementation, validate a completed tool result and its
-tool definition with the dependency-free MCP profile validator:
+Validate a completed MCP tool result and its tool definition with the
+dependency-free MCP profile validator. It defaults to the newest supported
+revision; use `--spec-version` when the evidence comes from an older MCP server:
 
 ```bash
 python scripts/validate_mcp_result_contract.py mcp-result.json \
+  --tool-definition mcp-tool-definition.json
+
+python scripts/validate_mcp_result_contract.py mcp-result.json \
+  --spec-version 2025-11-25 \
   --tool-definition mcp-tool-definition.json
 ```
 

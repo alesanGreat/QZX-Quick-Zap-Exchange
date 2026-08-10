@@ -104,13 +104,29 @@ def main() -> int:
             "details": {"profile": profile},
         }
 
-    evaluated_profile = str(report.get("details", {}).get("profile", profile))
+    details = report.get("details", {})
+    evaluated_profile = str(details.get("profile", profile))
     receipt_schema = str(report.get("receipt_schema", "unavailable"))
+    cases = details.get("cases", [])
+    schema_modes = {
+        str(case.get("profile_facts", {}).get("output_schema_mode"))
+        for case in cases
+        if isinstance(case, dict)
+        and case.get("profile_facts", {}).get("output_schema_mode") is not None
+    }
+    if len(schema_modes) == 1:
+        output_schema_mode = next(iter(schema_modes))
+    elif len(schema_modes) > 1:
+        output_schema_mode = "mixed"
+    else:
+        output_schema_mode = "not_applicable"
+
     github_output = os.environ.get("GITHUB_OUTPUT", "")
     append_line(github_output, f"report={report_path}")
     append_line(github_output, f"conformant={'true' if report.get('success') is True else 'false'}")
     append_line(github_output, f"profile={evaluated_profile}")
     append_line(github_output, f"receipt_schema={receipt_schema}")
+    append_line(github_output, f"output_schema_mode={output_schema_mode}")
 
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "")
     if summary_path:
@@ -120,6 +136,7 @@ def main() -> int:
             "",
             f"- Status: **{status}**",
             f"- Profile: `{evaluated_profile}`",
+            f"- Output schema mode: `{output_schema_mode}`",
             f"- Receipt: `{report_path}`",
             f"- Receipt schema: `{receipt_schema}`",
             "- Specification: [QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract)",

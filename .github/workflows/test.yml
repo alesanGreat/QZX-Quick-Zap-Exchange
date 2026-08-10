@@ -86,14 +86,23 @@ jobs:
           failure: examples/result_contract/valid-failure.json
           report: qzx-core-conformance.json
 
-      - name: Validate MCP evidence through the public Composite Action
+      - name: Validate MCP 2025-11-25 evidence through the public Composite Action
+        uses: ./.github/actions/result-contract-conformance
+        with:
+          profile: mcp-2025-11-25
+          success: examples/result_contract/mcp-success.json
+          failure: examples/result_contract/mcp-failure.json
+          tool-definition: examples/result_contract/mcp-tool-definition.json
+          report: qzx-mcp-2025-conformance.json
+
+      - name: Validate MCP 2026-07-28 evidence through the public Composite Action
         uses: ./.github/actions/result-contract-conformance
         with:
           profile: mcp-2026-07-28
           success: examples/result_contract/mcp-success.json
           failure: examples/result_contract/mcp-failure.json
           tool-definition: examples/result_contract/mcp-tool-definition.json
-          report: qzx-mcp-conformance.json
+          report: qzx-mcp-2026-conformance.json
 
       - name: Verify generated receipts
         shell: python
@@ -103,7 +112,8 @@ jobs:
 
           expected = {
               "qzx-core-conformance.json": "core",
-              "qzx-mcp-conformance.json": "mcp-2026-07-28",
+              "qzx-mcp-2025-conformance.json": "mcp-2025-11-25",
+              "qzx-mcp-2026-conformance.json": "mcp-2026-07-28",
           }
           for filename, profile in expected.items():
               report = json.loads(Path(filename).read_text(encoding="utf-8"))

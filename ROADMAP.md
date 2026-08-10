@@ -11,8 +11,10 @@ through separate reviewed operations.
 - Keep QZX Result Contract v1 transport-independent, machine-checkable, and
   internally consistent across its normative prose, JSON Schema, validator, and
   conformance fixtures.
-- Maintain the MCP 2026-07-28 interoperability profile so external MCP tools can
-  adopt the QZX result envelope without adopting QZX command names or runtime.
+- Maintain revision-specific MCP structured-output interoperability profiles for
+  2025-06-18, 2025-11-25, and 2026-07-28 so external MCP tools can adopt the QZX
+  result envelope without first upgrading their whole MCP stack or adopting QZX
+  command names/runtime.
 - Complete the Apache-2.0 rights audit before declaring the license transition
   finished.
 - Keep human terminal output and `--json` as two presentations of the same

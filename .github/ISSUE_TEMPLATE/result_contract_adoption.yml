@@ -43,6 +43,8 @@ body:
       options:
         - Core contract only
         - QZX CLI JSON transport profile
+        - QZX MCP 2025-06-18 interoperability profile
+        - QZX MCP 2025-11-25 interoperability profile
         - QZX MCP 2026-07-28 interoperability profile
         - Another transport or adapter
     validations:
@@ -67,7 +69,7 @@ body:
     id: transport_evidence
     attributes:
       label: Transport and profile evidence
-      description: For MCP, show outputSchema, structuredContent, success/isError consistency, and how protocol errors remain distinct. For another profile, describe its framing and status behavior. Use “core only” when no transport profile is claimed.
+      description: For MCP, show outputSchema, the receipt's output_schema_mode, structuredContent, success/isError consistency, and how protocol errors remain distinct. Do not describe structural_core as canonical schema embedding. For another profile, describe its framing and status behavior. Use “core only” when no transport profile is claimed.
     validations:
       required: true
   - type: textarea

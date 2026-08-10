@@ -3,6 +3,29 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
+## Unreleased — 2026-08-09
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Expanded the Result Contract MCP interoperability surface from only
+  specification 2026-07-28 to revision-specific profiles for 2025-06-18,
+  2025-11-25, and 2026-07-28. The 2026 profile still requires
+  `resultType: "complete"`; older revisions are not forced to invent a field
+  their MCP specifications did not define.
+- Replaced the overly restrictive assumption that every adopting MCP SDK can
+  expose the exact canonical QZX schema with reviewable schema-strength modes:
+  canonical direct reference, exact inline schema, `allOf` composition, and an
+  explicit `structural_core` mode for object-schema-only SDKs. Structural mode
+  does not masquerade as canonical embedding; receipts record the distinction
+  and full semantics are checked against real success/failure evidence.
+- Exposed the MCP output-schema mode in the reusable GitHub Composite Action and
+  job summary so public adoption evidence shows the strength of the schema
+  relationship instead of reducing conformance to a single green badge.
+- Validated the portable design against an isolated build of the maintained
+  Vendr MCP server shape using its current Zod/TypeScript tool-output pattern;
+  generated MCP 2025-11-25 success/failure evidence conforms as
+  `structural_core` without removing Vendr's existing result fields.
+
 ## 0.2.2.0.7a5 — 2026-08-08
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.

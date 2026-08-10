@@ -60,12 +60,16 @@
         "profile": {
           "enum": [
             "core",
+            "mcp-2025-06-18",
+            "mcp-2025-11-25",
             "mcp-2026-07-28"
           ]
         },
         "mcp_specification": {
           "enum": [
             null,
+            "2025-06-18",
+            "2025-11-25",
             "2026-07-28"
           ]
         },
@@ -182,16 +186,33 @@
       "type": "object",
       "properties": {
         "mcp_specification": {
-          "const": "2026-07-28"
+          "enum": [
+            "2025-06-18",
+            "2025-11-25",
+            "2026-07-28"
+          ]
         },
         "mcp_tools_spec": {
-          "const": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
+          "enum": [
+            "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+            "https://modelcontextprotocol.io/specification/2025-11-25/server/tools",
+            "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
+          ]
         },
         "contract": {
           "const": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
         },
         "output_schema_checked": {
           "type": "boolean"
+        },
+        "output_schema_mode": {
+          "enum": [
+            null,
+            "canonical_ref",
+            "canonical_inline",
+            "canonical_allof",
+            "structural_core"
+          ]
         },
         "backcompat_text_matches": {
           "type": "boolean"

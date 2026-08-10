@@ -44,7 +44,12 @@ object in `structuredContent`, expose the canonical QZX schema as
 `outputSchema`, and keep MCP `isError` consistent with `!success` as described
 below.
 
-## MCP 2026-07-28 profile fixtures
+## MCP structured-output profile fixtures
+
+QZX supports revision-specific MCP profiles for 2025-06-18, 2025-11-25, and
+2026-07-28. The checked-in fixtures use the 2026-07-28 wire shape and therefore
+include `resultType: "complete"`. For a 2025 profile, real evidence may omit that
+field; the `structuredContent`, `isError`, and `outputSchema` invariants remain.
 
 | File | Purpose |
 | --- | --- |

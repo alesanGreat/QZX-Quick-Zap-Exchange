@@ -138,15 +138,14 @@ def _matches(schema: dict[str, Any], instance: Any, root: dict[str, Any]) -> boo
 
 
 def _receipt(*, profile: str, with_tool_definition: bool = False) -> dict[str, Any]:
+    is_mcp = profile in validator.MCP_PROFILES
     arguments = {
         "profile": profile,
         "success_path": str(
-            FIXTURE_ROOT
-            / ("mcp-success.json" if profile == validator.PROFILE_MCP else "valid-success.json")
+            FIXTURE_ROOT / ("mcp-success.json" if is_mcp else "valid-success.json")
         ),
         "failure_path": str(
-            FIXTURE_ROOT
-            / ("mcp-failure.json" if profile == validator.PROFILE_MCP else "valid-failure.json")
+            FIXTURE_ROOT / ("mcp-failure.json" if is_mcp else "valid-failure.json")
         ),
     }
     if with_tool_definition:
@@ -160,22 +159,25 @@ def test_receipt_schema_accepts_pass_and_fail_receipts():
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     receipts = [
         _receipt(profile=validator.PROFILE_CORE),
-        _receipt(profile=validator.PROFILE_MCP, with_tool_definition=True),
+        *[
+            _receipt(profile=profile, with_tool_definition=True)
+            for profile in validator.MCP_PROFILES
+        ],
         _receipt(profile=validator.PROFILE_MCP, with_tool_definition=False),
     ]
 
     assert schema["$id"] == validator.CONFORMANCE_RECEIPT_SCHEMA_URL
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert receipts[0]["success"] is True
-    assert receipts[1]["success"] is True
-    assert receipts[2]["success"] is False
+    assert all(receipt["success"] is True for receipt in receipts[1:-1])
+    assert receipts[-1]["success"] is False
     for receipt in receipts:
         assert receipt["receipt_schema"] == schema["$id"]
         assert _matches(schema, receipt, schema)
         assert result_contract_violations(receipt) == []
     assert "error_code" not in receipts[0]
-    assert "error_code" not in receipts[1]
-    assert receipts[2]["error_code"] == "conformance_failed"
+    assert all("error_code" not in receipt for receipt in receipts[1:-1])
+    assert receipts[-1]["error_code"] == "conformance_failed"
 
 
 def test_receipt_schema_rejects_unknown_fields_and_role_swaps():

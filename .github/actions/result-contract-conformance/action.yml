@@ -1,10 +1,10 @@
 name: QZX Result Contract conformance
-description: Validate a success/failure evidence pair against QZX Result Contract v1, with optional MCP 2026-07-28 profile checks.
+description: Validate a success/failure evidence pair against QZX Result Contract v1, with revision-specific MCP structured-output profile checks.
 author: Alejandro Sánchez
 
 inputs:
   profile:
-    description: "Use 'core' or 'mcp-2026-07-28'."
+    description: "Use 'core', 'mcp-2025-06-18', 'mcp-2025-11-25', or 'mcp-2026-07-28'."
     required: false
     default: core
   success:
@@ -14,7 +14,7 @@ inputs:
     description: Path to one completed failed result JSON file in the caller repository.
     required: true
   tool-definition:
-    description: MCP tool definition JSON path. Required when profile is mcp-2026-07-28.
+    description: MCP tool definition JSON path. Required by every MCP profile.
     required: false
     default: ""
   report:
@@ -35,6 +35,9 @@ outputs:
   receipt_schema:
     description: Canonical schema URL declared by the generated conformance receipt.
     value: ${{ steps.validate.outputs.receipt_schema }}
+  output_schema_mode:
+    description: MCP outputSchema evidence mode, or not_applicable for non-MCP profiles.
+    value: ${{ steps.validate.outputs.output_schema_mode }}
 
 runs:
   using: composite

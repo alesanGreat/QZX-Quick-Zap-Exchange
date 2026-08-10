@@ -61,6 +61,82 @@ def test_mcp_success_failure_pair_checks_tool_definition():
         case["profile_facts"]["output_schema_checked"] is True
         for case in report["details"]["cases"]
     )
+    assert all(
+        case["profile_facts"]["output_schema_mode"] == "canonical_ref"
+        for case in report["details"]["cases"]
+    )
+
+
+def test_structural_mcp_output_schema_is_visible_in_receipt(tmp_path):
+    tool_definition_path = tmp_path / "tool-definition.json"
+    tool_definition_path.write_text(
+        json.dumps(
+            {
+                "name": "portable-zod-style-tool",
+                "outputSchema": {
+                    "type": "object",
+                    "required": ["success", "message", "isError"],
+                    "properties": {
+                        "success": {"type": "boolean"},
+                        "message": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "\\S",
+                        },
+                        "error": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "\\S",
+                        },
+                        "isError": {"type": "boolean"},
+                        "data": {"type": ["object", "null"]},
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = validator.validate_evidence(
+        profile=validator.PROFILE_MCP,
+        success_path=str(FIXTURE_ROOT / "mcp-success.json"),
+        failure_path=str(FIXTURE_ROOT / "mcp-failure.json"),
+        tool_definition_path=str(tool_definition_path),
+    )
+
+    assert report["success"] is True
+    assert all(
+        case["profile_facts"]["output_schema_mode"] == "structural_core"
+        for case in report["details"]["cases"]
+    )
+    assert all(case["warnings"] for case in report["details"]["cases"])
+
+
+def test_legacy_mcp_profiles_accept_completed_results_without_result_type(tmp_path):
+    paths = {}
+    for role in ("success", "failure"):
+        document = json.loads(
+            (FIXTURE_ROOT / f"mcp-{role}.json").read_text(encoding="utf-8")
+        )
+        document["result"].pop("resultType")
+        path = tmp_path / f"mcp-legacy-{role}.json"
+        path.write_text(json.dumps(document), encoding="utf-8")
+        paths[role] = path
+
+    for profile, specification in (
+        ("mcp-2025-06-18", "2025-06-18"),
+        ("mcp-2025-11-25", "2025-11-25"),
+    ):
+        report = validator.validate_evidence(
+            profile=profile,
+            success_path=str(paths["success"]),
+            failure_path=str(paths["failure"]),
+            tool_definition_path=str(FIXTURE_ROOT / "mcp-tool-definition.json"),
+        )
+        assert report["success"] is True
+        assert report["details"]["profile"] == profile
+        assert report["details"]["mcp_specification"] == specification
+        assert all(case["conformant"] for case in report["details"]["cases"])
 
 
 def test_evidence_pair_rejects_wrong_semantic_roles_and_missing_mcp_definition():
@@ -189,9 +265,11 @@ def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
     assert "conformant=true" in action_output
     assert "profile=mcp-2026-07-28" in action_output
     assert f"receipt_schema={validator.CONFORMANCE_RECEIPT_SCHEMA_URL}" in action_output
+    assert "output_schema_mode=canonical_ref" in action_output
     summary = summary_path.read_text(encoding="utf-8")
     assert "Status: **PASS**" in summary
     assert "mcp-2026-07-28" in summary
+    assert "Output schema mode: `canonical_ref`" in summary
     assert validator.CONFORMANCE_RECEIPT_SCHEMA_URL in summary
     assert "QZX Result Contract v1" in summary
     assert "Alejandro Sánchez" in summary

@@ -57,29 +57,56 @@ v1 on a bounded set of real tasks. A useful pilot measures parsing failures,
 extra tool calls, retries, latency, completion rate, and operator effort rather
 than assuming that structured JSON is always shorter or better.
 
-## MCP interoperability profile — specification 2026-07-28
+## MCP interoperability profiles — 2025-06-18 through 2026-07-28
 
-The Model Context Protocol (MCP) specification dated 2026-07-28 supports an
-optional JSON Schema `outputSchema` for tools and a `structuredContent` JSON
-value in completed tool results. When `outputSchema` is present, servers must
-return structured content that conforms to it and clients should validate that
-content. MCP also recommends repeating serialized structured content in a text
-content block for backwards compatibility.
+MCP already supported tool `outputSchema`, `structuredContent`, explicit
+`isError`, and the protocol-error/tool-execution-error boundary in specification
+2025-06-18. Those structured-output semantics remain available in 2025-11-25
+and 2026-07-28. QZX therefore defines revision-specific profiles for all three
+revisions instead of forcing an otherwise-compatible producer to upgrade its
+entire MCP stack merely to claim Result Contract interoperability.
 
-Official MCP tool specification:
-<https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
+Official MCP tool specifications:
+
+- <https://modelcontextprotocol.io/specification/2025-06-18/server/tools>
+- <https://modelcontextprotocol.io/specification/2025-11-25/server/tools>
+- <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
+
+The common QZX mapping is the same: the complete QZX object is carried in
+`structuredContent`, MCP `isError` agrees with `!structuredContent.success`, and
+the tool's `outputSchema` makes the stable QZX core fields reviewable. The
+wire-level lifecycle is not falsely flattened across revisions: MCP 2026-07-28
+requires `resultType: "complete"` for an ordinary completed result, while the
+2025 profiles do not require a field those revisions did not define. MCP
+2026-07-28 `input_required` is an interim protocol result and is not a completed
+QZX Result Contract operation.
 
 This makes QZX Result Contract v1 usable as an MCP output profile without
 replacing MCP, JSON-RPC, tool discovery, input schemas, transports, elicitation,
 or MCP security rules. MCP remains the protocol; QZX Result Contract describes
 the completed operation result carried inside it.
 
-### Tool definition mapping
+### Tool definition mapping and schema strength
 
-An MCP tool claiming this profile MUST expose the QZX Result Contract v1
-schema as its `outputSchema`. The compact example below uses `$ref`; an
-implementation should follow the `$ref` resolution rules of its MCP stack or
-inline the canonical QZX schema during its build when that is more portable.
+QZX deliberately records **how strongly** an MCP `outputSchema` exposes the
+contract instead of pretending every SDK can publish the same JSON Schema
+shape. A conformance receipt reports one of these modes:
+
+| Mode | Meaning |
+| --- | --- |
+| `canonical_ref` | `outputSchema` directly references the canonical QZX Result Contract v1 schema. |
+| `canonical_inline` | `outputSchema` is the exact canonical QZX schema inline. |
+| `canonical_allof` | `outputSchema` composes the canonical QZX schema through `allOf`, allowing additional domain constraints. |
+| `structural_core` | The MCP SDK exposes an object schema with the required QZX core fields and constraints; the submitted runtime evidence is validated separately against the complete Result Contract. |
+
+The first three modes prove the canonical schema relationship from
+`outputSchema` itself. `structural_core` is intentionally a weaker and explicit
+claim: it exists for maintained MCP SDK APIs that accept object-shaped output
+schemas but cannot portably publish a canonical `$ref`/`allOf` wrapper around an
+existing typed domain schema. It does **not** mean that `outputSchema` alone
+encodes every QZX invariant.
+
+A direct canonical reference is the smallest strong form:
 
 ```json
 {
@@ -96,11 +123,39 @@ inline the canonical QZX schema during its build when that is more portable.
 }
 ```
 
-The current MCP tool specification defaults schemas to JSON Schema 2020-12
-when `$schema` is omitted. QZX publishes the contract explicitly as JSON Schema
-2020-12, so no dialect translation is needed for this profile.
+When a stack supports JSON Schema composition, preserve a precise domain schema
+instead of throwing it away. For example:
+
+```json
+{
+  "outputSchema": {
+    "allOf": [
+      {
+        "$ref": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object" }
+        }
+      }
+    ]
+  }
+}
+```
+
+For `structural_core`, the schema must at minimum require boolean `success` and
+a nonblank string `message`, and declare either a nonblank string `error` or a
+canonical `error_code` field for failure evidence. The success/failure evidence
+is still validated against the complete canonical QZX Result Contract v1
+schema. This prevents SDK limitations from becoming adoption blockers without
+silently weakening the published claim.
 
 ### Completed success result
+
+The examples below show the MCP 2026-07-28 wire shape. For the 2025-06-18 and
+2025-11-25 profiles, omit the `resultType` member; the QZX object,
+`structuredContent`, `content`, and `isError` invariants remain the same.
 
 For a completed successful operation:
 
@@ -166,9 +221,9 @@ narrow:
 | Completed successful tool execution | QZX object in `structuredContent`; `success: true`; `isError: false`. |
 | Completed tool execution failure | QZX failure object in `structuredContent`; `success: false`; `isError: true`. |
 | Protocol error such as unknown tool, malformed request, or server-level JSON-RPC failure | Keep the MCP/JSON-RPC protocol error. Do not invent a completed QZX result. |
-| `input_required` / elicitation flow | Continue the MCP flow. Produce a QZX result only when an operation actually reaches a completed result. |
+| MCP 2026-07-28 `input_required` flow | Continue the MCP flow. Produce a QZX result only when an operation actually reaches `resultType: "complete"`. |
 
-For this QZX MCP profile, a completed result MUST declare `isError` as an
+For every QZX MCP profile, a completed result MUST declare `isError` as an
 explicit boolean and MUST keep `isError == !structuredContent.success`. A
 mismatch is an interoperability bug: it gives the MCP layer and the contract
 layer contradictory outcomes.
@@ -236,10 +291,15 @@ Validate one core contract object:
 python scripts/validate_result_contract.py result.json
 ```
 
-Validate an MCP 2026-07-28 completed tool result or a complete JSON-RPC response:
+Validate an MCP completed tool result or a complete JSON-RPC response. The
+validator defaults to MCP 2026-07-28; select the producer's real revision when
+validating older structured-output servers:
 
 ```bash
 python scripts/validate_mcp_result_contract.py mcp-result.json
+
+python scripts/validate_mcp_result_contract.py mcp-result.json \
+  --spec-version 2025-11-25
 ```
 
 Also verify that the MCP tool definition exposes the canonical QZX
@@ -247,15 +307,17 @@ Also verify that the MCP tool definition exposes the canonical QZX
 
 ```bash
 python scripts/validate_mcp_result_contract.py mcp-result.json \
+  --spec-version 2025-11-25 \
   --tool-definition mcp-tool-definition.json
 ```
 
 For independent evidence, validate the successful and failed completed results
-together and write one deterministic receipt:
+together and write one deterministic receipt. Choose exactly one of
+`mcp-2025-06-18`, `mcp-2025-11-25`, or `mcp-2026-07-28` to match the producer:
 
 ```bash
 python scripts/validate_result_contract_evidence.py \
-  --profile mcp-2026-07-28 \
+  --profile mcp-2025-11-25 \
   --success result-contract-evidence/success.json \
   --failure result-contract-evidence/failure.json \
   --tool-definition result-contract-evidence/tool-definition.json \
@@ -268,9 +330,10 @@ reusable Composite Action in
 The quickstart includes a copyable caller workflow. Pin the QZX Action to a full
 commit SHA before publishing durable evidence.
 
-The MCP validator checks `resultType: "complete"`, QZX conformance of
-`structuredContent`, explicit `isError`, `isError == !success`, and, when a tool
-definition is supplied, the canonical `outputSchema`. A text block that
+Every MCP profile checks QZX conformance of `structuredContent`, explicit
+`isError`, `isError == !success`, and, when a tool definition is supplied, the
+canonical `outputSchema`. The MCP 2026-07-28 profile additionally checks
+`resultType: "complete"`; the 2025 profiles do not require it. A text block that
 serializes the complete `structuredContent` object is reported as backwards-
 compatibility evidence. Because MCP specifies that duplicate text
 representation as a recommendation rather than a requirement, its absence is a

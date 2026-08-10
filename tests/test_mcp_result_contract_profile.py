@@ -28,6 +28,37 @@ def load_fixture(name):
     return json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
 
 
+def without_result_type(name):
+    document = load_fixture(name)
+    document["result"].pop("resultType", None)
+    return document
+
+
+def structural_tool_definition():
+    return {
+        "name": "example",
+        "outputSchema": {
+            "type": "object",
+            "required": ["success", "message", "isError"],
+            "properties": {
+                "success": {"type": "boolean"},
+                "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S",
+                },
+                "error": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S",
+                },
+                "isError": {"type": "boolean"},
+                "data": {"type": ["object", "null"]},
+            },
+        },
+    }
+
+
 def test_success_and_failure_fixtures_conform_with_output_schema():
     tool_definition = load_fixture("mcp-tool-definition.json")
     for fixture_name in ("mcp-success.json", "mcp-failure.json"):
@@ -38,7 +69,104 @@ def test_success_and_failure_fixtures_conform_with_output_schema():
         assert violations == []
         assert warnings == []
         assert details["output_schema_checked"] is True
+        assert details["output_schema_mode"] == validator.OUTPUT_SCHEMA_CANONICAL_REF
         assert details["backcompat_text_matches"] is True
+
+
+def test_allof_composition_preserves_canonical_schema_claim():
+    tool_definition = {
+        "name": "example",
+        "outputSchema": {
+            "allOf": [
+                {"$ref": validator.RESULT_CONTRACT_SCHEMA_URL},
+                {
+                    "type": "object",
+                    "properties": {"data": {"type": "object"}},
+                },
+            ]
+        },
+    }
+    violations, warnings, details = validator.validate_mcp_profile(
+        load_fixture("mcp-success.json"),
+        tool_definition,
+    )
+    assert violations == []
+    assert warnings == []
+    assert details["output_schema_mode"] == validator.OUTPUT_SCHEMA_CANONICAL_ALLOF
+
+
+def test_structural_output_schema_is_portable_but_reported_as_weaker_evidence():
+    violations, warnings, details = validator.validate_mcp_profile(
+        load_fixture("mcp-success.json"),
+        structural_tool_definition(),
+    )
+    assert violations == []
+    assert warnings == [
+        "outputSchema exposes the QZX core structurally but does not embed the "
+        "canonical QZX schema. The submitted runtime evidence is validated "
+        "against the full Result Contract, but outputSchema alone does not "
+        "guarantee every QZX invariant."
+    ]
+    assert details["output_schema_mode"] == validator.OUTPUT_SCHEMA_STRUCTURAL_CORE
+
+
+def test_structural_output_schema_rejects_weak_or_bypass_shapes():
+    weak = structural_tool_definition()
+    weak["outputSchema"]["properties"]["message"]["pattern"] = "\\S?"
+    weak["outputSchema"]["properties"]["success"]["type"] = ["boolean", "null"]
+    violations, _, details = validator.validate_mcp_profile(
+        load_fixture("mcp-success.json"),
+        weak,
+    )
+    assert any("non-empty, non-whitespace" in item for item in violations)
+    assert any("exactly boolean" in item for item in violations)
+    assert details["output_schema_mode"] is None
+
+    bypass = {
+        "name": "example",
+        "outputSchema": {
+            "anyOf": [
+                {"$ref": validator.RESULT_CONTRACT_SCHEMA_URL},
+                {"type": "object"},
+            ]
+        },
+    }
+    violations, _, details = validator.validate_mcp_profile(
+        load_fixture("mcp-success.json"),
+        bypass,
+    )
+    assert violations
+    assert details["output_schema_mode"] is None
+
+
+def test_legacy_structured_output_profiles_do_not_require_result_type():
+    tool_definition = load_fixture("mcp-tool-definition.json")
+    for specification_version in ("2025-06-18", "2025-11-25"):
+        for fixture_name in ("mcp-success.json", "mcp-failure.json"):
+            violations, warnings, details = validator.validate_mcp_profile(
+                without_result_type(fixture_name),
+                tool_definition,
+                specification_version,
+            )
+            assert violations == []
+            assert warnings == []
+            assert details["mcp_specification"] == specification_version
+            assert details["mcp_tools_spec"].endswith(
+                f"/{specification_version}/server/tools"
+            )
+
+
+def test_2026_07_28_profile_requires_complete_result_type():
+    violations, warnings, details = validator.validate_mcp_profile(
+        without_result_type("mcp-success.json"),
+        load_fixture("mcp-tool-definition.json"),
+        "2026-07-28",
+    )
+    assert violations == [
+        "The MCP 2026-07-28 profile applies only to resultType 'complete'."
+    ]
+    assert warnings == []
+    assert details["mcp_specification"] == "2026-07-28"
 
 
 def test_is_error_must_match_qzx_success():
@@ -105,3 +233,32 @@ def test_cli_json_report_accepts_full_jsonrpc_response():
     assert report["details"]["mcp_specification"] == "2026-07-28"
     assert report["details"]["output_schema_checked"] is True
     assert report["details"]["violations"] == []
+
+
+def test_cli_accepts_2025_11_25_result_without_result_type(tmp_path):
+    evidence_path = tmp_path / "mcp-2025-11-25-success.json"
+    evidence_path.write_text(
+        json.dumps(without_result_type("mcp-success.json")),
+        encoding="utf-8",
+    )
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            str(evidence_path),
+            "--spec-version",
+            "2025-11-25",
+            "--tool-definition",
+            str(TOOL_DEFINITION),
+            "--json",
+        ],
+        cwd=REPOSITORY_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert process.returncode == 0, process.stderr
+    report = json.loads(process.stdout)
+    assert report["success"] is True
+    assert report["details"]["mcp_specification"] == "2025-11-25"

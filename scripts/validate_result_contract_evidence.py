@@ -24,10 +24,7 @@ from qzx.core.result_contract import (  # noqa: E402
     RESULT_CONTRACT_VERSION,
     result_contract_violations,
 )
-from validate_mcp_result_contract import (  # noqa: E402
-    MCP_SPECIFICATION_VERSION,
-    validate_mcp_profile,
-)
+from validate_mcp_result_contract import validate_mcp_profile  # noqa: E402
 
 REPORT_SCHEMA_VERSION = 1
 CONFORMANCE_RECEIPT_SCHEMA_URL = (
@@ -35,6 +32,12 @@ CONFORMANCE_RECEIPT_SCHEMA_URL = (
     "result-contract-conformance-receipt-v1.schema.json"
 )
 PROFILE_CORE = "core"
+MCP_PROFILE_TO_SPECIFICATION = {
+    "mcp-2025-06-18": "2025-06-18",
+    "mcp-2025-11-25": "2025-11-25",
+    "mcp-2026-07-28": "2026-07-28",
+}
+MCP_PROFILES = tuple(MCP_PROFILE_TO_SPECIFICATION)
 PROFILE_MCP = "mcp-2026-07-28"
 
 
@@ -42,9 +45,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--profile",
-        choices=(PROFILE_CORE, PROFILE_MCP),
+        choices=(PROFILE_CORE, *MCP_PROFILES),
         default=PROFILE_CORE,
-        help="Conformance profile to validate. Defaults to the transport-neutral core.",
+        help=(
+            "Conformance profile to validate. Defaults to the transport-neutral "
+            "core. MCP profiles are revision-specific."
+        ),
     )
     parser.add_argument(
         "--success",
@@ -58,7 +64,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--tool-definition",
-        help="MCP tool definition JSON. Required by the MCP profile.",
+        help="MCP tool definition JSON. Required by every MCP profile.",
     )
     parser.add_argument(
         "--report",
@@ -136,6 +142,7 @@ def _validate_case(
             mcp_violations, warnings, facts = validate_mcp_profile(
                 document,
                 tool_definition,
+                MCP_PROFILE_TO_SPECIFICATION[profile],
             )
             violations.extend(mcp_violations)
             actual_success = _mcp_structured_success(document)
@@ -170,12 +177,15 @@ def validate_evidence(
 ) -> dict[str, Any]:
     """Return one deterministic evidence receipt for a success/failure pair."""
 
+    if profile != PROFILE_CORE and profile not in MCP_PROFILE_TO_SPECIFICATION:
+        raise ValueError(f"Unsupported QZX Result Contract profile: {profile}")
+
     global_violations: list[str] = []
     global_warnings: list[str] = []
     tool_definition: Any | None = None
     tool_definition_digest: str | None = None
 
-    if profile == PROFILE_MCP:
+    if profile in MCP_PROFILE_TO_SPECIFICATION:
         if not tool_definition_path:
             global_violations.append(
                 "The MCP profile requires --tool-definition so outputSchema is reviewable."
@@ -225,9 +235,7 @@ def validate_evidence(
             "contract_version": f"v{RESULT_CONTRACT_VERSION}",
             "contract_schema": RESULT_CONTRACT_SCHEMA_URL,
             "profile": profile,
-            "mcp_specification": (
-                MCP_SPECIFICATION_VERSION if profile == PROFILE_MCP else None
-            ),
+            "mcp_specification": MCP_PROFILE_TO_SPECIFICATION.get(profile),
             "tool_definition": (
                 {
                     "file": tool_definition_path,
