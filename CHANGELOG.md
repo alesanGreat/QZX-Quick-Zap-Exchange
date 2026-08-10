@@ -29,6 +29,11 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   portable `structural_core` tool definition, and made the public Composite
   Action smoke test exercise those exact files so the documented 2025 adoption
   path is continuously tested rather than synthesized only inside unit tests.
+- Aligned MCP profile validation with the protocol's `isError` default: a
+  successful completed result may omit `isError` because omission means
+  `false`, while a failed QZX result still requires an effective MCP error state
+  of `true`. Conformance receipts now record both whether `isError` was explicit
+  and its effective value without invalidating older v1 receipts.
 
 ## 0.2.2.0.7a5 — 2026-08-08
 
