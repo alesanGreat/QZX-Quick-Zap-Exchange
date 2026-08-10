@@ -355,9 +355,10 @@ reusable Composite Action in
 The quickstart includes a copyable caller workflow. Pin the QZX Action to a full
 commit SHA before publishing durable evidence.
 
-Every MCP profile checks QZX conformance of `structuredContent`, explicit
-`isError`, `isError == !success`, and, when a tool definition is supplied, the
-canonical `outputSchema`. The MCP 2026-07-28 profile additionally checks
+Every MCP profile checks QZX conformance of `structuredContent`, requires the
+effective MCP error state to equal `!success` (with omitted `isError` treated as
+`false`), and, when a tool definition is supplied, checks the canonical
+`outputSchema`. The MCP 2026-07-28 profile additionally checks
 `resultType: "complete"`; the 2025 profiles do not require it. A text block that
 serializes the complete `structuredContent` object is reported as backwards-
 compatibility evidence. Because MCP specifies that duplicate text
