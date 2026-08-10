@@ -228,13 +228,34 @@ explicit boolean and MUST keep `isError == !structuredContent.success`. A
 mismatch is an interoperability bug: it gives the MCP layer and the contract
 layer contradictory outcomes.
 
+### Why keep `success` when MCP already has `isError`?
+
+Within an MCP exchange, `isError` already tells an MCP-aware client whether a
+completed tool call failed. QZX does not replace that signal and does not claim
+MCP needs another boolean for transport correctness.
+
+The reason `success` remains inside the Result Contract is portability. `isError`
+is MCP transport metadata; `success` travels with the structured operation
+result itself. If that object is logged, cached, queued, stored in a database,
+passed through a non-MCP API, emitted by a CLI, or replayed later without its
+original MCP wrapper, the outcome remains self-describing. The same domain
+result shape can therefore cross MCP, CLI, HTTP, job, and test boundaries without
+requiring each consumer to reconstruct transport-specific status semantics.
+
+For an MCP producer the rule is deliberately boring: do not invent competing
+meaning. Keep `isError == !structuredContent.success`. The duplication is a
+cross-boundary interoperability invariant, not a second source of truth inside
+MCP.
+
 ### Why this profile is useful
 
-The profile gives an MCP consumer a tiny invariant across otherwise unrelated
-tools: it can inspect one explicit outcome boolean, show one useful message,
-then consume additive domain evidence. Tool authors keep their existing names,
-input schemas, permissions, transports, and domain fields. Adoption therefore
-does not require replacing MCP or renaming a tool surface around QZX.
+The profile gives consumers a tiny invariant across otherwise unrelated tools
+and transports: inspect one explicit outcome boolean, show one useful message,
+then consume additive domain evidence. MCP-aware clients still use MCP semantics;
+consumers of the detached Result Contract object do not need the MCP wrapper to
+understand the outcome. Tool authors keep their existing names, input schemas,
+permissions, transports, and domain fields. Adoption therefore does not require
+replacing MCP or renaming a tool surface around QZX.
 
 A serious interoperability report should test at least one successful and one
 failed completed call, schema validation of `structuredContent`, consistency of
