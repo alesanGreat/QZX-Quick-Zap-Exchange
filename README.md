@@ -110,7 +110,9 @@ python scripts/validate_mcp_result_contract.py mcp-result.json \
 
 For a reviewable implementation or pilot, validate one real success and one
 real failure together and generate a deterministic receipt containing the input
-SHA-256 digests:
+SHA-256 digests plus fingerprints of the exact QZX contract schema, receipt
+schema, core validator, MCP validator, and evidence validator used for the
+verdict:
 
 ```bash
 python scripts/validate_result_contract_evidence.py \
@@ -123,12 +125,15 @@ python scripts/validate_result_contract_evidence.py \
 
 The generated receipt self-identifies the public
 [QZX Result Contract Conformance Receipt v1 schema](https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json),
-so its structure can be checked independently with JSON Schema 2020-12. A
-schema-valid receipt can still record failed conformance.
+so its structure can be checked independently with JSON Schema 2020-12. Its
+`validation_materials` fingerprints let reviewers tie the verdict to
+byte-identical source artifacts from a pinned QZX revision. A schema-valid
+receipt can still record failed conformance.
 
 The same check is available as the reusable
 [QZX Result Contract conformance Composite Action](.github/actions/result-contract-conformance/action.yml)
-for external GitHub repositories. Independent implementations and bounded
+for external GitHub repositories; the Action also exposes the exact contract
+schema digest as `contract_schema_sha256`. Independent implementations and bounded
 pilots can follow the [adoption guide](docs/result-contract-adoption.md). If an
 experiment is not ready for a formal adoption report, use the short
 [Result Contract pilot or integration help form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=result_contract_pilot.yml)
