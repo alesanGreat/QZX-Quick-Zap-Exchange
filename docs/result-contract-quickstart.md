@@ -147,7 +147,7 @@ For a completed successful call:
 
 - put the complete QZX object in `structuredContent`;
 - set `structuredContent.success` to `true`;
-- set MCP `isError` to `false`.
+- keep the effective MCP `isError` state `false`; the field may be omitted because MCP treats omission as `false`.
 
 For a completed tool-execution failure:
 
