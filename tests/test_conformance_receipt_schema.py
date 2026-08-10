@@ -191,6 +191,7 @@ def test_receipt_schema_remains_compatible_with_older_mcp_receipts():
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     receipt = _receipt(profile=validator.MCP_PROFILES[0], with_tool_definition=True)
 
+    receipt["details"].pop("validation_materials")
     for case in receipt["details"]["cases"]:
         case["profile_facts"].pop("mcp_is_error_explicit")
         case["profile_facts"].pop("mcp_is_error_effective")
@@ -209,6 +210,18 @@ def test_receipt_schema_rejects_unknown_fields_and_role_swaps():
     swapped = copy.deepcopy(receipt)
     swapped["details"]["cases"][0]["expected_success"] = False
     assert not _matches(schema, swapped, schema)
+
+    wrong_material_path = copy.deepcopy(receipt)
+    wrong_material_path["details"]["validation_materials"]["contract_schema"][
+        "repository_path"
+    ] = "somewhere-else.json"
+    assert not _matches(schema, wrong_material_path, schema)
+
+    wrong_material_digest = copy.deepcopy(receipt)
+    wrong_material_digest["details"]["validation_materials"]["contract_schema"][
+        "sha256"
+    ] = "not-a-sha256"
+    assert not _matches(schema, wrong_material_digest, schema)
 
     failed_without_error_code = _receipt(profile=validator.PROFILE_MCP)
     failed_without_error_code.pop("error_code")

@@ -57,6 +57,9 @@
         "contract_schema": {
           "const": "https://qzx.yumbale.com/schemas/result-contract-v1.schema.json"
         },
+        "validation_materials": {
+          "$ref": "#/$defs/validationMaterials"
+        },
         "profile": {
           "enum": [
             "core",
@@ -158,6 +161,106 @@
     "sha256": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
+    },
+    "validationMaterial": {
+      "type": "object",
+      "required": [
+        "repository_path",
+        "sha256"
+      ],
+      "properties": {
+        "repository_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "validationMaterials": {
+      "type": "object",
+      "required": [
+        "contract_schema",
+        "receipt_schema",
+        "core_validator",
+        "mcp_validator",
+        "evidence_validator"
+      ],
+      "properties": {
+        "contract_schema": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validationMaterial"
+            },
+            {
+              "properties": {
+                "repository_path": {
+                  "const": "src/qzx/resources/schemas/result-contract-v1.schema.json"
+                }
+              }
+            }
+          ]
+        },
+        "receipt_schema": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validationMaterial"
+            },
+            {
+              "properties": {
+                "repository_path": {
+                  "const": "src/qzx/resources/schemas/result-contract-conformance-receipt-v1.schema.json"
+                }
+              }
+            }
+          ]
+        },
+        "core_validator": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validationMaterial"
+            },
+            {
+              "properties": {
+                "repository_path": {
+                  "const": "src/qzx/core/result_contract.py"
+                }
+              }
+            }
+          ]
+        },
+        "mcp_validator": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validationMaterial"
+            },
+            {
+              "properties": {
+                "repository_path": {
+                  "const": "scripts/validate_mcp_result_contract.py"
+                }
+              }
+            }
+          ]
+        },
+        "evidence_validator": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validationMaterial"
+            },
+            {
+              "properties": {
+                "repository_path": {
+                  "const": "scripts/validate_result_contract_evidence.py"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "toolDefinition": {
       "type": "object",

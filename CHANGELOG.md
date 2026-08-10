@@ -34,6 +34,12 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   `false`, while a failed QZX result still requires an effective MCP error state
   of `true`. Conformance receipts now record both whether `isError` was explicit
   and its effective value without invalidating older v1 receipts.
+- Made conformance receipts more independently reproducible by fingerprinting
+  the exact QZX contract schema, receipt schema, core validator, MCP validator,
+  and evidence validator used for each verdict. The receipt-v1 schema accepts
+  these fingerprints additively so older receipts remain valid, while the
+  Composite Action also exposes the contract-schema SHA-256 in its outputs and
+  job summary.
 
 ## 0.2.2.0.7a5 — 2026-08-08
 

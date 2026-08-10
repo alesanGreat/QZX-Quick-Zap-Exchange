@@ -107,6 +107,17 @@ def main() -> int:
     details = report.get("details", {})
     evaluated_profile = str(details.get("profile", profile))
     receipt_schema = str(report.get("receipt_schema", "unavailable"))
+    validation_materials = details.get("validation_materials", {})
+    contract_material = (
+        validation_materials.get("contract_schema", {})
+        if isinstance(validation_materials, dict)
+        else {}
+    )
+    contract_schema_sha256 = str(
+        contract_material.get("sha256", "unavailable")
+        if isinstance(contract_material, dict)
+        else "unavailable"
+    )
     cases = details.get("cases", [])
     schema_modes = {
         str(case.get("profile_facts", {}).get("output_schema_mode"))
@@ -126,6 +137,7 @@ def main() -> int:
     append_line(github_output, f"conformant={'true' if report.get('success') is True else 'false'}")
     append_line(github_output, f"profile={evaluated_profile}")
     append_line(github_output, f"receipt_schema={receipt_schema}")
+    append_line(github_output, f"contract_schema_sha256={contract_schema_sha256}")
     append_line(github_output, f"output_schema_mode={output_schema_mode}")
 
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "")
@@ -139,6 +151,7 @@ def main() -> int:
             f"- Output schema mode: `{output_schema_mode}`",
             f"- Receipt: `{report_path}`",
             f"- Receipt schema: `{receipt_schema}`",
+            f"- Contract schema SHA-256: `{contract_schema_sha256}`",
             "- Specification: [QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract)",
             "- QZX: created and maintained by [Alejandro Sánchez](https://qzx.yumbale.com/en/alejandro-sanchez)",
             "",

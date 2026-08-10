@@ -39,6 +39,29 @@ MCP_PROFILE_TO_SPECIFICATION = {
 }
 MCP_PROFILES = tuple(MCP_PROFILE_TO_SPECIFICATION)
 PROFILE_MCP = "mcp-2026-07-28"
+VALIDATION_MATERIAL_PATHS = {
+    "contract_schema": "src/qzx/resources/schemas/result-contract-v1.schema.json",
+    "receipt_schema": (
+        "src/qzx/resources/schemas/"
+        "result-contract-conformance-receipt-v1.schema.json"
+    ),
+    "core_validator": "src/qzx/core/result_contract.py",
+    "mcp_validator": "scripts/validate_mcp_result_contract.py",
+    "evidence_validator": "scripts/validate_result_contract_evidence.py",
+}
+
+
+def _validation_materials() -> dict[str, dict[str, str]]:
+    """Identify the exact QZX artifacts used to produce a conformance receipt."""
+
+    materials: dict[str, dict[str, str]] = {}
+    for name, repository_path in VALIDATION_MATERIAL_PATHS.items():
+        raw = (PROJECT_ROOT / repository_path).read_bytes()
+        materials[name] = {
+            "repository_path": repository_path,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        }
+    return materials
 
 
 def parse_args() -> argparse.Namespace:
@@ -234,6 +257,7 @@ def validate_evidence(
             "report_schema_version": REPORT_SCHEMA_VERSION,
             "contract_version": f"v{RESULT_CONTRACT_VERSION}",
             "contract_schema": RESULT_CONTRACT_SCHEMA_URL,
+            "validation_materials": _validation_materials(),
             "profile": profile,
             "mcp_specification": MCP_PROFILE_TO_SPECIFICATION.get(profile),
             "tool_definition": (

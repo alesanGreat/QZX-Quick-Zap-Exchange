@@ -35,6 +35,9 @@ outputs:
   receipt_schema:
     description: Canonical schema URL declared by the generated conformance receipt.
     value: ${{ steps.validate.outputs.receipt_schema }}
+  contract_schema_sha256:
+    description: SHA-256 of the exact QZX Result Contract v1 schema used by the validator.
+    value: ${{ steps.validate.outputs.contract_schema_sha256 }}
   output_schema_mode:
     description: MCP outputSchema evidence mode, or not_applicable for non-MCP profiles.
     value: ${{ steps.validate.outputs.output_schema_mode }}

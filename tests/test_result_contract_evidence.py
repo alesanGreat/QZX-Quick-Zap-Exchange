@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -44,6 +45,16 @@ def test_core_success_failure_pair_produces_deterministic_receipt():
     ]
     assert all(case["conformant"] for case in report["details"]["cases"])
     assert all(len(case["sha256"]) == 64 for case in report["details"]["cases"])
+
+    materials = report["details"]["validation_materials"]
+    assert set(materials) == set(validator.VALIDATION_MATERIAL_PATHS)
+    for name, repository_path in validator.VALIDATION_MATERIAL_PATHS.items():
+        material = materials[name]
+        assert material["repository_path"] == repository_path
+        expected_digest = hashlib.sha256(
+            (REPOSITORY_ROOT / repository_path).read_bytes()
+        ).hexdigest()
+        assert material["sha256"] == expected_digest
 
 
 def test_mcp_success_failure_pair_checks_tool_definition():
@@ -223,18 +234,24 @@ def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
         check=False,
     )
     assert process.returncode == 0, process.stderr
-    assert json.loads(report_path.read_text(encoding="utf-8"))["success"] is True
+    receipt = json.loads(report_path.read_text(encoding="utf-8"))
+    assert receipt["success"] is True
+    contract_schema_sha256 = receipt["details"]["validation_materials"][
+        "contract_schema"
+    ]["sha256"]
     action_output = output_path.read_text(encoding="utf-8")
     assert "report=qzx-receipt.json" in action_output
     assert "conformant=true" in action_output
     assert "profile=mcp-2026-07-28" in action_output
     assert f"receipt_schema={validator.CONFORMANCE_RECEIPT_SCHEMA_URL}" in action_output
+    assert f"contract_schema_sha256={contract_schema_sha256}" in action_output
     assert "output_schema_mode=canonical_ref" in action_output
     summary = summary_path.read_text(encoding="utf-8")
     assert "Status: **PASS**" in summary
     assert "mcp-2026-07-28" in summary
     assert "Output schema mode: `canonical_ref`" in summary
     assert validator.CONFORMANCE_RECEIPT_SCHEMA_URL in summary
+    assert contract_schema_sha256 in summary
     assert "QZX Result Contract v1" in summary
     assert "Alejandro Sánchez" in summary
 
@@ -301,3 +318,4 @@ def test_composite_action_metadata_pins_python_setup_and_exposes_inputs():
     assert "value: ${{ steps.validate.outputs.conformant }}" in metadata
     assert "value: ${{ steps.validate.outputs.profile }}" in metadata
     assert "value: ${{ steps.validate.outputs.receipt_schema }}" in metadata
+    assert "value: ${{ steps.validate.outputs.contract_schema_sha256 }}" in metadata

@@ -77,12 +77,16 @@ python scripts/validate_result_contract_evidence.py \
 
 Every generated receipt identifies its own versioned JSON Schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.
-That lets reviewers validate the receipt structure with any JSON Schema
-2020-12 implementation without executing QZX. The receipt itself also remains a
-valid QZX Result Contract v1 object: failed receipts carry a stable
-`error_code`. **Receipt schema validity is not an adoption verdict:** a
-structurally valid receipt may intentionally record `success: false`, violations,
-unreadable evidence, or a missing MCP tool definition.
+It also records SHA-256 digests for the exact QZX contract schema, receipt schema,
+core validator, MCP validator, and evidence validator used to produce the
+verdict. That makes a saved receipt independently traceable to the validation
+materials even if a public `v1` URL later receives compatible clarifications.
+Reviewers can validate the receipt structure with any JSON Schema 2020-12
+implementation without executing QZX. The receipt itself also remains a valid
+QZX Result Contract v1 object: failed receipts carry a stable `error_code`.
+**Receipt schema validity is not an adoption verdict:** a structurally valid
+receipt may intentionally record `success: false`, violations, unreadable
+evidence, or a missing MCP tool definition.
 
 For GitHub Actions, the repository also ships a reusable Composite Action. A
 minimal caller workflow is:
@@ -109,9 +113,9 @@ jobs:
 adoption evidence, replace it with the full QZX commit SHA that you actually
 validated against. The Action fails the job when the pair does not conform and
 writes the receipt path plus scalar `conformant`, `profile`, `receipt_schema`,
-and `output_schema_mode` outputs for later workflow steps. Its GitHub job summary
-keeps the PASS/FAIL
-result, receipt metadata, the specification link, and factual creator
+`contract_schema_sha256`, and `output_schema_mode` outputs for later workflow
+steps. Its GitHub job summary keeps the PASS/FAIL result, the exact contract
+schema digest, receipt metadata, the specification link, and factual creator
 attribution together with the run.
 
 ## 4. MCP 2025-06-18 and newer: use the contract as `outputSchema`
