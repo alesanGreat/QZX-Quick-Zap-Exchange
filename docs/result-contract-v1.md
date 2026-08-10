@@ -130,6 +130,26 @@ otherwise.
    is safe, authorized, sandboxed, correct for its domain, or available on every
    platform.
 
+## Layering with protocol-native status and errors
+
+QZX Result Contract describes a **completed operation result**. It does not
+replace the status and error mechanisms of the transport carrying that result.
+HTTP status codes and problem-detail documents, JSON-RPC errors, MCP protocol
+errors, process exit statuses, and application-specific error models may all
+remain appropriate at their own layer.
+
+The explicit `success` field serves a different purpose: it travels with the
+operation result itself. If that object is logged, cached, queued, stored,
+replayed, or passed through another transport without its original wrapper, its
+outcome remains self-describing. A transport profile MAY therefore duplicate
+the outcome in native metadata, but it MUST define a consistent mapping rather
+than create a competing meaning.
+
+A malformed request, unknown protocol method, framing failure, or comparable
+transport/protocol error MUST NOT be fabricated as a completed QZX Result
+Contract merely to force every failure into one envelope. Only once an
+operation has a completed result does the QZX core apply.
+
 ## QZX CLI JSON transport profile
 
 The core contract does not require `stdout`, `stderr`, or a process exit code.
