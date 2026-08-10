@@ -326,19 +326,23 @@ def validate_mcp_profile(
             f"structuredContent: {violation}" for violation in core_violations
         )
 
-    is_error = result.get("isError")
-    if not isinstance(is_error, bool):
-        violations.append(
-            "A QZX MCP profile result must declare isError as an explicit boolean."
-        )
+    is_error_explicit = "isError" in result
+    is_error_value = result.get("isError")
+    is_error_valid = not is_error_explicit or isinstance(is_error_value, bool)
+    if not is_error_valid:
+        violations.append("MCP isError must be a boolean when present.")
+    effective_is_error = is_error_value if isinstance(is_error_value, bool) else False
+    details["mcp_is_error_explicit"] = is_error_explicit
+    details["mcp_is_error_effective"] = effective_is_error
 
     if isinstance(structured_content, dict):
         success = structured_content.get("success")
-        if isinstance(success, bool) and isinstance(is_error, bool):
-            if is_error != (not success):
+        if isinstance(success, bool) and is_error_valid:
+            if effective_is_error != (not success):
                 violations.append(
-                    "isError must equal !structuredContent.success for a "
-                    "completed QZX MCP profile result."
+                    "Effective MCP isError must equal !structuredContent.success "
+                    "for a completed QZX MCP profile result. MCP treats omitted "
+                    "isError as false."
                 )
 
         backcompat_matches = _backcompat_text_matches(content, structured_content)

@@ -151,11 +151,46 @@ def test_is_error_must_match_qzx_success():
         load_fixture("mcp-invalid-is-error.json")
     )
     assert (
-        "isError must equal !structuredContent.success for a completed QZX MCP "
-        "profile result."
+        "Effective MCP isError must equal !structuredContent.success for a "
+        "completed QZX MCP profile result. MCP treats omitted isError as false."
     ) in violations
     assert warnings == []
     assert details["backcompat_text_matches"] is True
+
+
+def test_success_may_omit_is_error_because_mcp_defaults_it_to_false():
+    document = load_fixture("mcp-2025-success.json")
+    document["result"].pop("isError")
+    violations, warnings, details = validator.validate_mcp_profile(
+        document,
+        load_fixture("mcp-structural-tool-definition.json"),
+        "2025-11-25",
+    )
+    assert violations == []
+    assert warnings == [
+        "outputSchema exposes the QZX core structurally but does not embed the "
+        "canonical QZX schema. The submitted runtime evidence is validated "
+        "against the full Result Contract, but outputSchema alone does not "
+        "guarantee every QZX invariant."
+    ]
+    assert details["mcp_is_error_explicit"] is False
+    assert details["mcp_is_error_effective"] is False
+
+
+def test_failure_must_set_is_error_true_even_though_the_field_is_optional():
+    document = load_fixture("mcp-2025-failure.json")
+    document["result"].pop("isError")
+    violations, warnings, details = validator.validate_mcp_profile(
+        document,
+        load_fixture("mcp-structural-tool-definition.json"),
+        "2025-11-25",
+    )
+    assert (
+        "Effective MCP isError must equal !structuredContent.success for a "
+        "completed QZX MCP profile result. MCP treats omitted isError as false."
+    ) in violations
+    assert details["mcp_is_error_explicit"] is False
+    assert details["mcp_is_error_effective"] is False
 
 
 def test_protocol_error_is_not_a_completed_qzx_result():

@@ -178,6 +178,24 @@ def test_receipt_schema_accepts_pass_and_fail_receipts():
     assert "error_code" not in receipts[0]
     assert all("error_code" not in receipt for receipt in receipts[1:-1])
     assert receipts[-1]["error_code"] == "conformance_failed"
+    for receipt in receipts[1:]:
+        success_facts = receipt["details"]["cases"][0]["profile_facts"]
+        failure_facts = receipt["details"]["cases"][1]["profile_facts"]
+        assert success_facts["mcp_is_error_explicit"] is True
+        assert success_facts["mcp_is_error_effective"] is False
+        assert failure_facts["mcp_is_error_explicit"] is True
+        assert failure_facts["mcp_is_error_effective"] is True
+
+
+def test_receipt_schema_remains_compatible_with_older_mcp_receipts():
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    receipt = _receipt(profile=validator.MCP_PROFILES[0], with_tool_definition=True)
+
+    for case in receipt["details"]["cases"]:
+        case["profile_facts"].pop("mcp_is_error_explicit")
+        case["profile_facts"].pop("mcp_is_error_effective")
+
+    assert _matches(schema, receipt, schema)
 
 
 def test_receipt_schema_rejects_unknown_fields_and_role_swaps():

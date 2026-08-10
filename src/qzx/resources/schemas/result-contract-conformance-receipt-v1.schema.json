@@ -216,6 +216,12 @@
         },
         "backcompat_text_matches": {
           "type": "boolean"
+        },
+        "mcp_is_error_explicit": {
+          "type": "boolean"
+        },
+        "mcp_is_error_effective": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

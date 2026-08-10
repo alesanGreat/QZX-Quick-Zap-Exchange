@@ -155,13 +155,15 @@ silently weakening the published claim.
 
 The examples below show the MCP 2026-07-28 wire shape. For the 2025-06-18 and
 2025-11-25 profiles, omit the `resultType` member; the QZX object,
-`structuredContent`, `content`, and `isError` invariants remain the same.
+`structuredContent`, `content`, and effective MCP error-state invariants remain
+the same.
 
 For a completed successful operation:
 
 - `structuredContent` contains the complete QZX Result Contract object;
 - `success` is `true`;
-- `isError` is `false`;
+- effective MCP `isError` is `false`; the field MAY be omitted because MCP
+  defines omission as `false`;
 - the text compatibility block should contain the serialized contract object,
   not a different or lossy result.
 
@@ -218,15 +220,16 @@ narrow:
 
 | MCP condition | QZX Result Contract mapping |
 | --- | --- |
-| Completed successful tool execution | QZX object in `structuredContent`; `success: true`; `isError: false`. |
+| Completed successful tool execution | QZX object in `structuredContent`; `success: true`; effective MCP `isError: false`. MCP permits the `isError` field to be omitted on success because omission means `false`. |
 | Completed tool execution failure | QZX failure object in `structuredContent`; `success: false`; `isError: true`. |
 | Protocol error such as unknown tool, malformed request, or server-level JSON-RPC failure | Keep the MCP/JSON-RPC protocol error. Do not invent a completed QZX result. |
 | MCP 2026-07-28 `input_required` flow | Continue the MCP flow. Produce a QZX result only when an operation actually reaches `resultType: "complete"`. |
 
-For every QZX MCP profile, a completed result MUST declare `isError` as an
-explicit boolean and MUST keep `isError == !structuredContent.success`. A
-mismatch is an interoperability bug: it gives the MCP layer and the contract
-layer contradictory outcomes.
+For every QZX MCP profile, the **effective** MCP error state MUST equal
+`!structuredContent.success`. MCP specifies that an omitted `isError` is
+assumed to be `false`, so a successful QZX result MAY omit the field. A failed
+QZX result MUST still emit `isError: true`; omitting it would make MCP interpret
+the call as successful and would contradict `success: false`.
 
 ### Why keep `success` when MCP already has `isError`?
 
@@ -243,9 +246,10 @@ result shape can therefore cross MCP, CLI, HTTP, job, and test boundaries withou
 requiring each consumer to reconstruct transport-specific status semantics.
 
 For an MCP producer the rule is deliberately boring: do not invent competing
-meaning. Keep `isError == !structuredContent.success`. The duplication is a
-cross-boundary interoperability invariant, not a second source of truth inside
-MCP.
+meaning. Keep the **effective** MCP `isError` equal to
+`!structuredContent.success`; omission is equivalent to `false` only on the
+successful side. The duplication is a cross-boundary interoperability invariant,
+not a second source of truth inside MCP.
 
 ### Why this profile is useful
 
