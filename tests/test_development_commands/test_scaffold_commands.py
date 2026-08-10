@@ -6,6 +6,8 @@ Tests for the various scaffolding commands
 """
 
 import os
+import subprocess
+
 from qzx.commands.development.scaffold_python import ScaffoldPythonCommand
 from qzx.commands.development.scaffold_rust import ScaffoldRustCommand
 from qzx.commands.development.scaffold_javascript import ScaffoldJavaScriptCommand
@@ -138,3 +140,22 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_csharp_app" / "my_csharp_app.sln")
         assert os.path.isdir(tmp_path / "my_csharp_app" / "my_csharp_app.Tests")
         assert os.path.isfile(tmp_path / "my_csharp_app" / "my_csharp_app.Tests" / "ProgramTests.cs")
+
+    def test_scaffold_csharp_dotnet_probe_times_out_fail_closed(self):
+        calls = []
+
+        def timed_out_runner(args, **kwargs):
+            calls.append((args, kwargs))
+            raise subprocess.TimeoutExpired(args, kwargs["timeout"])
+
+        cmd = ScaffoldCSharpCommand()
+        assert cmd._is_dotnet_installed(timed_out_runner) is False
+        assert calls[0][0] == ["dotnet", "--version"]
+        assert calls[0][1]["timeout"] == 5.0
+
+    def test_scaffold_csharp_dotnet_probe_rejects_nonzero_exit(self):
+        def failed_runner(args, **kwargs):
+            return subprocess.CompletedProcess(args=args, returncode=1)
+
+        cmd = ScaffoldCSharpCommand()
+        assert cmd._is_dotnet_installed(failed_runner) is False

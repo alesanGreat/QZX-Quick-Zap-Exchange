@@ -15,6 +15,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 | `invalid-success-string.json` | Rejected: `success` is not a boolean. |
 | `invalid-whitespace-message.json` | Rejected: whitespace-only `message`. |
 | `invalid-failure-without-error.json` | Rejected: failed result has neither `error` nor `error_code`. |
+| `invalid-success-with-error-code.json` | Rejected: successful result carries a contradictory failure identifier. |
+| `invalid-null-details.json` | Rejected: defined optional core field uses `null` instead of its declared type. |
 
 Run all core cases:
 
@@ -89,8 +91,10 @@ python scripts/validate_result_contract_evidence.py \
   --report qzx-conformance.json
 ```
 
-The receipt records SHA-256 digests of the exact evidence files and preserves
-validator warnings and profile facts. It self-identifies the public
+The receipt records SHA-256 digests of the exact evidence files and fingerprints
+the exact QZX contract schema, receipt schema, core validator, MCP validator,
+and evidence validator used for the verdict. It preserves validator warnings
+and profile facts and self-identifies the public
 `result-contract-conformance-receipt-v1.schema.json` schema, so reviewers can
 validate the receipt structure independently with JSON Schema 2020-12. A valid
 receipt schema does not imply a passing conformance result. External GitHub

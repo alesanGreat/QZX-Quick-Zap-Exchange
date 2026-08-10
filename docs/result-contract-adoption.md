@@ -161,7 +161,7 @@ the same.
 For a completed successful operation:
 
 - `structuredContent` contains the complete QZX Result Contract object;
-- `success` is `true`;
+- `success` is `true` and the object contains neither `error` nor `error_code`;
 - effective MCP `isError` is `false`; the field MAY be omitted because MCP
   defines omission as `false`;
 - the text compatibility block should contain the serialized contract object,

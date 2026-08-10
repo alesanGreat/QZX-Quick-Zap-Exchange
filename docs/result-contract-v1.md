@@ -58,10 +58,13 @@ Every completed result is one JSON object containing:
 | `meta` | object | no | Shared invocation metadata, including schema version, command, duration, and maturity when available. |
 
 When `meta.command` is present, it must contain at least one non-whitespace
-character. A failed result MUST contain at least `error` or `error_code`.
-Producers MAY add command-specific top-level fields and additional metadata.
-Consumers MUST ignore unknown fields unless a command-specific contract says
-otherwise.
+character. A failed result MUST contain at least `error` or `error_code`. A
+successful result MUST NOT contain either failure field; non-fatal conditions
+belong in `warnings` or domain-specific evidence instead. Defined optional core
+fields and defined `meta` fields MUST satisfy their declared type when present;
+`null` is not a substitute for omitting an unavailable field. Producers MAY add
+command-specific top-level fields and additional metadata. Consumers MUST ignore
+unknown fields unless a command-specific contract says otherwise.
 
 ## Successful example
 
@@ -107,11 +110,15 @@ otherwise.
 3. `message` MUST be useful as a standalone summary and MUST contain at least
    one non-whitespace character.
 4. A failed result MUST contain at least one of `error` or `error_code`.
-5. A producer SHOULD use stable `error_code` values for failures on which a
+5. A successful result MUST NOT contain `error` or `error_code`.
+6. Defined optional core fields and defined `meta` fields MUST satisfy their
+   declared type when present; an unavailable defined field is omitted rather
+   than represented by `null`.
+7. A producer SHOULD use stable `error_code` values for failures on which a
    consumer may branch programmatically.
-6. Command-specific evidence MUST be truthful and typed. A producer MUST NOT
+8. Command-specific evidence MUST be truthful and typed. A producer MUST NOT
    invent values for information it could not obtain.
-7. Additive fields MAY evolve compatibly. Removing a required field, changing
+9. Additive fields MAY evolve compatibly. Removing a required field, changing
    its type, or changing its meaning requires a new contract version.
 
 ## Core consumer requirements
@@ -187,7 +194,8 @@ replaced with a conforming `invalid_result_contract` failure instead of leaking
 an ambiguous document.
 
 The public conformance fixtures include both valid documents and documents that
-MUST be rejected, including a whitespace-only `message`.
+MUST be rejected, including a whitespace-only `message`, a successful result
+with a contradictory `error_code`, and a defined typed field set to `null`.
 
 ## Compatibility and evolution
 

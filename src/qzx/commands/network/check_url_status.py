@@ -66,7 +66,9 @@ class CheckUrlStatusCommand(CommandBase):
             if not url:
                 return {
                     "success": False,
-                    "error": "URL cannot be empty."
+                    "message": "URL cannot be empty.",
+                    "error": "URL cannot be empty.",
+                    "error_code": "invalid_url",
                 }
                 
             # If protocol is missing, prepend https://
@@ -95,7 +97,7 @@ class CheckUrlStatusCommand(CommandBase):
             response_reason = "Unknown"
             headers_dict = {}
             is_online = False
-            error_msg = None
+            status_detail = None
             
             try:
                 # Execute the request
@@ -114,19 +116,19 @@ class CheckUrlStatusCommand(CommandBase):
                 response_code = e.code
                 response_reason = e.reason or "HTTP Error"
                 is_online = False
-                error_msg = f"HTTP Error {response_code}: {response_reason}"
+                status_detail = f"HTTP Error {response_code}: {response_reason}"
                 for key, val in e.headers.items():
                     headers_dict[key] = val
             except urllib.error.URLError as e:
                 # URLError means connection failed (DNS error, timeout, server down)
                 end_time = time.perf_counter()
                 is_online = False
-                error_msg = f"Connection Failed: {str(e.reason)}"
+                status_detail = f"Connection Failed: {str(e.reason)}"
             except Exception as e:
                 # Other connection issues (e.g., ssl handshake failed, timeout)
                 end_time = time.perf_counter()
                 is_online = False
-                error_msg = f"Request Failed: {str(e)}"
+                status_detail = f"Request Failed: {str(e)}"
                 
             elapsed_ms = (end_time - start_time) * 1000
             
@@ -155,8 +157,8 @@ class CheckUrlStatusCommand(CommandBase):
                             essential_headers[k] = hv
                 result["headers"] = essential_headers
                 
-            if error_msg:
-                result["error"] = error_msg
+            if status_detail:
+                result["status_detail"] = status_detail
                 
             # Formulate the response message
             if is_online:
@@ -164,7 +166,7 @@ class CheckUrlStatusCommand(CommandBase):
             elif response_code is not None:
                 result["message"] = f"URL '{url}' responded with client/server error status (Status: {response_code} {response_reason}, Time: {result['response_time_ms']}ms)."
             else:
-                result["message"] = f"URL '{url}' is OFFLINE or unreachable: {error_msg}."
+                result["message"] = f"URL '{url}' is OFFLINE or unreachable: {status_detail}."
                 
             return result
             

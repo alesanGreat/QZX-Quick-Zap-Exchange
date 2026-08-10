@@ -7,6 +7,8 @@ ScaffoldCSharp Command - Creates a basic scaffolding for a C# program
 
 import os
 import subprocess
+from collections.abc import Callable
+from typing import Any
 
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
@@ -312,14 +314,18 @@ Thumbs.db
 ''')
         result["files_created"].append(gitignore_path)
 
-    def _is_dotnet_installed(self):
+    def _is_dotnet_installed(
+        self,
+        runner: Callable[..., Any] = subprocess.run,
+    ) -> bool:
         try:
-            subprocess.run(
+            completed = runner(
                 ["dotnet", "--version"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                check=False
+                check=False,
+                timeout=5.0,
             )
-            return True
-        except FileNotFoundError:
+        except (OSError, subprocess.TimeoutExpired):
             return False
+        return completed.returncode == 0

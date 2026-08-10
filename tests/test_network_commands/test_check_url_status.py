@@ -3,6 +3,7 @@
 import socket
 
 from qzx.commands.network.check_url_status import CheckUrlStatusCommand
+from qzx.core.result_contract import result_contract_violations
 
 
 class TestCheckUrlStatusCommand:
@@ -13,7 +14,10 @@ class TestCheckUrlStatusCommand:
         result = self.command.execute("")
 
         assert result["success"] is False
+        assert result["error_code"] == "invalid_url"
         assert "cannot be empty" in result["error"]
+        assert result["message"] == "URL cannot be empty."
+        assert result_contract_violations(result) == []
 
     def test_missing_protocol_uses_real_https_endpoint(self):
         result = self.command.execute("example.com", timeout=10)
@@ -44,7 +48,11 @@ class TestCheckUrlStatusCommand:
         assert result["status_code"] == 404
         assert result["reason"] == "Not Found"
         assert result["headers"]["Content-Type"] == "text/plain"
+        assert result["status_detail"] == "HTTP Error 404: Not Found"
+        assert "error" not in result
+        assert "error_code" not in result
         assert "responded with client/server error" in result["message"]
+        assert result_contract_violations(result) == []
 
     def test_real_connection_refusal(self):
         # Keep the unlistened socket bound throughout the request. Releasing
@@ -61,8 +69,11 @@ class TestCheckUrlStatusCommand:
         assert result["success"] is True
         assert result["is_online"] is False
         assert "status_code" not in result
-        assert "Connection Failed" in result["error"]
+        assert "Connection Failed" in result["status_detail"]
+        assert "error" not in result
+        assert "error_code" not in result
         assert "is OFFLINE" in result["message"]
+        assert result_contract_violations(result) == []
 
     def test_real_tls_handshake_failure(self, local_http_server):
         plain_http_target = local_http_server.removeprefix("http://")
@@ -73,5 +84,8 @@ class TestCheckUrlStatusCommand:
 
         assert result["success"] is True
         assert result["is_online"] is False
-        assert "error" in result
+        assert "status_detail" in result
+        assert "error" not in result
+        assert "error_code" not in result
         assert "is OFFLINE" in result["message"]
+        assert result_contract_violations(result) == []

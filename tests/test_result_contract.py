@@ -56,6 +56,12 @@ def test_packaged_schema_identifies_the_public_contract():
     assert schema["properties"]["error"]["pattern"] == r"\S"
     assert schema["properties"]["warnings"]["items"]["pattern"] == r"\S"
     assert schema["properties"]["meta"]["properties"]["command"]["pattern"] == r"\S"
+    success_rule = schema["allOf"][1]
+    assert success_rule["if"]["properties"]["success"]["const"] is True
+    assert success_rule["then"]["not"]["anyOf"] == [
+        {"required": ["error"]},
+        {"required": ["error_code"]},
+    ]
     assert schema["additionalProperties"] is True
 
 
@@ -108,6 +114,60 @@ def test_core_validator_rejects_ambiguous_documents():
     assert "meta.schema_version must equal 1." in violations
     assert "meta.command must be a non-empty string when present." in violations
     assert "meta.duration_ms must be a finite non-negative number." in violations
+
+
+def test_core_validator_rejects_failure_fields_on_success():
+    expected = [
+        "A successful result must not include error or error_code."
+    ]
+    assert result_contract_violations(
+        {
+            "success": True,
+            "message": "The operation completed.",
+            "error": "Stale failure text.",
+        }
+    ) == expected
+    assert result_contract_violations(
+        {
+            "success": True,
+            "message": "The operation completed.",
+            "error_code": "stale_failure",
+        }
+    ) == expected
+
+
+def test_core_validator_rejects_explicit_null_for_typed_optional_fields():
+    assert result_contract_violations(
+        {
+            "success": True,
+            "message": "The operation completed.",
+            "details": None,
+            "warnings": None,
+            "meta": None,
+        }
+    ) == [
+        "details must be an object when present.",
+        "warnings must be an array when present.",
+        "meta must be an object when present.",
+    ]
+
+    assert result_contract_violations(
+        {
+            "success": True,
+            "message": "The operation completed.",
+            "meta": {
+                "schema_version": None,
+                "command": None,
+                "duration_ms": None,
+                "command_maturity": None,
+            },
+        }
+    ) == [
+        "meta.schema_version must equal 1.",
+        "meta.command must be a non-empty string when present.",
+        "meta.duration_ms must be a finite non-negative number.",
+        "meta.command_maturity must be an object when present.",
+    ]
 
 
 def test_invalid_internal_result_is_replaced_by_a_conforming_failure():

@@ -31,7 +31,10 @@ A failed completed operation starts with:
 ```
 
 Keep your existing domain data as additional fields. The contract is additive;
-it does not require throwing useful evidence away.
+it does not require throwing useful evidence away. Successful results do not
+carry `error` or `error_code`; use `warnings` for non-fatal conditions. When a
+defined optional core or `meta` field is unavailable, omit it instead of
+emitting `null` with the wrong type.
 
 TypeScript producers can copy the dependency-free
 [`typescript-minimal.ts`](../examples/result_contract/typescript-minimal.ts)

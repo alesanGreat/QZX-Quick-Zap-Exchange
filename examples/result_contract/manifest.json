@@ -45,6 +45,22 @@
       "expected_violations": [
         "A failed result must include error or error_code."
       ]
+    },
+    {
+      "id": "invalid_success_with_error_code",
+      "file": "invalid-success-with-error-code.json",
+      "expected_conformant": false,
+      "expected_violations": [
+        "A successful result must not include error or error_code."
+      ]
+    },
+    {
+      "id": "invalid_null_details",
+      "file": "invalid-null-details.json",
+      "expected_conformant": false,
+      "expected_violations": [
+        "details must be an object when present."
+      ]
     }
   ]
 }

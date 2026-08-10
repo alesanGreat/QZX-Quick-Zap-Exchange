@@ -40,6 +40,21 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   these fingerprints additively so older receipts remain valid, while the
   Composite Action also exposes the contract-schema SHA-256 in its outputs and
   job summary.
+- Removed two Result Contract validator ambiguities that could make independent
+  implementations disagree: successful results now reject `error` and
+  `error_code`, and the dependency-free validator no longer treats explicit
+  `null` as omission for typed optional core or defined `meta` fields. Public
+  negative fixtures cover both cases so external implementations can reproduce
+  the same verdicts without relying on QZX internals.
+- Aligned `checkUrlStatus` with that clarified contract after real evidence
+  recapture exposed a contradictory `success: true` plus `error` result for HTTP
+  404. Successful HTTP/connectivity observations now use the domain field
+  `status_detail`, while actual command failures retain `error`/`error_code`;
+  the empty-URL validation failure now also includes the required `message`.
+- Made the C# scaffold's .NET availability probe fail closed instead of hanging
+  indefinitely or treating a non-zero `dotnet --version` exit as usable. The
+  probe now has a bounded timeout, so a broken external SDK cannot block QZX
+  merely while capability detection runs.
 
 ## 0.2.2.0.7a5 — 2026-08-08
 

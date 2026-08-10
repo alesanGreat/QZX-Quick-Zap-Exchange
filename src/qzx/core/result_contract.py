@@ -46,14 +46,16 @@ def result_contract_violations(document: Any) -> list[str]:
     if not isinstance(message, str) or message.strip() == "":
         violations.append("message must be a non-empty string.")
 
+    has_error = "error" in document
     error = document.get("error")
-    if error is not None and (
+    if has_error and (
         not isinstance(error, str) or error.strip() == ""
     ):
         violations.append("error must be a non-empty string when present.")
 
+    has_error_code = "error_code" in document
     error_code = document.get("error_code")
-    if error_code is not None and (
+    if has_error_code and (
         not isinstance(error_code, str)
         or _ERROR_CODE_PATTERN.fullmatch(error_code) is None
     ):
@@ -61,17 +63,20 @@ def result_contract_violations(document: Any) -> list[str]:
             "error_code must use lower_snake_case when present."
         )
 
-    if success is False and error is None and error_code is None:
+    if success is False and not has_error and not has_error_code:
         violations.append(
             "A failed result must include error or error_code."
         )
+    if success is True and (has_error or has_error_code):
+        violations.append(
+            "A successful result must not include error or error_code."
+        )
 
-    details = document.get("details")
-    if details is not None and not isinstance(details, dict):
+    if "details" in document and not isinstance(document["details"], dict):
         violations.append("details must be an object when present.")
 
-    warnings = document.get("warnings")
-    if warnings is not None:
+    if "warnings" in document:
+        warnings = document["warnings"]
         if not isinstance(warnings, list):
             violations.append("warnings must be an array when present.")
         elif any(
@@ -82,42 +87,44 @@ def result_contract_violations(document: Any) -> list[str]:
                 "Every warnings item must be a non-empty string."
             )
 
-    meta = document.get("meta")
-    if meta is not None:
+    if "meta" in document:
+        meta = document["meta"]
         if not isinstance(meta, dict):
             violations.append("meta must be an object when present.")
         else:
-            schema_version = meta.get("schema_version")
-            if schema_version is not None and (
-                isinstance(schema_version, bool)
-                or schema_version != RESULT_CONTRACT_VERSION
-            ):
-                violations.append("meta.schema_version must equal 1.")
+            if "schema_version" in meta:
+                schema_version = meta["schema_version"]
+                if (
+                    isinstance(schema_version, bool)
+                    or schema_version != RESULT_CONTRACT_VERSION
+                ):
+                    violations.append("meta.schema_version must equal 1.")
 
-            command = meta.get("command")
-            if command is not None and (
-                not isinstance(command, str) or command.strip() == ""
-            ):
-                violations.append(
-                    "meta.command must be a non-empty string when present."
-                )
+            if "command" in meta:
+                command = meta["command"]
+                if not isinstance(command, str) or command.strip() == "":
+                    violations.append(
+                        "meta.command must be a non-empty string when present."
+                    )
 
-            duration_ms = meta.get("duration_ms")
-            if duration_ms is not None and (
-                isinstance(duration_ms, bool)
-                or not isinstance(duration_ms, (int, float))
-                or not math.isfinite(duration_ms)
-                or duration_ms < 0
-            ):
-                violations.append(
-                    "meta.duration_ms must be a finite non-negative number."
-                )
+            if "duration_ms" in meta:
+                duration_ms = meta["duration_ms"]
+                if (
+                    isinstance(duration_ms, bool)
+                    or not isinstance(duration_ms, (int, float))
+                    or not math.isfinite(duration_ms)
+                    or duration_ms < 0
+                ):
+                    violations.append(
+                        "meta.duration_ms must be a finite non-negative number."
+                    )
 
-            maturity = meta.get("command_maturity")
-            if maturity is not None and not isinstance(maturity, dict):
-                violations.append(
-                    "meta.command_maturity must be an object when present."
-                )
+            if "command_maturity" in meta:
+                maturity = meta["command_maturity"]
+                if not isinstance(maturity, dict):
+                    violations.append(
+                        "meta.command_maturity must be an object when present."
+                    )
 
     return violations
 

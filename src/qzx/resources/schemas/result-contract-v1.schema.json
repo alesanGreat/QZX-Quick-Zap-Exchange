@@ -93,6 +93,34 @@
           }
         ]
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "error"
+              ]
+            },
+            {
+              "required": [
+                "error_code"
+              ]
+            }
+          ]
+        }
+      }
     }
   ],
   "additionalProperties": true,
