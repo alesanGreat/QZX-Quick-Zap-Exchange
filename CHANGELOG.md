@@ -31,7 +31,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   Copyable workflow examples now mirror the same CI discipline: push validation
   is limited to `main` while pull requests and manual dispatch remain available,
   the runner is fixed to `ubuntu-24.04` instead of the moving `ubuntu-latest`
-  alias, and checkout does not persist credentials for this read-only gate.
+  alias, workflow permissions are explicitly limited to `contents: read`, and
+  checkout does not persist credentials for this read-only gate.
 - Expanded the Result Contract MCP interoperability surface from only
   specification 2026-07-28 to revision-specific profiles for 2025-06-18,
   2025-11-25, and 2026-07-28. The 2026 profile still requires

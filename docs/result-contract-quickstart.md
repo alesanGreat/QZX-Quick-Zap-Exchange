@@ -107,6 +107,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   qzx-result-contract:
     runs-on: ubuntu-24.04

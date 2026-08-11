@@ -401,6 +401,7 @@ def test_public_workflow_examples_avoid_duplicate_ci_and_moving_runner_defaults(
     )
     assert expected_triggers in quickstart
     assert "on: [push, pull_request]" not in quickstart
+    assert "permissions:\n  contents: read\n" in quickstart
     assert "runs-on: ubuntu-24.04" in quickstart
     assert "runs-on: ubuntu-latest" not in quickstart
     assert (
