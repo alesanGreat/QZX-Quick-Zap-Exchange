@@ -18,7 +18,10 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   Compatibility-policy tests now keep container image digests exact while
   validating GitHub Action identity plus full-SHA pinning without duplicating a
   permanently stale Action revision, so dependency-update PRs can prove newer
-  immutable pins through the real CI matrix.
+  immutable pins through the real CI matrix. Related updates are grouped into
+  bounded `artifact-actions` and `vm-actions` PRs to avoid multiplying the
+  expensive cross-platform matrix without collapsing unrelated Actions into one
+  review unit.
 - Expanded the Result Contract MCP interoperability surface from only
   specification 2026-07-28 to revision-specific profiles for 2025-06-18,
   2025-11-25, and 2026-07-28. The 2026 profile still requires

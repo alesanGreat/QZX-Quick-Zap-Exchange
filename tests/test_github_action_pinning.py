@@ -109,3 +109,14 @@ def test_dependabot_tracks_github_action_version_updates():
     assert re.search(
         r'^\s+interval:\s*["\']weekly["\']\s*$', body, flags=re.MULTILINE
     )
+    for required_group_fragment in (
+        "artifact-actions:",
+        '- "actions/upload-artifact"',
+        '- "actions/download-artifact"',
+        "vm-actions:",
+        '- "vmactions/*"',
+    ):
+        assert required_group_fragment in body
+    assert '- "actions/*"' not in body, (
+        "Do not couple every GitHub Action into one update PR; keep groups bounded."
+    )
