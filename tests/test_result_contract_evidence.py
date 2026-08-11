@@ -19,6 +19,7 @@ SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "validate_result_contract_evidence.p
 ACTION_ROOT = REPOSITORY_ROOT / ".github" / "actions" / "result-contract-conformance"
 ACTION_RUNNER = ACTION_ROOT / "run.py"
 ACTION_METADATA = ACTION_ROOT / "action.yml"
+ACTION_README = ACTION_ROOT / "README.md"
 FIXTURE_ROOT = REPOSITORY_ROOT / "examples" / "result_contract"
 
 spec = importlib.util.spec_from_file_location("qzx_evidence_validator", SCRIPT_PATH)
@@ -319,3 +320,16 @@ def test_composite_action_metadata_pins_python_setup_and_exposes_inputs():
     assert "value: ${{ steps.validate.outputs.profile }}" in metadata
     assert "value: ${{ steps.validate.outputs.receipt_schema }}" in metadata
     assert "value: ${{ steps.validate.outputs.contract_schema_sha256 }}" in metadata
+
+
+def test_composite_action_readme_documents_all_scalar_outputs():
+    readme = ACTION_README.read_text(encoding="utf-8")
+    for output_name in (
+        "report",
+        "conformant",
+        "profile",
+        "receipt_schema",
+        "contract_schema_sha256",
+        "output_schema_mode",
+    ):
+        assert f"| `{output_name}` |" in readme

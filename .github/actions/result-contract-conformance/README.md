@@ -69,6 +69,7 @@ steps:
 | `conformant` | `true` only when the selected profile conforms; otherwise `false`. |
 | `profile` | Profile actually evaluated by the validator. |
 | `receipt_schema` | Canonical schema URL declared by the generated receipt. |
+| `contract_schema_sha256` | SHA-256 of the exact QZX Result Contract v1 schema used by the validator. |
 | `output_schema_mode` | MCP schema evidence mode (`canonical_ref`, `canonical_inline`, `canonical_allof`, `structural_core`), or `not_applicable`. |
 
 These scalar outputs make the Action composable from later workflow steps while
