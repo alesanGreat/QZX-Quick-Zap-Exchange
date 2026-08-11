@@ -385,3 +385,30 @@ def test_nonconformance_receipt_is_preserved_by_ci_and_documented_for_callers():
     assert "if: always()" in quickstart
     assert "steps.qzx-conformance.outcome == 'failure'" in quickstart
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in quickstart
+
+
+def test_public_workflow_examples_avoid_duplicate_ci_and_moving_runner_defaults():
+    """Keep copyable workflows deterministic, read-only, and free of duplicate PR CI."""
+
+    quickstart = QUICKSTART.read_text(encoding="utf-8")
+    expected_triggers = (
+        "on:\n"
+        "  push:\n"
+        "    branches:\n"
+        "      - main\n"
+        "  pull_request:\n"
+        "  workflow_dispatch:\n"
+    )
+    assert expected_triggers in quickstart
+    assert "on: [push, pull_request]" not in quickstart
+    assert "runs-on: ubuntu-24.04" in quickstart
+    assert "runs-on: ubuntu-latest" not in quickstart
+    assert (
+        f"actions/checkout@{CHECKOUT_V7_SHA} # v7\n"
+        "        with:\n"
+        "          persist-credentials: false"
+        in quickstart
+    )
+
+    action_readme = ACTION_README.read_text(encoding="utf-8")
+    assert action_readme.count("persist-credentials: false") >= 2

@@ -100,13 +100,20 @@ SHA-pinned Actions:
 
 ```yaml
 name: QZX Result Contract conformance
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   qzx-result-contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - id: qzx-conformance
         uses: alesangreat/QZX-Quick-Zap-Exchange@6a912448c7b2aa41c2a48923c355c422c02cd7a2
         with:
