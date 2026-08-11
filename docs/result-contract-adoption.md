@@ -332,8 +332,9 @@ python scripts/validate_mcp_result_contract.py mcp-result.json \
   --spec-version 2025-11-25
 ```
 
-Also verify that the MCP tool definition exposes the canonical QZX
-`outputSchema`:
+Also verify that the MCP tool definition exposes either a canonical QZX
+`outputSchema` (`canonical_ref`, `canonical_inline`, or `canonical_allof`) or the
+explicitly weaker but compatible `structural_core` surface described above:
 
 ```bash
 python scripts/validate_mcp_result_contract.py mcp-result.json \
@@ -362,8 +363,10 @@ commit SHA before publishing durable evidence.
 
 Every MCP profile checks QZX conformance of `structuredContent`, requires the
 effective MCP error state to equal `!success` (with omitted `isError` treated as
-`false`), and, when a tool definition is supplied, checks the canonical
-`outputSchema`. The MCP 2026-07-28 profile additionally checks
+`false`), and, when a tool definition is supplied, records the strongest
+supported `outputSchema` mode: canonical embedding when available, otherwise
+`structural_core` only when the advertised schema exposes the required QZX core
+surface. The MCP 2026-07-28 profile additionally checks
 `resultType: "complete"`; the 2025 profiles do not require it. A text block that
 serializes the complete `structuredContent` object is reported as backwards-
 compatibility evidence. Because MCP specifies that duplicate text
