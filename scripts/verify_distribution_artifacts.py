@@ -580,6 +580,7 @@ def verify_sdist(
         conformance_runner_name = (
             f"{root}/scripts/run_result_contract_conformance.py"
         )
+        root_action_metadata_name = f"{root}/action.yml"
         action_metadata_name = (
             f"{root}/.github/actions/result-contract-conformance/action.yml"
         )
@@ -627,6 +628,7 @@ def verify_sdist(
             mcp_validator_name: members.get(mcp_validator_name),
             evidence_validator_name: members.get(evidence_validator_name),
             conformance_runner_name: members.get(conformance_runner_name),
+            root_action_metadata_name: members.get(root_action_metadata_name),
             action_metadata_name: members.get(action_metadata_name),
             action_runner_name: members.get(action_runner_name),
             action_readme_name: members.get(action_readme_name),

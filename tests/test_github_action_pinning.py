@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Regression tests for immutable external GitHub Action references."""
+"""Regression tests for immutable and maintainable GitHub Action references."""
 
 from __future__ import annotations
 
@@ -11,6 +11,9 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 GITHUB_ROOT = REPOSITORY_ROOT / ".github"
+ROOT_ACTION = REPOSITORY_ROOT / "action.yml"
+NESTED_ACTION = GITHUB_ROOT / "actions" / "result-contract-conformance" / "action.yml"
+DEPENDABOT_CONFIG = GITHUB_ROOT / "dependabot.yml"
 FULL_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -21,6 +24,11 @@ def _github_action_files() -> list[Path]:
     files.extend((GITHUB_ROOT / "workflows").rglob("*.yaml"))
     files.extend((GITHUB_ROOT / "actions").rglob("action.yml"))
     files.extend((GITHUB_ROOT / "actions").rglob("action.yaml"))
+    files.extend(
+        path
+        for path in (REPOSITORY_ROOT / "action.yml", REPOSITORY_ROOT / "action.yaml")
+        if path.is_file()
+    )
     return sorted(set(files))
 
 
@@ -64,4 +72,40 @@ def test_external_github_actions_use_full_commit_shas():
     assert violations == [], (
         "External GitHub Actions must use immutable full commit SHAs:\n"
         + "\n".join(violations)
+    )
+
+
+def test_root_action_matches_nested_compatibility_entrypoint():
+    """Keep the new root Action and the historical nested entrypoint equivalent."""
+
+    assert ROOT_ACTION.is_file(), "QZX must expose its public Action at repository root."
+    assert NESTED_ACTION.is_file(), "The historical nested Action entrypoint is missing."
+
+    root_text = ROOT_ACTION.read_text(encoding="utf-8")
+    nested_text = NESTED_ACTION.read_text(encoding="utf-8")
+    normalized_root = root_text.replace(
+        'python "$GITHUB_ACTION_PATH/.github/actions/result-contract-conformance/run.py"',
+        'python "$GITHUB_ACTION_PATH/run.py"',
+    )
+    assert normalized_root == nested_text, (
+        "Root and nested Result Contract Action metadata drifted. Keep inputs, outputs, "
+        "runtime setup, and immutable dependency pins synchronized."
+    )
+
+
+def test_dependabot_tracks_github_action_version_updates():
+    """Ensure pinned Actions have an automated version-update path."""
+
+    text = DEPENDABOT_CONFIG.read_text(encoding="utf-8")
+    assert re.search(r'^version:\s*2\s*$', text, flags=re.MULTILINE)
+    block = re.search(
+        r'(?ms)^\s*-\s+package-ecosystem:\s*["\']github-actions["\']\s*$'
+        r'(?P<body>.*?)(?=^\s*-\s+package-ecosystem:|\Z)',
+        text,
+    )
+    assert block is not None, "Dependabot must monitor the github-actions ecosystem."
+    body = block.group("body")
+    assert re.search(r'^\s+directory:\s*["\']/["\']\s*$', body, flags=re.MULTILINE)
+    assert re.search(
+        r'^\s+interval:\s*["\']weekly["\']\s*$', body, flags=re.MULTILINE
     )

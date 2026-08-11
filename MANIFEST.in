@@ -5,6 +5,7 @@ include LICENSE
 include NOTICE
 include qzx.bat
 include qzx.sh
+include action.yml
 include scripts/sync_citation.py
 include scripts/sync_codemeta.py
 include scripts/sync_command_index.py

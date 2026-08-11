@@ -79,7 +79,7 @@ jobs:
           persist-credentials: false
 
       - name: Validate core evidence through the public Composite Action
-        uses: ./.github/actions/result-contract-conformance
+        uses: ./
         with:
           profile: core
           success: examples/result_contract/valid-success.json
@@ -87,7 +87,7 @@ jobs:
           report: qzx-core-conformance.json
 
       - name: Validate MCP 2025-11-25 structural evidence through the public Composite Action
-        uses: ./.github/actions/result-contract-conformance
+        uses: ./
         with:
           profile: mcp-2025-11-25
           success: examples/result_contract/mcp-2025-success.json
@@ -96,7 +96,7 @@ jobs:
           report: qzx-mcp-2025-conformance.json
 
       - name: Validate MCP 2026-07-28 evidence through the public Composite Action
-        uses: ./.github/actions/result-contract-conformance
+        uses: ./
         with:
           profile: mcp-2026-07-28
           success: examples/result_contract/mcp-success.json

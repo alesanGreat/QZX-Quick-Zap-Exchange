@@ -1,0 +1,61 @@
+name: QZX Result Contract conformance
+description: Validate a success/failure evidence pair against QZX Result Contract v1, with revision-specific MCP structured-output profile checks.
+author: Alejandro Sánchez
+
+inputs:
+  profile:
+    description: "Use 'core', 'mcp-2025-06-18', 'mcp-2025-11-25', or 'mcp-2026-07-28'."
+    required: false
+    default: core
+  success:
+    description: Path to one completed successful result JSON file in the caller repository.
+    required: true
+  failure:
+    description: Path to one completed failed result JSON file in the caller repository.
+    required: true
+  tool-definition:
+    description: MCP tool definition JSON path. Required by every MCP profile.
+    required: false
+    default: ""
+  report:
+    description: Path where the deterministic QZX conformance receipt will be written.
+    required: false
+    default: qzx-result-contract-conformance.json
+
+outputs:
+  report:
+    description: Path to the generated deterministic QZX conformance receipt.
+    value: ${{ steps.validate.outputs.report }}
+  conformant:
+    description: "'true' when the selected QZX Result Contract profile conforms; otherwise 'false'."
+    value: ${{ steps.validate.outputs.conformant }}
+  profile:
+    description: QZX Result Contract profile evaluated by the validator.
+    value: ${{ steps.validate.outputs.profile }}
+  receipt_schema:
+    description: Canonical schema URL declared by the generated conformance receipt.
+    value: ${{ steps.validate.outputs.receipt_schema }}
+  contract_schema_sha256:
+    description: SHA-256 of the exact QZX Result Contract v1 schema used by the validator.
+    value: ${{ steps.validate.outputs.contract_schema_sha256 }}
+  output_schema_mode:
+    description: MCP outputSchema evidence mode, or not_applicable for non-MCP profiles.
+    value: ${{ steps.validate.outputs.output_schema_mode }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python 3.13
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+      with:
+        python-version: "3.13"
+    - id: validate
+      name: Validate QZX Result Contract evidence
+      shell: bash
+      env:
+        INPUT_PROFILE: ${{ inputs.profile }}
+        INPUT_SUCCESS: ${{ inputs.success }}
+        INPUT_FAILURE: ${{ inputs.failure }}
+        INPUT_TOOL_DEFINITION: ${{ inputs.tool-definition }}
+        INPUT_REPORT: ${{ inputs.report }}
+      run: python "$GITHUB_ACTION_PATH/.github/actions/result-contract-conformance/run.py"

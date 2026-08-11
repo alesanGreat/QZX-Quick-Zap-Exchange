@@ -168,6 +168,7 @@ def build_fixture_distributions(
         support_files = sorted(set(canonical_readme_relative_files()) | {
             "ADOPTERS.md",
             "CITATION.cff",
+            "action.yml",
             "codemeta.json",
             "docs/golden-core.md",
             "docs/result-contract-v1.md",
