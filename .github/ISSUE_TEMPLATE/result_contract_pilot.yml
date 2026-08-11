@@ -34,6 +34,19 @@ body:
         - Ask an implementation question
     validations:
       required: true
+  - type: dropdown
+    id: mcp_revision
+    attributes:
+      label: MCP revision (if applicable)
+      description: Select the revision your producer actually implements so QZX can use the matching profile. Choose Not sure yet if you need help identifying it.
+      options:
+        - Not using MCP for this pilot
+        - MCP 2025-06-18
+        - MCP 2025-11-25
+        - MCP 2026-07-28
+        - Not sure yet
+    validations:
+      required: true
   - type: textarea
     id: current_shape
     attributes:
