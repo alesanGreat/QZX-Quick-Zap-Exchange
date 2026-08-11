@@ -100,11 +100,21 @@ shape. A conformance receipt reports one of these modes:
 | `structural_core` | The MCP SDK exposes an object schema with the required QZX core fields and constraints; the submitted runtime evidence is validated separately against the complete Result Contract. |
 
 The first three modes prove the canonical schema relationship from
-`outputSchema` itself. `structural_core` is intentionally a weaker and explicit
-claim: it exists for maintained MCP SDK APIs that accept object-shaped output
-schemas but cannot portably publish a canonical `$ref`/`allOf` wrapper around an
-existing typed domain schema. It does **not** mean that `outputSchema` alone
-encodes every QZX invariant.
+`outputSchema` itself. `canonical_ref` is the smallest live relationship and
+intentionally follows compatible v1 clarifications at the canonical URL. When a
+long-lived integration must keep the accepted schema bytes stable until its own
+reviewed dependency update, vendor the exact canonical schema and publish that
+object inline with its canonical `$id` intact; QZX reports a byte-identical copy
+as `canonical_inline`. The conformance receipt's `contract_schema_sha256` and
+`validation_materials` let reviewers compare the schema used by the validator
+with the pinned QZX source revision. `canonical_allof` can likewise compose a
+vendored canonical object with domain constraints when reproducible bytes matter.
+
+`structural_core` is intentionally a weaker and explicit claim: it exists for
+maintained MCP SDK APIs that accept object-shaped output schemas but cannot
+portably publish a canonical `$ref`/`allOf` wrapper around an existing typed
+domain schema. It does **not** mean that `outputSchema` alone encodes every QZX
+invariant.
 
 A direct canonical reference is the smallest strong form:
 

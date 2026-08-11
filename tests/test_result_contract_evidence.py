@@ -20,7 +20,11 @@ ACTION_ROOT = REPOSITORY_ROOT / ".github" / "actions" / "result-contract-conform
 ACTION_RUNNER = ACTION_ROOT / "run.py"
 ACTION_METADATA = ACTION_ROOT / "action.yml"
 ACTION_README = ACTION_ROOT / "README.md"
+QUICKSTART = REPOSITORY_ROOT / "docs" / "result-contract-quickstart.md"
+ADOPTION_GUIDE = REPOSITORY_ROOT / "docs" / "result-contract-adoption.md"
 FIXTURE_ROOT = REPOSITORY_ROOT / "examples" / "result_contract"
+CHECKOUT_V7_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+QZX_CONFORMANCE_ACTION_SHA = "51a550a69b3958e6cc3837a8ca326870184a4204"
 
 spec = importlib.util.spec_from_file_location("qzx_evidence_validator", SCRIPT_PATH)
 validator = importlib.util.module_from_spec(spec)
@@ -333,3 +337,23 @@ def test_composite_action_readme_documents_all_scalar_outputs():
         "output_schema_mode",
     ):
         assert f"| `{output_name}` |" in readme
+
+
+def test_public_adoption_examples_are_reproducibly_pinned():
+    action_readme = ACTION_README.read_text(encoding="utf-8")
+    quickstart = QUICKSTART.read_text(encoding="utf-8")
+    adoption_guide = ADOPTION_GUIDE.read_text(encoding="utf-8")
+
+    for document in (action_readme, quickstart):
+        assert f"actions/checkout@{CHECKOUT_V7_SHA}" in document
+        assert (
+            "alesangreat/QZX-Quick-Zap-Exchange/.github/actions/"
+            f"result-contract-conformance@{QZX_CONFORMANCE_ACTION_SHA}"
+        ) in document
+        assert "result-contract-conformance@main" not in document
+        assert "actions/checkout@v7" not in document
+
+    assert "`canonical_inline`" in quickstart
+    assert "contract_schema_sha256" in quickstart
+    assert "vendored canonical object" in adoption_guide
+    assert "validation_materials" in adoption_guide

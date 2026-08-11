@@ -15,11 +15,15 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 ## Core profile
 
+The copyable examples pin every Action to a full commit SHA. The comments keep
+the human-readable release/revision context without making execution depend on
+a moving tag or branch.
+
 ```yaml
 steps:
-  - uses: actions/checkout@v7
+  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
   - id: qzx-conformance
-    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
+    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@51a550a69b3958e6cc3837a8ca326870184a4204
     with:
       profile: core
       success: result-contract-evidence/success.json
@@ -40,9 +44,9 @@ complete QZX Result Contract.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v7
+  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
   - id: qzx-conformance
-    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
+    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@51a550a69b3958e6cc3837a8ca326870184a4204
     with:
       profile: mcp-2025-11-25
       success: result-contract-evidence/success.json
@@ -79,9 +83,11 @@ the GitHub job summary.
 
 ## Evidence and security boundary
 
-For a quick experiment, `@main` is convenient. Before publishing durable
-adoption evidence, replace it with the full QZX commit SHA that was actually
-used.
+Keep the full QZX commit SHA in reviewable or durable evidence. Update that pin
+only as an explicit dependency change after reviewing the newer QZX revision;
+do not replace it with a floating branch or tag merely for convenience. The
+receipt's validation-material hashes then make the exact contract and validator
+bytes independently comparable with the pinned source revision.
 
 Evidence and report paths are restricted to `GITHUB_WORKSPACE`; line breaks in
 Action path inputs are rejected. The validator does not execute the evidence

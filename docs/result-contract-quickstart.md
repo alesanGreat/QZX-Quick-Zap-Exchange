@@ -91,8 +91,10 @@ QZX Result Contract v1 object: failed receipts carry a stable `error_code`.
 receipt may intentionally record `success: false`, violations, unreadable
 evidence, or a missing MCP tool definition.
 
-For GitHub Actions, the repository also ships a reusable Composite Action. A
-minimal caller workflow is:
+For GitHub Actions, the repository also ships a reusable Composite Action. The
+copyable workflow uses full commit SHAs so the executed code cannot move between
+otherwise-identical runs and so it also works in repositories that enforce
+SHA-pinned Actions:
 
 ```yaml
 name: QZX Result Contract conformance
@@ -102,9 +104,9 @@ jobs:
   qzx-result-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - id: qzx-conformance
-        uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@main
+        uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@51a550a69b3958e6cc3837a8ca326870184a4204
         with:
           profile: core
           success: result-contract-evidence/success.json
@@ -112,9 +114,9 @@ jobs:
           report: result-contract-evidence/qzx-conformance.json
 ```
 
-`@main` is convenient for an initial experiment. Before publishing durable
-adoption evidence, replace it with the full QZX commit SHA that you actually
-validated against. The Action fails the job when the pair does not conform and
+The QZX SHA above identifies the reviewed conformance implementation used by
+this example; update it deliberately when you choose to validate against a
+newer QZX revision. The Action fails the job when the pair does not conform and
 writes the receipt path plus scalar `conformant`, `profile`, `receipt_schema`,
 `contract_schema_sha256`, and `output_schema_mode` outputs for later workflow
 steps. Its GitHub job summary keeps the PASS/FAIL result, the exact contract
@@ -129,7 +131,7 @@ MCP 2025-06-18 already supports `outputSchema`, `structuredContent`, and
 matching the MCP revision your producer actually implements; you do not need to
 upgrade an otherwise-compatible server just to try QZX Result Contract.
 
-When the SDK permits it, the strongest small form is to declare the canonical
+When the SDK permits it, the smallest canonical form is to declare the public
 QZX schema as the tool's `outputSchema`:
 
 ```json
@@ -141,14 +143,26 @@ QZX schema as the tool's `outputSchema`:
 }
 ```
 
+QZX records that relationship as `canonical_ref`. It is convenient when the
+producer intentionally follows compatible v1 clarifications published at the
+canonical URL. For a long-lived integration whose accepted schema bytes should
+change only with a reviewed repository change, vendor the exact canonical
+schema and emit that JSON Schema object inline as `outputSchema`; keep its
+canonical `$id` intact. A byte-identical copy is reported as `canonical_inline`,
+and the conformance receipt records `contract_schema_sha256` so reviewers can
+compare the exact QZX schema used by the validator. Update the vendored copy and
+its expected digest deliberately rather than letting a remote alias change the
+build implicitly.
+
 If an SDK only accepts object-shaped schemas, keep the existing typed domain
 schema and add required `success`/`message` plus an `error` or `error_code`
 field with the QZX constraints. QZX records that portable form as
 `structural_core`; it remains conformant when the submitted success/failure
 results pass the complete canonical contract, but the receipt makes clear that
 `outputSchema` alone is not a full canonical embedding. SDKs that support
-`allOf` can instead compose the QZX `$ref` with their domain schema and receive
-the stronger `canonical_allof` mode.
+`allOf` can instead compose the QZX `$ref` — or the vendored canonical schema
+object for a byte-stable build — with their domain schema and receive the
+stronger `canonical_allof` mode.
 
 For a completed successful call:
 
