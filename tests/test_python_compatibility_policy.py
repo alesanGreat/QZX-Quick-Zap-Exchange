@@ -13,6 +13,15 @@ TEST_ENVIRONMENTS_PATH = (
 )
 
 
+def _assert_sha_pinned_action(workflow: str, action: str) -> None:
+    """Require an Action identity and immutable SHA without freezing its version."""
+
+    pattern = rf"uses:\s*{re.escape(action)}@[0-9a-f]{{40}}(?:\s+#\s+\S+)?"
+    assert re.search(pattern, workflow), (
+        f"{action} must remain present and pinned to a full commit SHA."
+    )
+
+
 def test_python_compatibility_policy_is_consistent():
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     test_environments = json.loads(
@@ -119,13 +128,14 @@ def test_freebsd_15_1_release_amd64_workflow_is_explicit():
     assert "arch: x86_64" in workflow
     assert 'test "$machine_arch" = "amd64"' in workflow
     assert "freebsd-version -u" in workflow
-    assert (
-        "vmactions/freebsd-vm@77ed28d336d03fe19a3f4f7266c1d2c4714dd79d"
-        in workflow
-    )
+    _assert_sha_pinned_action(workflow, "vmactions/freebsd-vm")
 
 
 def test_additional_distribution_workflow_names_are_explicit():
+    # Container runtime digests remain exact because they define the environment.
+    # GitHub Action identities remain exact while their full SHA may advance through
+    # reviewed Dependabot PRs; tests/test_github_action_pinning.py independently
+    # requires every executable external Action reference to use a 40-char SHA.
     workflow_contracts = (
         (
             "test-alpine-linux-3.24.1-amd64.yml",
@@ -135,6 +145,7 @@ def test_additional_distribution_workflow_names_are_explicit():
                 "python:3.13.14-alpine3.24"
                 "@sha256:c25cd44f45df1279a2cba589e67dfcd9db04647ea483b117a7de8b1a99bdfb23"
             ),
+            None,
         ),
         (
             "test-debian-13.6-amd64.yml",
@@ -145,37 +156,38 @@ def test_additional_distribution_workflow_names_are_explicit():
                 "@sha256:6771159cd4fa5d9bba1258caf0b82e6b73458c694"
                 "d178ad97c5e925c2d0e1a91"
             ),
+            None,
         ),
         (
             "test-omnios-r151054-lts-x86_64.yml",
             "OmniOS r151054 LTS x86_64",
             "test-omnios-r151054-lts-x86-64:",
-            (
-                "vmactions/omnios-vm"
-                "@027e3ec08fed6fb740ab5f300c2605f9de02997a"
-            ),
+            None,
+            "vmactions/omnios-vm",
         ),
         (
             "test-openbsd-7.9-amd64.yml",
             "OpenBSD 7.9 amd64",
             "test-openbsd-7-9-amd64:",
-            (
-                "vmactions/openbsd-vm"
-                "@c941015845c0f0c429676840963dc63b226d4f69"
-            ),
+            None,
+            "vmactions/openbsd-vm",
         ),
         (
             "test-oracle-solaris-11.4-cbe-x86_64.yml",
             "Oracle Solaris 11.4 CBE x86_64",
             "test-oracle-solaris-11-4-cbe-x86-64:",
-            (
-                "vmactions/solaris-vm"
-                "@315163f088b66e55bbcc45928bd224d4973b2312"
-            ),
+            None,
+            "vmactions/solaris-vm",
         ),
     )
 
-    for filename, distribution_name, job_id, pinned_runtime in workflow_contracts:
+    for (
+        filename,
+        distribution_name,
+        job_id,
+        pinned_runtime,
+        action_name,
+    ) in workflow_contracts:
         workflow = (
             PROJECT_ROOT / ".github" / "workflows" / filename
         ).read_text(encoding="utf-8")
@@ -188,7 +200,11 @@ def test_additional_distribution_workflow_names_are_explicit():
             in workflow
         )
         assert job_id in workflow
-        assert pinned_runtime in workflow
+        assert (pinned_runtime is None) != (action_name is None)
+        if pinned_runtime is not None:
+            assert pinned_runtime in workflow
+        else:
+            _assert_sha_pinned_action(workflow, action_name)
 
 
 def test_oracle_solaris_no_deps_install_covers_package_dependencies():

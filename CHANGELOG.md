@@ -15,6 +15,10 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   Dependabot version updates for GitHub Actions while preserving full-SHA
   execution pins; Python runtime dependencies are intentionally excluded until
   their maintained manifest is supported rather than claiming false coverage.
+  Compatibility-policy tests now keep container image digests exact while
+  validating GitHub Action identity plus full-SHA pinning without duplicating a
+  permanently stale Action revision, so dependency-update PRs can prove newer
+  immutable pins through the real CI matrix.
 - Expanded the Result Contract MCP interoperability surface from only
   specification 2026-07-28 to revision-specific profiles for 2025-06-18,
   2025-11-25, and 2026-07-28. The 2026 profile still requires
