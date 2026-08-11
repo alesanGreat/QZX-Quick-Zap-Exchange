@@ -75,6 +75,33 @@ def test_external_github_actions_use_full_commit_shas():
     )
 
 
+def test_workflow_branch_pushes_do_not_duplicate_pull_request_ci():
+    """Run branch CI through pull_request and reserve push CI for main."""
+
+    workflow_files = sorted((GITHUB_ROOT / "workflows").glob("*.yml"))
+    workflow_files.extend(sorted((GITHUB_ROOT / "workflows").glob("*.yaml")))
+    assert workflow_files, "Expected at least one GitHub workflow."
+
+    expected_trigger_block = (
+        "on:\n"
+        "  push:\n"
+        "    branches:\n"
+        "      - main\n"
+        "  pull_request:\n"
+        "  workflow_dispatch:\n"
+    )
+    violations = []
+    for path in workflow_files:
+        text = path.read_text(encoding="utf-8")
+        if expected_trigger_block not in text:
+            violations.append(str(path.relative_to(REPOSITORY_ROOT)))
+
+    assert violations == [], (
+        "Workflows must validate PRs once and reserve push-triggered CI for main: "
+        + ", ".join(violations)
+    )
+
+
 def test_root_action_matches_nested_compatibility_entrypoint():
     """Keep the new root Action and the historical nested entrypoint equivalent."""
 

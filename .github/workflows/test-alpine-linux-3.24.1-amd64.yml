@@ -2,6 +2,8 @@ name: QZX tests | Alpine Linux 3.24.1 amd64 | CPython 3.13
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 

@@ -21,7 +21,9 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   immutable pins through the real CI matrix. Related updates are grouped into
   bounded `artifact-actions` and `vm-actions` PRs to avoid multiplying the
   expensive cross-platform matrix without collapsing unrelated Actions into one
-  review unit.
+  review unit. Workflow `push` triggers are now limited to `main`; pull requests
+  retain their own validation and manual dispatch remains available, preventing
+  the same branch update from launching both push and pull-request matrices.
 - Expanded the Result Contract MCP interoperability surface from only
   specification 2026-07-28 to revision-specific profiles for 2025-06-18,
   2025-11-25, and 2026-07-28. The 2026 profile still requires
