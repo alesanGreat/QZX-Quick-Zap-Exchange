@@ -91,7 +91,9 @@ QZX Result Contract v1 object: failed receipts carry a stable `error_code`.
 receipt may intentionally record `success: false`, violations, unreadable
 evidence, or a missing MCP tool definition.
 
-For GitHub Actions, the repository also ships a reusable Composite Action. The
+For GitHub Actions, the repository also ships a reusable Composite Action at
+its repository root. New callers can therefore use the normal
+`owner/repository@sha` form without knowing QZX's internal directory layout. The
 copyable workflow uses full commit SHAs so the executed code cannot move between
 otherwise-identical runs and so it also works in repositories that enforce
 SHA-pinned Actions:
@@ -106,7 +108,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - id: qzx-conformance
-        uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@51a550a69b3958e6cc3837a8ca326870184a4204
+        uses: alesangreat/QZX-Quick-Zap-Exchange@6a912448c7b2aa41c2a48923c355c422c02cd7a2
         with:
           profile: core
           success: result-contract-evidence/success.json

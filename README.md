@@ -130,10 +130,11 @@ so its structure can be checked independently with JSON Schema 2020-12. Its
 byte-identical source artifacts from a pinned QZX revision. A schema-valid
 receipt can still record failed conformance.
 
-The same check is available as the reusable
-[QZX Result Contract conformance Composite Action](.github/actions/result-contract-conformance/action.yml)
-for external GitHub repositories; the Action also exposes the exact contract
-schema digest as `contract_schema_sha256`. Independent implementations and bounded
+The same check is available as the reusable repository-root
+[QZX Result Contract conformance Composite Action](action.yml) for external
+GitHub repositories, so callers can use the normal `owner/repository@sha` form;
+the Action also exposes the exact contract schema digest as
+`contract_schema_sha256`. Independent implementations and bounded
 pilots can follow the [adoption guide](docs/result-contract-adoption.md). If an
 experiment is not ready for a formal adoption report, use the short
 [Result Contract pilot or integration help form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=result_contract_pilot.yml)

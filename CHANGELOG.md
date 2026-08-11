@@ -7,6 +7,14 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Exposed the Result Contract conformance Composite Action at repository root so
+  external workflows can use the standard `owner/repository@<immutable-sha>`
+  form without depending on QZX's internal directory layout. The earlier nested
+  entrypoint remains equivalent for already-pinned evidence; CI now exercises
+  the root entrypoint and fails if the two metadata surfaces drift. Added weekly
+  Dependabot version updates for GitHub Actions while preserving full-SHA
+  execution pins; Python runtime dependencies are intentionally excluded until
+  their maintained manifest is supported rather than claiming false coverage.
 - Expanded the Result Contract MCP interoperability surface from only
   specification 2026-07-28 to revision-specific profiles for 2025-06-18,
   2025-11-25, and 2026-07-28. The 2026 profile still requires

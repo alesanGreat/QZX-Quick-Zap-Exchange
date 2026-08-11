@@ -1,7 +1,11 @@
 # QZX Result Contract conformance Action
 
 Run the QZX Result Contract v1 evidence-pair validator from another GitHub
-repository without installing QZX as an application dependency.
+repository without installing QZX as an application dependency. The preferred
+public entrypoint is the repository-root `action.yml`, so new callers use the
+normal `alesangreat/QZX-Quick-Zap-Exchange@<commit-sha>` form. This directory
+contains the runner and retains the earlier nested entrypoint with equivalent
+metadata for existing pinned evidence.
 
 The Action validates one completed success and one completed failure, writes a
 deterministic JSON receipt with SHA-256 digests of the evidence files, and fails
@@ -23,7 +27,7 @@ a moving tag or branch.
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
   - id: qzx-conformance
-    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@51a550a69b3958e6cc3837a8ca326870184a4204
+    uses: alesangreat/QZX-Quick-Zap-Exchange@6a912448c7b2aa41c2a48923c355c422c02cd7a2
     with:
       profile: core
       success: result-contract-evidence/success.json
@@ -46,7 +50,7 @@ complete QZX Result Contract.
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
   - id: qzx-conformance
-    uses: alesangreat/QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@51a550a69b3958e6cc3837a8ca326870184a4204
+    uses: alesangreat/QZX-Quick-Zap-Exchange@6a912448c7b2aa41c2a48923c355c422c02cd7a2
     with:
       profile: mcp-2025-11-25
       success: result-contract-evidence/success.json

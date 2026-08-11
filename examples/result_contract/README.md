@@ -98,8 +98,8 @@ and profile facts and self-identifies the public
 `result-contract-conformance-receipt-v1.schema.json` schema, so reviewers can
 validate the receipt structure independently with JSON Schema 2020-12. A valid
 receipt schema does not imply a passing conformance result. External GitHub
-repositories can run the same check with the reusable Composite Action under
-`.github/actions/result-contract-conformance`.
+repositories can run the same check with the reusable repository-root
+`action.yml`, using the normal `owner/repository@sha` form.
 
 Then replace the fixtures with output from **one real tool**. The quickest path
 to a reviewable independent experiment is documented in

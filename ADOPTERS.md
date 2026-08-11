@@ -46,10 +46,11 @@ python scripts/validate_result_contract_evidence.py \
   --report qzx-conformance.json
 ```
 
-External GitHub repositories can run the same check through
-[`.github/actions/result-contract-conformance`](.github/actions/result-contract-conformance/action.yml).
-For durable evidence, pin the QZX Action to a full commit SHA rather than a
-floating branch before publishing the result.
+External GitHub repositories can run the same check through the
+[repository-root Composite Action](action.yml), using the normal
+`alesangreat/QZX-Quick-Zap-Exchange@<commit-sha>` form. For durable evidence,
+pin the QZX Action to a full commit SHA rather than a floating branch before
+publishing the result.
 
 Independent work can be submitted directly. If the implementation is not ready
 for the listing requirements below, use the short

@@ -366,10 +366,11 @@ python scripts/validate_result_contract_evidence.py \
 ```
 
 External GitHub repositories can execute the same pair check through the
-reusable Composite Action in
-[`.github/actions/result-contract-conformance`](../.github/actions/result-contract-conformance/action.yml).
-The quickstart includes a copyable caller workflow. Pin the QZX Action to a full
-commit SHA before publishing durable evidence.
+[repository-root Composite Action](../action.yml), using the normal
+`alesangreat/QZX-Quick-Zap-Exchange@<commit-sha>` form without depending on
+QZX's internal directory layout. The quickstart includes a copyable caller
+workflow. Pin the QZX Action to a full commit SHA before publishing durable
+evidence.
 
 Every MCP profile checks QZX conformance of `structuredContent`, requires the
 effective MCP error state to equal `!success` (with omitted `isError` treated as

@@ -18,13 +18,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "validate_result_contract_evidence.py"
 ACTION_ROOT = REPOSITORY_ROOT / ".github" / "actions" / "result-contract-conformance"
 ACTION_RUNNER = ACTION_ROOT / "run.py"
-ACTION_METADATA = ACTION_ROOT / "action.yml"
+ACTION_METADATA = REPOSITORY_ROOT / "action.yml"
 ACTION_README = ACTION_ROOT / "README.md"
 QUICKSTART = REPOSITORY_ROOT / "docs" / "result-contract-quickstart.md"
 ADOPTION_GUIDE = REPOSITORY_ROOT / "docs" / "result-contract-adoption.md"
 FIXTURE_ROOT = REPOSITORY_ROOT / "examples" / "result_contract"
 CHECKOUT_V7_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
-QZX_CONFORMANCE_ACTION_SHA = "51a550a69b3958e6cc3837a8ca326870184a4204"
+QZX_CONFORMANCE_ACTION_SHA = "6a912448c7b2aa41c2a48923c355c422c02cd7a2"
 
 spec = importlib.util.spec_from_file_location("qzx_evidence_validator", SCRIPT_PATH)
 validator = importlib.util.module_from_spec(spec)
@@ -347,10 +347,14 @@ def test_public_adoption_examples_are_reproducibly_pinned():
     for document in (action_readme, quickstart):
         assert f"actions/checkout@{CHECKOUT_V7_SHA}" in document
         assert (
-            "alesangreat/QZX-Quick-Zap-Exchange/.github/actions/"
-            f"result-contract-conformance@{QZX_CONFORMANCE_ACTION_SHA}"
-        ) in document
-        assert "result-contract-conformance@main" not in document
+            f"alesangreat/QZX-Quick-Zap-Exchange@{QZX_CONFORMANCE_ACTION_SHA}"
+            in document
+        )
+        assert "alesangreat/QZX-Quick-Zap-Exchange@main" not in document
+        assert (
+            "QZX-Quick-Zap-Exchange/.github/actions/result-contract-conformance@"
+            not in document
+        )
         assert "actions/checkout@v7" not in document
 
     assert "`canonical_inline`" in quickstart
