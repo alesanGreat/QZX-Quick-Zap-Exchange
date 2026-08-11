@@ -106,6 +106,44 @@ jobs:
           tool-definition: examples/result_contract/mcp-tool-definition.json
           report: qzx-mcp-2026-conformance.json
 
+      - id: qzx-nonconforming
+        name: Validate intentionally nonconforming evidence
+        continue-on-error: true
+        uses: ./
+        with:
+          profile: core
+          success: examples/result_contract/invalid-success-string.json
+          failure: examples/result_contract/valid-failure.json
+          report: qzx-nonconforming-receipt.json
+
+      - name: Preserve the nonconformance receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-nonconformance-receipt
+          path: qzx-nonconforming-receipt.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify nonconformance Action failure and receipt
+        shell: python
+        env:
+          ACTION_OUTCOME: ${{ steps.qzx-nonconforming.outcome }}
+          CONFORMANT: ${{ steps.qzx-nonconforming.outputs.conformant }}
+          CONTRACT_SCHEMA_SHA256: ${{ steps.qzx-nonconforming.outputs.contract_schema_sha256 }}
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          receipt = json.loads(Path("qzx-nonconforming-receipt.json").read_text(encoding="utf-8"))
+          assert os.environ["ACTION_OUTCOME"] == "failure"
+          assert os.environ["CONFORMANT"] == "false"
+          assert len(os.environ["CONTRACT_SCHEMA_SHA256"]) == 64
+          assert receipt["success"] is False, receipt
+          assert receipt["error_code"] == "conformance_failed", receipt
+          assert receipt["details"]["cases"][0]["conformant"] is False, receipt
+
       - name: Verify generated receipts
         shell: python
         run: |

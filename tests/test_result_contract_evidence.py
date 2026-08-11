@@ -361,3 +361,27 @@ def test_public_adoption_examples_are_reproducibly_pinned():
     assert "contract_schema_sha256" in quickstart
     assert "vendored canonical object" in adoption_guide
     assert "validation_materials" in adoption_guide
+
+
+def test_nonconformance_receipt_is_preserved_by_ci_and_documented_for_callers():
+    """Keep failed conformance reviewable instead of losing the receipt with the job."""
+
+    workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "test.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "Validate intentionally nonconforming evidence" in workflow
+    assert "continue-on-error: true" in workflow
+    assert "qzx-nonconforming-receipt.json" in workflow
+    assert "if: always()" in workflow
+    assert (
+        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+        in workflow
+    )
+    assert "Verify nonconformance Action failure and receipt" in workflow
+
+    quickstart = QUICKSTART.read_text(encoding="utf-8")
+    assert "Preserve the receipt even when conformance fails" in quickstart
+    assert "continue-on-error: true" in quickstart
+    assert "if: always()" in quickstart
+    assert "steps.qzx-conformance.outcome == 'failure'" in quickstart
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in quickstart

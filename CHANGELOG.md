@@ -23,7 +23,11 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   expensive cross-platform matrix without collapsing unrelated Actions into one
   review unit. Workflow `push` triggers are now limited to `main`; pull requests
   retain their own validation and manual dispatch remains available, preventing
-  the same branch update from launching both push and pull-request matrices.
+  the same branch update from launching both push and pull-request matrices. The
+  public Composite Action smoke now also exercises intentional nonconformance,
+  preserves the failed receipt as a CI artifact, and verifies failure outputs;
+  the quickstart documents the `continue-on-error` → upload → explicit re-fail
+  pattern so adopters can retain negative evidence without weakening the gate.
 - Expanded the Result Contract MCP interoperability surface from only
   specification 2026-07-28 to revision-specific profiles for 2025-06-18,
   2025-11-25, and 2026-07-28. The 2026 profile still requires

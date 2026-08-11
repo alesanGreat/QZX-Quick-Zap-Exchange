@@ -125,6 +125,46 @@ steps. Its GitHub job summary keeps the PASS/FAIL result, the exact contract
 schema digest, receipt metadata, the specification link, and factual creator
 attribution together with the run.
 
+### Preserve the receipt even when conformance fails
+
+A failed conformance run is often the evidence a reviewer needs most. If you
+want GitHub Actions to retain that receipt as a downloadable artifact, allow the
+QZX step to finish as a recorded failure, upload the receipt unconditionally,
+and then fail the job explicitly. This preserves the evidence **without turning
+a failed conformance check into a passing gate**:
+
+```yaml
+      - id: qzx-conformance
+        continue-on-error: true
+        uses: alesangreat/QZX-Quick-Zap-Exchange@6a912448c7b2aa41c2a48923c355c422c02cd7a2
+        with:
+          profile: core
+          success: result-contract-evidence/success.json
+          failure: result-contract-evidence/failure.json
+          report: result-contract-evidence/qzx-conformance.json
+
+      - name: Preserve QZX conformance receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-conformance-receipt
+          path: result-contract-evidence/qzx-conformance.json
+          if-no-files-found: error
+
+      - name: Enforce QZX conformance gate
+        if: steps.qzx-conformance.outcome == 'failure'
+        shell: bash
+        run: exit 1
+```
+
+`steps.qzx-conformance.outcome` remains `failure` for a nonconforming pair even
+though `continue-on-error` lets the workflow reach the upload step. When the
+validator reached a conformance verdict, the receipt also exposes
+`conformant=false` and the same validation-material hashes used for PASS runs.
+If the Action fails before a receipt can be written, `if-no-files-found: error`
+keeps that missing evidence visible instead of silently pretending it was
+preserved.
+
 ## 4. MCP 2025-06-18 and newer: use the contract as `outputSchema`
 
 MCP 2025-06-18 already supports `outputSchema`, `structuredContent`, and
