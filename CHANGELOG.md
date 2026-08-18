@@ -3,7 +3,7 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
-## Unreleased — 2026-08-09
+## Unreleased
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 

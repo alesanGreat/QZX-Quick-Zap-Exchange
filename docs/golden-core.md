@@ -78,13 +78,14 @@ Passing one dimension never substitutes for another. Mocked unit tests do not
 become platform evidence, a captured success does not prove every failure path,
 and inclusion in Golden Core does not freeze an interface.
 
-While QZX remains Alpha, an intentional breaking rename can temporarily make a
-selected command development-only even though the previous published package
-contains its predecessor name. The catalog must expose that availability
-honestly instead of rejecting the whole cohort or pretending the new name is
-already installable from PyPI. Such a command cannot satisfy release quality
-until an exact release containing the current name and implementation is
-published and attested.
+The current Golden Core names are present in published pre-release
+`0.2.2.0.7a5` and are covered by its release-quality attestation under
+`docs/release-quality/0.2.2.0.7a5.json`. All 15 commands remain Alpha: published
+and attested evidence closes specific release-quality dimensions, but it does
+not substitute for lifecycle promotion review or independent reproduction. If
+a future Alpha rename makes a selected name development-only again, the catalog
+must expose that availability honestly until a release containing the new name
+is published and attested.
 
 ### Failure evidence must be meaningful, not manufactured
 

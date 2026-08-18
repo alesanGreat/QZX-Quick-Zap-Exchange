@@ -232,8 +232,8 @@ directly. They prefer the standard CPython 3.13 runtime selected explicitly
 with `QZX_PYTHON`, an active compatible environment, or an existing `uv`
 installation. Ordinary invocations use a validated packaged command index and
 import only the requested command; full discovery remains a development and CI
-integrity check. The basic `qzx Welcome` path avoids system, memory, and storage
-probes; request those details explicitly with `qzx Welcome true`.
+integrity check. The basic `qzx welcome` path avoids system, memory, and storage
+probes; request those details explicitly with `qzx welcome true`.
 
 Optional command groups can be installed with
 `python -m pip install "qzx[filetype]"` or
@@ -272,8 +272,8 @@ change a command result.
 Disable telemetry with either:
 
 ```bash
-QZX_TELEMETRY=0 qzx Welcome
-DO_NOT_TRACK=1 qzx Welcome
+QZX_TELEMETRY=0 qzx welcome
+DO_NOT_TRACK=1 qzx welcome
 ```
 
 An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
