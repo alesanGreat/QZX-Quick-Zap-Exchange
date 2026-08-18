@@ -95,6 +95,6 @@ IF NOT DEFINED QZX_RUNTIME (
 )
 
 REM Pass every original argument to the QZX package and preserve its exit code.
-"%QZX_RUNTIME%" -m qzx %*
+"%QZX_RUNTIME%" -B -m qzx %*
 SET "QZX_EXIT_CODE=%ERRORLEVEL%"
 ENDLOCAL & EXIT /B %QZX_EXIT_CODE%
