@@ -53,7 +53,7 @@ Push-Location examples/result_contract/mcp-typescript-sdk-v2
 corepack enable
 corepack prepare pnpm@10.29.2 --activate
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm run evidence -- $evidence
+pnpm run evidence $evidence
 Pop-Location
 
 python scripts/validate_result_contract_evidence.py `

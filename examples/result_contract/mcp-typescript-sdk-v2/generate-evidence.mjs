@@ -13,10 +13,13 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-const outputArgument = process.argv[2];
-if (!outputArgument) {
-  throw new Error("Usage: pnpm run evidence -- <output-directory>");
+const outputArguments = process.argv
+  .slice(2)
+  .filter((argument) => argument !== "--");
+if (outputArguments.length !== 1) {
+  throw new Error("Usage: pnpm run evidence <output-directory>");
 }
+const [outputArgument] = outputArguments;
 
 const exampleDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(exampleDirectory, "../../..");
