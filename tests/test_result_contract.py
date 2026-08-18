@@ -287,7 +287,7 @@ def test_standalone_validator_accepts_one_leading_byte_order_mark():
             "\ufeff"
             '{"success":true,"message":"PowerShell pipeline accepted."}'
         ),
-        text=True,
+        encoding="utf-8",
         capture_output=True,
         timeout=30,
         check=False,
