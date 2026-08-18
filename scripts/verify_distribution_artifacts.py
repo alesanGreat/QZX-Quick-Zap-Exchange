@@ -37,6 +37,18 @@ RESULT_CONTRACT_MANIFEST_PATH = (
     PROJECT_ROOT / "examples" / "result_contract" / "manifest.json"
 )
 RESULT_CONTRACT_EXAMPLES_ROOT = PROJECT_ROOT / "examples" / "result_contract"
+RESULT_CONTRACT_EXAMPLE_SUFFIXES = frozenset(
+    {
+        ".in",
+        ".json",
+        ".md",
+        ".mjs",
+        ".py",
+        ".ts",
+        ".txt",
+        ".yaml",
+    }
+)
 RESULT_CONTRACT_WHEEL_PATH = (
     "qzx/resources/schemas/result-contract-v1.schema.json"
 )
@@ -605,8 +617,9 @@ def verify_sdist(
         )
         example_names = [
             f"{root}/{path.relative_to(PROJECT_ROOT).as_posix()}"
-            for path in sorted(RESULT_CONTRACT_EXAMPLES_ROOT.iterdir())
-            if path.is_file() and path.suffix.lower() in {".json", ".md", ".ts"}
+            for path in sorted(RESULT_CONTRACT_EXAMPLES_ROOT.rglob("*"))
+            if path.is_file()
+            and path.suffix.lower() in RESULT_CONTRACT_EXAMPLE_SUFFIXES
         ]
         readme_link_names = [
             f"{root}/{relative_path}"

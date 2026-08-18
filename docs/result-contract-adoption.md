@@ -328,6 +328,16 @@ wire-only `resultType` field before returning `CallToolResult`, so reviewable
 from the normalized client object. The example is QZX reference evidence and is
 not listed as independent adoption.
 
+The locked
+[`mcp-python-sdk-v2`](../examples/result_contract/mcp-python-sdk-v2/README.md)
+example provides the complementary official Python SDK 2.0.0 path. It uses the
+SDK's modern in-process direct dispatcher and its own aliased model
+serialization, retains the MCP 2026-07-28 completion and error fields, and
+validates the exact inline QZX schema. A hash-checked dependency lock makes the
+environment reproducible. Its evidence says explicitly that HTTP and JSON-RPC
+framing were not exercised, so it must not be presented as wire-transport
+evidence or independent adoption.
+
 Validate the transport-independent core fixtures:
 
 ```bash

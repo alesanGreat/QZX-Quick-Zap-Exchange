@@ -55,11 +55,14 @@ QZX supports revision-specific MCP profiles for 2025-06-18, 2025-11-25, and
 without `resultType` and 2026-07-28 evidence with `resultType: "complete"`, so an
 adopter does not need to edit a newer fixture to simulate an older server.
 
-For an executable MCP 2026-07-28 integration rather than static fixtures, use
-the locked [official TypeScript SDK v2 example](mcp-typescript-sdk-v2/README.md).
-It runs a real client/server success and failure pair, captures the wire results,
-and is continuously checked in CI. It remains QZX-maintained reference evidence,
-not independent adoption.
+For executable MCP 2026-07-28 integrations rather than static fixtures, use the
+locked [official TypeScript SDK v2 example](mcp-typescript-sdk-v2/README.md) or
+the locked [official Python SDK v2 example](mcp-python-sdk-v2/README.md). Both
+run real official client/server success and failure pairs and are continuously
+checked in CI. TypeScript captures Streamable HTTP wire bodies; Python exercises
+the modern direct dispatcher and declares that it has no HTTP or JSON-RPC
+framing. Both remain QZX-maintained reference evidence, not independent
+adoption.
 
 | File | Purpose |
 | --- | --- |

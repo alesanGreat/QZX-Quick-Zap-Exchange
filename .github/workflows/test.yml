@@ -72,7 +72,7 @@ jobs:
         run: python -m twine check "$RUNNER_TEMP"/qzx-dist/*
 
   result-contract-conformance-action:
-    name: Result Contract SDK interop and Action smoke | Node 22 / CPython 3.13
+    name: Result Contract official SDK interop and Action smoke | Node 22 / CPython 3.13
     runs-on: ubuntu-24.04
     steps:
       - name: Check out QZX
@@ -85,6 +85,11 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install CPython 3.13 for the official MCP SDK example
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6
+        with:
+          python-version: "3.13"
+
       - name: Install the locked official MCP TypeScript SDK dependencies
         working-directory: examples/result_contract/mcp-typescript-sdk-v2
         run: |
@@ -92,7 +97,7 @@ jobs:
           corepack prepare pnpm@10.29.2 --activate
           pnpm install --frozen-lockfile --ignore-scripts
 
-      - id: generate-mcp-sdk-evidence
+      - id: generate-mcp-typescript-sdk-evidence
         name: Generate real MCP 2026-07-28 SDK wire evidence
         working-directory: examples/result_contract/mcp-typescript-sdk-v2
         run: pnpm run evidence "$GITHUB_WORKSPACE/qzx-mcp-typescript-sdk-v2-evidence"
@@ -133,7 +138,7 @@ jobs:
           report: qzx-mcp-typescript-sdk-v2-conformance.json
 
       - name: Preserve the official MCP TypeScript SDK v2 evidence
-        if: always() && steps.generate-mcp-sdk-evidence.outcome == 'success'
+        if: always() && steps.generate-mcp-typescript-sdk-evidence.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qzx-mcp-typescript-sdk-v2-evidence
@@ -141,6 +146,47 @@ jobs:
             qzx-mcp-typescript-sdk-v2-evidence/*.json
             qzx-mcp-typescript-sdk-v2-conformance.json
             examples/result_contract/mcp-typescript-sdk-v2/README.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Install the locked official MCP Python SDK dependencies
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/qzx-mcp-python-sdk-v2-venv"
+          "$RUNNER_TEMP/qzx-mcp-python-sdk-v2-venv/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --require-hashes \
+            -r examples/result_contract/mcp-python-sdk-v2/requirements.txt
+
+      - id: generate-mcp-python-sdk-evidence
+        name: Generate real MCP 2026-07-28 Python SDK evidence
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/qzx-mcp-python-sdk-v2-venv/bin/python" \
+            examples/result_contract/mcp-python-sdk-v2/generate_evidence.py \
+            "$GITHUB_WORKSPACE/qzx-mcp-python-sdk-v2-evidence"
+
+      - name: Validate official MCP Python SDK v2 evidence
+        uses: ./
+        with:
+          profile: mcp-2026-07-28
+          success: qzx-mcp-python-sdk-v2-evidence/success.json
+          failure: qzx-mcp-python-sdk-v2-evidence/failure.json
+          tool-definition: qzx-mcp-python-sdk-v2-evidence/tool-definition.json
+          report: qzx-mcp-python-sdk-v2-conformance.json
+
+      - name: Preserve the official MCP Python SDK v2 evidence
+        if: always() && steps.generate-mcp-python-sdk-evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-mcp-python-sdk-v2-evidence
+          path: |
+            qzx-mcp-python-sdk-v2-evidence/*.json
+            qzx-mcp-python-sdk-v2-conformance.json
+            examples/result_contract/mcp-python-sdk-v2/README.md
+            examples/result_contract/mcp-python-sdk-v2/generate_evidence.py
+            examples/result_contract/mcp-python-sdk-v2/requirements.in
+            examples/result_contract/mcp-python-sdk-v2/requirements.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -193,6 +239,10 @@ jobs:
               "qzx-mcp-2025-conformance.json": ("mcp-2025-11-25", "structural_core"),
               "qzx-mcp-2026-conformance.json": ("mcp-2026-07-28", "canonical_ref"),
               "qzx-mcp-typescript-sdk-v2-conformance.json": (
+                  "mcp-2026-07-28",
+                  "canonical_inline",
+              ),
+              "qzx-mcp-python-sdk-v2-conformance.json": (
                   "mcp-2026-07-28",
                   "canonical_inline",
               ),

@@ -18,6 +18,15 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   2026 evidence must be captured at the transport boundary. This remains
   QZX-maintained reference evidence, not an independent adoption claim.
 
+- Added a second locked interoperability example for the official MCP Python
+  SDK 2.0.0. It runs the SDK's real modern in-process client/server dispatcher,
+  retains `resultType: "complete"`, `isError`, and the canonical inline output
+  schema, and installs its complete dependency graph from a hash-checked lock.
+  Its metadata explicitly records that the direct dispatcher does not exercise
+  HTTP or JSON-RPC framing. CI validates and preserves this evidence separately
+  from the TypeScript wire capture; neither QZX-maintained example is counted
+  as independent adoption.
+
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested

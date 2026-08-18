@@ -34,11 +34,13 @@ The shortest path is the
 shows the minimal core, the reusable GitHub Action, and the MCP evidence bundle
 before the full reporting requirements below.
 
-Teams using the official MCP TypeScript SDK v2 can also start from the locked
+Teams using the official MCP SDK v2 can start from the locked
 [`mcp-typescript-sdk-v2`](examples/result_contract/mcp-typescript-sdk-v2/README.md)
-example. It proves QZX's own integration recipe against SDK 2.0.0, but does not
-count as an independent adopter because QZX maintains both the example and its
-conformance claim.
+wire example or the locked
+[`mcp-python-sdk-v2`](examples/result_contract/mcp-python-sdk-v2/README.md)
+direct-dispatch example. They prove QZX's own integration recipes against each
+official SDK 2.0.0, but do not count as independent adopters because QZX
+maintains the examples and their conformance claims.
 
 For the included MCP fixtures, validate the complete success/failure pair and
 produce the same deterministic receipt expected from independent evidence:

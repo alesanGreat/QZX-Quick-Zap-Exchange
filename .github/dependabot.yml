@@ -1,7 +1,8 @@
 # Keep executable GitHub Actions current while preserving immutable SHA pins.
-# Python runtime dependencies still live in setup.py; GitHub's current pip
-# updater does not treat that file as a supported manifest, so adding a pip
-# entry here would imply coverage QZX does not actually have.
+# QZX runtime dependencies still live in setup.py, which GitHub's pip updater
+# does not treat as a supported manifest; do not add a root pip entry that would
+# imply false coverage. The isolated Python SDK example below has its own
+# supported pip-compile manifest and hash-checked lock.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -25,3 +26,12 @@ updates:
         patterns:
           - "@modelcontextprotocol/*"
           - "zod"
+  - package-ecosystem: "pip"
+    directory: "/examples/result_contract/mcp-python-sdk-v2"
+    schedule:
+      interval: "weekly"
+    groups:
+      mcp-python-sdk:
+        patterns:
+          - "mcp"
+          - "mcp-types"

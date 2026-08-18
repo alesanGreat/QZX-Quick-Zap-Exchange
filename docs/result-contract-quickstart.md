@@ -261,7 +261,7 @@ without `resultType`, `mcp-success.json` / `mcp-failure.json` for the 2026-07-28
 case. Contradictory `isError` and protocol-error fixtures remain available for
 negative testing.
 
-### Executable official TypeScript SDK v2 example
+### Executable official SDK v2 examples
 
 The locked
 [`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
@@ -277,6 +277,16 @@ publishes the evidence bundle as a workflow artifact. The receipt reports
 `canonical_inline` because the official SDK's `fromJsonSchema` API advertises
 the exact QZX schema. This is QZX-maintained interoperability evidence, not an
 independent adopter or a certification of the SDK.
+
+The sibling locked
+[`mcp-python-sdk-v2`](../examples/result_contract/mcp-python-sdk-v2/README.md)
+example runs the official Python SDK 2.0.0 client and server through their
+modern in-process direct dispatcher. It preserves `resultType: "complete"`,
+explicit `isError`, and the exact canonical inline schema. Its complete Python
+dependency graph is pinned with hashes. Because this path deliberately has no
+HTTP or JSON-RPC framing, that limitation is recorded in the evidence instead
+of being implied away; the TypeScript example supplies the complementary wire
+capture. CI validates and preserves both QZX-maintained bundles independently.
 
 ## 5. Publish the smallest reviewable evidence bundle
 
