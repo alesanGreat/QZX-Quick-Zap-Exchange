@@ -13,6 +13,7 @@ from qzx.core.result_contract import (
     RESULT_CONTRACT_SCHEMA_URL,
     ensure_result_contract,
     load_result_contract_schema,
+    loads_interoperable_json,
     result_contract_violations,
 )
 
@@ -254,3 +255,77 @@ def test_standalone_validator_rejects_non_interoperable_json():
     assert "non-finite numeric tokens that JSON does not permit: NaN" in (
         human_process.stdout
     )
+
+
+def test_standalone_validator_rejects_unpaired_unicode_surrogates():
+    process = subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=(
+            r'{"success":true,"message":"Invalid Unicode: \ud800",'
+            r'"details":{"\udfff":"value"}}'
+        ),
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1, process.stderr
+    report = json.loads(process.stdout)
+    assert report["success"] is False
+    assert report["error_code"] == "invalid_json_input"
+    assert "contains an unpaired UTF-16 surrogate" in report["error"]
+    assert process.stderr == ""
+
+
+def test_standalone_validator_accepts_one_leading_byte_order_mark():
+    process = subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=(
+            "\ufeff"
+            '{"success":true,"message":"PowerShell pipeline accepted."}'
+        ),
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 0, process.stderr
+    report = json.loads(process.stdout)
+    assert report["success"] is True
+    assert report["details"]["violations"] == []
+
+
+def test_strict_json_reader_accepts_a_complete_surrogate_pair():
+    document = loads_interoperable_json(
+        r'{"success":true,"message":"Clef: \ud834\udd1e"}',
+        source="fixture",
+    )
+
+    assert document["message"] == "Clef: \U0001d11e"
+
+
+def test_standalone_validator_reports_excessive_json_nesting():
+    depth = sys.getrecursionlimit() * 10
+    deeply_nested_input = "[" * depth + "null" + "]" * depth
+    process = subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=deeply_nested_input,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1, process.stderr
+    report = json.loads(process.stdout)
+    assert report["success"] is False
+    assert report["error_code"] == "invalid_json_input"
+    assert report["error"] == (
+        "standard input exceeds the supported JSON nesting depth."
+    )
+    assert process.stderr == ""

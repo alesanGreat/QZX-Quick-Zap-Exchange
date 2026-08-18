@@ -31,6 +31,9 @@ class JsonInteroperabilityError(ValueError):
 def loads_interoperable_json(text: str, *, source: str) -> Any:
     """Decode JSON while rejecting ambiguous or non-standard representations."""
 
+    if text.startswith("\ufeff"):
+        text = text[1:]
+
     duplicate_names: set[str] = set()
     non_finite_numbers: set[str] = set()
 
@@ -45,11 +48,16 @@ def loads_interoperable_json(text: str, *, source: str) -> Any:
     def record_non_finite_number(value: str) -> None:
         non_finite_numbers.add(value)
 
-    document = json.loads(
-        text,
-        object_pairs_hook=object_with_unique_names,
-        parse_constant=record_non_finite_number,
-    )
+    try:
+        document = json.loads(
+            text,
+            object_pairs_hook=object_with_unique_names,
+            parse_constant=record_non_finite_number,
+        )
+    except RecursionError as exception:
+        raise JsonInteroperabilityError(
+            [f"{source} exceeds the supported JSON nesting depth."]
+        ) from exception
 
     violations: list[str] = []
     if duplicate_names:
@@ -66,10 +74,32 @@ def loads_interoperable_json(text: str, *, source: str) -> Any:
             f"{source} contains non-finite numeric tokens that JSON does not "
             f"permit: {rendered_numbers}."
         )
+    if _contains_unpaired_surrogate(document):
+        violations.append(
+            f"{source} contains an unpaired UTF-16 surrogate; its cross-parser "
+            "behavior is unpredictable."
+        )
 
     if violations:
         raise JsonInteroperabilityError(violations)
     return document
+
+
+def _contains_unpaired_surrogate(document: Any) -> bool:
+    """Inspect decoded JSON iteratively so deeply nested data cannot recurse."""
+
+    pending = [document]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str):
+            if any("\ud800" <= character <= "\udfff" for character in value):
+                return True
+        elif isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False
 
 
 def load_interoperable_json(handle: TextIO, *, source: str) -> Any:

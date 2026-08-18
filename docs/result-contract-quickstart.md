@@ -87,7 +87,12 @@ value, expose every value, or reject the document. A file with both
 appears to accept it. This follows the interoperability guidance in
 [RFC 8259 section 4](https://www.rfc-editor.org/rfc/rfc8259#section-4).
 The same strict read rejects non-finite `NaN`, `Infinity`, and `-Infinity`
-tokens, which JSON does not permit.
+tokens, which JSON does not permit. It also rejects unpaired UTF-16 surrogate
+escapes because receivers may disagree or fail on them, following
+[RFC 8259 section 8.2](https://www.rfc-editor.org/rfc/rfc8259#section-8.2), and
+reports excessive nesting as invalid input instead of exposing a runtime
+traceback. A single leading byte order mark is ignored, as RFC 8259 permits
+parsers to do for interoperability; producers should not add one.
 
 Every generated receipt identifies its own versioned JSON Schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.

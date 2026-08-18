@@ -315,7 +315,13 @@ effective. This is evidence-integrity enforcement based on the interoperability
 guidance in
 [RFC 8259 section 4](https://www.rfc-editor.org/rfc/rfc8259#section-4); it does
 not add a new Result Contract v1 field. The same strict read rejects non-finite
-`NaN`, `Infinity`, and `-Infinity` tokens, which JSON does not permit.
+`NaN`, `Infinity`, and `-Infinity` tokens, which JSON does not permit. It also
+rejects unpaired UTF-16 surrogate escapes because receivers may disagree or
+fail on them, following
+[RFC 8259 section 8.2](https://www.rfc-editor.org/rfc/rfc8259#section-8.2), and
+reports excessive nesting as invalid input rather than exposing a runtime
+traceback. A single leading byte order mark is ignored, as RFC 8259 permits
+parsers to do for interoperability; producers should not add one.
 
 Passing the core schema does not certify security, authorization, isolation,
 correct domain behavior, platform compatibility, or every extension field. A
