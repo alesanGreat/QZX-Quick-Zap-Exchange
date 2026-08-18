@@ -26,6 +26,12 @@ jobs:
           python-version: "3.13"
           cache: pip
 
+      - name: Install Node.js 24 for the TypeScript producer example
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
       - name: Install static, dependency, and distribution auditors
         run: >-
           python -m pip install
@@ -36,6 +42,36 @@ jobs:
 
       - name: Reject undefined names and invalid Python syntax
         run: python -m ruff check src tests
+
+      - name: Type-check the dependency-free TypeScript producer
+        run: >-
+          npm exec --yes --package=typescript@7.0.2 --
+          tsc --ignoreConfig --noEmit --strict
+          --target ES2022 --module NodeNext --moduleResolution NodeNext
+          examples/result_contract/typescript-minimal.ts
+          examples/result_contract/typescript-minimal.typecheck.ts
+
+      - name: Exercise TypeScript producer runtime guards
+        run: >-
+          node --experimental-strip-types --experimental-default-type=module
+          examples/result_contract/typescript-minimal.runtime-check.mjs
+
+      - name: Validate emitted TypeScript results against QZX
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t results < <(
+            node --experimental-strip-types --experimental-default-type=module \
+              examples/result_contract/typescript-minimal.ts
+          )
+          if [[ "${#results[@]}" -ne 2 ]]; then
+            echo "Expected two JSON results, received ${#results[@]}." >&2
+            exit 1
+          fi
+          for result in "${results[@]}"; do
+            printf '%s\n' "$result" \
+              | python scripts/validate_result_contract.py - --json
+          done
 
       - name: Install the QZX runtime dependency set in isolation
         run: python -m pip install --target "$RUNNER_TEMP/qzx-audit" .

@@ -44,7 +44,10 @@ and domain evidence that collides with a QZX outcome field. Optional core
 fields retain their schema types, while the canonical validator remains the
 final check for arbitrary runtime data. The companion
 [`typescript-minimal.typecheck.ts`](typescript-minimal.typecheck.ts) file keeps
-the intended compile-time rejections executable.
+the intended compile-time rejections executable, and
+[`typescript-minimal.runtime-check.mjs`](typescript-minimal.runtime-check.mjs)
+checks callers that bypass TypeScript. The repository runs all three in its
+static-correctness CI job.
 
 Type-check both files with the current TypeScript 7 compiler without adding it
 to the adopting project:
