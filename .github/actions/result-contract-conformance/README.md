@@ -98,8 +98,11 @@ receipt's validation-material hashes then make the exact contract and validator
 bytes independently comparable with the pinned source revision.
 
 Evidence and report paths are restricted to `GITHUB_WORKSPACE`; line breaks in
-Action path inputs are rejected. The validator does not execute the evidence
-files. It parses JSON and evaluates QZX Result Contract/profile invariants.
+Action path inputs are rejected. The report path must differ from the success,
+failure, and tool-definition inputs, including path aliases and hard links, so
+producing a receipt cannot overwrite its own evidence. The validator does not
+execute the evidence files. It parses JSON and evaluates QZX Result
+Contract/profile invariants.
 
 Passing this Action does not certify security, authorization, domain
 correctness, platform compatibility, or endorsement by QZX. It certifies only

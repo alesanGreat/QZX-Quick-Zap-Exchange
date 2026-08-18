@@ -6,6 +6,7 @@
 import locale
 import os
 import platform
+import signal
 import shutil
 import subprocess
 import sys
@@ -37,7 +38,8 @@ class RunScriptCommand(CommandBase):
         {
             "name": "args",
             "description": (
-                "Arguments passed to the script; values are not echoed in the result"
+                "Arguments passed to the script; QZX does not add their values "
+                "to result metadata, but the script can print them in captured output"
             ),
             "required": False,
             "default": [],
@@ -56,8 +58,8 @@ class RunScriptCommand(CommandBase):
         {
             "command": "qzx runScript myscript.py arg1 arg2 --yolo",
             "description": (
-                "Execute with two arguments without repeating their values in "
-                "the result"
+                "Execute with two arguments without QZX adding their values to "
+                "result metadata"
             ),
         },
         {
@@ -104,15 +106,16 @@ class RunScriptCommand(CommandBase):
 
         with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
             try:
-                completed = subprocess.run(
+                process = subprocess.Popen(
                     command,
                     stdin=subprocess.DEVNULL,
                     stdout=stdout_file,
                     stderr=stderr_file,
-                    timeout=self.timeout_seconds,
-                    check=False,
+                    **self._process_group_options(),
                 )
+                exit_code = process.wait(timeout=self.timeout_seconds)
             except subprocess.TimeoutExpired:
+                termination = self._terminate_process_tree(process)
                 stdout = self._read_capture(stdout_file)
                 stderr = self._read_capture(stderr_file)
                 return {
@@ -132,6 +135,7 @@ class RunScriptCommand(CommandBase):
                         "timeout_seconds": self.timeout_seconds,
                         "exit_code": None,
                         "timed_out": True,
+                        "termination": termination,
                     },
                     "stdout": stdout,
                     "stderr": stderr,
@@ -147,7 +151,7 @@ class RunScriptCommand(CommandBase):
             stdout = self._read_capture(stdout_file)
             stderr = self._read_capture(stderr_file)
 
-        success = completed.returncode == 0
+        success = exit_code == 0
         if success:
             message = (
                 f"Executed {script_type} script "
@@ -156,13 +160,11 @@ class RunScriptCommand(CommandBase):
         else:
             message = (
                 f"{script_type} script '{os.path.basename(absolute_script)}' "
-                f"exited with code {completed.returncode}."
+                f"exited with code {exit_code}."
             )
-        return {
+        result = {
             "success": success,
             "message": message,
-            "error": None if success else "Script returned a non-zero exit code.",
-            "error_code": None if success else "script_failed",
             "script": self._script_info(
                 absolute_script,
                 script_type,
@@ -170,12 +172,16 @@ class RunScriptCommand(CommandBase):
             ),
             "execution": {
                 "timeout_seconds": self.timeout_seconds,
-                "exit_code": completed.returncode,
+                "exit_code": exit_code,
                 "timed_out": False,
             },
             "stdout": stdout,
             "stderr": stderr,
         }
+        if not success:
+            result["error"] = "Script returned a non-zero exit code."
+            result["error_code"] = "script_failed"
+        return result
 
     @staticmethod
     def _command_for_script(script_path, args):
@@ -210,6 +216,67 @@ class RunScriptCommand(CommandBase):
         }
 
     @staticmethod
+    def _process_group_options():
+        """Isolate a script so a timeout can stop descendants with it."""
+        if os.name == "nt":
+            return {
+                "creationflags": getattr(
+                    subprocess,
+                    "CREATE_NEW_PROCESS_GROUP",
+                    0,
+                )
+            }
+        return {"start_new_session": True}
+
+    @staticmethod
+    def _terminate_process_tree(process):
+        """Stop a timed-out script and its descendants when the OS permits."""
+        method = "process_kill_fallback"
+        process_tree_confirmed = False
+
+        if os.name == "nt":
+            taskkill = shutil.which("taskkill.exe") or shutil.which("taskkill")
+            if taskkill:
+                try:
+                    completed = subprocess.run(
+                        [taskkill, "/PID", str(process.pid), "/T", "/F"],
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=10,
+                        check=False,
+                    )
+                    method = "taskkill_tree"
+                    process_tree_confirmed = completed.returncode == 0
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+                method = "process_group_kill"
+                process_tree_confirmed = True
+            except (OSError, ProcessLookupError):
+                pass
+
+        if process.poll() is None:
+            try:
+                process.kill()
+            except OSError:
+                pass
+        try:
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+        return {
+            "attempted": True,
+            "scope": "process_tree",
+            "method": method,
+            "process_tree_confirmed": process_tree_confirmed,
+            "root_process_stopped": process.poll() is not None,
+        }
+
+    @staticmethod
     def _script_info(script_path, script_type, argument_count):
         return {
             "path": script_path,
@@ -218,7 +285,8 @@ class RunScriptCommand(CommandBase):
             "size_bytes": os.path.getsize(script_path),
             "type": script_type,
             "argument_count": argument_count,
-            "argument_values_returned": False,
+            "argument_values_in_metadata": False,
+            "captured_output_may_contain_argument_values": True,
             "working_directory": os.getcwd(),
         }
 

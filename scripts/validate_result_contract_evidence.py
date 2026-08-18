@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -278,6 +279,39 @@ def _serialize(report: dict[str, Any]) -> str:
     return json.dumps(report, indent=2, ensure_ascii=False) + "\n"
 
 
+def _conflicting_evidence_role(
+    report_path: str,
+    *,
+    success_path: str,
+    failure_path: str,
+    tool_definition_path: str | None,
+) -> str | None:
+    """Return the evidence role that a receipt would overwrite, if any."""
+
+    report = Path(report_path)
+    normalized_report = os.path.normcase(str(report.resolve()))
+    evidence_paths = {
+        "success": success_path,
+        "failure": failure_path,
+        "tool definition": tool_definition_path,
+    }
+    for role, path_text in evidence_paths.items():
+        if path_text is None:
+            continue
+        evidence = Path(path_text)
+        normalized_evidence = os.path.normcase(str(evidence.resolve()))
+        if normalized_report == normalized_evidence:
+            return role
+        try:
+            if report.exists() and evidence.exists() and report.samefile(evidence):
+                return role
+        except OSError:
+            # Normalized-path comparison still protects aliases that can be
+            # resolved even when the platform cannot query file identity.
+            pass
+    return None
+
+
 def main() -> int:
     args = parse_args()
     report = validate_evidence(
@@ -286,9 +320,29 @@ def main() -> int:
         failure_path=args.failure,
         tool_definition_path=args.tool_definition,
     )
+    conflicting_role = (
+        _conflicting_evidence_role(
+            args.report,
+            success_path=args.success,
+            failure_path=args.failure,
+            tool_definition_path=args.tool_definition,
+        )
+        if args.report
+        else None
+    )
+    if conflicting_role is not None:
+        report["success"] = False
+        report["message"] = (
+            "The conformance receipt path conflicts with an evidence input."
+        )
+        report["error_code"] = "receipt_path_conflict"
+        report["details"]["violations"].append(
+            "The report path must differ from the "
+            f"{conflicting_role} evidence path; no receipt was written."
+        )
     serialized = _serialize(report)
 
-    if args.report:
+    if args.report and conflicting_role is None:
         report_path = Path(args.report)
         try:
             report_path.parent.mkdir(parents=True, exist_ok=True)

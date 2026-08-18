@@ -65,7 +65,7 @@ class TerminalCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx Terminal',
+            'command': 'qzx terminal',
             'description': 'Launch the QZX interactive terminal with default settings'
         },
         {
@@ -73,11 +73,11 @@ class TerminalCommand(CommandBase):
             'description': 'Launch the QZX interactive terminal with an agent prompt'
         },
         {
-            'command': 'qzx Terminal "MyQZX> "',
+            'command': 'qzx terminal "MyQZX> "',
             'description': 'Launch the QZX terminal with a custom prompt'
         },
         {
-            'command': 'qzx Terminal "QZX> " --history_file ~/.qzx_history --show_path false',
+            'command': 'qzx terminal "QZX> " --history_file ~/.qzx_history --show_path false',
             'description': 'Opt in to persistent history and hide the path'
         }
     ]
@@ -174,7 +174,7 @@ class QZXTerminal(cmd.Cmd):
             self._load_history()
         
         # Create welcome screen generator
-        self.welcome_generator = TerminalWelcome()
+        self.welcome_generator = TerminalWelcome(interactive=True)
         
         # Get the welcome message
         self.intro = self.welcome_generator.get_welcome_message()
@@ -220,6 +220,10 @@ class QZXTerminal(cmd.Cmd):
     def emptyline(self):
         """Do nothing on empty line"""
         pass
+
+    def precmd(self, line):
+        """Normalize a UTF-8 BOM added by some piped Windows shell inputs."""
+        return line.lstrip("\ufeff")
     
     def do_exit(self, arg):
         """Exit the QZX Terminal"""

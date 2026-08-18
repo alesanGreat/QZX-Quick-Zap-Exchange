@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "validate_result_contract_evidence.py"
@@ -203,6 +205,92 @@ def test_cli_write_failure_remains_a_valid_result_contract(tmp_path):
     assert report["success"] is False
     assert report["error_code"] == "receipt_write_failed"
     assert report["receipt_schema"] == validator.CONFORMANCE_RECEIPT_SCHEMA_URL
+    assert validator.result_contract_violations(report) == []
+
+
+def test_cli_refuses_to_overwrite_an_evidence_input_with_its_receipt(tmp_path):
+    success_path = tmp_path / "success.json"
+    failure_path = tmp_path / "failure.json"
+    success_path.write_bytes((FIXTURE_ROOT / "valid-success.json").read_bytes())
+    failure_path.write_bytes((FIXTURE_ROOT / "valid-failure.json").read_bytes())
+    original_success = success_path.read_bytes()
+
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--profile",
+            "core",
+            "--success",
+            str(success_path),
+            "--failure",
+            str(failure_path),
+            "--report",
+            str(success_path),
+            "--json",
+        ],
+        cwd=REPOSITORY_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1
+    assert success_path.read_bytes() == original_success
+    report = json.loads(process.stdout)
+    assert report["success"] is False
+    assert report["error_code"] == "receipt_path_conflict"
+    assert report["details"]["violations"] == [
+        "The report path must differ from the success evidence path; "
+        "no receipt was written."
+    ]
+    assert validator.result_contract_violations(report) == []
+
+
+def test_cli_refuses_to_overwrite_a_hard_link_to_evidence(tmp_path):
+    success_path = tmp_path / "success.json"
+    failure_path = tmp_path / "failure.json"
+    report_path = tmp_path / "receipt.json"
+    success_path.write_bytes((FIXTURE_ROOT / "valid-success.json").read_bytes())
+    failure_path.write_bytes((FIXTURE_ROOT / "valid-failure.json").read_bytes())
+    try:
+        os.link(success_path, report_path)
+    except OSError as exception:
+        pytest.skip(f"Hard links are unavailable in this environment: {exception}")
+    original_success = success_path.read_bytes()
+
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--profile",
+            "core",
+            "--success",
+            str(success_path),
+            "--failure",
+            str(failure_path),
+            "--report",
+            str(report_path),
+            "--json",
+        ],
+        cwd=REPOSITORY_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1
+    assert success_path.read_bytes() == original_success
+    assert report_path.read_bytes() == original_success
+    report = json.loads(process.stdout)
+    assert report["success"] is False
+    assert report["error_code"] == "receipt_path_conflict"
+    assert report["details"]["violations"] == [
+        "The report path must differ from the success evidence path; "
+        "no receipt was written."
+    ]
     assert validator.result_contract_violations(report) == []
 
 

@@ -78,6 +78,10 @@ python scripts/validate_result_contract_evidence.py \
   --report result-contract-evidence/qzx-conformance.json
 ```
 
+Keep the report path distinct from the success, failure, and MCP tool-definition
+inputs. The validator rejects path aliases and hard links to those inputs
+instead of overwriting the evidence that the receipt is meant to identify.
+
 Every generated receipt identifies its own versioned JSON Schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.
 It also records SHA-256 digests for the exact QZX contract schema, receipt schema,
