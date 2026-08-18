@@ -7,6 +7,17 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Added a locked, executable interoperability example for the official MCP
+  TypeScript client/server SDK 2.0.0. It negotiates MCP 2026-07-28 through the
+  SDK's modern in-process HTTP entry, publishes the exact QZX Result Contract
+  schema through `fromJsonSchema`, captures real success/failure wire results,
+  and validates them as `canonical_inline`. CI now preserves the generated pair
+  and receipt as reviewable artifacts. Documentation also makes two SDK
+  boundaries explicit: its in-memory transport exercises the 2025 era, and its
+  public client result consumes the wire-only `resultType` discriminator, so
+  2026 evidence must be captured at the transport boundary. This remains
+  QZX-maintained reference evidence, not an independent adoption claim.
+
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested

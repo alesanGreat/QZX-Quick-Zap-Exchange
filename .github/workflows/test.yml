@@ -72,13 +72,29 @@ jobs:
         run: python -m twine check "$RUNNER_TEMP"/qzx-dist/*
 
   result-contract-conformance-action:
-    name: Result Contract Composite Action smoke | CPython 3.13
+    name: Result Contract SDK interop and Action smoke | Node 22 / CPython 3.13
     runs-on: ubuntu-24.04
     steps:
       - name: Check out QZX
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      - name: Install Node.js 22 for the official MCP SDK example
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+
+      - name: Install the locked official MCP TypeScript SDK dependencies
+        working-directory: examples/result_contract/mcp-typescript-sdk-v2
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.29.2 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generate real MCP 2026-07-28 SDK wire evidence
+        working-directory: examples/result_contract/mcp-typescript-sdk-v2
+        run: pnpm run evidence -- "$RUNNER_TEMP/qzx-mcp-typescript-sdk-v2-evidence"
 
       - name: Validate core evidence through the public Composite Action
         uses: ./
@@ -105,6 +121,26 @@ jobs:
           failure: examples/result_contract/mcp-failure.json
           tool-definition: examples/result_contract/mcp-tool-definition.json
           report: qzx-mcp-2026-conformance.json
+
+      - name: Validate official MCP TypeScript SDK v2 wire evidence
+        uses: ./
+        with:
+          profile: mcp-2026-07-28
+          success: ${{ runner.temp }}/qzx-mcp-typescript-sdk-v2-evidence/success.json
+          failure: ${{ runner.temp }}/qzx-mcp-typescript-sdk-v2-evidence/failure.json
+          tool-definition: ${{ runner.temp }}/qzx-mcp-typescript-sdk-v2-evidence/tool-definition.json
+          report: qzx-mcp-typescript-sdk-v2-conformance.json
+
+      - name: Preserve the official MCP TypeScript SDK v2 evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-mcp-typescript-sdk-v2-evidence
+          path: |
+            ${{ runner.temp }}/qzx-mcp-typescript-sdk-v2-evidence/*.json
+            qzx-mcp-typescript-sdk-v2-conformance.json
+            examples/result_contract/mcp-typescript-sdk-v2/README.md
+          if-no-files-found: error
+          retention-days: 14
 
       - id: qzx-nonconforming
         name: Validate intentionally nonconforming evidence
@@ -154,6 +190,10 @@ jobs:
               "qzx-core-conformance.json": ("core", None),
               "qzx-mcp-2025-conformance.json": ("mcp-2025-11-25", "structural_core"),
               "qzx-mcp-2026-conformance.json": ("mcp-2026-07-28", "canonical_ref"),
+              "qzx-mcp-typescript-sdk-v2-conformance.json": (
+                  "mcp-2026-07-28",
+                  "canonical_inline",
+              ),
           }
           for filename, (profile, output_schema_mode) in expected.items():
               report = json.loads(Path(filename).read_text(encoding="utf-8"))

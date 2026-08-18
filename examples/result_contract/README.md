@@ -55,6 +55,12 @@ QZX supports revision-specific MCP profiles for 2025-06-18, 2025-11-25, and
 without `resultType` and 2026-07-28 evidence with `resultType: "complete"`, so an
 adopter does not need to edit a newer fixture to simulate an older server.
 
+For an executable MCP 2026-07-28 integration rather than static fixtures, use
+the locked [official TypeScript SDK v2 example](mcp-typescript-sdk-v2/README.md).
+It runs a real client/server success and failure pair, captures the wire results,
+and is continuously checked in CI. It remains QZX-maintained reference evidence,
+not independent adoption.
+
 | File | Purpose |
 | --- | --- |
 | `mcp-tool-definition.json` | Strong `canonical_ref` tool definition using QZX Result Contract v1 as `outputSchema`. |

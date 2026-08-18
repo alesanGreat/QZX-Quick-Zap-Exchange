@@ -318,6 +318,16 @@ The repository contains positive and negative fixtures under
 [`examples/result_contract/`](../examples/result_contract/) and dependency-free
 validators.
 
+For a maintained end-to-end producer example, see the locked
+[`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
+integration. It drives the official MCP TypeScript SDK 2.0.0 over its modern
+in-process HTTP entry, captures actual MCP 2026-07-28 wire results, and validates
+them as `canonical_inline`. The public SDK client intentionally consumes the
+wire-only `resultType` field before returning `CallToolResult`, so reviewable
+2026 evidence must be captured at the transport boundary rather than reconstructed
+from the normalized client object. The example is QZX reference evidence and is
+not listed as independent adoption.
+
 Validate the transport-independent core fixtures:
 
 ```bash

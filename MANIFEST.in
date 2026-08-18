@@ -21,7 +21,7 @@ include scripts/verify_golden_core.py
 include scripts/verify_golden_core_release_quality.py
 include scripts/verify_distribution_artifacts.py
 recursive-include src/qzx/resources *.json
-recursive-include examples/result_contract *.json *.md *.ts
+recursive-include examples/result_contract *.json *.md *.ts *.mjs *.yaml
 recursive-include .github/actions/result-contract-conformance *.yml *.py *.md
 prune docs
 prune tests

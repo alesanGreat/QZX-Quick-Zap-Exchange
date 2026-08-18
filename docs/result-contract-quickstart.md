@@ -261,6 +261,23 @@ without `resultType`, `mcp-success.json` / `mcp-failure.json` for the 2026-07-28
 case. Contradictory `isError` and protocol-error fixtures remain available for
 negative testing.
 
+### Executable official TypeScript SDK v2 example
+
+The locked
+[`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
+example runs an actual success/failure pair through the official MCP TypeScript
+SDK 2.0.0 and captures the MCP 2026-07-28 wire results. It deliberately uses
+`createMcpHandler` plus `StreamableHTTPClientTransport`: the SDK's in-memory
+transport exercises only the 2025 era, and the public client result hides the
+wire-only `resultType` discriminator. The example captures that discriminator at
+the transport boundary rather than adding it after the fact.
+
+CI validates the generated pair through the public QZX Composite Action and
+publishes the evidence bundle as a workflow artifact. The receipt reports
+`canonical_inline` because the official SDK's `fromJsonSchema` API advertises
+the exact QZX schema. This is QZX-maintained interoperability evidence, not an
+independent adopter or a certification of the SDK.
+
 ## 5. Publish the smallest reviewable evidence bundle
 
 A first independent implementation does not need a white paper. A small public

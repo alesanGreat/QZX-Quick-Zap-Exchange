@@ -16,3 +16,12 @@ updates:
       vm-actions:
         patterns:
           - "vmactions/*"
+  - package-ecosystem: "npm"
+    directory: "/examples/result_contract/mcp-typescript-sdk-v2"
+    schedule:
+      interval: "weekly"
+    groups:
+      mcp-typescript-sdk:
+        patterns:
+          - "@modelcontextprotocol/*"
+          - "zod"
