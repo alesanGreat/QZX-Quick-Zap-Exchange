@@ -272,22 +272,32 @@ def test_distribution_verifier_rejects_missing_readme_link_target(tmp_path):
         )
 
 
+@pytest.mark.parametrize(
+    ("omitted_support_file", "missing_pattern"),
+    [
+        (
+            "examples/result_contract/mcp-python-sdk-v2/requirements.txt",
+            r"mcp-python-sdk-v2/requirements\.txt",
+        ),
+        (
+            "examples/result_contract/mcp-go-sdk-v1/go.sum",
+            r"mcp-go-sdk-v1/go\.sum",
+        ),
+    ],
+)
 def test_distribution_verifier_rejects_missing_nested_result_contract_example(
     tmp_path,
+    omitted_support_file,
+    missing_pattern,
 ):
     build_fixture_distributions(
         tmp_path,
-        omitted_support_file=(
-            "examples/result_contract/mcp-python-sdk-v2/requirements.txt"
-        ),
+        omitted_support_file=omitted_support_file,
     )
 
     with pytest.raises(
         ValueError,
-        match=(
-            r"missing required release files: .*"
-            r"mcp-python-sdk-v2/requirements\.txt"
-        ),
+        match=rf"missing required release files: .*{missing_pattern}",
     ):
         verify_distributions(
             tmp_path,

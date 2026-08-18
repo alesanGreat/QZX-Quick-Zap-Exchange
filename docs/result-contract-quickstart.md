@@ -268,7 +268,7 @@ without `resultType`, `mcp-success.json` / `mcp-failure.json` for the 2026-07-28
 case. Contradictory `isError` and protocol-error fixtures remain available for
 negative testing.
 
-### Executable official SDK v2 examples
+### Executable official SDK examples
 
 The locked
 [`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
@@ -294,6 +294,17 @@ dependency graph is pinned with hashes. Because this path deliberately has no
 HTTP or JSON-RPC framing, that limitation is recorded in the evidence instead
 of being implied away; the TypeScript example supplies the complementary wire
 capture. CI validates and preserves both QZX-maintained bundles independently.
+
+The locked stable
+[`mcp-go-sdk-v1`](../examples/result_contract/mcp-go-sdk-v1/README.md)
+example adds an official Go client/server path. It negotiates MCP 2025-11-25
+through the SDK's newline-delimited JSON-RPC in-memory transport, validates typed
+outputs against the exact inline QZX schema, and preserves the client-observed
+success/failure models. The success serialization omits `isError: false` as the
+SDK model specifies, while the receipt records its effective false value and
+the failure retains `isError: true`. It does not claim HTTP coverage or retain
+raw frames. CI validates and preserves this third QZX-maintained bundle with its
+`go.mod` and authenticated `go.sum` dependency graph.
 
 ## 5. Publish the smallest reviewable evidence bundle
 

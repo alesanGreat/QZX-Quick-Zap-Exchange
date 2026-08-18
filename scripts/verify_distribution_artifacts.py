@@ -40,10 +40,13 @@ RESULT_CONTRACT_EXAMPLES_ROOT = PROJECT_ROOT / "examples" / "result_contract"
 RESULT_CONTRACT_EXAMPLE_SUFFIXES = frozenset(
     {
         ".in",
+        ".go",
         ".json",
         ".md",
+        ".mod",
         ".mjs",
         ".py",
+        ".sum",
         ".ts",
         ".txt",
         ".yaml",

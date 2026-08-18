@@ -338,6 +338,15 @@ environment reproducible. Its evidence says explicitly that HTTP and JSON-RPC
 framing were not exercised, so it must not be presented as wire-transport
 evidence or independent adoption.
 
+The locked stable
+[`mcp-go-sdk-v1`](../examples/result_contract/mcp-go-sdk-v1/README.md)
+example exercises the official Go SDK's client, server, typed tool validation,
+and paired newline-delimited JSON-RPC transport at MCP 2025-11-25. It preserves
+the client-observed models, authenticates the dependency graph with `go.sum`,
+and validates the exact inline QZX schema. Its metadata distinguishes exercising
+JSON-RPC framing from retaining raw frames and makes clear that HTTP and SSE were
+not tested. It is QZX-maintained reference evidence, not independent adoption.
+
 Validate the transport-independent core fixtures:
 
 ```bash

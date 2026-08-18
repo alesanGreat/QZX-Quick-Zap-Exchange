@@ -27,6 +27,22 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   from the TypeScript wire capture; neither QZX-maintained example is counted
   as independent adoption.
 
+- Added a locked interoperability example for the official MCP Go SDK stable
+  release 1.6.1. Its official client and server negotiate MCP 2025-11-25 over
+  the SDK's newline-delimited JSON-RPC in-memory transport, validate typed
+  outputs against the exact inline QZX schema, and produce conforming success
+  and failure evidence. The module graph is authenticated with `go.sum`, CI
+  preserves the generated bundle, and the evidence explicitly distinguishes
+  exercised JSON-RPC framing from absent raw-frame and HTTP coverage. This is
+  QZX-maintained reference evidence, not independent adoption.
+
+- Made early failures from the reusable Result Contract Action composable.
+  Stable `failure_kind` outputs now distinguish rejected evidence from
+  operational failures, early input/path/time-limit failures still produce a
+  safe job summary, and `report=unavailable` prevents downstream workflows from
+  claiming a receipt that was never written. The copyable artifact workflow now
+  uploads only verdicts that actually produced receipts.
+
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested

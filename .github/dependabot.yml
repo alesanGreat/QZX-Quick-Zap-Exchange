@@ -35,3 +35,11 @@ updates:
         patterns:
           - "mcp"
           - "mcp-types"
+  - package-ecosystem: "gomod"
+    directory: "/examples/result_contract/mcp-go-sdk-v1"
+    schedule:
+      interval: "weekly"
+    groups:
+      mcp-go-sdk:
+        patterns:
+          - "github.com/modelcontextprotocol/go-sdk"
