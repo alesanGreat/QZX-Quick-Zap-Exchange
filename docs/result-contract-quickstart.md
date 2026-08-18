@@ -78,6 +78,22 @@ python scripts/validate_result_contract_evidence.py \
   --report result-contract-evidence/qzx-conformance.json
 ```
 
+Evidence and MCP tool-definition files must use unique JSON object member
+names. QZX's public conformance validators reject duplicates before schema or
+profile validation because JSON parsers may keep the first value, keep the last
+value, expose every value, or reject the document. A file with both
+`"success": true` and
+`"success": false` is therefore ambiguous evidence, even if one local parser
+appears to accept it. This follows the interoperability guidance in
+[RFC 8259 section 4](https://www.rfc-editor.org/rfc/rfc8259#section-4).
+The same strict read rejects non-finite `NaN`, `Infinity`, and `-Infinity`
+tokens, which JSON does not permit. It also rejects unpaired UTF-16 surrogate
+escapes because receivers may disagree or fail on them, following
+[RFC 8259 section 8.2](https://www.rfc-editor.org/rfc/rfc8259#section-8.2), and
+reports excessive nesting as invalid input instead of exposing a runtime
+traceback. A single leading byte order mark is ignored, as RFC 8259 permits
+parsers to do for interoperability; producers should not add one.
+
 Every generated receipt identifies its own versioned JSON Schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.
 It also records SHA-256 digests for the exact QZX contract schema, receipt schema,

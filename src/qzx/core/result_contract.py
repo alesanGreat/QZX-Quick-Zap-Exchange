@@ -9,7 +9,7 @@ import json
 import math
 import re
 from importlib.resources import files
-from typing import Any
+from typing import Any, BinaryIO, TextIO
 
 
 RESULT_CONTRACT_VERSION = 1
@@ -18,6 +18,113 @@ RESULT_CONTRACT_SCHEMA_URL = (
 )
 _RESULT_CONTRACT_RESOURCE = "schemas/result-contract-v1.schema.json"
 _ERROR_CODE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+class JsonInteroperabilityError(ValueError):
+    """Describe valid-for-some-parsers input that is not portable JSON."""
+
+    def __init__(self, violations: list[str]) -> None:
+        self.violations = tuple(violations)
+        super().__init__(" ".join(violations))
+
+
+def loads_interoperable_json(text: str, *, source: str) -> Any:
+    """Decode JSON while rejecting ambiguous or non-standard representations."""
+
+    if text.startswith("\ufeff"):
+        text = text[1:]
+
+    duplicate_names: set[str] = set()
+    non_finite_numbers: set[str] = set()
+
+    def object_with_unique_names(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        parsed: dict[str, Any] = {}
+        for name, value in pairs:
+            if name in parsed:
+                duplicate_names.add(name)
+            parsed[name] = value
+        return parsed
+
+    def record_non_finite_number(value: str) -> None:
+        non_finite_numbers.add(value)
+
+    try:
+        document = json.loads(
+            text,
+            object_pairs_hook=object_with_unique_names,
+            parse_constant=record_non_finite_number,
+        )
+    except RecursionError as exception:
+        raise JsonInteroperabilityError(
+            [f"{source} exceeds the supported JSON nesting depth."]
+        ) from exception
+
+    violations: list[str] = []
+    if duplicate_names:
+        rendered_names = ", ".join(
+            json.dumps(name, ensure_ascii=True) for name in sorted(duplicate_names)
+        )
+        violations.append(
+            f"{source} contains duplicate JSON object member names: "
+            f"{rendered_names}."
+        )
+    if non_finite_numbers:
+        rendered_numbers = ", ".join(sorted(non_finite_numbers))
+        violations.append(
+            f"{source} contains non-finite numeric tokens that JSON does not "
+            f"permit: {rendered_numbers}."
+        )
+    if _contains_unpaired_surrogate(document):
+        violations.append(
+            f"{source} contains an unpaired UTF-16 surrogate; its cross-parser "
+            "behavior is unpredictable."
+        )
+
+    if violations:
+        raise JsonInteroperabilityError(violations)
+    return document
+
+
+def loads_interoperable_json_bytes(data: bytes, *, source: str) -> Any:
+    """Decode RFC 8259 JSON bytes as UTF-8 before enforcing portability."""
+
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exception:
+        raise JsonInteroperabilityError(
+            [f"{source} is not valid UTF-8 at byte offset {exception.start}."]
+        ) from exception
+    return loads_interoperable_json(text, source=source)
+
+
+def _contains_unpaired_surrogate(document: Any) -> bool:
+    """Inspect decoded JSON iteratively so deeply nested data cannot recurse."""
+
+    pending = [document]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str):
+            if any("\ud800" <= character <= "\udfff" for character in value):
+                return True
+        elif isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False
+
+
+def load_interoperable_json(
+    handle: TextIO | BinaryIO,
+    *,
+    source: str,
+) -> Any:
+    """Decode one interoperable JSON document from a text or binary stream."""
+
+    content = handle.read()
+    if isinstance(content, bytes):
+        return loads_interoperable_json_bytes(content, source=source)
+    return loads_interoperable_json(content, source=source)
 
 
 def load_result_contract_schema() -> dict[str, Any]:

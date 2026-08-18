@@ -147,6 +147,69 @@ def test_evidence_pair_rejects_wrong_semantic_roles_and_missing_mcp_definition()
     ]
 
 
+def test_evidence_pair_rejects_duplicate_json_object_member_names(tmp_path):
+    duplicate_success = tmp_path / "duplicate-success.json"
+    duplicate_success.write_text(
+        '{"success":false,"success":true,"message":"Ambiguous outcome."}',
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    core_report = validator.validate_evidence(
+        profile=validator.PROFILE_CORE,
+        success_path=str(duplicate_success),
+        failure_path=str(FIXTURE_ROOT / "valid-failure.json"),
+    )
+
+    assert core_report["success"] is False
+    assert core_report["details"]["cases"][0]["actual_success"] is None
+    assert core_report["details"]["cases"][0]["sha256"] is not None
+    assert core_report["details"]["cases"][0]["violations"] == [
+        f'{duplicate_success} contains duplicate JSON object member names: "success".'
+    ]
+
+    duplicate_tool_definition = tmp_path / "duplicate-tool-definition.json"
+    duplicate_tool_definition.write_text(
+        '{"name":"ambiguous","outputSchema":{"type":"object","type":"array"}}',
+        encoding="utf-8",
+        newline="\n",
+    )
+    mcp_report = validator.validate_evidence(
+        profile=validator.PROFILE_MCP,
+        success_path=str(FIXTURE_ROOT / "mcp-success.json"),
+        failure_path=str(FIXTURE_ROOT / "mcp-failure.json"),
+        tool_definition_path=str(duplicate_tool_definition),
+    )
+
+    assert mcp_report["success"] is False
+    assert mcp_report["details"]["violations"] == [
+        f'{duplicate_tool_definition} contains duplicate JSON object member names: "type".'
+    ]
+
+
+def test_evidence_pair_rejects_non_finite_json_numbers(tmp_path):
+    non_finite_success = tmp_path / "non-finite-success.json"
+    non_finite_success.write_text(
+        '{"success":true,"message":"Ambiguous metrics.",'
+        '"details":{"score":NaN,"minimum":-Infinity,"maximum":Infinity}}',
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    report = validator.validate_evidence(
+        profile=validator.PROFILE_CORE,
+        success_path=str(non_finite_success),
+        failure_path=str(FIXTURE_ROOT / "valid-failure.json"),
+    )
+
+    assert report["success"] is False
+    assert report["details"]["cases"][0]["actual_success"] is None
+    assert report["details"]["cases"][0]["violations"] == [
+        f"{non_finite_success} contains non-finite numeric tokens that JSON does "
+        "not permit: -Infinity, Infinity, NaN."
+    ]
+
+
 def test_cli_writes_same_receipt_it_prints(tmp_path):
     report_path = tmp_path / "receipt.json"
     process = subprocess.run(

@@ -19,7 +19,9 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from qzx.core.result_contract import (  # noqa: E402
+    JsonInteroperabilityError,
     RESULT_CONTRACT_SCHEMA_URL,
+    load_interoperable_json,
     result_contract_violations,
 )
 
@@ -29,9 +31,11 @@ def load_json(path: Path, label: str) -> Any:
 
     try:
         with path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+            return load_interoperable_json(handle, source=label)
     except json.JSONDecodeError as exception:
         raise ValueError(f"{label} contains invalid JSON: {exception}") from exception
+    except JsonInteroperabilityError as exception:
+        raise ValueError(str(exception)) from exception
 
 
 def _resolve_case_path(manifest_path: Path, relative_name: str) -> Path:
@@ -180,6 +184,8 @@ def main() -> int:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
         print(("[OK] " if result["success"] else "[FAIL] ") + result["message"])
+        if result.get("error"):
+            print(f"  - {result['error']}")
         for case in result.get("details", {}).get("cases", []):
             status = "PASS" if case.get("passed") else "FAIL"
             print(f"  [{status}] {case.get('id')}: {case.get('file')}")
