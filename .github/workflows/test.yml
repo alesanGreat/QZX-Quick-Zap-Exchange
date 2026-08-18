@@ -53,7 +53,8 @@ jobs:
 
       - name: Exercise TypeScript producer runtime guards
         run: >-
-          node --experimental-strip-types --experimental-default-type=module
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          --experimental-strip-types
           examples/result_contract/typescript-minimal.runtime-check.mjs
 
       - name: Validate emitted TypeScript results against QZX
@@ -61,7 +62,8 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t results < <(
-            node --experimental-strip-types --experimental-default-type=module \
+            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+              --experimental-strip-types \
               examples/result_contract/typescript-minimal.ts
           )
           if [[ "${#results[@]}" -ne 2 ]]; then

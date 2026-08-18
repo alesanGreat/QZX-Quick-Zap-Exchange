@@ -62,7 +62,7 @@ pnpm dlx --package=typescript@7 tsc --ignoreConfig --noEmit --strict \
 Run the producer with Node.js 22 or newer:
 
 ```bash
-node --experimental-strip-types --experimental-default-type=module \
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types \
   examples/result_contract/typescript-minimal.ts
 ```
 
