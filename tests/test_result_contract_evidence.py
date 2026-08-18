@@ -13,9 +13,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "validate_result_contract_evidence.py"
 ACTION_ROOT = REPOSITORY_ROOT / ".github" / "actions" / "result-contract-conformance"
@@ -254,10 +251,7 @@ def test_cli_refuses_to_overwrite_a_hard_link_to_evidence(tmp_path):
     report_path = tmp_path / "receipt.json"
     success_path.write_bytes((FIXTURE_ROOT / "valid-success.json").read_bytes())
     failure_path.write_bytes((FIXTURE_ROOT / "valid-failure.json").read_bytes())
-    try:
-        os.link(success_path, report_path)
-    except OSError as exception:
-        pytest.skip(f"Hard links are unavailable in this environment: {exception}")
+    os.link(success_path, report_path)
     original_success = success_path.read_bytes()
 
     process = subprocess.run(
