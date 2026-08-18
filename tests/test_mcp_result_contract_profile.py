@@ -312,6 +312,23 @@ def test_cli_rejects_non_interoperable_mcp_json():
     )
 
 
+def test_cli_accepts_utf8_bom_from_standard_input():
+    process = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=b"\xef\xbb\xbf" + (FIXTURE_ROOT / "mcp-success.json").read_bytes(),
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 0, process.stderr
+    report = json.loads(process.stdout.decode("utf-8"))
+    assert report["success"] is True
+    assert report["details"]["violations"] == []
+    assert process.stderr == b""
+
+
 def test_non_interoperable_text_content_is_not_backcompat_evidence():
     document = {
         "resultType": "complete",

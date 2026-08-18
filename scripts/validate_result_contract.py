@@ -42,7 +42,8 @@ def parse_args() -> argparse.Namespace:
 
 def load_document(path: str):
     if path == "-":
-        return load_interoperable_json(sys.stdin, source="standard input")
+        standard_input = getattr(sys.stdin, "buffer", sys.stdin)
+        return load_interoperable_json(standard_input, source="standard input")
     with Path(path).open("r", encoding="utf-8") as handle:
         return load_interoperable_json(handle, source=path)
 

@@ -9,7 +9,7 @@ import json
 import math
 import re
 from importlib.resources import files
-from typing import Any, TextIO
+from typing import Any, BinaryIO, TextIO
 
 
 RESULT_CONTRACT_VERSION = 1
@@ -85,6 +85,18 @@ def loads_interoperable_json(text: str, *, source: str) -> Any:
     return document
 
 
+def loads_interoperable_json_bytes(data: bytes, *, source: str) -> Any:
+    """Decode RFC 8259 JSON bytes as UTF-8 before enforcing portability."""
+
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exception:
+        raise JsonInteroperabilityError(
+            [f"{source} is not valid UTF-8 at byte offset {exception.start}."]
+        ) from exception
+    return loads_interoperable_json(text, source=source)
+
+
 def _contains_unpaired_surrogate(document: Any) -> bool:
     """Inspect decoded JSON iteratively so deeply nested data cannot recurse."""
 
@@ -102,10 +114,17 @@ def _contains_unpaired_surrogate(document: Any) -> bool:
     return False
 
 
-def load_interoperable_json(handle: TextIO, *, source: str) -> Any:
-    """Decode one interoperable JSON document from a text stream."""
+def load_interoperable_json(
+    handle: TextIO | BinaryIO,
+    *,
+    source: str,
+) -> Any:
+    """Decode one interoperable JSON document from a text or binary stream."""
 
-    return loads_interoperable_json(handle.read(), source=source)
+    content = handle.read()
+    if isinstance(content, bytes):
+        return loads_interoperable_json_bytes(content, source=source)
+    return loads_interoperable_json(content, source=source)
 
 
 def load_result_contract_schema() -> dict[str, Any]:

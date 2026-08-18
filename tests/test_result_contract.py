@@ -284,19 +284,36 @@ def test_standalone_validator_accepts_one_leading_byte_order_mark():
         [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
         cwd=REPOSITORY_ROOT,
         input=(
-            "\ufeff"
-            '{"success":true,"message":"PowerShell pipeline accepted."}'
+            b"\xef\xbb\xbf"
+            b'{"success":true,"message":"PowerShell pipeline accepted."}'
         ),
-        encoding="utf-8",
         capture_output=True,
         timeout=30,
         check=False,
     )
 
     assert process.returncode == 0, process.stderr
-    report = json.loads(process.stdout)
+    report = json.loads(process.stdout.decode("utf-8"))
     assert report["success"] is True
     assert report["details"]["violations"] == []
+
+
+def test_standalone_validator_rejects_non_utf8_standard_input():
+    process = subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=b'{"success":true,"message":"Invalid byte: \xff"}',
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1, process.stderr
+    report = json.loads(process.stdout.decode("utf-8"))
+    assert report["success"] is False
+    assert report["error_code"] == "invalid_json_input"
+    assert "standard input is not valid UTF-8 at byte offset" in report["error"]
+    assert process.stderr == b""
 
 
 def test_strict_json_reader_accepts_a_complete_surrogate_pair():
