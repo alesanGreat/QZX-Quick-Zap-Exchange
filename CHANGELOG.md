@@ -81,6 +81,11 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   indefinitely or treating a non-zero `dotnet --version` exit as usable. The
   probe now has a bounded timeout, so a broken external SDK cannot block QZX
   merely while capability detection runs.
+- Kept the complete `listCommands` terminal catalog while removing its duplicate
+  prose copy from JSON `message`; the structured `commands` field remains the
+  machine-readable source. With the current 87-command catalog, the real
+  PowerShell invocation fell from 59,944 to 50,833 JSON characters (15.2%) while
+  PowerShell and Command Prompt retained the same 98-line human presentation.
 
 ## 0.2.2.0.7a5 — 2026-08-08
 
