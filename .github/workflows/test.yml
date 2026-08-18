@@ -201,7 +201,9 @@ jobs:
           report: qzx-nonconforming-receipt.json
 
       - name: Preserve the nonconformance receipt
-        if: always() && steps.qzx-nonconforming.outcome != 'skipped'
+        if: >-
+          always() &&
+          steps.qzx-nonconforming.outputs.failure_kind == 'conformance'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qzx-nonconformance-receipt
@@ -215,6 +217,7 @@ jobs:
           ACTION_OUTCOME: ${{ steps.qzx-nonconforming.outcome }}
           CONFORMANT: ${{ steps.qzx-nonconforming.outputs.conformant }}
           CONTRACT_SCHEMA_SHA256: ${{ steps.qzx-nonconforming.outputs.contract_schema_sha256 }}
+          FAILURE_KIND: ${{ steps.qzx-nonconforming.outputs.failure_kind }}
         run: |
           import json
           import os
@@ -223,6 +226,7 @@ jobs:
           receipt = json.loads(Path("qzx-nonconforming-receipt.json").read_text(encoding="utf-8"))
           assert os.environ["ACTION_OUTCOME"] == "failure"
           assert os.environ["CONFORMANT"] == "false"
+          assert os.environ["FAILURE_KIND"] == "conformance"
           assert len(os.environ["CONTRACT_SCHEMA_SHA256"]) == 64
           assert receipt["success"] is False, receipt
           assert receipt["error_code"] == "conformance_failed", receipt

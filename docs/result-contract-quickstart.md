@@ -130,8 +130,10 @@ The QZX SHA above identifies the reviewed conformance implementation used by
 this example; update it deliberately when you choose to validate against a
 newer QZX revision. The Action fails the job when the pair does not conform and
 writes the receipt path plus scalar `conformant`, `profile`, `receipt_schema`,
-`contract_schema_sha256`, and `output_schema_mode` outputs for later workflow
-steps. Its GitHub job summary keeps the PASS/FAIL result, the exact contract
+`contract_schema_sha256`, `output_schema_mode`, and `failure_kind` outputs for
+later workflow steps. `failure_kind` is `none`, `conformance`, or `operational`,
+so automation can distinguish rejected evidence from a run that never reached
+a verdict. Its GitHub job summary keeps the PASS/FAIL result, the exact contract
 schema digest, receipt metadata, the specification link, and factual creator
 attribution together with the run.
 
@@ -154,7 +156,10 @@ a failed conformance check into a passing gate**:
           report: result-contract-evidence/qzx-conformance.json
 
       - name: Preserve QZX conformance receipt
-        if: always()
+        if: >-
+          always() &&
+          (steps.qzx-conformance.outputs.failure_kind == 'none' ||
+          steps.qzx-conformance.outputs.failure_kind == 'conformance')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qzx-conformance-receipt
@@ -171,9 +176,11 @@ a failed conformance check into a passing gate**:
 though `continue-on-error` lets the workflow reach the upload step. When the
 validator reached a conformance verdict, the receipt also exposes
 `conformant=false` and the same validation-material hashes used for PASS runs.
-If the Action fails before a receipt can be written, `if-no-files-found: error`
-keeps that missing evidence visible instead of silently pretending it was
-preserved.
+If validation cannot complete, `failure_kind=operational` and
+`report=unavailable`; the upload is skipped because there is no receipt to
+preserve, while the Action outcome and job summary keep the operational failure
+visible. A failure before the Action runner itself starts also leaves
+`failure_kind` empty and therefore cannot trigger a misleading artifact upload.
 
 ## 4. MCP 2025-06-18 and newer: use the contract as `outputSchema`
 

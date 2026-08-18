@@ -19,6 +19,7 @@ SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "validate_result_contract_evidence.p
 ACTION_ROOT = REPOSITORY_ROOT / ".github" / "actions" / "result-contract-conformance"
 ACTION_RUNNER = ACTION_ROOT / "run.py"
 ACTION_METADATA = REPOSITORY_ROOT / "action.yml"
+NESTED_ACTION_METADATA = ACTION_ROOT / "action.yml"
 ACTION_README = ACTION_ROOT / "README.md"
 QUICKSTART = REPOSITORY_ROOT / "docs" / "result-contract-quickstart.md"
 ADOPTION_GUIDE = REPOSITORY_ROOT / "docs" / "result-contract-adoption.md"
@@ -30,6 +31,11 @@ spec = importlib.util.spec_from_file_location("qzx_evidence_validator", SCRIPT_P
 validator = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(validator)
+
+action_spec = importlib.util.spec_from_file_location("qzx_action_runner", ACTION_RUNNER)
+action_runner = importlib.util.module_from_spec(action_spec)
+assert action_spec.loader is not None
+action_spec.loader.exec_module(action_runner)
 
 
 def test_core_success_failure_pair_produces_deterministic_receipt():
@@ -251,8 +257,10 @@ def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
     assert f"receipt_schema={validator.CONFORMANCE_RECEIPT_SCHEMA_URL}" in action_output
     assert f"contract_schema_sha256={contract_schema_sha256}" in action_output
     assert "output_schema_mode=canonical_ref" in action_output
+    assert "failure_kind=none" in action_output
     summary = summary_path.read_text(encoding="utf-8")
     assert "Status: **PASS**" in summary
+    assert "Failure kind: `none`" in summary
     assert "mcp-2026-07-28" in summary
     assert "Output schema mode: `canonical_ref`" in summary
     assert validator.CONFORMANCE_RECEIPT_SCHEMA_URL in summary
@@ -297,9 +305,20 @@ def test_composite_action_rejects_workspace_escape_and_output_injection(tmp_path
     )
     assert escape_process.returncode == 2
     assert "must stay inside GITHUB_WORKSPACE" in escape_process.stderr
+    escape_output = (tmp_path / "github-output.txt").read_text(encoding="utf-8")
+    assert "report=unavailable" in escape_output
+    assert "conformant=false" in escape_output
+    assert "profile=core" in escape_output
+    assert "failure_kind=operational" in escape_output
+    escape_summary = (tmp_path / "github-summary.md").read_text(encoding="utf-8")
+    assert "Status: **FAIL**" in escape_summary
+    assert "Failure kind: `operational`" in escape_summary
+    assert "must stay inside GITHUB_WORKSPACE" in escape_summary
 
     environment["INPUT_SUCCESS"] = "success.json"
     environment["INPUT_REPORT"] = "receipt.json\ninjected=true"
+    environment["GITHUB_OUTPUT"] = str(tmp_path / "injection-output.txt")
+    environment["GITHUB_STEP_SUMMARY"] = str(tmp_path / "injection-summary.md")
     injection_process = subprocess.run(
         [sys.executable, str(ACTION_RUNNER)],
         cwd=REPOSITORY_ROOT,
@@ -311,19 +330,187 @@ def test_composite_action_rejects_workspace_escape_and_output_injection(tmp_path
     )
     assert injection_process.returncode == 2
     assert "must not contain line breaks" in injection_process.stderr
+    injection_output = (tmp_path / "injection-output.txt").read_text(
+        encoding="utf-8"
+    )
+    assert "report=unavailable" in injection_output
+    assert "failure_kind=operational" in injection_output
+    assert "injected=true" not in injection_output
+
+
+def test_composite_action_distinguishes_conformance_failure(tmp_path):
+    caller_workspace = tmp_path / "caller"
+    caller_workspace.mkdir()
+    for name in ("valid-success.json", "valid-failure.json"):
+        (caller_workspace / name).write_bytes((FIXTURE_ROOT / name).read_bytes())
+
+    output_path = tmp_path / "github-output.txt"
+    summary_path = tmp_path / "github-summary.md"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "INPUT_PROFILE": "core",
+            "INPUT_SUCCESS": "valid-failure.json",
+            "INPUT_FAILURE": "valid-failure.json",
+            "INPUT_TOOL_DEFINITION": "",
+            "INPUT_REPORT": "qzx-receipt.json",
+            "GITHUB_WORKSPACE": str(caller_workspace),
+            "GITHUB_OUTPUT": str(output_path),
+            "GITHUB_STEP_SUMMARY": str(summary_path),
+        }
+    )
+
+    process = subprocess.run(
+        [sys.executable, str(ACTION_RUNNER)],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1
+    action_output = output_path.read_text(encoding="utf-8")
+    assert "report=qzx-receipt.json" in action_output
+    assert "conformant=false" in action_output
+    assert "failure_kind=conformance" in action_output
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "Status: **FAIL**" in summary
+    assert "Failure kind: `conformance`" in summary
+
+
+def test_composite_action_timeout_is_an_operational_failure(tmp_path, monkeypatch, capsys):
+    caller_workspace = tmp_path / "caller"
+    caller_workspace.mkdir()
+    for name in ("valid-success.json", "valid-failure.json"):
+        (caller_workspace / name).write_bytes((FIXTURE_ROOT / name).read_bytes())
+
+    output_path = tmp_path / "github-output.txt"
+    summary_path = tmp_path / "github-summary.md"
+    environment = {
+        "INPUT_PROFILE": "core",
+        "INPUT_SUCCESS": "valid-success.json",
+        "INPUT_FAILURE": "valid-failure.json",
+        "INPUT_TOOL_DEFINITION": "",
+        "INPUT_REPORT": "qzx-receipt.json",
+        "GITHUB_WORKSPACE": str(caller_workspace),
+        "GITHUB_OUTPUT": str(output_path),
+        "GITHUB_STEP_SUMMARY": str(summary_path),
+    }
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+
+    def time_out(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+
+    assert action_runner.run_action(process_runner=time_out) == 2
+    assert "120-second execution limit" in capsys.readouterr().err
+    action_output = output_path.read_text(encoding="utf-8")
+    assert "report=unavailable" in action_output
+    assert "conformant=false" in action_output
+    assert "failure_kind=operational" in action_output
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "Failure kind: `operational`" in summary
+    assert "120-second execution limit" in summary
+
+
+def test_composite_action_rejects_unknown_profile_without_reflecting_it(tmp_path):
+    output_path = tmp_path / "github-output.txt"
+    summary_path = tmp_path / "github-summary.md"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "INPUT_PROFILE": "unknown-profile",
+            "INPUT_SUCCESS": "success.json",
+            "INPUT_FAILURE": "failure.json",
+            "INPUT_TOOL_DEFINITION": "",
+            "INPUT_REPORT": "qzx-receipt.json",
+            "GITHUB_WORKSPACE": str(tmp_path),
+            "GITHUB_OUTPUT": str(output_path),
+            "GITHUB_STEP_SUMMARY": str(summary_path),
+        }
+    )
+
+    process = subprocess.run(
+        [sys.executable, str(ACTION_RUNNER)],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 2
+    assert "INPUT_PROFILE must be one of" in process.stderr
+    action_output = output_path.read_text(encoding="utf-8")
+    assert "profile=unavailable" in action_output
+    assert "failure_kind=operational" in action_output
+    assert "unknown-profile" not in action_output
+
+
+def test_composite_action_does_not_claim_an_unwritten_receipt(tmp_path):
+    caller_workspace = tmp_path / "caller"
+    caller_workspace.mkdir()
+    for name in ("valid-success.json", "valid-failure.json"):
+        (caller_workspace / name).write_bytes((FIXTURE_ROOT / name).read_bytes())
+    (caller_workspace / "receipt-target").mkdir()
+
+    output_path = tmp_path / "github-output.txt"
+    summary_path = tmp_path / "github-summary.md"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "INPUT_PROFILE": "core",
+            "INPUT_SUCCESS": "valid-success.json",
+            "INPUT_FAILURE": "valid-failure.json",
+            "INPUT_TOOL_DEFINITION": "",
+            "INPUT_REPORT": "receipt-target",
+            "GITHUB_WORKSPACE": str(caller_workspace),
+            "GITHUB_OUTPUT": str(output_path),
+            "GITHUB_STEP_SUMMARY": str(summary_path),
+        }
+    )
+
+    process = subprocess.run(
+        [sys.executable, str(ACTION_RUNNER)],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1
+    action_output = output_path.read_text(encoding="utf-8")
+    assert "report=unavailable" in action_output
+    assert "conformant=false" in action_output
+    assert "failure_kind=operational" in action_output
+    assert f"receipt_schema={validator.CONFORMANCE_RECEIPT_SCHEMA_URL}" in action_output
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "Receipt: `unavailable`" in summary
+    assert "Failure kind: `operational`" in summary
 
 
 def test_composite_action_metadata_pins_python_setup_and_exposes_inputs():
-    metadata = ACTION_METADATA.read_text(encoding="utf-8")
-    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in metadata
-    assert 'python-version: "3.13"' in metadata
-    assert "INPUT_SUCCESS: ${{ inputs.success }}" in metadata
-    assert "INPUT_FAILURE: ${{ inputs.failure }}" in metadata
-    assert "INPUT_TOOL_DEFINITION: ${{ inputs.tool-definition }}" in metadata
-    assert "value: ${{ steps.validate.outputs.conformant }}" in metadata
-    assert "value: ${{ steps.validate.outputs.profile }}" in metadata
-    assert "value: ${{ steps.validate.outputs.receipt_schema }}" in metadata
-    assert "value: ${{ steps.validate.outputs.contract_schema_sha256 }}" in metadata
+    assert action_runner.SUPPORTED_PROFILES == {
+        validator.PROFILE_CORE,
+        *validator.MCP_PROFILES,
+    }
+    for metadata_path in (ACTION_METADATA, NESTED_ACTION_METADATA):
+        metadata = metadata_path.read_text(encoding="utf-8")
+        assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in metadata
+        assert 'python-version: "3.13"' in metadata
+        assert "INPUT_SUCCESS: ${{ inputs.success }}" in metadata
+        assert "INPUT_FAILURE: ${{ inputs.failure }}" in metadata
+        assert "INPUT_TOOL_DEFINITION: ${{ inputs.tool-definition }}" in metadata
+        assert "value: ${{ steps.validate.outputs.conformant }}" in metadata
+        assert "value: ${{ steps.validate.outputs.profile }}" in metadata
+        assert "value: ${{ steps.validate.outputs.receipt_schema }}" in metadata
+        assert "value: ${{ steps.validate.outputs.contract_schema_sha256 }}" in metadata
+        assert "value: ${{ steps.validate.outputs.failure_kind }}" in metadata
 
 
 def test_composite_action_readme_documents_all_scalar_outputs():
@@ -335,6 +522,7 @@ def test_composite_action_readme_documents_all_scalar_outputs():
         "receipt_schema",
         "contract_schema_sha256",
         "output_schema_mode",
+        "failure_kind",
     ):
         assert f"| `{output_name}` |" in readme
 
@@ -372,7 +560,7 @@ def test_nonconformance_receipt_is_preserved_by_ci_and_documented_for_callers():
     assert "Validate intentionally nonconforming evidence" in workflow
     assert "continue-on-error: true" in workflow
     assert "qzx-nonconforming-receipt.json" in workflow
-    assert "if: always()" in workflow
+    assert "steps.qzx-nonconforming.outputs.failure_kind == 'conformance'" in workflow
     assert (
         "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
         in workflow
@@ -382,7 +570,8 @@ def test_nonconformance_receipt_is_preserved_by_ci_and_documented_for_callers():
     quickstart = QUICKSTART.read_text(encoding="utf-8")
     assert "Preserve the receipt even when conformance fails" in quickstart
     assert "continue-on-error: true" in quickstart
-    assert "if: always()" in quickstart
+    assert "steps.qzx-conformance.outputs.failure_kind == 'none'" in quickstart
+    assert "steps.qzx-conformance.outputs.failure_kind == 'conformance'" in quickstart
     assert "steps.qzx-conformance.outcome == 'failure'" in quickstart
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in quickstart
 

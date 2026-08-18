@@ -77,17 +77,20 @@ steps:
 
 | Output | Meaning |
 | --- | --- |
-| `report` | Caller-workspace-relative path to the generated receipt. |
-| `conformant` | `true` only when the selected profile conforms; otherwise `false`. |
-| `profile` | Profile actually evaluated by the validator. |
-| `receipt_schema` | Canonical schema URL declared by the generated receipt. |
-| `contract_schema_sha256` | SHA-256 of the exact QZX Result Contract v1 schema used by the validator. |
-| `output_schema_mode` | MCP schema evidence mode (`canonical_ref`, `canonical_inline`, `canonical_allof`, `structural_core`), or `not_applicable`. |
+| `report` | Caller-workspace-relative receipt path, or `unavailable` when no receipt exists. |
+| `conformant` | `true` only when the selected profile conforms; inspect `failure_kind` when this is `false`. |
+| `profile` | Profile actually evaluated, or `unavailable` when evaluation did not start. |
+| `receipt_schema` | Canonical schema URL declared by the receipt, or `unavailable`. |
+| `contract_schema_sha256` | SHA-256 of the exact QZX Result Contract v1 schema used, or `unavailable`. |
+| `output_schema_mode` | MCP schema evidence mode (`canonical_ref`, `canonical_inline`, `canonical_allof`, `structural_core`), `not_applicable`, or `unavailable`. |
+| `failure_kind` | `none` on success, `conformance` when evidence was evaluated and failed the contract, or `operational` when validation could not complete. |
 
 These scalar outputs make the Action composable from later workflow steps while
 the JSON receipt remains the durable evidence artifact. The Action also writes
 a compact PASS/FAIL summary with links to the specification and its creator to
-the GitHub job summary.
+the GitHub job summary. An early operational failure still emits safe scalar
+outputs and a FAIL summary; values that could not be established use
+`unavailable`, and `report=unavailable` never claims that a receipt was written.
 
 ## Evidence and security boundary
 

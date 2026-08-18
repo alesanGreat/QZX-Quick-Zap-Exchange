@@ -77,7 +77,7 @@ def test_ci_executes_validates_and_preserves_the_sdk_evidence():
         'pnpm run evidence "$GITHUB_WORKSPACE/qzx-mcp-typescript-sdk-v2-evidence"',
         "success: qzx-mcp-typescript-sdk-v2-evidence/success.json",
         "if: always() && steps.generate-mcp-typescript-sdk-evidence.outcome == 'success'",
-        "if: always() && steps.qzx-nonconforming.outcome != 'skipped'",
+        "steps.qzx-nonconforming.outputs.failure_kind == 'conformance'",
         "qzx-mcp-typescript-sdk-v2-conformance.json",
         '"canonical_inline"',
         "name: qzx-mcp-typescript-sdk-v2-evidence",
