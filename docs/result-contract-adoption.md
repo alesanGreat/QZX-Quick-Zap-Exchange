@@ -308,6 +308,14 @@ validation-material fingerprints remain schema-valid. An adopter may instead
 use an independent JSON Schema or profile validator; QZX tooling is not a
 dependency of the Result Contract itself.
 
+Evidence and MCP tool-definition documents must use unique JSON object member
+names. QZX's evidence validator rejects duplicates before schema or profile
+validation because receivers otherwise disagree about which value is effective.
+This is evidence-integrity enforcement based on the interoperability guidance in
+[RFC 8259 section 4](https://www.rfc-editor.org/rfc/rfc8259#section-4); it does
+not add a new Result Contract v1 field. The same strict read rejects non-finite
+`NaN`, `Infinity`, and `-Infinity` tokens, which JSON does not permit.
+
 Passing the core schema does not certify security, authorization, isolation,
 correct domain behavior, platform compatibility, or every extension field. A
 report must keep those claims separate.

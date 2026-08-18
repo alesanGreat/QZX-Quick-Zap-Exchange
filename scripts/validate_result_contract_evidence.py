@@ -114,10 +114,49 @@ def _read_json(path_text: str) -> tuple[Any | None, str | None, list[str]]:
     except UnicodeDecodeError as exception:
         return None, digest, [f"{path_text} is not UTF-8 JSON: {exception}"]
 
+    duplicate_names: set[str] = set()
+    non_finite_numbers: set[str] = set()
+
+    def object_with_unique_names(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        parsed: dict[str, Any] = {}
+        for name, value in pairs:
+            if name in parsed:
+                duplicate_names.add(name)
+            parsed[name] = value
+        return parsed
+
+    def record_non_finite_number(value: str) -> None:
+        non_finite_numbers.add(value)
+
     try:
-        return json.loads(text), digest, []
+        document = json.loads(
+            text,
+            object_pairs_hook=object_with_unique_names,
+            parse_constant=record_non_finite_number,
+        )
     except json.JSONDecodeError as exception:
         return None, digest, [f"{path_text} is not valid JSON: {exception}"]
+
+    interoperability_errors: list[str] = []
+    if duplicate_names:
+        rendered_names = ", ".join(
+            json.dumps(name, ensure_ascii=True) for name in sorted(duplicate_names)
+        )
+        interoperability_errors.append(
+            f"{path_text} contains duplicate JSON object member names: "
+            f"{rendered_names}."
+        )
+    if non_finite_numbers:
+        rendered_numbers = ", ".join(sorted(non_finite_numbers))
+        interoperability_errors.append(
+            f"{path_text} contains non-finite numeric tokens that JSON does not "
+            f"permit: {rendered_numbers}."
+        )
+
+    if interoperability_errors:
+        return None, digest, interoperability_errors
+
+    return document, digest, []
 
 
 def _actual_core_success(document: Any) -> bool | None:
