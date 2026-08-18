@@ -16,6 +16,7 @@ GO_MOD = EXAMPLE_ROOT / "go.mod"
 GO_SUM = EXAMPLE_ROOT / "go.sum"
 GENERATOR = EXAMPLE_ROOT / "main.go"
 README = EXAMPLE_ROOT / "README.md"
+EXAMPLES_INDEX = REPOSITORY_ROOT / "examples" / "result_contract" / "README.md"
 WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "test.yml"
 DEPENDABOT = REPOSITORY_ROOT / ".github" / "dependabot.yml"
 
@@ -61,6 +62,14 @@ def test_official_mcp_go_sdk_example_states_its_claim_boundary():
     assert "does not retain raw frames" in readme
     assert "output_schema_mode: canonical_inline" in readme
     assert "created and maintained by Alejandro Sánchez" in readme
+
+
+def test_result_contract_examples_index_exposes_the_go_sdk_boundary():
+    index = EXAMPLES_INDEX.read_text(encoding="utf-8")
+
+    assert "[Go SDK v1](mcp-go-sdk-v1/README.md)" in index
+    assert "MCP 2025-11-25" in index
+    assert "newline-delimited JSON-RPC; no retained raw frames" in index
 
 
 def test_ci_executes_validates_and_preserves_the_go_sdk_evidence():

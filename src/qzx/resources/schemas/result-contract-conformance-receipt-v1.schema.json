@@ -217,6 +217,20 @@
             }
           ]
         },
+        "json_decoder": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validationMaterial"
+            },
+            {
+              "properties": {
+                "repository_path": {
+                  "const": "src/qzx/core/strict_json.py"
+                }
+              }
+            }
+          ]
+        },
         "core_validator": {
           "allOf": [
             {

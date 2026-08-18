@@ -212,6 +212,23 @@ def test_cli_write_failure_remains_a_valid_result_contract(tmp_path):
     assert validator.result_contract_violations(report) == []
 
 
+def test_evidence_validator_rejects_ambiguous_json_and_preserves_its_digest(
+    tmp_path,
+):
+    ambiguous = tmp_path / "ambiguous.json"
+    ambiguous.write_text(
+        '{"success":true,"success":false,"message":"Ambiguous."}',
+        encoding="utf-8",
+    )
+
+    document, digest, errors = validator._read_json(str(ambiguous))
+
+    assert document is None
+    assert digest == hashlib.sha256(ambiguous.read_bytes()).hexdigest()
+    assert len(errors) == 1
+    assert "Duplicate JSON object member name" in errors[0]
+
+
 def test_composite_action_runner_generates_receipt_output_and_summary(tmp_path):
     caller_workspace = tmp_path / "caller"
     caller_workspace.mkdir()

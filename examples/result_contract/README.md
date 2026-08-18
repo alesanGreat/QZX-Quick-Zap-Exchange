@@ -55,14 +55,19 @@ QZX supports revision-specific MCP profiles for 2025-06-18, 2025-11-25, and
 without `resultType` and 2026-07-28 evidence with `resultType: "complete"`, so an
 adopter does not need to edit a newer fixture to simulate an older server.
 
-For executable MCP 2026-07-28 integrations rather than static fixtures, use the
-locked [official TypeScript SDK v2 example](mcp-typescript-sdk-v2/README.md) or
-the locked [official Python SDK v2 example](mcp-python-sdk-v2/README.md). Both
-run real official client/server success and failure pairs and are continuously
-checked in CI. TypeScript captures Streamable HTTP wire bodies; Python exercises
-the modern direct dispatcher and declares that it has no HTTP or JSON-RPC
-framing. Both remain QZX-maintained reference evidence, not independent
-adoption.
+For executable integrations rather than static fixtures, choose the locked
+official SDK example whose protocol and transport boundary matches the question
+you need to answer:
+
+| Example | Protocol | Exercised boundary |
+| --- | --- | --- |
+| [TypeScript SDK v2](mcp-typescript-sdk-v2/README.md) | MCP 2026-07-28 | In-process Streamable HTTP with retained wire response bodies. |
+| [Python SDK v2](mcp-python-sdk-v2/README.md) | MCP 2026-07-28 | Modern direct dispatcher; no HTTP or JSON-RPC framing. |
+| [Go SDK v1](mcp-go-sdk-v1/README.md) | MCP 2025-11-25 | Paired in-memory transport with newline-delimited JSON-RPC; no retained raw frames. |
+
+All three run real official client/server success and failure pairs and are
+continuously checked in CI. They remain QZX-maintained reference evidence, not
+independent adoption.
 
 | File | Purpose |
 | --- | --- |
@@ -101,9 +106,9 @@ python scripts/validate_result_contract_evidence.py \
 ```
 
 The receipt records SHA-256 digests of the exact evidence files and fingerprints
-the exact QZX contract schema, receipt schema, core validator, MCP validator,
-and evidence validator used for the verdict. It preserves validator warnings
-and profile facts and self-identifies the public
+the exact QZX contract schema, receipt schema, strict JSON decoder, core
+validator, MCP validator, and evidence validator used for the verdict. It
+preserves validator warnings and profile facts and self-identifies the public
 `result-contract-conformance-receipt-v1.schema.json` schema, so reviewers can
 validate the receipt structure independently with JSON Schema 2020-12. A valid
 receipt schema does not imply a passing conformance result. External GitHub

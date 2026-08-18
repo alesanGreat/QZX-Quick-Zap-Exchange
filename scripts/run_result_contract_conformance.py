@@ -22,6 +22,10 @@ from qzx.core.result_contract import (  # noqa: E402
     RESULT_CONTRACT_SCHEMA_URL,
     result_contract_violations,
 )
+from qzx.core.strict_json import (  # noqa: E402
+    StrictJsonError,
+    load_json_document,
+)
 
 
 def load_json(path: Path, label: str) -> Any:
@@ -29,8 +33,8 @@ def load_json(path: Path, label: str) -> Any:
 
     try:
         with path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
-    except json.JSONDecodeError as exception:
+            return load_json_document(handle)
+    except (json.JSONDecodeError, StrictJsonError) as exception:
         raise ValueError(f"{label} contains invalid JSON: {exception}") from exception
 
 

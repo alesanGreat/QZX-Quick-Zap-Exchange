@@ -7,6 +7,17 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Hardened Result Contract evidence parsing for cross-language reproducibility.
+  The public validators and conformance runner now reject duplicate JSON object
+  member names, non-JSON numeric constants, and numbers outside the supported
+  finite range instead of accepting Python-specific interpretations. Full MCP
+  JSON-RPC result responses must also carry a string or integer request ID and
+  exactly one of `result` or `error`; protocol-error envelopes cannot be
+  certified as completed QZX results. New receipts fingerprint the strict JSON
+  decoder while the receipt schema remains compatible with the previous
+  material set. The examples index now compares all three official SDK
+  references, including Go, by protocol and exercised transport boundary.
+
 - Added a locked, executable interoperability example for the official MCP
   TypeScript client/server SDK 2.0.0. It negotiates MCP 2026-07-28 through the
   SDK's modern in-process HTTP entry, publishes the exact QZX Result Contract

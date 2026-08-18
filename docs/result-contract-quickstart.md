@@ -81,9 +81,10 @@ python scripts/validate_result_contract_evidence.py \
 Every generated receipt identifies its own versioned JSON Schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.
 It also records SHA-256 digests for the exact QZX contract schema, receipt schema,
-core validator, MCP validator, and evidence validator used to produce the
-verdict. That makes a saved receipt independently traceable to the validation
-materials even if a public `v1` URL later receives compatible clarifications.
+strict JSON decoder, core validator, MCP validator, and evidence validator used
+to produce the verdict. That makes a saved receipt independently traceable to
+the validation materials even if a public `v1` URL later receives compatible
+clarifications.
 Reviewers can validate the receipt structure with any JSON Schema 2020-12
 implementation without executing QZX. The receipt itself also remains a valid
 QZX Result Contract v1 object: failed receipts carry a stable `error_code`.

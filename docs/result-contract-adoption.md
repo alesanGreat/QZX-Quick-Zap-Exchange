@@ -86,6 +86,13 @@ replacing MCP, JSON-RPC, tool discovery, input schemas, transports, elicitation,
 or MCP security rules. MCP remains the protocol; QZX Result Contract describes
 the completed operation result carried inside it.
 
+The validator accepts either a bare `CallToolResult` or one complete JSON-RPC
+result response. For a full response it also checks the MCP envelope boundary:
+`jsonrpc` is exactly `"2.0"`, the response has a string or integer `id`, and it
+contains `result` without a competing `error`. A JSON-RPC protocol error is not
+accepted as completed QZX evidence, even when its error object is otherwise
+well formed.
+
 ### Tool definition mapping and schema strength
 
 QZX deliberately records **how strongly** an MCP `outputSchema` exposes the
@@ -293,9 +300,10 @@ When QZX's evidence CLI or Composite Action is used, publish the generated
 `qzx-conformance.json` receipt and identify the full QZX commit SHA that ran the
 validator. The receipt records SHA-256 digests of the exact success, failure,
 and MCP tool-definition files when applicable. It also fingerprints the exact
-QZX contract schema, receipt schema, core validator, MCP validator, and evidence
-validator used for the verdict. This lets a reviewer reconstruct the validation
-materials from a pinned source revision instead of trusting that a mutable URL
+QZX contract schema, receipt schema, strict JSON decoder, core validator, MCP
+validator, and evidence validator used for the verdict. This lets a reviewer
+reconstruct the validation materials from a pinned source revision instead of
+trusting that a mutable URL
 still serves byte-identical content. The receipt identifies the public QZX
 Result Contract Conformance Receipt v1 schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`,
