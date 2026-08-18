@@ -5,11 +5,11 @@
 
 import platform
 
-from qzx.commands.system.get_startup_programs import GetStartupProgramsCommand
+from qzx.commands.system.list_startup_programs import ListStartupProgramsCommand
 
 
 def test_execute_reads_the_real_platform_startup_sources():
-    result = GetStartupProgramsCommand().execute()
+    result = ListStartupProgramsCommand().execute()
 
     assert result["success"] is True
     assert result["os"] == platform.system()
@@ -42,7 +42,7 @@ def test_desktop_entry_parser_reads_a_real_file(tmp_path):
         encoding="utf-8",
     )
 
-    name, command = GetStartupProgramsCommand()._parse_desktop_file(
+    name, command = ListStartupProgramsCommand()._parse_desktop_file(
         desktop_file
     )
 
@@ -57,10 +57,10 @@ def test_desktop_entry_without_exec_is_reported_not_invented(tmp_path):
         encoding="utf-8",
     )
 
-    name, command = GetStartupProgramsCommand()._parse_desktop_file(
+    name, command = ListStartupProgramsCommand()._parse_desktop_file(
         desktop_file
     )
-    item = GetStartupProgramsCommand()._startup_item(
+    item = ListStartupProgramsCommand()._startup_item(
         name=name,
         command=command,
         source="Test Autostart",

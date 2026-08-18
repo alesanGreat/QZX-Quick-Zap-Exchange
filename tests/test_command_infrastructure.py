@@ -154,6 +154,7 @@ def test_retired_commands_and_old_names_are_not_available():
         "findLargeFiles",
         "generateContent",
         "getEnvironmentInfo",
+        "getStartupPrograms",
         "releaseProject",
         "WonderMyEnvironment",
     ):

@@ -37,11 +37,11 @@ class WelcomeCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx Welcome',
+            'command': 'qzx welcome',
             'description': 'Display the welcome screen immediately'
         },
         {
-            'command': 'qzx Welcome true',
+            'command': 'qzx welcome true',
             'description': 'Collect system details, then display the detailed welcome screen'
         }
     ]

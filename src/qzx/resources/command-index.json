@@ -310,13 +310,6 @@
       "category": "system"
     },
     {
-      "name": "getStartupPrograms",
-      "module": "qzx.commands.system.get_startup_programs",
-      "class_name": "GetStartupProgramsCommand",
-      "description": "Lists all startup programs configured to run on system boot or user login",
-      "category": "system"
-    },
-    {
       "name": "getSystemInfo",
       "module": "qzx.commands.system.get_system_info",
       "class_name": "GetSystemInfoCommand",
@@ -405,6 +398,13 @@
       "module": "qzx.commands.system.list_processes",
       "class_name": "ListProcessesCommand",
       "description": "Lists running processes (similar to 'ps' in Unix)",
+      "category": "system"
+    },
+    {
+      "name": "listStartupPrograms",
+      "module": "qzx.commands.system.list_startup_programs",
+      "class_name": "ListStartupProgramsCommand",
+      "description": "Lists all startup programs configured to run on system boot or user login",
       "category": "system"
     },
     {
