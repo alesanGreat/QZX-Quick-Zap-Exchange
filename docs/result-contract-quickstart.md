@@ -39,8 +39,13 @@ emitting `null` with the wrong type.
 TypeScript producers can copy the dependency-free
 [`typescript-minimal.ts`](../examples/result_contract/typescript-minimal.ts)
 example. It models success/failure as a discriminated union while preserving
-existing domain fields; it is an implementation example, not a substitute for
-validating emitted JSON against the canonical schema.
+existing domain fields, rejects collisions with QZX outcome fields, and
+protects the core outcome invariants when untyped JavaScript calls the helpers.
+Its companion
+[`typescript-minimal.typecheck.ts`](../examples/result_contract/typescript-minimal.typecheck.ts)
+keeps the intended compile-time rejections executable. These are implementation
+examples, not a substitute for validating emitted JSON against the canonical
+schema.
 
 Canonical JSON Schema:
 <https://qzx.yumbale.com/schemas/result-contract-v1.schema.json>

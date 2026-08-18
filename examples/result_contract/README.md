@@ -39,7 +39,32 @@ runner.
 TypeScript tool can keep its domain-specific fields and add the small QZX
 success/failure envelope without depending on the QZX runtime. The example uses
 a discriminated union so failed results require a stable `error_code` at the
-TypeScript type level.
+TypeScript type level. It also rejects blank summaries, malformed error codes,
+and domain evidence that collides with a QZX outcome field. Optional core
+fields retain their schema types, while the canonical validator remains the
+final check for arbitrary runtime data. The companion
+[`typescript-minimal.typecheck.ts`](typescript-minimal.typecheck.ts) file keeps
+the intended compile-time rejections executable.
+
+Type-check both files with the current TypeScript 7 compiler without adding it
+to the adopting project:
+
+```bash
+pnpm dlx --package=typescript@7 tsc --ignoreConfig --noEmit --strict \
+  --target ES2022 --module NodeNext --moduleResolution NodeNext \
+  examples/result_contract/typescript-minimal.ts \
+  examples/result_contract/typescript-minimal.typecheck.ts
+```
+
+Run the producer with Node.js 22 or newer:
+
+```bash
+node --experimental-strip-types --experimental-default-type=module \
+  examples/result_contract/typescript-minimal.ts
+```
+
+Validate each emitted JSON line with `scripts/validate_result_contract.py`
+before making a compatibility claim.
 
 The example is intentionally transport-neutral. For MCP, place the resulting
 object in `structuredContent`, keep MCP `isError` consistent with `!success`,
