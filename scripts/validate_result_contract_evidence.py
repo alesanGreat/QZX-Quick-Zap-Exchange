@@ -20,8 +20,10 @@ for import_root in (SOURCE_ROOT, SCRIPTS_ROOT):
         sys.path.insert(0, str(import_root))
 
 from qzx.core.result_contract import (  # noqa: E402
+    JsonInteroperabilityError,
     RESULT_CONTRACT_SCHEMA_URL,
     RESULT_CONTRACT_VERSION,
+    loads_interoperable_json,
     result_contract_violations,
 )
 from validate_mcp_result_contract import validate_mcp_profile  # noqa: E402
@@ -114,47 +116,12 @@ def _read_json(path_text: str) -> tuple[Any | None, str | None, list[str]]:
     except UnicodeDecodeError as exception:
         return None, digest, [f"{path_text} is not UTF-8 JSON: {exception}"]
 
-    duplicate_names: set[str] = set()
-    non_finite_numbers: set[str] = set()
-
-    def object_with_unique_names(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-        parsed: dict[str, Any] = {}
-        for name, value in pairs:
-            if name in parsed:
-                duplicate_names.add(name)
-            parsed[name] = value
-        return parsed
-
-    def record_non_finite_number(value: str) -> None:
-        non_finite_numbers.add(value)
-
     try:
-        document = json.loads(
-            text,
-            object_pairs_hook=object_with_unique_names,
-            parse_constant=record_non_finite_number,
-        )
+        document = loads_interoperable_json(text, source=path_text)
     except json.JSONDecodeError as exception:
         return None, digest, [f"{path_text} is not valid JSON: {exception}"]
-
-    interoperability_errors: list[str] = []
-    if duplicate_names:
-        rendered_names = ", ".join(
-            json.dumps(name, ensure_ascii=True) for name in sorted(duplicate_names)
-        )
-        interoperability_errors.append(
-            f"{path_text} contains duplicate JSON object member names: "
-            f"{rendered_names}."
-        )
-    if non_finite_numbers:
-        rendered_numbers = ", ".join(sorted(non_finite_numbers))
-        interoperability_errors.append(
-            f"{path_text} contains non-finite numeric tokens that JSON does not "
-            f"permit: {rendered_numbers}."
-        )
-
-    if interoperability_errors:
-        return None, digest, interoperability_errors
+    except JsonInteroperabilityError as exception:
+        return None, digest, list(exception.violations)
 
     return document, digest, []
 

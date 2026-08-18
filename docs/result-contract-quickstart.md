@@ -79,9 +79,10 @@ python scripts/validate_result_contract_evidence.py \
 ```
 
 Evidence and MCP tool-definition files must use unique JSON object member
-names. The evidence kit rejects duplicates before schema or profile validation
-because JSON parsers may keep the first value, keep the last value, expose every
-value, or reject the document. A file with both `"success": true` and
+names. QZX's public conformance validators reject duplicates before schema or
+profile validation because JSON parsers may keep the first value, keep the last
+value, expose every value, or reject the document. A file with both
+`"success": true` and
 `"success": false` is therefore ambiguous evidence, even if one local parser
 appears to accept it. This follows the interoperability guidance in
 [RFC 8259 section 4](https://www.rfc-editor.org/rfc/rfc8259#section-4).

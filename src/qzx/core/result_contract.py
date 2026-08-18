@@ -9,7 +9,7 @@ import json
 import math
 import re
 from importlib.resources import files
-from typing import Any
+from typing import Any, TextIO
 
 
 RESULT_CONTRACT_VERSION = 1
@@ -18,6 +18,64 @@ RESULT_CONTRACT_SCHEMA_URL = (
 )
 _RESULT_CONTRACT_RESOURCE = "schemas/result-contract-v1.schema.json"
 _ERROR_CODE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+class JsonInteroperabilityError(ValueError):
+    """Describe valid-for-some-parsers input that is not portable JSON."""
+
+    def __init__(self, violations: list[str]) -> None:
+        self.violations = tuple(violations)
+        super().__init__(" ".join(violations))
+
+
+def loads_interoperable_json(text: str, *, source: str) -> Any:
+    """Decode JSON while rejecting ambiguous or non-standard representations."""
+
+    duplicate_names: set[str] = set()
+    non_finite_numbers: set[str] = set()
+
+    def object_with_unique_names(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        parsed: dict[str, Any] = {}
+        for name, value in pairs:
+            if name in parsed:
+                duplicate_names.add(name)
+            parsed[name] = value
+        return parsed
+
+    def record_non_finite_number(value: str) -> None:
+        non_finite_numbers.add(value)
+
+    document = json.loads(
+        text,
+        object_pairs_hook=object_with_unique_names,
+        parse_constant=record_non_finite_number,
+    )
+
+    violations: list[str] = []
+    if duplicate_names:
+        rendered_names = ", ".join(
+            json.dumps(name, ensure_ascii=True) for name in sorted(duplicate_names)
+        )
+        violations.append(
+            f"{source} contains duplicate JSON object member names: "
+            f"{rendered_names}."
+        )
+    if non_finite_numbers:
+        rendered_numbers = ", ".join(sorted(non_finite_numbers))
+        violations.append(
+            f"{source} contains non-finite numeric tokens that JSON does not "
+            f"permit: {rendered_numbers}."
+        )
+
+    if violations:
+        raise JsonInteroperabilityError(violations)
+    return document
+
+
+def load_interoperable_json(handle: TextIO, *, source: str) -> Any:
+    """Decode one interoperable JSON document from a text stream."""
+
+    return loads_interoperable_json(handle.read(), source=source)
 
 
 def load_result_contract_schema() -> dict[str, Any]:

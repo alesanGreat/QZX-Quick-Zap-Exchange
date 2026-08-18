@@ -17,8 +17,11 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from qzx.core.result_contract import (  # noqa: E402
+    JsonInteroperabilityError,
     RESULT_CONTRACT_SCHEMA_URL,
+    load_interoperable_json,
     load_result_contract_schema,
+    loads_interoperable_json,
     result_contract_violations,
 )
 
@@ -80,9 +83,9 @@ def parse_args() -> argparse.Namespace:
 
 def load_document(path: str):
     if path == "-":
-        return json.load(sys.stdin)
+        return load_interoperable_json(sys.stdin, source="standard input")
     with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return load_interoperable_json(handle, source=path)
 
 
 def _extract_tool_result(document):
@@ -118,8 +121,11 @@ def _backcompat_text_matches(content, structured_content):
         if item.get("type") != "text" or not isinstance(item.get("text"), str):
             continue
         try:
-            decoded = json.loads(item["text"])
-        except json.JSONDecodeError:
+            decoded = loads_interoperable_json(
+                item["text"],
+                source="MCP TextContent JSON",
+            )
+        except (json.JSONDecodeError, JsonInteroperabilityError):
             continue
         if decoded == structured_content:
             return True
@@ -390,7 +396,7 @@ def main() -> int:
                 "violations": violations,
             },
         }
-    except (OSError, json.JSONDecodeError) as exception:
+    except (OSError, json.JSONDecodeError, JsonInteroperabilityError) as exception:
         result = {
             "success": False,
             "message": "The MCP profile input could not be read as JSON.",
@@ -409,6 +415,8 @@ def main() -> int:
     else:
         prefix = "[OK]" if result["success"] else "[FAIL]"
         print(f"{prefix} {result['message']}")
+        if result.get("error"):
+            print(f"  - {result['error']}")
         for violation in result["details"].get("violations", []):
             print(f"  - {violation}")
         for warning in result.get("warnings", []):

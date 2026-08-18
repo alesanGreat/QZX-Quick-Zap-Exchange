@@ -269,3 +269,73 @@ def test_cli_accepts_checked_in_2025_11_25_fixture_without_result_type():
     report = json.loads(process.stdout)
     assert report["success"] is True
     assert report["details"]["mcp_specification"] == "2025-11-25"
+
+
+def test_cli_rejects_non_interoperable_mcp_json():
+    ambiguous_input = (
+        '{"resultType":"complete","content":[],"structuredContent":'
+        '{"success":false,"success":true,"message":"Ambiguous.",'
+        '"details":{"score":Infinity}}}'
+    )
+    process = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=ambiguous_input,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1, process.stderr
+    report = json.loads(process.stdout)
+    assert report["success"] is False
+    assert report["error_code"] == "invalid_json_input"
+    assert 'duplicate JSON object member names: "success"' in report["error"]
+    assert "non-finite numeric tokens that JSON does not permit: Infinity" in report[
+        "error"
+    ]
+
+    human_process = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "-"],
+        cwd=REPOSITORY_ROOT,
+        input=ambiguous_input,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert human_process.returncode == 1, human_process.stderr
+    assert 'duplicate JSON object member names: "success"' in human_process.stdout
+    assert "non-finite numeric tokens that JSON does not permit: Infinity" in (
+        human_process.stdout
+    )
+
+
+def test_non_interoperable_text_content_is_not_backcompat_evidence():
+    document = {
+        "resultType": "complete",
+        "content": [
+            {
+                "type": "text",
+                "text": (
+                    '{"success":false,"success":true,'
+                    '"message":"Operation completed."}'
+                ),
+            }
+        ],
+        "structuredContent": {
+            "success": True,
+            "message": "Operation completed.",
+        },
+        "isError": False,
+    }
+
+    violations, warnings, details = validator.validate_mcp_profile(document)
+
+    assert violations == []
+    assert warnings == [
+        "No TextContent block serializes the complete structuredContent object. "
+        "MCP recommends this for backwards compatibility."
+    ]
+    assert details["backcompat_text_matches"] is False

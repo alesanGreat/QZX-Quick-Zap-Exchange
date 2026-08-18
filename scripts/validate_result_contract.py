@@ -17,7 +17,9 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from qzx.core.result_contract import (  # noqa: E402
+    JsonInteroperabilityError,
     RESULT_CONTRACT_SCHEMA_URL,
+    load_interoperable_json,
     result_contract_violations,
 )
 
@@ -40,9 +42,9 @@ def parse_args() -> argparse.Namespace:
 
 def load_document(path: str):
     if path == "-":
-        return json.load(sys.stdin)
+        return load_interoperable_json(sys.stdin, source="standard input")
     with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return load_interoperable_json(handle, source=path)
 
 
 def main() -> int:
@@ -62,7 +64,7 @@ def main() -> int:
                 "violations": violations,
             },
         }
-    except (OSError, json.JSONDecodeError) as exception:
+    except (OSError, json.JSONDecodeError, JsonInteroperabilityError) as exception:
         result = {
             "success": False,
             "message": "The input could not be read as one JSON document.",
@@ -79,6 +81,8 @@ def main() -> int:
     else:
         prefix = "[OK]" if result["success"] else "[FAIL]"
         print(f"{prefix} {result['message']}")
+        if result.get("error"):
+            print(f"  - {result['error']}")
         for violation in result["details"]["violations"]:
             print(f"  - {violation}")
     return 0 if result["success"] else 1

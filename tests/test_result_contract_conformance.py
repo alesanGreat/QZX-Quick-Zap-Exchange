@@ -82,6 +82,23 @@ def test_conformance_manifest_cannot_escape_its_directory(tmp_path):
         run_conformance(manifest_path)
 
 
+def test_conformance_suite_rejects_non_interoperable_json(tmp_path):
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        '{"schema_version":1,"schema_version":1,'
+        '"contract":"https://qzx.yumbale.com/schemas/'
+        'result-contract-v1.schema.json","cases":[],"score":NaN}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as raised:
+        run_conformance(manifest_path)
+
+    message = str(raised.value)
+    assert 'duplicate JSON object member names: "schema_version"' in message
+    assert "non-finite numeric tokens that JSON does not permit: NaN" in message
+
+
 def test_every_manifest_case_file_exists_and_is_valid_json():
     manifest = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))
 

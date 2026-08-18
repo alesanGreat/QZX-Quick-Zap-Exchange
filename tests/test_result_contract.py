@@ -214,3 +214,43 @@ def test_standalone_validator_supports_stdin_and_json_reports():
     assert report["success"] is True
     assert report["details"]["contract"] == RESULT_CONTRACT_SCHEMA_URL
     assert report["details"]["violations"] == []
+
+
+def test_standalone_validator_rejects_non_interoperable_json():
+    ambiguous_input = (
+        '{"success":false,"success":true,"message":"Ambiguous.",'
+        '"details":{"score":NaN}}'
+    )
+    process = subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=ambiguous_input,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1, process.stderr
+    report = json.loads(process.stdout)
+    assert report["success"] is False
+    assert report["error_code"] == "invalid_json_input"
+    assert 'duplicate JSON object member names: "success"' in report["error"]
+    assert "non-finite numeric tokens that JSON does not permit: NaN" in report[
+        "error"
+    ]
+
+    human_process = subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), "-"],
+        cwd=REPOSITORY_ROOT,
+        input=ambiguous_input,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert human_process.returncode == 1, human_process.stderr
+    assert 'duplicate JSON object member names: "success"' in human_process.stdout
+    assert "non-finite numeric tokens that JSON does not permit: NaN" in (
+        human_process.stdout
+    )
