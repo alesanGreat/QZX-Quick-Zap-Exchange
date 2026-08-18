@@ -180,7 +180,7 @@ class ScaffoldCCommand(CommandBase):
         
         # Create main.c
         main_path = os.path.join(src_dir, 'main.c')
-        with open(main_path, 'w') as f:
+        with open(main_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file main.c
  * @brief Main entry point for the {project_name} program.
@@ -210,7 +210,7 @@ int main(int argc, char **argv) {{
         
         # Create implementation file
         impl_path = os.path.join(src_dir, f'{project_name}.c')
-        with open(impl_path, 'w') as f:
+        with open(impl_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file {project_name}.c
  * @brief Implementation of {project_name} functionality.
@@ -246,7 +246,7 @@ int add(int a, int b) {{
         
         # Create header file
         header_path = os.path.join(include_dir, f'{project_name}.h')
-        with open(header_path, 'w') as f:
+        with open(header_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file {project_name}.h
  * @brief Header file for {project_name} functionality.
@@ -291,7 +291,7 @@ int add(int a, int b);
         
         # Create test file
         test_path = os.path.join(tests_dir, 'test_add.c')
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file test_add.c
  * @brief Test for the add function.
@@ -338,7 +338,7 @@ int main(void) {{
             result (dict): Result dictionary to update
         """
         makefile_path = os.path.join(project_path, 'Makefile')
-        with open(makefile_path, 'w') as f:
+        with open(makefile_path, 'w', encoding='utf-8') as f:
             f.write(f'''# Makefile for {project_name}
 
 # Compiler settings
@@ -431,7 +431,7 @@ test: tests
         """
         # Create root CMakeLists.txt
         cmake_path = os.path.join(project_path, 'CMakeLists.txt')
-        with open(cmake_path, 'w') as f:
+        with open(cmake_path, 'w', encoding='utf-8') as f:
             f.write(f'''cmake_minimum_required(VERSION 3.10)
 project({project_name} C)
 
@@ -484,7 +484,7 @@ add_test(NAME test_add COMMAND test_{project_name})
             result (dict): Result dictionary to update
         """
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name.replace('_', ' ').title()}
 
 A C project created with QZX scaffolding tool.
@@ -580,7 +580,7 @@ gcc -Iinclude -o test_add tests/test_add.c src/your_lib.c
             result (dict): Result dictionary to update
         """
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''# Build artifacts
 bin/
 obj/

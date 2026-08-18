@@ -197,7 +197,7 @@ class ScaffoldCppCommand(CommandBase):
         
         # Create main.cpp
         main_path = os.path.join(src_dir, 'main.cpp')
-        with open(main_path, 'w') as f:
+        with open(main_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file main.cpp
  * @brief Main entry point for the {project_name} program.
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {{
         
         # Create implementation file
         impl_path = os.path.join(src_dir, f'{project_name}.cpp')
-        with open(impl_path, 'w') as f:
+        with open(impl_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file {project_name}.cpp
  * @brief Implementation of {project_name} functionality.
@@ -280,7 +280,7 @@ Vector2D Vector2D::operator+(const Vector2D& rhs) const {{
         
         # Create header file
         header_path = os.path.join(include_dir, f'{project_name}.hpp')
-        with open(header_path, 'w') as f:
+        with open(header_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file {project_name}.hpp
  * @brief Header file for {project_name} functionality.
@@ -334,7 +334,7 @@ public:
         
         # Create test main file
         test_main_path = os.path.join(tests_dir, 'test_main.cpp')
-        with open(test_main_path, 'w') as f:
+        with open(test_main_path, 'w', encoding='utf-8') as f:
             f.write('''/**
  * @file test_main.cpp
  * @brief Test runner for Catch2 tests.
@@ -347,7 +347,7 @@ public:
         
         # Create test file
         test_path = os.path.join(tests_dir, f'test_{project_name}.cpp')
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write(f'''/**
  * @file test_{project_name}.cpp
  * @brief Tests for {project_name} functionality.
@@ -381,7 +381,7 @@ TEST_CASE("Vector2D addition works", "[vector2d]") {{
         result["files_created"].append(catch_dir)
         
         catch_path = os.path.join(catch_dir, 'catch.hpp')
-        with open(catch_path, 'w') as f:
+        with open(catch_path, 'w', encoding='utf-8') as f:
             f.write('''/**
  * Catch2 v2.13.9 - Single-header testing framework for C++11 and later
  *
@@ -449,7 +449,7 @@ inline int main(int argc, char* argv[]) {
             result (dict): Result dictionary to update
         """
         makefile_path = os.path.join(project_path, 'Makefile')
-        with open(makefile_path, 'w') as f:
+        with open(makefile_path, 'w', encoding='utf-8') as f:
             f.write(f'''# Makefile for {project_name}
 
 # Compiler settings
@@ -548,7 +548,7 @@ test: tests
         """
         # Create root CMakeLists.txt
         cmake_path = os.path.join(project_path, 'CMakeLists.txt')
-        with open(cmake_path, 'w') as f:
+        with open(cmake_path, 'w', encoding='utf-8') as f:
             f.write(f'''cmake_minimum_required(VERSION 3.10)
 project({project_name} CXX)
 
@@ -632,7 +632,7 @@ endif()
         
         # Create a simple module
         compiler_flags_path = os.path.join(cmake_config_dir, 'CompilerFlags.cmake')
-        with open(compiler_flags_path, 'w') as f:
+        with open(compiler_flags_path, 'w', encoding='utf-8') as f:
             f.write('''# Additional compiler flags configuration
 
 # Function to set compiler flags based on the compiler
@@ -672,7 +672,7 @@ endfunction()
             result (dict): Result dictionary to update
         """
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name.replace('_', ' ').title()}
 
 A C++{cpp_standard} project created with QZX scaffolding tool.
@@ -777,7 +777,7 @@ g++ -std=c++{cpp_standard} -Iinclude -Itests -o test_{project_name} tests/*.cpp 
             result (dict): Result dictionary to update
         """
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''# Build artifacts
 bin/
 obj/

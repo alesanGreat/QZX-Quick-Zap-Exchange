@@ -136,7 +136,7 @@ class ScaffoldCSharpCommand(CommandBase):
 
     def _create_solution(self, project_path, project_name, result):
         sln_path = os.path.join(project_path, f"{project_name}.sln")
-        with open(sln_path, 'w') as f:
+        with open(sln_path, 'w', encoding='utf-8') as f:
             f.write(f'''
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
@@ -171,7 +171,7 @@ EndGlobal
 
     def _create_project_file(self, project_path, project_name, result):
         csproj_path = os.path.join(project_path, f"{project_name}.csproj")
-        with open(csproj_path, 'w') as f:
+        with open(csproj_path, 'w', encoding='utf-8') as f:
             f.write('''<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -188,7 +188,7 @@ EndGlobal
     def _create_source_file(self, project_path, project_name, result):
         src_path = os.path.join(project_path, 'Program.cs')
         class_name = self._to_class_name(project_name)
-        with open(src_path, 'w') as f:
+        with open(src_path, 'w', encoding='utf-8') as f:
             f.write(f'''namespace {class_name};
 
 public class Program
@@ -209,7 +209,7 @@ public class Program
         result["files_created"].append(test_dir)
 
         csproj_path = os.path.join(test_dir, f"{project_name}.Tests.csproj")
-        with open(csproj_path, 'w') as f:
+        with open(csproj_path, 'w', encoding='utf-8') as f:
             f.write(f'''<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -242,7 +242,7 @@ public class Program
 
         test_path = os.path.join(test_dir, 'ProgramTests.cs')
         class_name = self._to_class_name(project_name)
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write(f'''namespace {class_name}.Tests;
 
 using Xunit;
@@ -266,7 +266,7 @@ public class ProgramTests
 
     def _create_readme(self, project_path, project_name, result):
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name.replace('_', ' ').title()}
 
 A C# project created with QZX scaffolding tool.
@@ -293,7 +293,7 @@ dotnet test
 
     def _create_gitignore(self, project_path, result):
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''# .NET build outputs
 bin/
 obj/

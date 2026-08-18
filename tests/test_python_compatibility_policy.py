@@ -13,6 +13,37 @@ TEST_ENVIRONMENTS_PATH = (
 )
 
 
+def _text_open_without_encoding(tree: ast.AST) -> list[int]:
+    """Return line numbers for built-in text opens without an encoding."""
+
+    missing = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "open":
+            continue
+
+        mode_node = node.args[1] if len(node.args) > 1 else next(
+            (
+                keyword.value
+                for keyword in node.keywords
+                if keyword.arg == "mode"
+            ),
+            None,
+        )
+        mode = mode_node.value if (
+            isinstance(mode_node, ast.Constant)
+            and isinstance(mode_node.value, str)
+        ) else None
+        if mode is not None and "b" in mode:
+            continue
+        if any(keyword.arg == "encoding" for keyword in node.keywords):
+            continue
+        missing.append(node.lineno)
+
+    return missing
+
+
 def _assert_sha_pinned_action(workflow: str, action: str) -> None:
     """Require an Action identity and immutable SHA without freezing its version."""
 
@@ -70,6 +101,21 @@ def test_python_compatibility_policy_is_consistent():
         "omnios",
         "oracle-solaris",
     }
+
+
+def test_text_file_opens_use_explicit_encodings():
+    """Keep generated and consumed text independent of the host locale."""
+
+    source_root = PROJECT_ROOT / "src" / "qzx"
+    violations = []
+    for path in sorted(source_root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=str(path))
+        for line_number in _text_open_without_encoding(tree):
+            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line_number}")
+
+    assert violations == [], (
+        "Text files must declare an explicit encoding: " + ", ".join(violations)
+    )
 
 
 def test_test_environment_source_matches_workflows_and_readme():
