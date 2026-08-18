@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from scripts.verify_distribution_artifacts import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 README_PATH = PROJECT_ROOT / "README.md"
+COMPATIBILITY_README_PATH = PROJECT_ROOT / "README-English.md"
 PRODUCT_MANIFEST_PATH = (
     PROJECT_ROOT / "src" / "qzx" / "resources" / "product-manifest.json"
 )
@@ -55,6 +57,16 @@ def test_current_readme_becomes_package_index_safe() -> None:
     )
     assert f"{repository}/blob/v{version}/LICENSE" in rendered
     verify_package_index_links(rendered, "rendered README")
+
+
+def test_compatibility_readme_remains_a_versionless_pointer() -> None:
+    content = COMPATIBILITY_README_PATH.read_text(encoding="utf-8")
+    relative_links = find_repository_relative_links(content)
+
+    assert "[`README.md`](README.md)" in content
+    assert "src/qzx/resources/product-manifest.json" in content
+    assert re.search(r"(?<!\d)\d+(?:\.\d+){2,}[A-Za-z0-9.-]*", content) is None
+    assert all((PROJECT_ROOT / path).is_file() for path in relative_links)
 
 
 def test_setup_long_description_uses_package_index_renderer() -> None:
