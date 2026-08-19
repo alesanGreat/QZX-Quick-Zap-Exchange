@@ -193,6 +193,13 @@ its own final envelope before printing it; invalid internal producer output is
 replaced with a conforming `invalid_result_contract` failure instead of leaking
 an ambiguous document.
 
+The public validation tools decode evidence conservatively for cross-language
+interoperability. They reject duplicate object member names, the non-JSON
+numeric tokens `NaN` and `Infinity`, and numbers outside the decoder's finite
+range. This follows [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259): duplicate
+names can produce unpredictable mappings across implementations, while
+non-finite numeric tokens are not JSON.
+
 The public conformance fixtures include both valid documents and documents that
 MUST be rejected, including a whitespace-only `message`, a successful result
 with a contradictory `error_code`, and a defined typed field set to `null`.

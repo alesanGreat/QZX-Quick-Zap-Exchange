@@ -86,6 +86,13 @@ replacing MCP, JSON-RPC, tool discovery, input schemas, transports, elicitation,
 or MCP security rules. MCP remains the protocol; QZX Result Contract describes
 the completed operation result carried inside it.
 
+The validator accepts either a bare `CallToolResult` or one complete JSON-RPC
+result response. For a full response it also checks the MCP envelope boundary:
+`jsonrpc` is exactly `"2.0"`, the response has a string or integer `id`, and it
+contains `result` without a competing `error`. A JSON-RPC protocol error is not
+accepted as completed QZX evidence, even when its error object is otherwise
+well formed.
+
 ### Tool definition mapping and schema strength
 
 QZX deliberately records **how strongly** an MCP `outputSchema` exposes the
@@ -293,9 +300,10 @@ When QZX's evidence CLI or Composite Action is used, publish the generated
 `qzx-conformance.json` receipt and identify the full QZX commit SHA that ran the
 validator. The receipt records SHA-256 digests of the exact success, failure,
 and MCP tool-definition files when applicable. It also fingerprints the exact
-QZX contract schema, receipt schema, core validator, MCP validator, and evidence
-validator used for the verdict. This lets a reviewer reconstruct the validation
-materials from a pinned source revision instead of trusting that a mutable URL
+QZX contract schema, receipt schema, strict JSON decoder, core validator, MCP
+validator, and evidence validator used for the verdict. This lets a reviewer
+reconstruct the validation materials from a pinned source revision instead of
+trusting that a mutable URL
 still serves byte-identical content. The receipt identifies the public QZX
 Result Contract Conformance Receipt v1 schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`,
@@ -317,6 +325,56 @@ report must keep those claims separate.
 The repository contains positive and negative fixtures under
 [`examples/result_contract/`](../examples/result_contract/) and dependency-free
 validators.
+
+For a maintained end-to-end producer example, see the locked
+[`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
+integration. It drives the official MCP TypeScript SDK 2.0.0 over its modern
+in-process HTTP entry, captures actual MCP 2026-07-28 wire results, and validates
+them as `canonical_inline`. The public SDK client intentionally consumes the
+wire-only `resultType` field before returning `CallToolResult`, so reviewable
+2026 evidence must be captured at the transport boundary rather than reconstructed
+from the normalized client object. The example is QZX reference evidence and is
+not listed as independent adoption.
+
+The locked
+[`mcp-python-sdk-v2`](../examples/result_contract/mcp-python-sdk-v2/README.md)
+example provides the complementary official Python SDK 2.0.0 path. It uses the
+SDK's modern in-process direct dispatcher and its own aliased model
+serialization, retains the MCP 2026-07-28 completion and error fields, and
+validates the exact inline QZX schema. A hash-checked dependency lock makes the
+environment reproducible. Its evidence says explicitly that HTTP and JSON-RPC
+framing were not exercised, so it must not be presented as wire-transport
+evidence or independent adoption.
+
+The locked stable
+[`mcp-go-sdk-v1`](../examples/result_contract/mcp-go-sdk-v1/README.md)
+example exercises the official Go SDK's client, server, typed tool validation,
+and paired newline-delimited JSON-RPC transport at MCP 2025-11-25. It preserves
+the client-observed models, authenticates the dependency graph with `go.sum`,
+and validates the exact inline QZX schema. Its metadata distinguishes exercising
+JSON-RPC framing from retaining raw frames and makes clear that HTTP and SSE were
+not tested. It is QZX-maintained reference evidence, not independent adoption.
+
+The locked stable
+[`mcp-csharp-sdk-v2`](../examples/result_contract/mcp-csharp-sdk-v2/README.md)
+example exercises the official C# SDK 2.2.0 client, server, tool collection, and
+paired newline-delimited JSON-RPC stream transports at MCP 2026-07-28 on .NET 10
+LTS. It preserves the client-observed complete models, authenticates the exact
+NuGet graph through `packages.lock.json`, and validates the canonical inline QZX
+schema. Its metadata separates exercised JSON-RPC framing from absent raw-frame,
+HTTP, and SSE coverage. It is QZX-maintained reference evidence, not independent
+adoption.
+
+The locked stable
+[`mcp-java-sdk-v2`](../examples/result_contract/mcp-java-sdk-v2/README.md)
+example exercises the official Java SDK 2.0.0 client and server across a real
+subprocess boundary using its newline-delimited JSON-RPC `stdio` transports at
+MCP 2025-11-25 on Java 21 LTS. It validates the exact inline QZX schema and
+preserves the client-observed success and failure models. The Maven Wrapper is
+checksum-pinned, and CI rejects changes to the committed resolved runtime
+coordinates. Its metadata records that raw frames, HTTP, and SSE were not
+captured or exercised. It is QZX-maintained reference evidence, not independent
+adoption.
 
 Validate the transport-independent core fixtures:
 

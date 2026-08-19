@@ -15,6 +15,7 @@ from scripts.verify_distribution_artifacts import (
     CONFORMANCE_RECEIPT_SCHEMA_ID,
     CONFORMANCE_RECEIPT_WHEEL_PATH,
     GOLDEN_CORE_WHEEL_PATH,
+    RESULT_CONTRACT_EXAMPLE_SUFFIXES,
     RESULT_CONTRACT_SCHEMA_ID,
     RESULT_CONTRACT_WHEEL_PATH,
     canonical_readme_relative_files,
@@ -195,13 +196,24 @@ def build_fixture_distributions(
                 f"{root}/{relative_path}",
                 (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8"),
             )
-        for source in sorted((REPOSITORY_ROOT / "examples" / "result_contract").iterdir()):
-            if source.is_file() and source.suffix.lower() in {".json", ".md", ".ts"}:
-                add_tar_text(
-                    archive,
-                    f"{root}/examples/result_contract/{source.name}",
-                    source.read_text(encoding="utf-8"),
+        examples_root = REPOSITORY_ROOT / "examples" / "result_contract"
+        for source in sorted(examples_root.rglob("*")):
+            relative_path = source.relative_to(REPOSITORY_ROOT).as_posix()
+            if (
+                not source.is_file()
+                or (
+                    source.suffix.lower()
+                    not in RESULT_CONTRACT_EXAMPLE_SUFFIXES
+                    and source.name != "mvnw"
                 )
+                or relative_path == omitted_support_file
+            ):
+                continue
+            add_tar_text(
+                archive,
+                f"{root}/{relative_path}",
+                source.read_text(encoding="utf-8"),
+            )
     return wheel, sdist
 
 
@@ -256,6 +268,52 @@ def test_distribution_verifier_rejects_missing_readme_link_target(tmp_path):
     with pytest.raises(
         ValueError,
         match=r"missing required release files: .*SPONSORSHIP\.md",
+    ):
+        verify_distributions(
+            tmp_path,
+            expected_version=VERSION,
+            expected_python=REQUIRES_PYTHON,
+        )
+
+
+@pytest.mark.parametrize(
+    ("omitted_support_file", "missing_pattern"),
+    [
+        (
+            "examples/result_contract/mcp-python-sdk-v2/requirements.txt",
+            r"mcp-python-sdk-v2/requirements\.txt",
+        ),
+        (
+            "examples/result_contract/mcp-go-sdk-v1/go.sum",
+            r"mcp-go-sdk-v1/go\.sum",
+        ),
+        (
+            "examples/result_contract/mcp-csharp-sdk-v2/packages.lock.json",
+            r"mcp-csharp-sdk-v2/packages\.lock\.json",
+        ),
+        (
+            "examples/result_contract/mcp-java-sdk-v2/dependency-tree.txt",
+            r"mcp-java-sdk-v2/dependency-tree\.txt",
+        ),
+        (
+            "examples/result_contract/mcp-java-sdk-v2/mvnw",
+            r"mcp-java-sdk-v2/mvnw",
+        ),
+    ],
+)
+def test_distribution_verifier_rejects_missing_nested_result_contract_example(
+    tmp_path,
+    omitted_support_file,
+    missing_pattern,
+):
+    build_fixture_distributions(
+        tmp_path,
+        omitted_support_file=omitted_support_file,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=rf"missing required release files: .*{missing_pattern}",
     ):
         verify_distributions(
             tmp_path,

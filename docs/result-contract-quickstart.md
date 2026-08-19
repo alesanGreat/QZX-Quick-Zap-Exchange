@@ -81,9 +81,10 @@ python scripts/validate_result_contract_evidence.py \
 Every generated receipt identifies its own versioned JSON Schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.
 It also records SHA-256 digests for the exact QZX contract schema, receipt schema,
-core validator, MCP validator, and evidence validator used to produce the
-verdict. That makes a saved receipt independently traceable to the validation
-materials even if a public `v1` URL later receives compatible clarifications.
+strict JSON decoder, core validator, MCP validator, and evidence validator used
+to produce the verdict. That makes a saved receipt independently traceable to
+the validation materials even if a public `v1` URL later receives compatible
+clarifications.
 Reviewers can validate the receipt structure with any JSON Schema 2020-12
 implementation without executing QZX. The receipt itself also remains a valid
 QZX Result Contract v1 object: failed receipts carry a stable `error_code`.
@@ -130,8 +131,10 @@ The QZX SHA above identifies the reviewed conformance implementation used by
 this example; update it deliberately when you choose to validate against a
 newer QZX revision. The Action fails the job when the pair does not conform and
 writes the receipt path plus scalar `conformant`, `profile`, `receipt_schema`,
-`contract_schema_sha256`, and `output_schema_mode` outputs for later workflow
-steps. Its GitHub job summary keeps the PASS/FAIL result, the exact contract
+`contract_schema_sha256`, `output_schema_mode`, and `failure_kind` outputs for
+later workflow steps. `failure_kind` is `none`, `conformance`, or `operational`,
+so automation can distinguish rejected evidence from a run that never reached
+a verdict. Its GitHub job summary keeps the PASS/FAIL result, the exact contract
 schema digest, receipt metadata, the specification link, and factual creator
 attribution together with the run.
 
@@ -154,7 +157,10 @@ a failed conformance check into a passing gate**:
           report: result-contract-evidence/qzx-conformance.json
 
       - name: Preserve QZX conformance receipt
-        if: always()
+        if: >-
+          always() &&
+          (steps.qzx-conformance.outputs.failure_kind == 'none' ||
+          steps.qzx-conformance.outputs.failure_kind == 'conformance')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qzx-conformance-receipt
@@ -171,9 +177,11 @@ a failed conformance check into a passing gate**:
 though `continue-on-error` lets the workflow reach the upload step. When the
 validator reached a conformance verdict, the receipt also exposes
 `conformant=false` and the same validation-material hashes used for PASS runs.
-If the Action fails before a receipt can be written, `if-no-files-found: error`
-keeps that missing evidence visible instead of silently pretending it was
-preserved.
+If validation cannot complete, `failure_kind=operational` and
+`report=unavailable`; the upload is skipped because there is no receipt to
+preserve, while the Action outcome and job summary keep the operational failure
+visible. A failure before the Action runner itself starts also leaves
+`failure_kind` empty and therefore cannot trigger a misleading artifact upload.
 
 ## 4. MCP 2025-06-18 and newer: use the contract as `outputSchema`
 
@@ -260,6 +268,65 @@ without `resultType`, `mcp-success.json` / `mcp-failure.json` for the 2026-07-28
 `mcp-structural-tool-definition.json` for the SDK-portable `structural_core`
 case. Contradictory `isError` and protocol-error fixtures remain available for
 negative testing.
+
+### Executable official SDK examples
+
+The locked
+[`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
+example runs an actual success/failure pair through the official MCP TypeScript
+SDK 2.0.0 and captures the MCP 2026-07-28 wire results. It deliberately uses
+`createMcpHandler` plus `StreamableHTTPClientTransport`: the SDK's in-memory
+transport exercises only the 2025 era, and the public client result hides the
+wire-only `resultType` discriminator. The example captures that discriminator at
+the transport boundary rather than adding it after the fact.
+
+CI validates the generated pair through the public QZX Composite Action and
+publishes the evidence bundle as a workflow artifact. The receipt reports
+`canonical_inline` because the official SDK's `fromJsonSchema` API advertises
+the exact QZX schema. This is QZX-maintained interoperability evidence, not an
+independent adopter or a certification of the SDK.
+
+The sibling locked
+[`mcp-python-sdk-v2`](../examples/result_contract/mcp-python-sdk-v2/README.md)
+example runs the official Python SDK 2.0.0 client and server through their
+modern in-process direct dispatcher. It preserves `resultType: "complete"`,
+explicit `isError`, and the exact canonical inline schema. Its complete Python
+dependency graph is pinned with hashes. Because this path deliberately has no
+HTTP or JSON-RPC framing, that limitation is recorded in the evidence instead
+of being implied away; the TypeScript example supplies the complementary wire
+capture. CI validates and preserves both QZX-maintained bundles independently.
+
+The locked stable
+[`mcp-go-sdk-v1`](../examples/result_contract/mcp-go-sdk-v1/README.md)
+example adds an official Go client/server path. It negotiates MCP 2025-11-25
+through the SDK's newline-delimited JSON-RPC in-memory transport, validates typed
+outputs against the exact inline QZX schema, and preserves the client-observed
+success/failure models. The success serialization omits `isError: false` as the
+SDK model specifies, while the receipt records its effective false value and
+the failure retains `isError: true`. It does not claim HTTP coverage or retain
+raw frames. CI validates and preserves this third QZX-maintained bundle with its
+`go.mod` and authenticated `go.sum` dependency graph.
+
+The locked stable
+[`mcp-csharp-sdk-v2`](../examples/result_contract/mcp-csharp-sdk-v2/README.md)
+example adds the official C# SDK 2.2.0 on .NET 10 LTS. Its client and server
+negotiate MCP 2026-07-28 through paired stream transports, exercising the SDK's
+newline-delimited JSON-RPC framing while retaining `resultType: "complete"`,
+explicit `isError`, and the exact inline QZX schema. It records that raw frames,
+HTTP, and SSE were not captured or exercised. CI restores the exact NuGet graph
+from `packages.lock.json`, builds outside the checkout, and preserves this
+fourth QZX-maintained evidence bundle.
+
+The locked stable
+[`mcp-java-sdk-v2`](../examples/result_contract/mcp-java-sdk-v2/README.md)
+example adds the official Java SDK 2.0.0 on Java 21 LTS. Its client launches the
+official server as a subprocess and negotiates MCP 2025-11-25 through the SDK's
+newline-delimited JSON-RPC `stdio` transports. It publishes the exact inline QZX
+schema and preserves explicit `isError` with matching structured and text
+content. CI verifies the checksum-pinned Maven Wrapper, rejects drift in the
+resolved runtime coordinates, builds outside the checkout, and preserves this
+fifth QZX-maintained evidence bundle. Raw frames, HTTP, and SSE remain outside
+the claim boundary.
 
 ## 5. Publish the smallest reviewable evidence bundle
 

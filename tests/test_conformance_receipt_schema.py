@@ -199,6 +199,15 @@ def test_receipt_schema_remains_compatible_with_older_mcp_receipts():
     assert _matches(schema, receipt, schema)
 
 
+def test_receipt_schema_accepts_the_previous_validation_material_set():
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    receipt = _receipt(profile=validator.PROFILE_CORE)
+
+    receipt["details"]["validation_materials"].pop("json_decoder")
+
+    assert _matches(schema, receipt, schema)
+
+
 def test_receipt_schema_rejects_unknown_fields_and_role_swaps():
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     receipt = _receipt(profile=validator.PROFILE_CORE)

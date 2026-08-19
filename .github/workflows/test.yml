@@ -72,13 +72,56 @@ jobs:
         run: python -m twine check "$RUNNER_TEMP"/qzx-dist/*
 
   result-contract-conformance-action:
-    name: Result Contract Composite Action smoke | CPython 3.13
+    name: Result Contract official SDK interop and Action smoke | Node 22 / CPython 3.13 / Go 1.25 / .NET 10 / Java 21
     runs-on: ubuntu-24.04
     steps:
       - name: Check out QZX
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      - name: Install Node.js 22 for the official MCP SDK example
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+
+      - name: Install CPython 3.13 for the official MCP SDK example
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6
+        with:
+          python-version: "3.13"
+
+      - name: Install Go 1.25.1 for the official MCP SDK example
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.25.1"
+          cache-dependency-path: examples/result_contract/mcp-go-sdk-v1/go.sum
+
+      - name: Install .NET 10 LTS for the official MCP C# SDK example
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/qzx-nuget-packages
+        with:
+          global-json-file: examples/result_contract/mcp-csharp-sdk-v2/global.json
+          cache: true
+          cache-dependency-path: examples/result_contract/mcp-csharp-sdk-v2/packages.lock.json
+
+      - name: Install Java 21 LTS for the official MCP Java SDK example
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install the locked official MCP TypeScript SDK dependencies
+        working-directory: examples/result_contract/mcp-typescript-sdk-v2
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.29.2 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      - id: generate-mcp-typescript-sdk-evidence
+        name: Generate real MCP 2026-07-28 SDK wire evidence
+        working-directory: examples/result_contract/mcp-typescript-sdk-v2
+        run: pnpm run evidence "$GITHUB_WORKSPACE/qzx-mcp-typescript-sdk-v2-evidence"
 
       - name: Validate core evidence through the public Composite Action
         uses: ./
@@ -106,6 +149,199 @@ jobs:
           tool-definition: examples/result_contract/mcp-tool-definition.json
           report: qzx-mcp-2026-conformance.json
 
+      - name: Validate official MCP TypeScript SDK v2 wire evidence
+        uses: ./
+        with:
+          profile: mcp-2026-07-28
+          success: qzx-mcp-typescript-sdk-v2-evidence/success.json
+          failure: qzx-mcp-typescript-sdk-v2-evidence/failure.json
+          tool-definition: qzx-mcp-typescript-sdk-v2-evidence/tool-definition.json
+          report: qzx-mcp-typescript-sdk-v2-conformance.json
+
+      - name: Preserve the official MCP TypeScript SDK v2 evidence
+        if: always() && steps.generate-mcp-typescript-sdk-evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-mcp-typescript-sdk-v2-evidence
+          path: |
+            qzx-mcp-typescript-sdk-v2-evidence/*.json
+            qzx-mcp-typescript-sdk-v2-conformance.json
+            examples/result_contract/mcp-typescript-sdk-v2/README.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Install the locked official MCP Python SDK dependencies
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/qzx-mcp-python-sdk-v2-venv"
+          "$RUNNER_TEMP/qzx-mcp-python-sdk-v2-venv/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --require-hashes \
+            -r examples/result_contract/mcp-python-sdk-v2/requirements.txt
+
+      - id: generate-mcp-python-sdk-evidence
+        name: Generate real MCP 2026-07-28 Python SDK evidence
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/qzx-mcp-python-sdk-v2-venv/bin/python" \
+            examples/result_contract/mcp-python-sdk-v2/generate_evidence.py \
+            "$GITHUB_WORKSPACE/qzx-mcp-python-sdk-v2-evidence"
+
+      - name: Validate official MCP Python SDK v2 evidence
+        uses: ./
+        with:
+          profile: mcp-2026-07-28
+          success: qzx-mcp-python-sdk-v2-evidence/success.json
+          failure: qzx-mcp-python-sdk-v2-evidence/failure.json
+          tool-definition: qzx-mcp-python-sdk-v2-evidence/tool-definition.json
+          report: qzx-mcp-python-sdk-v2-conformance.json
+
+      - name: Preserve the official MCP Python SDK v2 evidence
+        if: always() && steps.generate-mcp-python-sdk-evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-mcp-python-sdk-v2-evidence
+          path: |
+            qzx-mcp-python-sdk-v2-evidence/*.json
+            qzx-mcp-python-sdk-v2-conformance.json
+            examples/result_contract/mcp-python-sdk-v2/README.md
+            examples/result_contract/mcp-python-sdk-v2/generate_evidence.py
+            examples/result_contract/mcp-python-sdk-v2/requirements.in
+            examples/result_contract/mcp-python-sdk-v2/requirements.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - id: generate-mcp-go-sdk-evidence
+        name: Generate real MCP 2025-11-25 Go SDK evidence
+        working-directory: examples/result_contract/mcp-go-sdk-v1
+        run: |
+          go run -mod=readonly . "$GITHUB_WORKSPACE/qzx-mcp-go-sdk-v1.6.1-evidence"
+          go mod verify
+
+      - name: Validate official MCP Go SDK v1.6.1 evidence
+        uses: ./
+        with:
+          profile: mcp-2025-11-25
+          success: qzx-mcp-go-sdk-v1.6.1-evidence/success.json
+          failure: qzx-mcp-go-sdk-v1.6.1-evidence/failure.json
+          tool-definition: qzx-mcp-go-sdk-v1.6.1-evidence/tool-definition.json
+          report: qzx-mcp-go-sdk-v1.6.1-conformance.json
+
+      - name: Preserve the official MCP Go SDK v1.6.1 evidence
+        if: always() && steps.generate-mcp-go-sdk-evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-mcp-go-sdk-v1.6.1-evidence
+          path: |
+            qzx-mcp-go-sdk-v1.6.1-evidence/*.json
+            qzx-mcp-go-sdk-v1.6.1-conformance.json
+            examples/result_contract/mcp-go-sdk-v1/README.md
+            examples/result_contract/mcp-go-sdk-v1/main.go
+            examples/result_contract/mcp-go-sdk-v1/go.mod
+            examples/result_contract/mcp-go-sdk-v1/go.sum
+          if-no-files-found: error
+          retention-days: 14
+
+      - id: generate-mcp-csharp-sdk-evidence
+        name: Generate real MCP 2026-07-28 C# SDK evidence
+        working-directory: examples/result_contract/mcp-csharp-sdk-v2
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/qzx-nuget-packages
+        run: |
+          artifacts="$RUNNER_TEMP/qzx-mcp-csharp-sdk-v2-artifacts"
+          schema="$GITHUB_WORKSPACE/src/qzx/resources/schemas/result-contract-v1.schema.json"
+          evidence="$GITHUB_WORKSPACE/qzx-mcp-csharp-sdk-v2.2.0-evidence"
+          export ArtifactsPath="$artifacts"
+          dotnet restore --locked-mode --artifacts-path "$artifacts"
+          dotnet build --no-restore --configuration Release --artifacts-path "$artifacts"
+          dotnet format McpCsharpEvidence.csproj --no-restore --verify-no-changes
+          dotnet run --no-build --configuration Release --artifacts-path "$artifacts" -- "$schema" "$evidence"
+
+      - name: Validate official MCP C# SDK 2.2.0 evidence
+        uses: ./
+        with:
+          profile: mcp-2026-07-28
+          success: qzx-mcp-csharp-sdk-v2.2.0-evidence/success.json
+          failure: qzx-mcp-csharp-sdk-v2.2.0-evidence/failure.json
+          tool-definition: qzx-mcp-csharp-sdk-v2.2.0-evidence/tool-definition.json
+          report: qzx-mcp-csharp-sdk-v2.2.0-conformance.json
+
+      - name: Preserve the official MCP C# SDK 2.2.0 evidence
+        if: always() && steps.generate-mcp-csharp-sdk-evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-mcp-csharp-sdk-v2.2.0-evidence
+          path: |
+            qzx-mcp-csharp-sdk-v2.2.0-evidence/*.json
+            qzx-mcp-csharp-sdk-v2.2.0-conformance.json
+            examples/result_contract/mcp-csharp-sdk-v2/README.md
+            examples/result_contract/mcp-csharp-sdk-v2/Program.cs
+            examples/result_contract/mcp-csharp-sdk-v2/McpCsharpEvidence.csproj
+            examples/result_contract/mcp-csharp-sdk-v2/global.json
+            examples/result_contract/mcp-csharp-sdk-v2/packages.lock.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - id: generate-mcp-java-sdk-evidence
+        name: Generate real MCP 2025-11-25 Java SDK evidence
+        working-directory: examples/result_contract/mcp-java-sdk-v2
+        env:
+          MAVEN_USER_HOME: ${{ runner.temp }}/qzx-maven
+        run: |
+          artifacts="$RUNNER_TEMP/qzx-mcp-java-sdk-v2-artifacts"
+          repository="$RUNNER_TEMP/qzx-maven/repository"
+          schema="$GITHUB_WORKSPACE/src/qzx/resources/schemas/result-contract-v1.schema.json"
+          evidence="$GITHUB_WORKSPACE/qzx-mcp-java-sdk-v2.0.0-evidence"
+          ./mvnw \
+            "-Dqzx.build.directory=$artifacts" \
+            "-Dmaven.repo.local=$repository" \
+            "-Dmdep.outputFile=$artifacts/classpath.txt" \
+            -B -ntp clean compile dependency:build-classpath
+          ./mvnw \
+            "-Dqzx.build.directory=$artifacts" \
+            "-Dmaven.repo.local=$repository" \
+            "-DoutputFile=$artifacts/dependency-tree.txt" \
+            -DoutputType=text -B -ntp dependency:tree
+          python - "$artifacts/dependency-tree.txt" <<'PY'
+          import sys
+          from pathlib import Path
+
+          expected = Path("dependency-tree.txt").read_text(encoding="utf-8").splitlines()
+          actual = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+          if actual != expected:
+              raise SystemExit("Resolved Maven dependency tree differs from dependency-tree.txt")
+          PY
+          classpath="$artifacts/classes:$(cat "$artifacts/classpath.txt")"
+          java -cp "$classpath" qzx.evidence.Main "$schema" "$evidence"
+
+      - name: Validate official MCP Java SDK 2.0.0 evidence
+        uses: ./
+        with:
+          profile: mcp-2025-11-25
+          success: qzx-mcp-java-sdk-v2.0.0-evidence/success.json
+          failure: qzx-mcp-java-sdk-v2.0.0-evidence/failure.json
+          tool-definition: qzx-mcp-java-sdk-v2.0.0-evidence/tool-definition.json
+          report: qzx-mcp-java-sdk-v2.0.0-conformance.json
+
+      - name: Preserve the official MCP Java SDK 2.0.0 evidence
+        if: always() && steps.generate-mcp-java-sdk-evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-mcp-java-sdk-v2.0.0-evidence
+          path: |
+            qzx-mcp-java-sdk-v2.0.0-evidence/*.json
+            qzx-mcp-java-sdk-v2.0.0-conformance.json
+            examples/result_contract/mcp-java-sdk-v2/README.md
+            examples/result_contract/mcp-java-sdk-v2/pom.xml
+            examples/result_contract/mcp-java-sdk-v2/dependency-tree.txt
+            examples/result_contract/mcp-java-sdk-v2/src/main/java/qzx/evidence/Main.java
+            examples/result_contract/mcp-java-sdk-v2/mvnw
+            examples/result_contract/mcp-java-sdk-v2/mvnw.cmd
+            examples/result_contract/mcp-java-sdk-v2/.mvn/wrapper/maven-wrapper.properties
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
       - id: qzx-nonconforming
         name: Validate intentionally nonconforming evidence
         continue-on-error: true
@@ -117,7 +353,9 @@ jobs:
           report: qzx-nonconforming-receipt.json
 
       - name: Preserve the nonconformance receipt
-        if: always()
+        if: >-
+          always() &&
+          steps.qzx-nonconforming.outputs.failure_kind == 'conformance'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qzx-nonconformance-receipt
@@ -131,6 +369,7 @@ jobs:
           ACTION_OUTCOME: ${{ steps.qzx-nonconforming.outcome }}
           CONFORMANT: ${{ steps.qzx-nonconforming.outputs.conformant }}
           CONTRACT_SCHEMA_SHA256: ${{ steps.qzx-nonconforming.outputs.contract_schema_sha256 }}
+          FAILURE_KIND: ${{ steps.qzx-nonconforming.outputs.failure_kind }}
         run: |
           import json
           import os
@@ -139,6 +378,7 @@ jobs:
           receipt = json.loads(Path("qzx-nonconforming-receipt.json").read_text(encoding="utf-8"))
           assert os.environ["ACTION_OUTCOME"] == "failure"
           assert os.environ["CONFORMANT"] == "false"
+          assert os.environ["FAILURE_KIND"] == "conformance"
           assert len(os.environ["CONTRACT_SCHEMA_SHA256"]) == 64
           assert receipt["success"] is False, receipt
           assert receipt["error_code"] == "conformance_failed", receipt
@@ -154,6 +394,26 @@ jobs:
               "qzx-core-conformance.json": ("core", None),
               "qzx-mcp-2025-conformance.json": ("mcp-2025-11-25", "structural_core"),
               "qzx-mcp-2026-conformance.json": ("mcp-2026-07-28", "canonical_ref"),
+              "qzx-mcp-typescript-sdk-v2-conformance.json": (
+                  "mcp-2026-07-28",
+                  "canonical_inline",
+              ),
+              "qzx-mcp-python-sdk-v2-conformance.json": (
+                  "mcp-2026-07-28",
+                  "canonical_inline",
+              ),
+              "qzx-mcp-go-sdk-v1.6.1-conformance.json": (
+                  "mcp-2025-11-25",
+                  "canonical_inline",
+              ),
+              "qzx-mcp-csharp-sdk-v2.2.0-conformance.json": (
+                  "mcp-2026-07-28",
+                  "canonical_inline",
+              ),
+              "qzx-mcp-java-sdk-v2.0.0-conformance.json": (
+                  "mcp-2025-11-25",
+                  "canonical_inline",
+              ),
           }
           for filename, (profile, output_schema_mode) in expected.items():
               report = json.loads(Path(filename).read_text(encoding="utf-8"))

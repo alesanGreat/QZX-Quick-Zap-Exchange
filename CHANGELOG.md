@@ -7,6 +7,77 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Hardened Result Contract evidence parsing for cross-language reproducibility.
+  The public validators and conformance runner now reject duplicate JSON object
+  member names, non-JSON numeric constants, and numbers outside the supported
+  finite range instead of accepting Python-specific interpretations. Full MCP
+  JSON-RPC result responses must also carry a string or integer request ID and
+  exactly one of `result` or `error`; protocol-error envelopes cannot be
+  certified as completed QZX results. New receipts fingerprint the strict JSON
+  decoder while the receipt schema remains compatible with the previous
+  material set. The examples index now compares all five official SDK
+  references by protocol and exercised transport boundary.
+
+- Added a locked interoperability example for the official MCP Java SDK stable
+  release 2.0.0 on Java 21 LTS. Its official client launches the official server
+  across a real subprocess boundary, negotiates MCP 2025-11-25 over the SDK's
+  newline-delimited JSON-RPC `stdio` transports, publishes the exact inline QZX
+  schema, and produces conforming success and failure evidence. The Maven 3.9.9
+  Wrapper distribution is checksum-pinned, all direct dependencies and build
+  plugins use exact versions, and CI rejects drift in the committed resolved
+  runtime coordinates while building outside the checkout. Contract evidence
+  files are byte-reproducible across operating systems; raw frames, HTTP, and
+  SSE remain explicitly outside the claim. This is QZX-maintained reference
+  evidence, not independent adoption.
+
+- Added a locked interoperability example for the official MCP C# SDK stable
+  release 2.2.0 on .NET 10 LTS. Its official client and server negotiate MCP
+  2026-07-28 over paired newline-delimited JSON-RPC stream transports, publish
+  the exact inline QZX schema, and produce conforming success and failure
+  evidence with `resultType: "complete"`. The exact NuGet graph is authenticated
+  through `packages.lock.json`; CI builds outside the checkout and preserves the
+  generated bundle. LF serialization keeps the three contract evidence files
+  byte-identical across Windows and Linux, while environment metadata remains
+  intentionally platform-specific. The evidence explicitly separates exercised
+  JSON-RPC framing from absent raw-frame and HTTP/SSE coverage. This remains
+  QZX-maintained reference evidence, not independent adoption.
+
+- Added a locked, executable interoperability example for the official MCP
+  TypeScript client/server SDK 2.0.0. It negotiates MCP 2026-07-28 through the
+  SDK's modern in-process HTTP entry, publishes the exact QZX Result Contract
+  schema through `fromJsonSchema`, captures real success/failure wire results,
+  and validates them as `canonical_inline`. CI now preserves the generated pair
+  and receipt as reviewable artifacts. Documentation also makes two SDK
+  boundaries explicit: its in-memory transport exercises the 2025 era, and its
+  public client result consumes the wire-only `resultType` discriminator, so
+  2026 evidence must be captured at the transport boundary. This remains
+  QZX-maintained reference evidence, not an independent adoption claim.
+
+- Added a second locked interoperability example for the official MCP Python
+  SDK 2.0.0. It runs the SDK's real modern in-process client/server dispatcher,
+  retains `resultType: "complete"`, `isError`, and the canonical inline output
+  schema, and installs its complete dependency graph from a hash-checked lock.
+  Its metadata explicitly records that the direct dispatcher does not exercise
+  HTTP or JSON-RPC framing. CI validates and preserves this evidence separately
+  from the TypeScript wire capture; neither QZX-maintained example is counted
+  as independent adoption.
+
+- Added a locked interoperability example for the official MCP Go SDK stable
+  release 1.6.1. Its official client and server negotiate MCP 2025-11-25 over
+  the SDK's newline-delimited JSON-RPC in-memory transport, validate typed
+  outputs against the exact inline QZX schema, and produce conforming success
+  and failure evidence. The module graph is authenticated with `go.sum`, CI
+  preserves the generated bundle, and the evidence explicitly distinguishes
+  exercised JSON-RPC framing from absent raw-frame and HTTP coverage. This is
+  QZX-maintained reference evidence, not independent adoption.
+
+- Made early failures from the reusable Result Contract Action composable.
+  Stable `failure_kind` outputs now distinguish rejected evidence from
+  operational failures, early input/path/time-limit failures still produce a
+  safe job summary, and `report=unavailable` prevents downstream workflows from
+  claiming a receipt that was never written. The copyable artifact workflow now
+  uploads only verdicts that actually produced receipts.
+
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested

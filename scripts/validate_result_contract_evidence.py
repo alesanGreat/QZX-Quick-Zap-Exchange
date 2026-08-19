@@ -24,6 +24,7 @@ from qzx.core.result_contract import (  # noqa: E402
     RESULT_CONTRACT_VERSION,
     result_contract_violations,
 )
+from qzx.core.strict_json import StrictJsonError, loads_json_document  # noqa: E402
 from validate_mcp_result_contract import validate_mcp_profile  # noqa: E402
 
 REPORT_SCHEMA_VERSION = 1
@@ -45,6 +46,7 @@ VALIDATION_MATERIAL_PATHS = {
         "src/qzx/resources/schemas/"
         "result-contract-conformance-receipt-v1.schema.json"
     ),
+    "json_decoder": "src/qzx/core/strict_json.py",
     "core_validator": "src/qzx/core/result_contract.py",
     "mcp_validator": "scripts/validate_mcp_result_contract.py",
     "evidence_validator": "scripts/validate_result_contract_evidence.py",
@@ -115,8 +117,8 @@ def _read_json(path_text: str) -> tuple[Any | None, str | None, list[str]]:
         return None, digest, [f"{path_text} is not UTF-8 JSON: {exception}"]
 
     try:
-        return json.loads(text), digest, []
-    except json.JSONDecodeError as exception:
+        return loads_json_document(text), digest, []
+    except (json.JSONDecodeError, StrictJsonError) as exception:
         return None, digest, [f"{path_text} is not valid JSON: {exception}"]
 
 

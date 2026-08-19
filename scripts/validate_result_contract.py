@@ -20,6 +20,10 @@ from qzx.core.result_contract import (  # noqa: E402
     RESULT_CONTRACT_SCHEMA_URL,
     result_contract_violations,
 )
+from qzx.core.strict_json import (  # noqa: E402
+    StrictJsonError,
+    load_json_path_or_stdin,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,17 +42,10 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_document(path: str):
-    if path == "-":
-        return json.load(sys.stdin)
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
 def main() -> int:
     args = parse_args()
     try:
-        document = load_document(args.path)
+        document = load_json_path_or_stdin(args.path, sys.stdin)
         violations = result_contract_violations(document)
         result = {
             "success": not violations,
@@ -62,7 +59,7 @@ def main() -> int:
                 "violations": violations,
             },
         }
-    except (OSError, json.JSONDecodeError) as exception:
+    except (OSError, json.JSONDecodeError, StrictJsonError) as exception:
         result = {
             "success": False,
             "message": "The input could not be read as one JSON document.",
