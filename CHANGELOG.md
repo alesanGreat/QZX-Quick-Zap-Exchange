@@ -15,7 +15,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   The Golden Core guide, project README, and contribution guide now route
   contributors to this entrypoint while keeping platform evidence distinct from
   universal compatibility, independent adoption, certification, or automatic
-  Beta readiness.
+  Beta readiness. This single evidence path replaces the older, less complete
+  compatibility-report form.
 
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`

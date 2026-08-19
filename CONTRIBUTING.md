@@ -49,8 +49,9 @@ python -m pytest -q
 QZX concentrates its compatibility tests on the standard CPython 3.13.x
 build. Other Python versions or implementations may work, but experimental
 free-threaded CPython builds, PyPy, and other implementations are not
-certified. Compatibility reports from those runtimes are welcome when they
-identify the exact implementation, version, and build.
+certified. Evidence from those runtimes is welcome through the Golden Core
+form when it identifies the exact implementation, version, build, and tested
+boundary.
 
 Run the real command as well as proportional automated tests. For website
 changes, use the separate website workspace and its own contribution process;
