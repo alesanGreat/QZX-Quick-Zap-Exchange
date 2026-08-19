@@ -14,7 +14,7 @@ jobs:
   test-real-format-code-ubuntu-24-04-amd64:
     name: Real formatCode native tools | Ubuntu 24.04 amd64 | CPython 3.13
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     env:
       QZX_TELEMETRY: "0"
     steps:
@@ -29,34 +29,58 @@ jobs:
           python-version: "3.13"
           cache: pip
 
-      - name: Install every declared real formatter | Ubuntu 24.04 amd64
+      - name: Prepare every declared real formatter | Ubuntu 24.04 amd64
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes \
-            clang-format \
-            curl \
-            golang-go \
-            nodejs \
-            npm \
-            php-cli \
-            rustfmt
+
+          # GitHub's ubuntu-24.04 image declares these toolchains. Verify that
+          # contract explicitly instead of reinstalling them through a mutable
+          # regional apt mirror on every pull request.
+          runner_tools=(clang-format curl gofmt node npm php rustfmt)
+          missing_tools=()
+          for tool in "${runner_tools[@]}"; do
+            if ! command -v "${tool}" >/dev/null; then
+              missing_tools+=("${tool}")
+            fi
+          done
+          if (( ${#missing_tools[@]} )); then
+            printf 'Missing ubuntu-24.04 runner tools: %s\n' \
+              "${missing_tools[*]}" >&2
+            exit 1
+          fi
+
           python -m pip install \
+            --disable-pip-version-check \
+            --no-input \
             black==26.5.1 \
             pytest \
             -e .
-          sudo npm install --global prettier@3.6.2
+
+          npm_prefix="${RUNNER_TEMP}/qzx-npm"
+          npm install --global --prefix "${npm_prefix}" prettier@3.6.2
+          printf '%s\n' "${npm_prefix}/bin" >> "${GITHUB_PATH}"
+
+          php_cs_fixer="${RUNNER_TEMP}/php-cs-fixer"
           curl --fail --location --silent --show-error \
+            --retry 5 --retry-all-errors --connect-timeout 20 --max-time 120 \
             https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/releases/download/v3.95.1/php-cs-fixer.phar \
-            --output "${RUNNER_TEMP}/php-cs-fixer"
-          chmod +x "${RUNNER_TEMP}/php-cs-fixer"
-          sudo mv "${RUNNER_TEMP}/php-cs-fixer" /usr/local/bin/php-cs-fixer
+            --output "${php_cs_fixer}"
+          printf '%s  %s\n' \
+            '3a06439b16ca8a7713d47da25efbf7808b7c08e6f0bdedf2b0d69cf0ce887414' \
+            "${php_cs_fixer}" | sha256sum --check --strict
+          chmod +x "${php_cs_fixer}"
+          printf '%s\n' "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+
+          export PATH="${npm_prefix}/bin:${RUNNER_TEMP}:${PATH}"
 
           black --version
+          node --version
+          npm --version
           prettier --version
           rustfmt --version
           gofmt </dev/null >/dev/null
+          php --version
           php-cs-fixer --version
           clang-format --version
 
