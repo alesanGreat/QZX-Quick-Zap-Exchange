@@ -43,6 +43,26 @@ class AuditRepositoryCommand(CommandBase):
             'description': 'Audit project at specified path'
         }
     ]
+
+    @staticmethod
+    def _is_documentation_placeholder_url(parsed_link):
+        """Return whether a URL uses an exact reserved documentation host."""
+
+        hostname = parsed_link.hostname
+        if hostname is None:
+            return False
+        normalized_host = hostname.casefold().rstrip(".")
+        return (
+            normalized_host in {"example.com", "localhost"}
+            or normalized_host.endswith(".example.com")
+            or normalized_host.endswith(".localhost")
+        )
+
+    @staticmethod
+    def _open_url(request, timeout):
+        """Open one external documentation URL through an injectable seam."""
+
+        return urllib.request.urlopen(request, timeout=timeout)
     
     def execute(self, path='.'):
         """
@@ -251,11 +271,11 @@ class AuditRepositoryCommand(CommandBase):
                             is_broken = False
                             reason = ""
                             if link.startswith(("http://", "https://")):
-                                if "example.com" in link or "localhost" in link:
+                                if self._is_documentation_placeholder_url(parsed_link):
                                     continue
                                 try:
                                     req = urllib.request.Request(link, headers={'User-Agent': 'QZX-Link-Checker'})
-                                    with urllib.request.urlopen(req, timeout=2.0) as resp:
+                                    with self._open_url(req, timeout=2.0) as resp:
                                         if resp.status >= 400:
                                             is_broken = True
                                             reason = f"HTTP {resp.status}"

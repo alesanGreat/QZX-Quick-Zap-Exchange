@@ -5,7 +5,21 @@
 Tests for the AuditRepository command
 """
 
+import urllib.error
+
 from qzx.commands.development.audit_repository import AuditRepositoryCommand
+
+
+class RefusingNetworkAuditRepositoryCommand(AuditRepositoryCommand):
+    """Record external checks without contacting a network."""
+
+    def __init__(self):
+        super().__init__()
+        self.requested_urls = []
+
+    def _open_url(self, request, timeout):
+        self.requested_urls.append(request.full_url)
+        raise urllib.error.URLError("synthetic unavailable host")
 
 class TestAuditRepositoryCommand:
     """
@@ -100,3 +114,39 @@ class TestAuditRepositoryCommand:
 
         assert result["success"] is True
         assert result["details"]["broken_links"] == []
+
+    def test_audit_repository_matches_placeholder_url_hostnames_exactly(
+        self, tmp_path
+    ):
+        """Placeholder text outside the hostname must not suppress a check."""
+        (tmp_path / "LICENSE").write_text("MIT License", encoding="utf-8")
+        (tmp_path / ".gitignore").write_text(
+            "node_modules\n.env\n__pycache__\ndist\nbuild\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "README.md").write_text(
+            "\n".join(
+                (
+                    "[Reserved](https://example.com/guide)",
+                    "[Reserved subdomain](https://docs.example.com/guide)",
+                    "[Local](http://localhost/health)",
+                    "[Lookalike](https://example.com.attacker.invalid/guide)",
+                    "[Query text](https://invalid.example/?next=example.com)",
+                    "[Local lookalike](https://localhost.attacker.invalid/)",
+                )
+            ),
+            encoding="utf-8",
+        )
+
+        command = RefusingNetworkAuditRepositoryCommand()
+        result = command.execute(path=str(tmp_path))
+
+        assert result["success"] is True
+        assert command.requested_urls == [
+            "https://example.com.attacker.invalid/guide",
+            "https://invalid.example/?next=example.com",
+            "https://localhost.attacker.invalid/",
+        ]
+        assert [
+            finding["link"] for finding in result["details"]["broken_links"]
+        ] == command.requested_urls

@@ -7,6 +7,12 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Hardened two network boundaries found by CodeQL's initial repository scan.
+  `checkSslCertificate` now requires TLS 1.2 or newer for both trusted and
+  unverified diagnostic handshakes, while `auditRepository` recognizes reserved
+  documentation URLs from their parsed hostname so lookalike hosts and query
+  text cannot bypass external-link checks.
+
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested

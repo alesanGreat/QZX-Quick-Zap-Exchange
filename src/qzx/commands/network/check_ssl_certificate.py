@@ -3,11 +3,11 @@
 
 """Inspect an SSL/TLS certificate while reporting trust separately."""
 
-import os
 import socket
 import ssl
 import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 from qzx.core.command_base import CommandBase
 
@@ -79,16 +79,14 @@ class CheckSslCertificateCommand(CommandBase):
             cert, cipher, tls_version = self._connect(
                 host,
                 port_num,
-                ssl.create_default_context(),
+                self._create_tls_context(),
                 binary=False,
             )
         except ssl.SSLCertVerificationError as exc:
             chain_trusted = False
             verification_error = str(exc)
             try:
-                unverified_context = ssl.create_default_context()
-                unverified_context.check_hostname = False
-                unverified_context.verify_mode = ssl.CERT_NONE
+                unverified_context = self._create_unverified_tls_context()
                 der_cert, cipher, tls_version = self._connect(
                     host,
                     port_num,
@@ -192,6 +190,23 @@ class CheckSslCertificateCommand(CommandBase):
         }
 
     @staticmethod
+    def _create_tls_context():
+        """Create a verified context that never negotiates obsolete TLS."""
+
+        context = ssl.create_default_context()
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        return context
+
+    @classmethod
+    def _create_unverified_tls_context(cls):
+        """Create a diagnostic context with the same protocol floor."""
+
+        context = cls._create_tls_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        return context
+
+    @staticmethod
     def _connect(host, port, context, binary=False):
         with socket.create_connection((host, port), timeout=5) as sock:
             with context.wrap_socket(sock, server_hostname=host) as secure_socket:
@@ -218,10 +233,7 @@ class CheckSslCertificateCommand(CommandBase):
             return ssl._ssl._test_decode_cert(temporary_path)
         finally:
             if temporary_path:
-                try:
-                    os.unlink(temporary_path)
-                except OSError:
-                    pass
+                Path(temporary_path).unlink(missing_ok=True)
 
     @staticmethod
     def _parse_date(date_text):
