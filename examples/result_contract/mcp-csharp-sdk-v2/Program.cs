@@ -1,5 +1,6 @@
 using System.IO.Pipelines;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Client;
@@ -96,6 +97,7 @@ AssertResult(failure, expectedSuccess: false);
 JsonSerializerOptions wireOptions = new()
 {
     WriteIndented = true,
+    NewLine = "\n",
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 };
 
@@ -111,6 +113,32 @@ await WriteJsonAsync(
     Path.Combine(evidenceDirectory, "failure.json"),
     failure,
     wireOptions);
+
+Dictionary<string, string> evidenceSha256 = new(StringComparer.Ordinal)
+{
+    ["tool-definition.json"] = Sha256(
+        Path.Combine(evidenceDirectory, "tool-definition.json")),
+    ["success.json"] = Sha256(Path.Combine(evidenceDirectory, "success.json")),
+    ["failure.json"] = Sha256(Path.Combine(evidenceDirectory, "failure.json")),
+};
+Dictionary<string, string> expectedSha256 = new(StringComparer.Ordinal)
+{
+    ["tool-definition.json"] =
+        "cc32c0e1f9648e66cb81c1fc28862014b660d4714a477ec75316352367db273c",
+    ["success.json"] =
+        "9fa166682624f3f8dc4c7984f9ff9630287994fea8e78774a3e5df01bbc92cd2",
+    ["failure.json"] =
+        "34330cf5f34f38de7667f3ae9e6f2923aec9f519e56d46a6918a0e8a8cb4fee7",
+};
+foreach ((string filename, string expected) in expectedSha256)
+{
+    if (evidenceSha256[filename] != expected)
+    {
+        throw new InvalidOperationException(
+            $"{filename} changed from expected SHA-256 {expected} to " +
+            $"{evidenceSha256[filename]}.");
+    }
+}
 
 AssemblyName sdkAssembly = typeof(McpClient).Assembly.GetName();
 string assemblyVersion = sdkAssembly.Version?.ToString() ?? "unknown";
@@ -140,6 +168,7 @@ await WriteJsonAsync(
         http_exercised = false,
         sse_exercised = false,
         output_schema_mode = "canonical_inline",
+        contract_evidence_sha256 = evidenceSha256,
         tool = ToolName,
     },
     wireOptions);
@@ -217,4 +246,10 @@ static async Task WriteJsonAsync<T>(
 {
     string serialized = JsonSerializer.Serialize(value, options) + "\n";
     await File.WriteAllTextAsync(path, serialized);
+}
+
+static string Sha256(string path)
+{
+    byte[] digest = SHA256.HashData(File.ReadAllBytes(path));
+    return Convert.ToHexString(digest).ToLowerInvariant();
 }

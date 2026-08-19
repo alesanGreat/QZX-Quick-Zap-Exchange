@@ -24,8 +24,10 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   the exact inline QZX schema, and produce conforming success and failure
   evidence with `resultType: "complete"`. The exact NuGet graph is authenticated
   through `packages.lock.json`; CI builds outside the checkout and preserves the
-  generated bundle. The evidence explicitly separates exercised JSON-RPC
-  framing from absent raw-frame and HTTP/SSE coverage. This remains
+  generated bundle. LF serialization keeps the three contract evidence files
+  byte-identical across Windows and Linux, while environment metadata remains
+  intentionally platform-specific. The evidence explicitly separates exercised
+  JSON-RPC framing from absent raw-frame and HTTP/SSE coverage. This remains
   QZX-maintained reference evidence, not independent adoption.
 
 - Added a locked, executable interoperability example for the official MCP

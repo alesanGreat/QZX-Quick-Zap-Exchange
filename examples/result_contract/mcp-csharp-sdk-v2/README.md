@@ -26,6 +26,13 @@ created and maintained by the QZX project.
 - `global.json` selects .NET SDK `10.0.400`, while the project targets the
   supported `net10.0` LTS framework.
 
+The serializer pins LF newlines, so `tool-definition.json`, `success.json`, and
+`failure.json` have byte-identical SHA-256 digests on Windows and Linux for the
+same source revision. `evidence-metadata.json` remains environment-specific by
+design because it records the actual runtime and operating system. Generation
+fails closed if any of the three contract evidence digests changes, and the
+metadata publishes the observed digest map for review.
+
 The in-process stream transport exercises JSON-RPC serialization but does not
 exercise HTTP or SSE, and this example does not retain raw frames. Its evidence
 metadata records those boundaries explicitly. The neighboring
