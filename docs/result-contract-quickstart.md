@@ -307,6 +307,16 @@ the failure retains `isError: true`. It does not claim HTTP coverage or retain
 raw frames. CI validates and preserves this third QZX-maintained bundle with its
 `go.mod` and authenticated `go.sum` dependency graph.
 
+The locked stable
+[`mcp-csharp-sdk-v2`](../examples/result_contract/mcp-csharp-sdk-v2/README.md)
+example adds the official C# SDK 2.2.0 on .NET 10 LTS. Its client and server
+negotiate MCP 2026-07-28 through paired stream transports, exercising the SDK's
+newline-delimited JSON-RPC framing while retaining `resultType: "complete"`,
+explicit `isError`, and the exact inline QZX schema. It records that raw frames,
+HTTP, and SSE were not captured or exercised. CI restores the exact NuGet graph
+from `packages.lock.json`, builds outside the checkout, and preserves this
+fourth QZX-maintained evidence bundle.
+
 ## 5. Publish the smallest reviewable evidence bundle
 
 A first independent implementation does not need a white paper. A small public

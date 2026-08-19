@@ -283,6 +283,10 @@ def test_distribution_verifier_rejects_missing_readme_link_target(tmp_path):
             "examples/result_contract/mcp-go-sdk-v1/go.sum",
             r"mcp-go-sdk-v1/go\.sum",
         ),
+        (
+            "examples/result_contract/mcp-csharp-sdk-v2/packages.lock.json",
+            r"mcp-csharp-sdk-v2/packages\.lock\.json",
+        ),
     ],
 )
 def test_distribution_verifier_rejects_missing_nested_result_contract_example(

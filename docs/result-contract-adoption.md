@@ -355,6 +355,16 @@ and validates the exact inline QZX schema. Its metadata distinguishes exercising
 JSON-RPC framing from retaining raw frames and makes clear that HTTP and SSE were
 not tested. It is QZX-maintained reference evidence, not independent adoption.
 
+The locked stable
+[`mcp-csharp-sdk-v2`](../examples/result_contract/mcp-csharp-sdk-v2/README.md)
+example exercises the official C# SDK 2.2.0 client, server, tool collection, and
+paired newline-delimited JSON-RPC stream transports at MCP 2026-07-28 on .NET 10
+LTS. It preserves the client-observed complete models, authenticates the exact
+NuGet graph through `packages.lock.json`, and validates the canonical inline QZX
+schema. Its metadata separates exercised JSON-RPC framing from absent raw-frame,
+HTTP, and SSE coverage. It is QZX-maintained reference evidence, not independent
+adoption.
+
 Validate the transport-independent core fixtures:
 
 ```bash

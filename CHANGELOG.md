@@ -15,8 +15,18 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   exactly one of `result` or `error`; protocol-error envelopes cannot be
   certified as completed QZX results. New receipts fingerprint the strict JSON
   decoder while the receipt schema remains compatible with the previous
-  material set. The examples index now compares all three official SDK
-  references, including Go, by protocol and exercised transport boundary.
+  material set. The examples index now compares all four official SDK
+  references by protocol and exercised transport boundary.
+
+- Added a locked interoperability example for the official MCP C# SDK stable
+  release 2.2.0 on .NET 10 LTS. Its official client and server negotiate MCP
+  2026-07-28 over paired newline-delimited JSON-RPC stream transports, publish
+  the exact inline QZX schema, and produce conforming success and failure
+  evidence with `resultType: "complete"`. The exact NuGet graph is authenticated
+  through `packages.lock.json`; CI builds outside the checkout and preserves the
+  generated bundle. The evidence explicitly separates exercised JSON-RPC
+  framing from absent raw-frame and HTTP/SSE coverage. This remains
+  QZX-maintained reference evidence, not independent adoption.
 
 - Added a locked, executable interoperability example for the official MCP
   TypeScript client/server SDK 2.0.0. It negotiates MCP 2026-07-28 through the

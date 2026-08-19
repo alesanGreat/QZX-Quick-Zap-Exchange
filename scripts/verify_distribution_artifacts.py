@@ -39,8 +39,10 @@ RESULT_CONTRACT_MANIFEST_PATH = (
 RESULT_CONTRACT_EXAMPLES_ROOT = PROJECT_ROOT / "examples" / "result_contract"
 RESULT_CONTRACT_EXAMPLE_SUFFIXES = frozenset(
     {
-        ".in",
+        ".cs",
+        ".csproj",
         ".go",
+        ".in",
         ".json",
         ".md",
         ".mod",
