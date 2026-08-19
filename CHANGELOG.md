@@ -11,9 +11,10 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   runner cancellations inside `apt-get` and before QZX executed. The fixed
   Ubuntu 24.04 runner's documented Clang-format, Go, Node, PHP, and Rust tools
   are now verified explicitly instead of being reinstalled through a mutable
-  regional mirror; pinned Black, Pytest, and Prettier install without root, and the
-  pinned PHP-CS-Fixer download now has bounded retries plus an exact SHA-256
-  integrity check. A workflow-policy regression test preserves those controls.
+  regional mirror; pinned Black, Pytest, and Prettier install without root, and
+  the pinned PHP-CS-Fixer download now has bounded retries plus an exact
+  SHA-256 integrity check. A workflow-policy regression test preserves those
+  controls.
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested
