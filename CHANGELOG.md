@@ -7,6 +7,13 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Added an official OpenSSF Scorecard workflow that publishes an OIDC-authenticated
+  weekly supply-chain assessment and uploads its SARIF findings to GitHub code
+  scanning. The workflow runs only from `main`, uses a fixed Ubuntu runner,
+  bounds its runtime, keeps write permissions inside the single analysis job,
+  avoids persisted checkout credentials, and pins every external Action to a
+  full commit SHA. Policy tests preserve those restrictions and the exact set
+  of publisher-approved Actions.
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested
