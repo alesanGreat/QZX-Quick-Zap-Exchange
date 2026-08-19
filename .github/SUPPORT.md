@@ -16,17 +16,19 @@ qzx version --json
 qzx listCommands --json
 ```
 
-## Reproducible bugs and compatibility reports
+## Reproducible bugs and platform evidence
 
 Use the [issue chooser](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new/choose)
-for a reproducible bug, feature proposal, or platform compatibility report.
+for a reproducible bug, feature proposal, or platform evidence report.
 Include the QZX version, operating system, standard CPython version, exact
 command, expected result, and sanitized output when they are relevant.
 
 ## Private security reports
 
-Potential vulnerabilities belong in the private process described in
-[SECURITY.md](../SECURITY.md), not a public issue or discussion.
+Potential vulnerabilities belong in the
+[private vulnerability report](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/security/advisories/new)
+or the email alternative described in [SECURITY.md](../SECURITY.md), not a
+public issue or discussion.
 
 ## Sponsorship
 

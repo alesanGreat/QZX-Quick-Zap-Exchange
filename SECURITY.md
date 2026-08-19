@@ -6,8 +6,11 @@ the current development checkout, and the official website.
 ## Report privately
 
 Do not open a public issue for a vulnerability that could put users or systems
-at risk. Email `qzx@yumbale.com` with the subject `[SECURITY] QZX report`.
-Include, when safe:
+at risk. Use the repository's
+[private vulnerability report](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/security/advisories/new)
+so the finding can be discussed in a private GitHub advisory. If that channel
+is not suitable, email `qzx@yumbale.com` with the subject
+`[SECURITY] QZX report`. Include, when safe:
 
 - the affected QZX version or website URL;
 - operating system and Python version;

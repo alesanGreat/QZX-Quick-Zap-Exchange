@@ -7,5 +7,5 @@ contact_links:
     url: https://qzx.yumbale.com/en/commands
     about: Check command availability, parameters, safety, and platform evidence.
   - name: Private security report
-    url: https://qzx.yumbale.com/en/contact
-    about: Report vulnerabilities privately instead of opening a public issue.
+    url: https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/security/advisories/new
+    about: Submit a vulnerability privately to the maintainer instead of opening a public issue.
