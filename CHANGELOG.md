@@ -15,8 +15,20 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   exactly one of `result` or `error`; protocol-error envelopes cannot be
   certified as completed QZX results. New receipts fingerprint the strict JSON
   decoder while the receipt schema remains compatible with the previous
-  material set. The examples index now compares all four official SDK
+  material set. The examples index now compares all five official SDK
   references by protocol and exercised transport boundary.
+
+- Added a locked interoperability example for the official MCP Java SDK stable
+  release 2.0.0 on Java 21 LTS. Its official client launches the official server
+  across a real subprocess boundary, negotiates MCP 2025-11-25 over the SDK's
+  newline-delimited JSON-RPC `stdio` transports, publishes the exact inline QZX
+  schema, and produces conforming success and failure evidence. The Maven 3.9.9
+  Wrapper distribution is checksum-pinned, all direct dependencies and build
+  plugins use exact versions, and CI rejects drift in the committed resolved
+  runtime coordinates while building outside the checkout. Contract evidence
+  files are byte-reproducible across operating systems; raw frames, HTTP, and
+  SSE remain explicitly outside the claim. This is QZX-maintained reference
+  evidence, not independent adoption.
 
 - Added a locked interoperability example for the official MCP C# SDK stable
   release 2.2.0 on .NET 10 LTS. Its official client and server negotiate MCP

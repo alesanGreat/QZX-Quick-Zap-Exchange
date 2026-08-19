@@ -1,0 +1,15 @@
+com.qzxproject.evidence:mcp-java-sdk-evidence:jar:1.0.0
++- io.modelcontextprotocol.sdk:mcp:jar:2.0.0:compile
+|  +- io.modelcontextprotocol.sdk:mcp-json-jackson3:jar:2.0.0:compile
+|  |  +- tools.jackson.core:jackson-databind:jar:3.0.3:compile
+|  |  |  \- tools.jackson.core:jackson-core:jar:3.0.3:compile
+|  |  \- com.networknt:json-schema-validator:jar:3.0.0:compile
+|  |     +- com.ethlo.time:itu:jar:1.14.0:compile
+|  |     \- tools.jackson.dataformat:jackson-dataformat-yaml:jar:3.0.3:compile
+|  |        \- org.snakeyaml:snakeyaml-engine:jar:2.10:compile
+|  \- io.modelcontextprotocol.sdk:mcp-core:jar:2.0.0:compile
+|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.20:compile
+|     \- io.projectreactor:reactor-core:jar:3.7.0:compile
+|        \- org.reactivestreams:reactive-streams:jar:1.0.4:compile
+\- org.slf4j:slf4j-nop:jar:2.0.16:runtime
+   \- org.slf4j:slf4j-api:jar:2.0.16:compile

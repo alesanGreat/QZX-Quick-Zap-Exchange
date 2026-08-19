@@ -365,6 +365,17 @@ schema. Its metadata separates exercised JSON-RPC framing from absent raw-frame,
 HTTP, and SSE coverage. It is QZX-maintained reference evidence, not independent
 adoption.
 
+The locked stable
+[`mcp-java-sdk-v2`](../examples/result_contract/mcp-java-sdk-v2/README.md)
+example exercises the official Java SDK 2.0.0 client and server across a real
+subprocess boundary using its newline-delimited JSON-RPC `stdio` transports at
+MCP 2025-11-25 on Java 21 LTS. It validates the exact inline QZX schema and
+preserves the client-observed success and failure models. The Maven Wrapper is
+checksum-pinned, and CI rejects changes to the committed resolved runtime
+coordinates. Its metadata records that raw frames, HTTP, and SSE were not
+captured or exercised. It is QZX-maintained reference evidence, not independent
+adoption.
+
 Validate the transport-independent core fixtures:
 
 ```bash

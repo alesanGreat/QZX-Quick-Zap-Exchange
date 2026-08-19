@@ -51,3 +51,14 @@ updates:
       mcp-csharp-sdk:
         patterns:
           - "ModelContextProtocol.Core"
+  - package-ecosystem: "maven"
+    directory: "/examples/result_contract/mcp-java-sdk-v2"
+    schedule:
+      interval: "weekly"
+    groups:
+      mcp-java-sdk:
+        patterns:
+          - "io.modelcontextprotocol.sdk:*"
+          - "org.slf4j:*"
+          - "org.apache.maven.plugins:*"
+          - "io.spring.javaformat:*"

@@ -65,8 +65,9 @@ you need to answer:
 | [Python SDK v2](mcp-python-sdk-v2/README.md) | MCP 2026-07-28 | Modern direct dispatcher; no HTTP or JSON-RPC framing. |
 | [Go SDK v1](mcp-go-sdk-v1/README.md) | MCP 2025-11-25 | Paired in-memory transport with newline-delimited JSON-RPC; no retained raw frames. |
 | [C# SDK v2](mcp-csharp-sdk-v2/README.md) | MCP 2026-07-28 | Paired in-memory streams with newline-delimited JSON-RPC; no retained raw frames. |
+| [Java SDK v2](mcp-java-sdk-v2/README.md) | MCP 2025-11-25 | Subprocess `stdio` with newline-delimited JSON-RPC; no retained raw frames. |
 
-All four run real official client/server success and failure pairs and are
+All five run real official client/server success and failure pairs and are
 continuously checked in CI. They remain QZX-maintained reference evidence, not
 independent adoption.
 

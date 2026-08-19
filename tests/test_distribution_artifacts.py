@@ -201,7 +201,11 @@ def build_fixture_distributions(
             relative_path = source.relative_to(REPOSITORY_ROOT).as_posix()
             if (
                 not source.is_file()
-                or source.suffix.lower() not in RESULT_CONTRACT_EXAMPLE_SUFFIXES
+                or (
+                    source.suffix.lower()
+                    not in RESULT_CONTRACT_EXAMPLE_SUFFIXES
+                    and source.name != "mvnw"
+                )
                 or relative_path == omitted_support_file
             ):
                 continue
@@ -286,6 +290,14 @@ def test_distribution_verifier_rejects_missing_readme_link_target(tmp_path):
         (
             "examples/result_contract/mcp-csharp-sdk-v2/packages.lock.json",
             r"mcp-csharp-sdk-v2/packages\.lock\.json",
+        ),
+        (
+            "examples/result_contract/mcp-java-sdk-v2/dependency-tree.txt",
+            r"mcp-java-sdk-v2/dependency-tree\.txt",
+        ),
+        (
+            "examples/result_contract/mcp-java-sdk-v2/mvnw",
+            r"mcp-java-sdk-v2/mvnw",
         ),
     ],
 )

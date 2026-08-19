@@ -40,7 +40,12 @@ wire example, the locked
 [`mcp-python-sdk-v2`](examples/result_contract/mcp-python-sdk-v2/README.md)
 direct-dispatch example, or the locked stable
 [`mcp-go-sdk-v1`](examples/result_contract/mcp-go-sdk-v1/README.md)
-newline-delimited JSON-RPC example. They prove QZX's own integration recipes
+newline-delimited JSON-RPC example. The locked stable
+[`mcp-csharp-sdk-v2`](examples/result_contract/mcp-csharp-sdk-v2/README.md)
+and
+[`mcp-java-sdk-v2`](examples/result_contract/mcp-java-sdk-v2/README.md)
+examples add .NET and JVM paths over official stream or subprocess `stdio`
+transports. They prove QZX's own integration recipes
 against the named SDK releases, but do not count as independent adopters
 because QZX maintains the examples and their conformance claims.
 

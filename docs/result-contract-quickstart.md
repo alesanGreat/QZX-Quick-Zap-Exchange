@@ -317,6 +317,17 @@ HTTP, and SSE were not captured or exercised. CI restores the exact NuGet graph
 from `packages.lock.json`, builds outside the checkout, and preserves this
 fourth QZX-maintained evidence bundle.
 
+The locked stable
+[`mcp-java-sdk-v2`](../examples/result_contract/mcp-java-sdk-v2/README.md)
+example adds the official Java SDK 2.0.0 on Java 21 LTS. Its client launches the
+official server as a subprocess and negotiates MCP 2025-11-25 through the SDK's
+newline-delimited JSON-RPC `stdio` transports. It publishes the exact inline QZX
+schema and preserves explicit `isError` with matching structured and text
+content. CI verifies the checksum-pinned Maven Wrapper, rejects drift in the
+resolved runtime coordinates, builds outside the checkout, and preserves this
+fifth QZX-maintained evidence bundle. Raw frames, HTTP, and SSE remain outside
+the claim boundary.
+
 ## 5. Publish the smallest reviewable evidence bundle
 
 A first independent implementation does not need a white paper. A small public

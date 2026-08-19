@@ -43,14 +43,18 @@ RESULT_CONTRACT_EXAMPLE_SUFFIXES = frozenset(
         ".csproj",
         ".go",
         ".in",
+        ".java",
         ".json",
         ".md",
         ".mod",
         ".mjs",
+        ".cmd",
+        ".properties",
         ".py",
         ".sum",
         ".ts",
         ".txt",
+        ".xml",
         ".yaml",
     }
 )
@@ -624,7 +628,10 @@ def verify_sdist(
             f"{root}/{path.relative_to(PROJECT_ROOT).as_posix()}"
             for path in sorted(RESULT_CONTRACT_EXAMPLES_ROOT.rglob("*"))
             if path.is_file()
-            and path.suffix.lower() in RESULT_CONTRACT_EXAMPLE_SUFFIXES
+            and (
+                path.suffix.lower() in RESULT_CONTRACT_EXAMPLE_SUFFIXES
+                or path.name == "mvnw"
+            )
         ]
         readme_link_names = [
             f"{root}/{relative_path}"

@@ -137,8 +137,9 @@ the Action also exposes the exact contract schema digest as
 `contract_schema_sha256`. Locked, executable reference integrations cover the
 official MCP [TypeScript](examples/result_contract/mcp-typescript-sdk-v2/README.md),
 [Python](examples/result_contract/mcp-python-sdk-v2/README.md),
-[Go](examples/result_contract/mcp-go-sdk-v1/README.md), and
-[C#](examples/result_contract/mcp-csharp-sdk-v2/README.md) SDKs without
+[Go](examples/result_contract/mcp-go-sdk-v1/README.md),
+[C#](examples/result_contract/mcp-csharp-sdk-v2/README.md), and
+[Java](examples/result_contract/mcp-java-sdk-v2/README.md) SDKs without
 counting QZX-maintained examples as independent adoption. Independent
 implementations and bounded pilots can follow the
 [adoption guide](docs/result-contract-adoption.md). If an experiment is not
