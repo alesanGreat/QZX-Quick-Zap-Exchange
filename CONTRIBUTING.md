@@ -17,6 +17,13 @@ Read:
 - [the project overview](README.md);
 - [the security policy](SECURITY.md) for private vulnerability reports.
 
+To contribute a real platform run without changing code, use the
+[Golden Core evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml).
+It accepts the canonical sanitized capture as well as selected-command failures
+and portability counterexamples. Review every generated record manually before
+uploading it; the public form must never contain credentials, private paths or
+remotes, personal data, proprietary content, or internal addresses.
+
 Public commands must preserve the dual-output contract: warm human output by
 default and equivalent stable JSON under `--json`, with at least `success` and
 a descriptive `message`.

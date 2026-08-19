@@ -171,7 +171,9 @@ The repository's existing Windows, Linux, and macOS matrix also captures one
 sanitized 15-command evidence record per runner and validates a combined
 cross-platform summary. The capturer uses only disposable fixtures and an
 authorized loopback HTTP endpoint; it does not request secrets or private
-project data.
+project data. Independent contributors can use the
+[Golden Core platform evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml)
+after manually reviewing the generated JSON for private data.
 
 ### Command maturity is explicit
 

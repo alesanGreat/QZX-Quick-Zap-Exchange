@@ -1,0 +1,143 @@
+name: Golden Core platform evidence
+description: Submit a sanitized independent Golden Core run, boundary result, or reproducible counterexample.
+title: "[Golden Core evidence]: "
+labels:
+  - golden-core
+  - help wanted
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping QZX test its Golden Core on a real system. The preferred path is the [sanitizing evidence capturer](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/golden-core.md#platform-evidence-pipeline), run from a clean checkout pinned to the revision you report. It creates disposable fixtures and uses only an authorized loopback HTTP endpoint.
+
+        **This issue and every attachment are public.** The capturer replaces known checkout, home, user, hostname, fixture, and ephemeral-port values, but automated sanitization is not a guarantee. Open and review the JSON before attaching it. Remove secrets, private paths, remotes, personal data, proprietary content, internal addresses, and anything else that should not be public. Report a vulnerability privately through [SECURITY.md](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/SECURITY.md).
+
+        Independent evidence strengthens only the exact QZX revision, commands, environment, fixtures, arguments, and results observed. It is not a universal compatibility claim and does not automatically promote a command from Alpha to Beta.
+  - type: checkboxes
+    id: public_safety
+    attributes:
+      label: Public evidence safety
+      options:
+        - label: I understand this issue and its attachments are public, and this is not a private security report.
+          required: true
+        - label: I manually reviewed the evidence and removed credentials, private paths, remotes, personal data, proprietary content, and internal addresses.
+          required: true
+  - type: dropdown
+    id: evidence_kind
+    attributes:
+      label: Evidence kind
+      description: The canonical capturer runs the complete current cohort. Selected-command evidence and negative findings are also useful when their boundary is explicit.
+      options:
+        - Canonical sanitized Golden Core capture
+        - Selected-command manual reproduction
+        - Reproducible failure or boundary result
+        - Counterexample or portability limitation
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Exact QZX revision
+      description: Full 40-character Git commit SHA preferred; otherwise provide an immutable release tag plus its commit SHA.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+  - type: input
+    id: qzx_version
+    attributes:
+      label: Observed QZX version
+      description: Copy the version recorded by the evidence or `qzx version --json`; do not infer it from a branch name.
+      placeholder: 0.2.2.0.7a5
+    validations:
+      required: true
+  - type: dropdown
+    id: platform_family
+    attributes:
+      label: Platform family
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - FreeBSD
+        - OpenBSD
+        - illumos or Solaris
+        - Another operating system
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Exact environment
+      description: OS edition/release, architecture, standard Python implementation/version/build, shell, virtualization, permissions, Git, and other relevant native dependencies. Do not include the hostname or username.
+      placeholder: Ubuntu 24.04.3 LTS, x86_64, standard CPython 3.13.15, Bash 5.2, Git 2.43.0, bare-metal host
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction command and exit status
+      description: Include the exact sanitized command, working-copy state, exit code, and whether the run was repeated. The canonical command is shown in the Golden Core documentation.
+      placeholder: |
+        git status --short: clean
+        python scripts/capture_golden_core_platform_evidence.py --output evidence.json --environment-id ubuntu-24-amd64 --environment-name "Ubuntu 24.04 amd64"
+        exit code: 0
+        repeated: twice with equivalent command results
+    validations:
+      required: true
+  - type: dropdown
+    id: observed_result
+    attributes:
+      label: Observed result
+      options:
+        - Complete capture succeeded
+        - Selected commands worked as documented
+        - Worked with a limitation
+        - Reproducible command failure
+        - Evidence capturer could not complete
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Drag the manually reviewed JSON file here or link to an immutable public record. For a manual reproduction, include sanitized command, arguments, exit code, stdout, and stderr. Do not paste secrets or machine-private data.
+      placeholder: Attach evidence.json or provide an immutable public URL.
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations and untested boundaries
+      description: State commands skipped, missing dependencies, retries, virtualization, permissions, deviations, and what this evidence does not prove.
+      placeholder: Only this exact host and revision were tested; no elevated permissions or proxy were exercised.
+    validations:
+      required: true
+  - type: dropdown
+    id: credit
+    attributes:
+      label: Public credit preference
+      options:
+        - Credit my GitHub account
+        - Credit the name or organization specified below
+        - Keep the evidence attribution anonymous
+    validations:
+      required: true
+  - type: input
+    id: credit_name
+    attributes:
+      label: Optional public credit name or organization
+      description: Complete this only when you selected the named credit option and are authorized to grant that permission.
+      placeholder: Example Organization
+    validations:
+      required: false
+  - type: checkboxes
+    id: accuracy
+    attributes:
+      label: Scope and permission
+      options:
+        - label: I am authorized to publish this evidence and the selected attribution.
+          required: true
+        - label: The evidence came from the exact QZX revision and environment reported above; I have not represented mocked results as real platform evidence.
+          required: true
+        - label: I understand this submission is evidence for the observed boundary only and does not automatically establish universal compatibility, independent adoption, certification, or Beta readiness.
+          required: true

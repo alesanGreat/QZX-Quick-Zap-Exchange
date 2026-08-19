@@ -7,6 +7,16 @@ checkout. Changing this file does not publish a package or create a release.
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Added a dedicated Golden Core platform-evidence issue form for independent
+  real-system captures, selected-command failures, and portability
+  counterexamples. It requires an immutable QZX revision, exact environment,
+  reproduction command and exit status, manually reviewed sanitized evidence,
+  limitations, attribution preference, and explicit public-data permission.
+  The Golden Core guide, project README, and contribution guide now route
+  contributors to this entrypoint while keeping platform evidence distinct from
+  universal compatibility, independent adoption, certification, or automatic
+  Beta readiness.
+
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested
