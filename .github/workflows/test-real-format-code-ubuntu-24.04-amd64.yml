@@ -54,7 +54,7 @@ jobs:
             --disable-pip-version-check \
             --no-input \
             black==26.5.1 \
-            pytest \
+            pytest==9.1.1 \
             -e .
 
           npm_prefix="${RUNNER_TEMP}/qzx-npm"

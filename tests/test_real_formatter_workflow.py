@@ -39,6 +39,7 @@ def test_real_formatter_workflow_pins_downloads_and_uses_external_tool_paths():
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     assert "black==26.5.1" in workflow
+    assert "pytest==9.1.1" in workflow
     assert "prettier@3.6.2" in workflow
     assert "PHP-CS-Fixer/releases/download/v3.95.1/php-cs-fixer.phar" in workflow
     assert workflow.count(PHP_CS_FIXER_SHA256) == 1
