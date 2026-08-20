@@ -136,18 +136,6 @@ def source_bytes(relative_path: str) -> bytes:
     return canonicalize_source_bytes((PROJECT_ROOT / relative_path).read_bytes())
 
 
-def digest_source_paths(relative_paths: list[str] | tuple[str, ...]) -> str:
-    """Hash paths and bytes deterministically so moved files also invalidate."""
-
-    digest = hashlib.sha256()
-    for relative_path in sorted(set(relative_paths)):
-        digest.update(relative_path.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(source_bytes(relative_path))
-        digest.update(b"\0")
-    return "sha256:" + digest.hexdigest()
-
-
 @lru_cache(maxsize=1)
 def load_lifecycle_digest_document() -> dict[str, Any]:
     """Load lifecycle metadata for semantic per-command digest projection."""
