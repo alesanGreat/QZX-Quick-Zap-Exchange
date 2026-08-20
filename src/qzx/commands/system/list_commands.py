@@ -96,7 +96,6 @@ class ListCommandsCommand(CommandBase):
         else:
             title = "Available Commands"
         
-        result = [title]
         command_count = sum(len(commands) for commands in categories.values())
         category_count = sum(1 for commands in categories.values() if commands)
         summary = {
@@ -104,7 +103,6 @@ class ListCommandsCommand(CommandBase):
             "categories": category_count,
             "filter": requested_filter,
         }
-        result.append(f"Commands: {command_count}")
         maturity_details = {}
         for commands in categories.values():
             for item in commands:
@@ -126,39 +124,11 @@ class ListCommandsCommand(CommandBase):
             stage: details["count"]
             for stage, details in ordered_maturity
         }
-        if maturity_summary:
-            maturity_text = ", ".join(
-                "{} {}".format(details["count"], details["label"])
-                for stage, details in ordered_maturity
-            )
-            result.append(f"Maturity: {maturity_text}")
-        
-        # Generate output for each category
-        for category in sorted(categories):
-            # Skip empty categories
-            if not categories[category]:
-                continue
-                
-            result.append(f"\n[{category.upper()}]")
-            # Sort commands within category
-            for item in sorted(
-                categories[category],
-                key=lambda command: command["name"].lower(),
-            ):
-                result.append(
-                    "  {} [{}]: {}".format(
-                        item["name"],
-                        item["maturity"]["label"],
-                        item["description"],
-                    )
-                )
-        
-        text_result = "\n".join(result)
-        
+
         # Format the result for consistent output
         return {
             "success": True,
-            "message": text_result,
+            "message": f"{title}\nCommands: {command_count}",
             "summary": summary,
             "maturity_summary": maturity_summary,
             "commands": categories,

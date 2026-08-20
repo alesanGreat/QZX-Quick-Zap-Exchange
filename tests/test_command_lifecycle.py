@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from qzx.cli import _render_human
 from qzx.commands.system.get_current_directory import GetCurrentDirectoryCommand
 from qzx.commands.system.help import HelpCommand
 from qzx.commands.system.list_commands import ListCommandsCommand
@@ -184,7 +185,7 @@ def test_usage_errors_keep_command_maturity_metadata():
 
 def test_help_and_list_expose_the_same_maturity_source():
     help_result = HelpCommand().execute("getCurrentDirectory")
-    list_result = ListCommandsCommand().execute("getCurrentDirectory")
+    list_result = ListCommandsCommand().invoke(["getCurrentDirectory"])
 
     assert help_result["details"]["maturity"] == command_maturity(
         "getCurrentDirectory"
@@ -193,4 +194,4 @@ def test_help_and_list_expose_the_same_maturity_source():
     assert listed["name"] == "getCurrentDirectory"
     assert listed["maturity"] == command_maturity("getCurrentDirectory")
     assert list_result["maturity_summary"] == {"alpha": 1}
-    assert "getCurrentDirectory [Alpha]" in list_result["message"]
+    assert "getCurrentDirectory [Alpha]" in _render_human(list_result)
