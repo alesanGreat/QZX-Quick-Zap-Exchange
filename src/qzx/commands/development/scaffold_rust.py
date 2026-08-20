@@ -169,7 +169,7 @@ class ScaffoldRustCommand(CommandBase):
         if is_binary:
             # Create main.rs for binary projects
             main_path = os.path.join(src_dir, 'main.rs')
-            with open(main_path, 'w') as f:
+            with open(main_path, 'w', encoding='utf-8') as f:
                 f.write('''fn main() {
     println!("Hello, world from Rust!");
 }
@@ -178,7 +178,7 @@ class ScaffoldRustCommand(CommandBase):
         else:
             # Create lib.rs for library projects
             lib_path = os.path.join(src_dir, 'lib.rs')
-            with open(lib_path, 'w') as f:
+            with open(lib_path, 'w', encoding='utf-8') as f:
                 f.write('''/// A sample library function.
 /// 
 /// # Examples
@@ -217,7 +217,7 @@ mod tests {
         
         # Create integration test file
         test_path = os.path.join(tests_dir, 'integration_test.rs')
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write('''// Integration tests go here
 #[cfg(test)]
 mod integration_tests {
@@ -245,7 +245,7 @@ mod integration_tests {
         cargo_path = os.path.join(project_path, 'Cargo.toml')
         
         cargo_type = "bin" if is_binary else "lib"
-        with open(cargo_path, 'w') as f:
+        with open(cargo_path, 'w', encoding='utf-8') as f:
             f.write(f'''[package]
 name = "{project_name}"
 version = "0.1.0"
@@ -276,7 +276,7 @@ path = "src/lib.rs"
             result (dict): Result dictionary to update
         """
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''/target
 **/*.rs.bk
 Cargo.lock
@@ -296,7 +296,7 @@ Cargo.lock
         readme_path = os.path.join(project_path, 'README.md')
         project_type = "Binary application" if is_binary else "Library"
         
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name}
 
 {project_type} created with QZX scaffolding tool.

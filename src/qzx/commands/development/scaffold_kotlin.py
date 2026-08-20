@@ -115,14 +115,14 @@ class ScaffoldKotlinCommand(CommandBase):
 
     def _create_settings_gradle(self, project_path, project_name, result):
         settings_path = os.path.join(project_path, 'settings.gradle.kts')
-        with open(settings_path, 'w') as f:
+        with open(settings_path, 'w', encoding='utf-8') as f:
             f.write(f'''rootProject.name = "{project_name}"
 ''')
         result["files_created"].append(settings_path)
 
     def _create_build_gradle(self, project_path, project_name, result):
         build_path = os.path.join(project_path, 'build.gradle.kts')
-        with open(build_path, 'w') as f:
+        with open(build_path, 'w', encoding='utf-8') as f:
             f.write('''plugins {
     kotlin("jvm") version "1.9.24"
     application
@@ -160,7 +160,7 @@ application {
         result["files_created"].append(src_dir)
 
         app_path = os.path.join(src_dir, 'App.kt')
-        with open(app_path, 'w') as f:
+        with open(app_path, 'w', encoding='utf-8') as f:
             f.write(f'''package com.example.{project_name}
 
 fun hello(): String {{
@@ -179,7 +179,7 @@ fun main() {{
         result["files_created"].append(test_dir)
 
         test_path = os.path.join(test_dir, 'AppTest.kt')
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write(f'''package com.example.{project_name}
 
 import org.junit.jupiter.api.Test
@@ -202,7 +202,7 @@ class AppTest {{
 
     def _create_readme(self, project_path, project_name, result):
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name.replace('_', ' ').title()}
 
 A Kotlin project created with QZX scaffolding tool.
@@ -229,7 +229,7 @@ A Kotlin project created with QZX scaffolding tool.
 
     def _create_gitignore(self, project_path, result):
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''# Gradle
 .gradle/
 build/

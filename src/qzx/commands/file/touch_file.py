@@ -89,7 +89,7 @@ class TouchFileCommand(CommandBase):
             # Open the file in the appropriate mode ('a' for append, which will
             # create the file if it doesn't exist or just update the timestamp if it does)
             mode = 'w' if content else 'a'
-            with open(path, mode) as f:
+            with open(path, mode, encoding='utf-8') as f:
                 if content:
                     f.write(content)
             

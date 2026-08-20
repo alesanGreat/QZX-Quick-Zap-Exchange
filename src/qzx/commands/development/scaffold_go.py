@@ -136,7 +136,7 @@ class ScaffoldGoCommand(CommandBase):
 
     def _create_go_mod(self, project_path, module_path, result):
         go_mod_path = os.path.join(project_path, 'go.mod')
-        with open(go_mod_path, 'w') as f:
+        with open(go_mod_path, 'w', encoding='utf-8') as f:
             f.write(f'''module {module_path}
 
 go 1.22
@@ -145,7 +145,7 @@ go 1.22
 
     def _create_main_go(self, project_path, project_name, result):
         main_path = os.path.join(project_path, 'main.go')
-        with open(main_path, 'w') as f:
+        with open(main_path, 'w', encoding='utf-8') as f:
             f.write(f'''package main
 
 import "fmt"
@@ -163,7 +163,7 @@ func main() {{
 
     def _create_tests(self, project_path, project_name, result):
         test_path = os.path.join(project_path, 'main_test.go')
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write(f'''package main
 
 import "testing"
@@ -180,7 +180,7 @@ func TestHello(t *testing.T) {{
 
     def _create_readme(self, project_path, project_name, module_path, result):
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name.replace('_', ' ').title()}
 
 A Go project created with QZX scaffolding tool.
@@ -213,7 +213,7 @@ go test ./...
 
     def _create_gitignore(self, project_path, result):
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''# Binaries for programs and plugins
 *.exe
 *.exe~

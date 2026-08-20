@@ -317,7 +317,7 @@ class SystemDoctorCommand(CommandBase):
                         info["usage_percent"] = float(lines[1])
                 else:
                     # Linux uptime/loadavg fallback
-                    with open("/proc/loadavg", "r") as f:
+                    with open("/proc/loadavg", "r", encoding="utf-8") as f:
                         load = float(f.read().split()[0])
                         info["usage_percent"] = min(
                             100.0, (load / (info["cores_logical"] or 1)) * 100.0
