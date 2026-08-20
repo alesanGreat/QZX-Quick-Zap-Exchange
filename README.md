@@ -316,7 +316,7 @@ operating system, date, fixture, and exit code on the
 - `tests/` contains the public automated Python test suite.
 - `examples/` contains standalone usage examples.
 - `docs/` contains public product philosophy and generated command references.
-- `.github/` contains the public contribution, funding, issue, and CI
+- `.github/` contains the public contribution, support, funding, issue, and CI
   configuration.
 
 ## Contributing
@@ -324,7 +324,8 @@ operating system, date, fixture, and exit code on the
 Start with the [contribution guide](CONTRIBUTING.md) and
 [project philosophy](docs/philosophy.md). Preserve the structured output
 contract, add proportional tests, and keep published and development
-availability explicit.
+availability explicit. For usage help and the right route for questions, bugs,
+or private reports, see the [support guide](.github/SUPPORT.md).
 
 License: [Apache-2.0](LICENSE). The attribution notice is in [NOTICE](NOTICE).
 See [how to contribute](CONTRIBUTING.md), [how to cite QZX](CITATION.cff),

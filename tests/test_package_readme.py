@@ -19,6 +19,7 @@ from scripts.verify_distribution_artifacts import (
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 README_PATH = PROJECT_ROOT / "README.md"
 COMPATIBILITY_README_PATH = PROJECT_ROOT / "README-English.md"
+MANIFEST_PATH = PROJECT_ROOT / "MANIFEST.in"
 PRODUCT_MANIFEST_PATH = (
     PROJECT_ROOT / "src" / "qzx" / "resources" / "product-manifest.json"
 )
@@ -95,6 +96,17 @@ def test_setup_long_description_uses_package_index_renderer() -> None:
         "repository_url",
         "revision",
     }
+
+
+def test_readme_support_guide_is_available_in_source_distributions() -> None:
+    source = README_PATH.read_text(encoding="utf-8")
+    manifest_lines = {
+        line.strip()
+        for line in MANIFEST_PATH.read_text(encoding="utf-8").splitlines()
+    }
+
+    assert ".github/SUPPORT.md" in find_repository_relative_links(source)
+    assert "include .github/SUPPORT.md" in manifest_lines
 
 
 def test_renderer_preserves_non_repository_links_and_fragments() -> None:
