@@ -171,7 +171,9 @@ The repository's existing Windows, Linux, and macOS matrix also captures one
 sanitized 15-command evidence record per runner and validates a combined
 cross-platform summary. The capturer uses only disposable fixtures and an
 authorized loopback HTTP endpoint; it does not request secrets or private
-project data.
+project data. Independent contributors can use the
+[Golden Core platform evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml)
+after manually reviewing the generated JSON for private data.
 
 ### Command maturity is explicit
 
@@ -292,7 +294,10 @@ QZX is Alpha software. This list identifies the environments used by the test ma
 Mocked unit tests are not compatibility evidence. Platform claims require
 real-system tests that exercise the installed native dependencies and QZX's
 public interface; the distinction and review rules are documented in the
-[test evidence policy](tests/README.md).
+[test evidence policy](tests/README.md). Submit a canonical cohort capture
+through the [Golden Core evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml),
+or use the [general platform-evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=compatibility_report.yml)
+for any other command or bounded observation.
 
 Complete local stdout snapshots identify their QZX version, Python version,
 operating system, date, fixture, and exit code on the

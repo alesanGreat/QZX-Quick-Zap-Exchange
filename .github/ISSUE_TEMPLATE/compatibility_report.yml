@@ -1,51 +1,137 @@
-name: Compatibility report
-description: Share reproducible evidence from an operating system or architecture.
-title: "[Compatibility]: "
+name: Platform evidence (any command)
+description: Submit sanitized real-system evidence for a QZX command, limitation, or portability counterexample.
+title: "[Platform evidence]: "
 labels:
   - compatibility
 body:
-  - type: input
-    id: version
+  - type: markdown
     attributes:
-      label: QZX version
-      placeholder: 0.2.2.0.3
+      value: |
+        Use this form for real-system evidence about any QZX command. For a complete canonical Golden Core capture, use the specialized [Golden Core evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml) instead.
+
+        **This issue and every attachment are public.** Review all output manually. Remove credentials, private paths and remotes, usernames, hostnames, personal data, proprietary content, internal addresses, and anything else that should not be public. Report vulnerabilities through the [security policy](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/security/policy), never through a public evidence issue.
+
+        Evidence supports only the exact QZX revision, command, environment, arguments, dependencies, and result observed. It does not establish universal compatibility, certification, independent adoption, or lifecycle maturity.
+  - type: checkboxes
+    id: public_safety
+    attributes:
+      label: Public evidence safety
+      options:
+        - label: I understand this issue and its attachments are public, and this is not a private security report.
+          required: true
+        - label: I manually reviewed the evidence and removed credentials, private paths and remotes, usernames, hostnames, personal data, proprietary content, and internal addresses.
+          required: true
+  - type: dropdown
+    id: evidence_kind
+    attributes:
+      label: Evidence kind
+      options:
+        - Successful command observation
+        - Worked with a limitation or workaround
+        - Reproducible failure or boundary result
+        - Portability counterexample
     validations:
       required: true
   - type: input
-    id: environment
+    id: revision
     attributes:
-      label: Exact environment
-      description: OS edition and version, exact Python implementation/version/build, architecture, shell, and relevant dependencies. State whether CPython is a standard or free-threaded build.
-      placeholder: Ubuntu 24.04, standard CPython 3.13.12, Bash 5.2, x86_64
+      label: Exact QZX revision
+      description: Full 40-character Git commit SHA preferred; otherwise provide an immutable release tag plus its commit SHA.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
     validations:
       required: true
   - type: input
-    id: command
+    id: qzx_version
     attributes:
-      label: Command and arguments
-      description: Redact private paths, names, and values.
+      label: Observed QZX version
+      description: Copy the value from `qzx version --json`; do not infer it from a branch or filename.
+      placeholder: 0.2.2.0.7a5
     validations:
       required: true
   - type: dropdown
-    id: result
+    id: platform_family
     attributes:
-      label: Result
+      label: Platform family
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - FreeBSD
+        - OpenBSD
+        - illumos or Solaris
+        - Another operating system
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Exact environment
+      description: OS edition/release, architecture, exact Python implementation/version/build, shell, virtualization, permissions, and relevant native dependencies. State whether CPython is standard or free-threaded. Do not include the hostname or username.
+      placeholder: Windows 11 24H2, x86_64, standard CPython 3.13.15, PowerShell 7.5, Git 2.51, non-elevated process
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Command, fixture, and exit status
+      description: Include the exact sanitized command and arguments, disposable fixture, exit code, and whether the result was repeated.
+      placeholder: |
+        qzx findFiles ./fixture "*.py" -r --json
+        exit code: 0
+        repeated: twice with equivalent results
+    validations:
+      required: true
+  - type: dropdown
+    id: observed_result
+    attributes:
+      label: Observed result
       options:
         - Worked as documented
         - Worked with a limitation
-        - Failed
+        - Reproducible command failure
         - Could not complete the test
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Reproduction and evidence
-      description: Include exit code and sanitized human/JSON output when safe.
+      label: Sanitized evidence
+      description: Attach or paste sanitized stdout, stderr, structured output, and native dependency versions when relevant. Explain any redactions that affect interpretation.
     validations:
       required: true
   - type: textarea
     id: limitations
     attributes:
-      label: Limitations
-      description: Permissions, optional dependencies, virtualization, untested branches, or other caveats.
+      label: Limitations and untested boundaries
+      description: State skipped branches, missing dependencies, retries, virtualization, permissions, deviations, and what this evidence does not prove.
+    validations:
+      required: true
+  - type: dropdown
+    id: credit
+    attributes:
+      label: Public credit preference
+      options:
+        - Credit my GitHub account
+        - Credit the name or organization specified below
+        - Keep the evidence attribution anonymous
+    validations:
+      required: true
+  - type: input
+    id: credit_name
+    attributes:
+      label: Optional public credit name or organization
+      description: Complete this only when you selected the named credit option and are authorized to grant that permission.
+      placeholder: Example Organization
+    validations:
+      required: false
+  - type: checkboxes
+    id: accuracy
+    attributes:
+      label: Scope and permission
+      options:
+        - label: I am authorized to publish this evidence and the selected attribution.
+          required: true
+        - label: This result came from the exact revision and real environment reported above; mocked output is not represented as platform evidence.
+          required: true
+        - label: I understand this submission supports only the observed boundary and is not a universal compatibility, certification, adoption, or maturity claim.
+          required: true

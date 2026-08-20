@@ -19,9 +19,11 @@ qzx listCommands --json
 ## Reproducible bugs and platform evidence
 
 Use the [issue chooser](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new/choose)
-for a reproducible bug, feature proposal, or platform evidence report.
-Include the QZX version, operating system, standard CPython version, exact
-command, expected result, and sanitized output when they are relevant.
+for a reproducible bug, feature proposal, or platform evidence report. Use the
+specialized Golden Core form for a canonical cohort capture and the general
+platform-evidence form for any other command or bounded observation. Include
+the exact QZX revision and version, environment, command, exit status,
+limitations, and manually reviewed sanitized output when relevant.
 
 ## Private security reports
 

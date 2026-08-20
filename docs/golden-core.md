@@ -160,6 +160,27 @@ The aggregate proves only the exact revision, command implementation digests,
 environments, fixtures, arguments, and observed results; it is not a universal
 compatibility guarantee or an automatic Beta promotion.
 
+### Submit independent platform evidence
+
+Run the capturer from a clean checkout at the exact full commit SHA you intend
+to report, open the generated JSON, and review it manually before publishing.
+The automatic replacements cover known checkout, home, user, hostname, fixture,
+and ephemeral-port values; they are a defense in depth, not permission to upload
+an unreviewed file. Never publish credentials, private remotes, internal
+addresses, personal data, proprietary content, or a security vulnerability.
+
+Use the
+[Golden Core platform evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml)
+to attach the sanitized record or submit a selected-command failure,
+counterexample, or portability limitation. The form asks for the immutable QZX
+revision, exact environment, command and exit status, repetitions, limitations,
+and public credit preference so a reviewer can distinguish independent evidence
+from QZX's own CI matrix. Negative findings are welcome and do not need to make
+the project look successful to be useful. Evidence for a command outside the
+cohort belongs in the
+[general platform-evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=compatibility_report.yml)
+so Golden Core claims remain scoped to the maintained registry.
+
 ## Release-quality attestation
 
 Release quality is a separate, fail-closed evidence layer. The canonical Golden

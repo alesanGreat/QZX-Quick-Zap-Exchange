@@ -29,6 +29,17 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   single analysis job, avoids persisted checkout credentials, and pins every
   external Action to a full commit SHA. Policy tests preserve those restrictions
   and the exact set of publisher-approved Actions.
+- Added a dedicated Golden Core platform-evidence issue form for independent
+  real-system captures, selected-command failures, and portability
+  counterexamples. It requires an immutable QZX revision, exact environment,
+  reproduction command and exit status, manually reviewed sanitized evidence,
+  limitations, attribution preference, and explicit public-data permission.
+  The older compatibility form was retained and substantially hardened as the
+  general path for commands outside the 15-command cohort, rather than forcing
+  every one of QZX's 87 commands through a Golden Core-specific vocabulary.
+  Documentation and regression tests keep both routes discoverable and preserve
+  their claim, privacy, attribution, and real-evidence boundaries.
+
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested

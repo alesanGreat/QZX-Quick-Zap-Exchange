@@ -17,6 +17,15 @@ Read:
 - [the project overview](README.md);
 - [the security policy](SECURITY.md) for private vulnerability reports.
 
+To contribute a real platform run without changing code, use the
+[Golden Core evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml)
+for canonical cohort captures and Golden Core boundaries. Use the
+[general platform-evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=compatibility_report.yml)
+for another command or a bounded manual observation. Review every generated
+record manually before uploading it; public forms must never contain
+credentials, private paths or remotes, usernames, hostnames, personal data,
+proprietary content, or internal addresses.
+
 Public commands must preserve the dual-output contract: warm human output by
 default and equivalent stable JSON under `--json`, with at least `success` and
 a descriptive `message`.
@@ -42,8 +51,9 @@ python -m pytest -q
 QZX concentrates its compatibility tests on the standard CPython 3.13.x
 build. Other Python versions or implementations may work, but experimental
 free-threaded CPython builds, PyPy, and other implementations are not
-certified. Compatibility reports from those runtimes are welcome when they
-identify the exact implementation, version, and build.
+certified. Evidence from those runtimes is welcome through the form matching
+the tested command when it identifies the exact implementation, version,
+build, and observed boundary.
 
 Run the real command as well as proportional automated tests. For website
 changes, use the separate website workspace and its own contribution process;
