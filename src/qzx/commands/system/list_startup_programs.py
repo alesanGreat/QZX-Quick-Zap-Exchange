@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-GetStartupPrograms Command - Lists programs configured to run on system boot/login (Registry & Startup folder on Windows).
+ListStartupPrograms Command - Lists programs configured to run on system boot/login (Registry & Startup folder on Windows).
 """
 
 import os
@@ -10,12 +10,12 @@ import platform
 
 from qzx.core.command_base import CommandBase
 
-class GetStartupProgramsCommand(CommandBase):
+class ListStartupProgramsCommand(CommandBase):
     """
     Command to audit and list all startup programs configured to run on boot or login.
     """
     
-    name = "getStartupPrograms"
+    name = "listStartupPrograms"
     description = "Lists all startup programs configured to run on system boot or user login"
     category = "system"
     
@@ -23,14 +23,14 @@ class GetStartupProgramsCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx getStartupPrograms',
-            'description': 'Retrieve a list of all startup programs and registry triggers'
+            'command': 'qzx listStartupPrograms',
+            'description': 'List all startup programs and registry triggers'
         }
     ]
     
     def execute(self):
         """
-        Retrieves startup program list
+        Lists startup programs
         
         Returns:
             Dictionary with startup applications details

@@ -65,7 +65,7 @@ class TerminalCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx Terminal',
+            'command': 'qzx terminal',
             'description': 'Launch the QZX interactive terminal with default settings'
         },
         {
@@ -73,11 +73,11 @@ class TerminalCommand(CommandBase):
             'description': 'Launch the QZX interactive terminal with an agent prompt'
         },
         {
-            'command': 'qzx Terminal "MyQZX> "',
+            'command': 'qzx terminal "MyQZX> "',
             'description': 'Launch the QZX terminal with a custom prompt'
         },
         {
-            'command': 'qzx Terminal "QZX> " --history_file ~/.qzx_history --show_path false',
+            'command': 'qzx terminal "QZX> " --history_file ~/.qzx_history --show_path false',
             'description': 'Opt in to persistent history and hide the path'
         }
     ]

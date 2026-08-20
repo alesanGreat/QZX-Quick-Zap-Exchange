@@ -147,7 +147,7 @@
     "getProjectTree": {"stage": "alpha"},
     "getRamInfo": {"stage": "alpha"},
     "getDiskHealth": {"stage": "alpha"},
-    "getStartupPrograms": {"stage": "alpha"},
+    "listStartupPrograms": {"stage": "alpha"},
     "getCurrentDateTime": {"stage": "alpha"},
     "inspectImage": {"stage": "alpha"},
     "inspectPort": {"stage": "alpha"},
