@@ -7,7 +7,9 @@ AuditRepository Command - Security and quality audit of a Git repository
 
 import os
 import re
+import socket
 import hashlib
+import ipaddress
 import subprocess
 import urllib.parse
 import urllib.request
@@ -43,6 +45,70 @@ class AuditRepositoryCommand(CommandBase):
             'description': 'Audit project at specified path'
         }
     ]
+
+    @staticmethod
+    def _literal_ip_address(hostname):
+        """Parse canonical and legacy IPv4 spellings without resolving DNS."""
+
+        try:
+            return ipaddress.ip_address(hostname)
+        except ValueError:
+            pass
+
+        # Operating systems may accept shortened or integer IPv4 forms such as
+        # ``127.1`` and ``2130706433``. Treat them as literals too so a link
+        # audit cannot accidentally probe a loopback or private service.
+        if ":" in hostname:
+            return None
+        try:
+            normalized = socket.inet_ntoa(socket.inet_aton(hostname))
+        except OSError:
+            return None
+        return ipaddress.ip_address(normalized)
+
+    @classmethod
+    def _is_documentation_placeholder_url(cls, parsed_link):
+        """Return whether a documentation URL must not be fetched."""
+
+        try:
+            hostname = parsed_link.hostname
+        except ValueError:
+            return False
+        if hostname is None:
+            return False
+
+        normalized_host = hostname.casefold().rstrip(".")
+        reserved_hosts = {
+            "example",
+            "example.com",
+            "example.net",
+            "example.org",
+            "invalid",
+            "localhost",
+            "test",
+        }
+        reserved_suffixes = (
+            ".example",
+            ".example.com",
+            ".example.net",
+            ".example.org",
+            ".invalid",
+            ".localhost",
+            ".test",
+        )
+        if normalized_host in reserved_hosts or normalized_host.endswith(
+            reserved_suffixes
+        ):
+            return True
+
+        literal_address = cls._literal_ip_address(normalized_host)
+        return literal_address is not None and not literal_address.is_global
+
+    @staticmethod
+    def _open_url(request, timeout):
+        """Open one external documentation URL through an injectable seam."""
+
+        return urllib.request.urlopen(request, timeout=timeout)
     
     def execute(self, path='.'):
         """
@@ -238,40 +304,76 @@ class AuditRepositoryCommand(CommandBase):
                         for text, link in md_links:
                             if link.startswith("#"):
                                 continue
-                            parsed_link = urllib.parse.urlsplit(link)
-                            if parsed_link.scheme.lower() in {
-                                "irc",
-                                "ircs",
-                                "mailto",
-                                "sms",
-                                "tel",
-                                "xmpp",
-                            }:
-                                continue
+
                             is_broken = False
                             reason = ""
-                            if link.startswith(("http://", "https://")):
-                                if "example.com" in link or "localhost" in link:
+                            try:
+                                parsed_link = urllib.parse.urlsplit(link)
+                            except ValueError as exc:
+                                parsed_link = None
+                                is_broken = True
+                                reason = f"Invalid URL: {exc}"
+
+                            if parsed_link is not None:
+                                scheme = parsed_link.scheme.casefold()
+                                if scheme in {
+                                    "irc",
+                                    "ircs",
+                                    "mailto",
+                                    "sms",
+                                    "tel",
+                                    "xmpp",
+                                }:
                                     continue
-                                try:
-                                    req = urllib.request.Request(link, headers={'User-Agent': 'QZX-Link-Checker'})
-                                    with urllib.request.urlopen(req, timeout=2.0) as resp:
-                                        if resp.status >= 400:
-                                            is_broken = True
-                                            reason = f"HTTP {resp.status}"
-                                except Exception as e:
-                                    is_broken = True
-                                    reason = str(e)
-                            else:
-                                clean_link = link.split("#")[0].split("?")[0]
-                                if clean_link:
-                                    if clean_link.startswith("/"):
-                                        target_path_local = os.path.join(abs_path, clean_link.lstrip("/"))
-                                    else:
-                                        target_path_local = os.path.join(root, clean_link)
-                                    if not os.path.exists(target_path_local):
+
+                                if scheme in {"http", "https"}:
+                                    if self._is_documentation_placeholder_url(
+                                        parsed_link
+                                    ):
+                                        continue
+                                    if (
+                                        parsed_link.username is not None
+                                        or parsed_link.password is not None
+                                    ):
                                         is_broken = True
-                                        reason = "Local file not found"
+                                        reason = (
+                                            "Embedded URL credentials are unsafe; "
+                                            "network check skipped"
+                                        )
+                                    elif parsed_link.hostname is None:
+                                        is_broken = True
+                                        reason = "HTTP URL has no hostname"
+                                    else:
+                                        try:
+                                            req = urllib.request.Request(
+                                                link,
+                                                headers={
+                                                    "User-Agent": "QZX-Link-Checker"
+                                                },
+                                            )
+                                            with self._open_url(
+                                                req, timeout=2.0
+                                            ) as resp:
+                                                if resp.status >= 400:
+                                                    is_broken = True
+                                                    reason = f"HTTP {resp.status}"
+                                        except Exception as exc:
+                                            is_broken = True
+                                            reason = str(exc)
+                                else:
+                                    clean_link = link.split("#")[0].split("?")[0]
+                                    if clean_link:
+                                        if clean_link.startswith("/"):
+                                            target_path_local = os.path.join(
+                                                abs_path, clean_link.lstrip("/")
+                                            )
+                                        else:
+                                            target_path_local = os.path.join(
+                                                root, clean_link
+                                            )
+                                        if not os.path.exists(target_path_local):
+                                            is_broken = True
+                                            reason = "Local file not found"
                             if is_broken:
                                 results["broken_links"].append({
                                     "file": rel_file,

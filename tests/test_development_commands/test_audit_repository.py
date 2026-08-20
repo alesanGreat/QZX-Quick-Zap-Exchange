@@ -5,7 +5,21 @@
 Tests for the AuditRepository command
 """
 
+import urllib.error
+
 from qzx.commands.development.audit_repository import AuditRepositoryCommand
+
+
+class RefusingNetworkAuditRepositoryCommand(AuditRepositoryCommand):
+    """Record external checks without contacting a network."""
+
+    def __init__(self):
+        super().__init__()
+        self.requested_urls = []
+
+    def _open_url(self, request, timeout):
+        self.requested_urls.append(request.full_url)
+        raise urllib.error.URLError("synthetic unavailable host")
 
 class TestAuditRepositoryCommand:
     """
@@ -100,3 +114,89 @@ class TestAuditRepositoryCommand:
 
         assert result["success"] is True
         assert result["details"]["broken_links"] == []
+
+    def test_audit_repository_matches_placeholder_url_hostnames_exactly(
+        self, tmp_path
+    ):
+        """Placeholder text outside the hostname must not suppress a check."""
+        (tmp_path / "LICENSE").write_text("MIT License", encoding="utf-8")
+        (tmp_path / ".gitignore").write_text(
+            "node_modules\n.env\n__pycache__\ndist\nbuild\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "README.md").write_text(
+            "\n".join(
+                (
+                    "[Reserved](https://example.com/guide)",
+                    "[Reserved subdomain](https://docs.example.org/guide)",
+                    "[Reserved TLD](https://service.test/guide)",
+                    "[Reserved invalid](https://service.invalid/guide)",
+                    "[Local](http://localhost/health)",
+                    "[Loopback](http://127.0.0.1/health)",
+                    "[Short loopback](http://127.1/health)",
+                    "[Integer loopback](http://2130706433/health)",
+                    "[Hex loopback](http://0x7f000001/health)",
+                    "[IPv6 loopback](http://[::1]/health)",
+                    "[Private literal](http://192.168.1.10/health)",
+                    "[Lookalike](https://example.com.attacker.dev/guide)",
+                    "[Query text](https://invalid.example.dev/?next=example.com)",
+                    "[Local lookalike](https://localhost.attacker.dev/)",
+                )
+            ),
+            encoding="utf-8",
+        )
+
+        command = RefusingNetworkAuditRepositoryCommand()
+        result = command.execute(path=str(tmp_path))
+
+        assert result["success"] is True
+        assert command.requested_urls == [
+            "https://example.com.attacker.dev/guide",
+            "https://invalid.example.dev/?next=example.com",
+            "https://localhost.attacker.dev/",
+        ]
+        assert [
+            finding["link"] for finding in result["details"]["broken_links"]
+        ] == command.requested_urls
+
+    def test_unsafe_or_malformed_urls_do_not_abort_later_checks(self, tmp_path):
+        """One hostile link must not hide later documentation findings."""
+        credential_url = "".join(
+            (
+                "https://",
+                "fixture-user",
+                ":",
+                "fixture-value",
+                "@public.example.dev/path",
+            )
+        )
+        (tmp_path / "LICENSE").write_text("MIT License", encoding="utf-8")
+        (tmp_path / ".gitignore").write_text(
+            "node_modules\n.env\n__pycache__\ndist\nbuild\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "README.md").write_text(
+            "\n".join(
+                (
+                    f"[Credentials]({credential_url})",
+                    "[Malformed](https://[::1)",
+                    "[Later external](HTTPS://later.example.dev/path)",
+                )
+            ),
+            encoding="utf-8",
+        )
+
+        command = RefusingNetworkAuditRepositoryCommand()
+        result = command.execute(path=str(tmp_path))
+
+        assert result["success"] is True
+        assert command.requested_urls == ["HTTPS://later.example.dev/path"]
+        broken_links = result["details"]["broken_links"]
+        assert [finding["link"] for finding in broken_links] == [
+            credential_url,
+            "https://[::1",
+            "HTTPS://later.example.dev/path",
+        ]
+        assert "Embedded URL credentials" in broken_links[0]["reason"]
+        assert "Invalid URL" in broken_links[1]["reason"]
+        assert "synthetic unavailable host" in broken_links[2]["reason"]
