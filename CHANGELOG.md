@@ -22,6 +22,13 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   the pinned PHP-CS-Fixer download now has bounded retries plus an exact
   SHA-256 integrity check. A workflow-policy regression test preserves those
   controls.
+- Added an official OpenSSF Scorecard workflow that publishes an OIDC-authenticated
+  weekly supply-chain assessment and uploads its SARIF findings to GitHub code
+  scanning. The workflow runs only from `main`, uses a fixed Ubuntu runner,
+  bounds its runtime, keeps the exact required reads and writes inside the
+  single analysis job, avoids persisted checkout credentials, and pins every
+  external Action to a full commit SHA. Policy tests preserve those restrictions
+  and the exact set of publisher-approved Actions.
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested
