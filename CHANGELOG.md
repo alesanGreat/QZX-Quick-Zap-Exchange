@@ -9,10 +9,19 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 - Hardened two network boundaries found by CodeQL's initial repository scan.
   `checkSslCertificate` now requires TLS 1.2 or newer for both trusted and
-  unverified diagnostic handshakes, while `auditRepository` recognizes reserved
-  documentation URLs from their parsed hostname so lookalike hosts and query
-  text cannot bypass external-link checks.
-
+  unverified diagnostic handshakes. `auditRepository` now classifies links from
+  their parsed hostname instead of substring text, skips the complete reserved
+  documentation namespace plus non-public IP literals (including legacy IPv4
+  spellings), refuses embedded URL credentials, and continues safely after a
+  malformed URL instead of suppressing later findings.
+- Stabilized the real `formatCode` integration workflow after repeated GitHub
+  runner cancellations inside `apt-get` and before QZX executed. The fixed
+  Ubuntu 24.04 runner's documented Clang-format, Go, Node, PHP, and Rust tools
+  are now verified explicitly instead of being reinstalled through a mutable
+  regional mirror; pinned Black, Pytest, and Prettier install without root, and
+  the pinned PHP-CS-Fixer download now has bounded retries plus an exact
+  SHA-256 integrity check. A workflow-policy regression test preserves those
+  controls.
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
   form without depending on QZX's internal directory layout. The earlier nested
