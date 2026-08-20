@@ -6,12 +6,81 @@
 import locale
 import os
 import platform
+import signal
 import shutil
 import subprocess
 import sys
-import tempfile
+import threading
 
 from qzx.core.command_base import CommandBase
+
+
+class _BoundedPipeCapture:
+    """Drain one child pipe without retaining unbounded output in RAM or on disk."""
+
+    chunk_size = 64 * 1024
+
+    def __init__(self, stream, retention_limit):
+        self._stream = stream
+        self._retention_limit = max(0, int(retention_limit))
+        self._retained = bytearray()
+        self._bytes_produced = 0
+        self._read_failed = False
+        self._lock = threading.Lock()
+        self._thread = threading.Thread(
+            target=self._consume,
+            name="qzx-bounded-pipe-capture",
+            daemon=True,
+        )
+
+    def start(self):
+        self._thread.start()
+
+    def _consume(self):
+        try:
+            while True:
+                chunk = self._stream.read(self.chunk_size)
+                if not chunk:
+                    break
+                with self._lock:
+                    self._bytes_produced += len(chunk)
+                    remaining = self._retention_limit - len(self._retained)
+                    if remaining > 0:
+                        self._retained.extend(chunk[:remaining])
+        except (OSError, ValueError):
+            with self._lock:
+                self._read_failed = True
+        finally:
+            try:
+                self._stream.close()
+            except OSError:
+                pass
+
+    def finish(self, timeout_seconds=1.0):
+        """Return a stable snapshot without hanging on inherited pipe handles."""
+
+        self._thread.join(timeout_seconds)
+        if self._thread.is_alive():
+            try:
+                self._stream.close()
+            except (OSError, ValueError):
+                pass
+            self._thread.join(0.25)
+
+        with self._lock:
+            retained = bytes(self._retained)
+            bytes_produced = self._bytes_produced
+            read_failed = self._read_failed
+        capture_complete = not self._thread.is_alive() and not read_failed
+        encoding = locale.getpreferredencoding(False) or "utf-8"
+        return {
+            "text": retained.decode(encoding, errors="replace"),
+            "bytes_produced": bytes_produced,
+            "bytes_retained": len(retained),
+            "truncated": bytes_produced > len(retained) or not capture_complete,
+            "retention_limit_bytes": self._retention_limit,
+            "capture_complete": capture_complete,
+        }
 
 
 class RunScriptCommand(CommandBase):
@@ -37,7 +106,8 @@ class RunScriptCommand(CommandBase):
         {
             "name": "args",
             "description": (
-                "Arguments passed to the script; values are not echoed in the result"
+                "Arguments passed to the script; QZX does not add their values "
+                "to result metadata, but the script can print them in captured output"
             ),
             "required": False,
             "default": [],
@@ -56,8 +126,8 @@ class RunScriptCommand(CommandBase):
         {
             "command": "qzx runScript myscript.py arg1 arg2 --yolo",
             "description": (
-                "Execute with two arguments without repeating their values in "
-                "the result"
+                "Execute with two arguments without QZX adding their values to "
+                "result metadata"
             ),
         },
         {
@@ -102,52 +172,79 @@ class RunScriptCommand(CommandBase):
                 script_path=absolute_script,
             )
 
-        with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
-            try:
-                completed = subprocess.run(
-                    command,
-                    stdin=subprocess.DEVNULL,
-                    stdout=stdout_file,
-                    stderr=stderr_file,
-                    timeout=self.timeout_seconds,
-                    check=False,
-                )
-            except subprocess.TimeoutExpired:
-                stdout = self._read_capture(stdout_file)
-                stderr = self._read_capture(stderr_file)
-                return {
-                    "success": False,
-                    "message": (
-                        f"{script_type} script '{os.path.basename(absolute_script)}' "
-                        f"exceeded the {self.timeout_seconds}-second timeout."
-                    ),
-                    "error": "Script execution timed out.",
-                    "error_code": "script_timeout",
-                    "script": self._script_info(
-                        absolute_script,
-                        script_type,
-                        len(args),
-                    ),
-                    "execution": {
-                        "timeout_seconds": self.timeout_seconds,
-                        "exit_code": None,
-                        "timed_out": True,
-                    },
-                    "stdout": stdout,
-                    "stderr": stderr,
-                }
-            except OSError as exc:
-                return self._failure(
-                    "script_start_failed",
-                    f"Could not start the {script_type} script: {exc}",
-                    script_path=absolute_script,
-                    script_type=script_type,
-                )
+        try:
+            script_info = self._script_info(
+                absolute_script,
+                script_type,
+                len(args),
+            )
+        except OSError as exc:
+            return self._failure(
+                "script_metadata_unavailable",
+                f"Could not inspect the {script_type} script before execution: {exc}",
+                script_path=absolute_script,
+                script_type=script_type,
+            )
 
-            stdout = self._read_capture(stdout_file)
-            stderr = self._read_capture(stderr_file)
+        try:
+            process = subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0,
+                **self._process_group_options(),
+            )
+        except OSError as exc:
+            return self._failure(
+                "script_start_failed",
+                f"Could not start the {script_type} script: {exc}",
+                script_path=absolute_script,
+                script_type=script_type,
+            )
 
-        success = completed.returncode == 0
+        assert process.stdout is not None
+        assert process.stderr is not None
+        stdout_capture = _BoundedPipeCapture(
+            process.stdout,
+            self.retained_output_bytes,
+        )
+        stderr_capture = _BoundedPipeCapture(
+            process.stderr,
+            self.retained_output_bytes,
+        )
+        stdout_capture.start()
+        stderr_capture.start()
+
+        try:
+            exit_code = process.wait(timeout=self.timeout_seconds)
+        except subprocess.TimeoutExpired:
+            termination = self._terminate_process_tree(process)
+            stdout = stdout_capture.finish()
+            stderr = stderr_capture.finish()
+            return {
+                "success": False,
+                "message": (
+                    f"{script_type} script '{os.path.basename(absolute_script)}' "
+                    f"exceeded the {self.timeout_seconds}-second timeout."
+                ),
+                "error": "Script execution timed out.",
+                "error_code": "script_timeout",
+                "script": script_info,
+                "execution": {
+                    "timeout_seconds": self.timeout_seconds,
+                    "exit_code": None,
+                    "timed_out": True,
+                    "termination": termination,
+                },
+                "stdout": stdout,
+                "stderr": stderr,
+            }
+
+        stdout = stdout_capture.finish()
+        stderr = stderr_capture.finish()
+
+        success = exit_code == 0
         if success:
             message = (
                 f"Executed {script_type} script "
@@ -156,26 +253,24 @@ class RunScriptCommand(CommandBase):
         else:
             message = (
                 f"{script_type} script '{os.path.basename(absolute_script)}' "
-                f"exited with code {completed.returncode}."
+                f"exited with code {exit_code}."
             )
-        return {
+        result = {
             "success": success,
             "message": message,
-            "error": None if success else "Script returned a non-zero exit code.",
-            "error_code": None if success else "script_failed",
-            "script": self._script_info(
-                absolute_script,
-                script_type,
-                len(args),
-            ),
+            "script": script_info,
             "execution": {
                 "timeout_seconds": self.timeout_seconds,
-                "exit_code": completed.returncode,
+                "exit_code": exit_code,
                 "timed_out": False,
             },
             "stdout": stdout,
             "stderr": stderr,
         }
+        if not success:
+            result["error"] = "Script returned a non-zero exit code."
+            result["error_code"] = "script_failed"
+        return result
 
     @staticmethod
     def _command_for_script(script_path, args):
@@ -196,17 +291,69 @@ class RunScriptCommand(CommandBase):
             f"Unsupported script type '{suffix or '(none)'}'; supported types are {supported}."
         )
 
-    def _read_capture(self, capture):
-        size = capture.tell()
-        capture.seek(0)
-        retained = capture.read(self.retained_output_bytes)
-        encoding = locale.getpreferredencoding(False) or "utf-8"
+    @staticmethod
+    def _process_group_options():
+        """Isolate a script so a timeout can stop descendants with it."""
+        if os.name == "nt":
+            return {
+                "creationflags": (
+                    getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                )
+            }
+        return {"start_new_session": True}
+
+    @staticmethod
+    def _terminate_process_tree(process):
+        """Stop a timed-out script and its descendants when the OS permits."""
+        method = "process_kill_fallback"
+        process_tree_confirmed = False
+
+        if os.name == "nt":
+            taskkill = shutil.which("taskkill.exe") or shutil.which("taskkill")
+            if taskkill:
+                try:
+                    completed = subprocess.run(
+                        [taskkill, "/PID", str(process.pid), "/T", "/F"],
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=10,
+                        check=False,
+                        creationflags=getattr(
+                            subprocess,
+                            "CREATE_NO_WINDOW",
+                            0,
+                        ),
+                    )
+                    method = "taskkill_tree"
+                    process_tree_confirmed = completed.returncode == 0
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+                method = "process_group_kill"
+                process_tree_confirmed = True
+            except OSError:
+                pass
+
+        if process.poll() is None:
+            try:
+                process.kill()
+            except OSError:
+                pass
+        try:
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
         return {
-            "text": retained.decode(encoding, errors="replace"),
-            "bytes_produced": size,
-            "bytes_retained": len(retained),
-            "truncated": size > len(retained),
-            "retention_limit_bytes": self.retained_output_bytes,
+            "attempted": True,
+            "scope": "process_tree",
+            "method": method,
+            "process_tree_confirmed": process_tree_confirmed,
+            "root_process_stopped": process.poll() is not None,
         }
 
     @staticmethod
@@ -218,7 +365,8 @@ class RunScriptCommand(CommandBase):
             "size_bytes": os.path.getsize(script_path),
             "type": script_type,
             "argument_count": argument_count,
-            "argument_values_returned": False,
+            "argument_values_in_metadata": False,
+            "captured_output_may_contain_argument_values": True,
             "working_directory": os.getcwd(),
         }
 

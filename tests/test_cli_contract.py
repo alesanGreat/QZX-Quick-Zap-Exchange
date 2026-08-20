@@ -610,3 +610,12 @@ def test_interactive_terminal_uses_the_shared_human_and_json_renderers(capsys):
     assert "Items Found: 2" in human_output
     assert "{'" not in human_output
     assert json.loads(json_output)["details"]["ready"] is True
+
+
+def test_interactive_terminal_accepts_a_bom_prefixed_piped_command():
+    terminal = object.__new__(QZXTerminal)
+
+    normalized = terminal.precmd("\ufeffexit")
+
+    assert normalized == "exit"
+    assert terminal.onecmd(normalized) is True

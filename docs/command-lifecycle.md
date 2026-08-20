@@ -124,8 +124,13 @@ version, publishing to PyPI, creating a tag, or creating a GitHub Release.
    `commands` only when it becomes a real Alpha command.
 4. Attach the required review before claiming Beta or a later public stage.
 5. Run the command through both human and `--json` output.
-6. Run tests and regenerate the maintained documentation projections.
+6. Run `python -B scripts/generate_command_docs.py`, then verify the projection
+   with `python -B scripts/generate_command_docs.py --check` and the test suite.
 7. Review lifecycle, safety, translations, and evidence as distinct facts.
+
+The public generator emits byte-stable Markdown without a wall-clock timestamp,
+uses the same fail-closed loader and lifecycle registry as the CLI, and replaces
+the projection atomically only when its content changes.
 
 Discovery and documentation generation fail when an executable command is
 missing from the registry, a removed command remains, an executable command

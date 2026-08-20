@@ -18,5 +18,6 @@ Use these canonical sources:
 - [Command lifecycle](docs/command-lifecycle.md) — Planning, Proof of concept,
   Alpha, Beta, Release Candidate, Stable, Deprecated, and Retired semantics.
 
-Version, release-channel, and package-selection details intentionally remain in
-those canonical sources so this compatibility pointer cannot drift from them.
+Version, release-channel, package-selection, and release-availability details
+intentionally remain in those canonical sources so this compatibility pointer
+cannot drift from them.

@@ -174,7 +174,7 @@ class QZXTerminal(cmd.Cmd):
             self._load_history()
         
         # Create welcome screen generator
-        self.welcome_generator = TerminalWelcome()
+        self.welcome_generator = TerminalWelcome(interactive=True)
         
         # Get the welcome message
         self.intro = self.welcome_generator.get_welcome_message()
@@ -220,6 +220,10 @@ class QZXTerminal(cmd.Cmd):
     def emptyline(self):
         """Do nothing on empty line"""
         pass
+
+    def precmd(self, line):
+        """Normalize a UTF-8 BOM added by some piped Windows shell inputs."""
+        return line.lstrip("\ufeff")
     
     def do_exit(self, arg):
         """Exit the QZX Terminal"""

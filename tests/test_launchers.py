@@ -83,6 +83,8 @@ def test_local_launcher_uses_fast_human_welcome(tmp_path):
     assert ATTRIBUTION in completed.stdout
     assert "Welcome Professor!" in completed.stdout
     assert "QZX welcome screen (basic view) displayed." in completed.stdout
+    assert "Run 'qzx listCommands'" in completed.stdout
+    assert "Run 'qzx terminal'" in completed.stdout
 
 
 def test_local_launcher_does_not_write_bytecode_into_checkout(tmp_path):
