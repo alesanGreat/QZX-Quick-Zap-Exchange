@@ -149,14 +149,20 @@ def _json_compatible(value):
 
 
 def _print_json(result):
-    print(
-        json.dumps(
-            _json_compatible(result),
-            indent=2,
-            ensure_ascii=False,
-            allow_nan=False,
-        )
+    """Write one UTF-8 JSON document regardless of the text code page."""
+    serialized = json.dumps(
+        _json_compatible(result),
+        indent=2,
+        ensure_ascii=False,
+        allow_nan=False,
     )
+    binary_stdout = getattr(sys.stdout, "buffer", None)
+    if binary_stdout is None:
+        print(serialized)
+        return
+
+    binary_stdout.write((serialized + "\n").encode("utf-8"))
+    binary_stdout.flush()
 
 
 _HUMAN_ACRONYMS = {
@@ -305,6 +311,62 @@ def _visible_meta(result):
     }
 
 
+def _render_command_catalog(result, message):
+    """Render listCommands from structured data without duplicating it in JSON."""
+    meta = result.get("meta")
+    categories = result.get("commands")
+    if (
+        not isinstance(meta, dict)
+        or meta.get("command") != "listCommands"
+        or not isinstance(categories, dict)
+    ):
+        return None
+
+    maturity_labels = {}
+    for commands in categories.values():
+        if not isinstance(commands, list):
+            return None
+        for command in commands:
+            if not isinstance(command, dict):
+                return None
+            maturity = command.get("maturity")
+            if not isinstance(maturity, dict):
+                return None
+            stage = maturity.get("stage")
+            label = maturity.get("label")
+            if isinstance(stage, str) and isinstance(label, str):
+                maturity_labels.setdefault(stage, label)
+
+    lines = message.splitlines()
+    maturity_summary = result.get("maturity_summary")
+    if isinstance(maturity_summary, dict) and maturity_summary:
+        maturity_text = ", ".join(
+            "{} {}".format(count, maturity_labels.get(stage, stage))
+            for stage, count in maturity_summary.items()
+        )
+        lines.append("Maturity: {}".format(maturity_text))
+
+    for category in sorted(categories, key=lambda value: str(value).lower()):
+        commands = categories[category]
+        if not commands:
+            continue
+        lines.extend(["", "[{}]".format(str(category).upper())])
+        for command in sorted(
+            commands,
+            key=lambda item: str(item.get("name", "")).lower(),
+        ):
+            maturity = command["maturity"]
+            lines.append(
+                "  {} [{}]: {}".format(
+                    command.get("name", "Unnamed command"),
+                    maturity.get("label", maturity.get("stage", "Unknown")),
+                    command.get("description", "No description available"),
+                )
+            )
+
+    return "\n".join(lines).rstrip()
+
+
 def _render_human(result):
     """Render one structured result as warm, readable terminal text."""
     if not isinstance(result, dict):
@@ -318,8 +380,12 @@ def _render_human(result):
             else "The command could not be completed."
         )
 
-    # Help, command listings, and similar results already carry their complete
-    # terminal presentation in a multi-line message.
+    command_catalog = _render_command_catalog(result, message)
+    if command_catalog is not None:
+        return command_catalog
+
+    # Help and similar results already carry their complete terminal
+    # presentation in a multi-line message.
     if len(message.splitlines()) >= 3:
         return message
 
@@ -427,8 +493,8 @@ def _capture_process_stdout():
     """
     Capture Python and child-process stdout.
 
-    ``redirect_stdout`` alone misses native programs such as ``cls``. JSON
-    mode must capture those bytes as progress too, or they can corrupt the
+    ``redirect_stdout`` alone misses native programs launched by commands.
+    JSON mode must capture those bytes as progress too, or they can corrupt the
     single JSON document written by the CLI.
     """
     import tempfile

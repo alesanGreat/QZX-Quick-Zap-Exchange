@@ -18,7 +18,7 @@ inputs:
     required: false
     default: ""
   report:
-    description: Path where the deterministic QZX conformance receipt will be written.
+    description: Receipt path; must differ from every evidence input path.
     required: false
     default: qzx-result-contract-conformance.json
 

@@ -65,7 +65,7 @@ class TerminalCommand(CommandBase):
     
     examples = [
         {
-            'command': 'qzx Terminal',
+            'command': 'qzx terminal',
             'description': 'Launch the QZX interactive terminal with default settings'
         },
         {
@@ -73,70 +73,102 @@ class TerminalCommand(CommandBase):
             'description': 'Launch the QZX interactive terminal with an agent prompt'
         },
         {
-            'command': 'qzx Terminal "MyQZX> "',
+            'command': 'qzx terminal "MyQZX> "',
             'description': 'Launch the QZX terminal with a custom prompt'
         },
         {
-            'command': 'qzx Terminal "QZX> " --history_file ~/.qzx_history --show_path false',
+            'command': 'qzx terminal "QZX> " --history_file ~/.qzx_history --show_path false',
             'description': 'Opt in to persistent history and hide the path'
         }
     ]
     
-    def execute(self, *args, **kwargs):
-        """
-        Launch an interactive terminal for QZX commands
-        
-        Args:
-            prompt (str, optional): Custom prompt for the terminal
-            history_file (str, optional): Path to history file
-            show_path (str, optional): Whether to show path in prompt ('true' or 'false')
-            
-        Returns:
-            Dictionary with the result of the operation
-        """
-        try:
-            # Parse arguments
-            prompt = 'QZX> '
-            history_file = None
-            show_path = 'true'
-            
-            # Handle positional arguments
-            if len(args) > 0 and args[0]:
-                prompt = args[0]
-            if len(args) > 1 and args[1]:
-                history_file = args[1]
-            if len(args) > 2 and args[2]:
-                show_path = args[2]
-                
-            # Handle keyword arguments (override positional)
-            if 'prompt' in kwargs and kwargs['prompt']:
-                prompt = kwargs['prompt']
-            if 'history_file' in kwargs and kwargs['history_file']:
-                history_file = kwargs['history_file']
-            if 'show_path' in kwargs and kwargs['show_path']:
-                show_path = kwargs['show_path']
-            
-            # Convert show_path to boolean
-            if isinstance(show_path, str):
-                show_path = show_path.lower() in ('true', 'yes', 'y', '1', 't')
-            
-            # Initialize the QZXTerminal
-            terminal = QZXTerminal(prompt, history_file, show_path)
-            
-            # Start the terminal
-            terminal.start()
-            
-            return {
-                "success": True,
-                "message": "QZX Terminal session ended"
-            }
-            
-        except Exception as e:
+    def __init__(self, terminal_factory=None):
+        super().__init__()
+        self._terminal_factory = terminal_factory
+
+    def execute(
+        self,
+        prompt="QZX> ",
+        history_file=None,
+        show_path=True,
+    ):
+        """Launch an interactive terminal with metadata-backed arguments."""
+        if not isinstance(prompt, str):
             return {
                 "success": False,
-                "error": f"Error in QZX Terminal: {str(e)}",
-                "message": "The interactive QZX terminal could not be started."
+                "error_code": "invalid_prompt",
+                "error": "prompt must be a string.",
+                "message": "Provide a text prompt for the QZX terminal.",
             }
+        if history_file is not None and not isinstance(
+            history_file,
+            (str, os.PathLike),
+        ):
+            return {
+                "success": False,
+                "error_code": "invalid_history_file",
+                "error": "history_file must be a filesystem path or null.",
+                "message": (
+                    "Provide a history path, or omit history_file to keep "
+                    "the interactive session ephemeral."
+                ),
+            }
+        if isinstance(show_path, str):
+            parsed_show_path = self._parse_bool(show_path)
+            if parsed_show_path is None:
+                return {
+                    "success": False,
+                    "error_code": "invalid_show_path",
+                    "error": (
+                        "show_path must be true or false; received "
+                        f"'{show_path}'."
+                    ),
+                    "message": "Choose whether the terminal prompt shows the path.",
+                }
+            show_path = parsed_show_path
+        elif not isinstance(show_path, bool):
+            return {
+                "success": False,
+                "error_code": "invalid_show_path",
+                "error": "show_path must be a boolean.",
+                "message": "Choose whether the terminal prompt shows the path.",
+            }
+
+        normalized_history = (
+            os.fspath(history_file)
+            if history_file is not None
+            else None
+        )
+        terminal_factory = self._terminal_factory or QZXTerminal
+        try:
+            terminal = terminal_factory(
+                prompt,
+                normalized_history,
+                show_path,
+            )
+            terminal.start()
+            return {
+                "success": True,
+                "message": "QZX terminal session ended.",
+                "details": {
+                    "prompt": prompt,
+                    "history_enabled": normalized_history is not None,
+                    "history_file": normalized_history,
+                    "show_path": show_path,
+                },
+            }
+        except Exception as exc:
+            return {
+                "success": False,
+                "error_code": "terminal_start_failed",
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": "The interactive QZX terminal could not be started.",
+                "details": {
+                    "history_enabled": normalized_history is not None,
+                    "show_path": show_path,
+                },
+            }
+
 
 
 class QZXTerminal(cmd.Cmd):
@@ -174,7 +206,7 @@ class QZXTerminal(cmd.Cmd):
             self._load_history()
         
         # Create welcome screen generator
-        self.welcome_generator = TerminalWelcome()
+        self.welcome_generator = TerminalWelcome(interactive=True)
         
         # Get the welcome message
         self.intro = self.welcome_generator.get_welcome_message()
@@ -220,6 +252,10 @@ class QZXTerminal(cmd.Cmd):
     def emptyline(self):
         """Do nothing on empty line"""
         pass
+
+    def precmd(self, line):
+        """Normalize a UTF-8 BOM added by some piped Windows shell inputs."""
+        return line.lstrip("\ufeff")
     
     def do_exit(self, arg):
         """Exit the QZX Terminal"""

@@ -14,6 +14,7 @@ GITHUB_ROOT = REPOSITORY_ROOT / ".github"
 ROOT_ACTION = REPOSITORY_ROOT / "action.yml"
 NESTED_ACTION = GITHUB_ROOT / "actions" / "result-contract-conformance" / "action.yml"
 DEPENDABOT_CONFIG = GITHUB_ROOT / "dependabot.yml"
+SCORECARD_WORKFLOW = GITHUB_ROOT / "workflows" / "scorecard-analysis.yml"
 FULL_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -82,24 +83,85 @@ def test_workflow_branch_pushes_do_not_duplicate_pull_request_ci():
     workflow_files.extend(sorted((GITHUB_ROOT / "workflows").glob("*.yaml")))
     assert workflow_files, "Expected at least one GitHub workflow."
 
-    expected_trigger_block = (
+    expected_main_push = (
         "on:\n"
         "  push:\n"
         "    branches:\n"
         "      - main\n"
+    )
+    expected_ci_trigger_block = expected_main_push + (
         "  pull_request:\n"
         "  workflow_dispatch:\n"
     )
     violations = []
     for path in workflow_files:
         text = path.read_text(encoding="utf-8")
-        if expected_trigger_block not in text:
-            violations.append(str(path.relative_to(REPOSITORY_ROOT)))
+        relative_path = str(path.relative_to(REPOSITORY_ROOT))
+        if expected_main_push not in text:
+            violations.append(f"{relative_path}: push is not limited to main")
+        if "  pull_request:\n" in text and expected_ci_trigger_block not in text:
+            violations.append(f"{relative_path}: duplicated or incomplete PR CI triggers")
 
     assert violations == [], (
         "Workflows must validate PRs once and reserve push-triggered CI for main: "
         + ", ".join(violations)
     )
+
+
+def test_scorecard_workflow_is_publishable_and_least_privilege():
+    """Keep the public Scorecard evidence authenticated and tightly scoped."""
+
+    assert SCORECARD_WORKFLOW.is_file(), "The OpenSSF Scorecard workflow is missing."
+    text = SCORECARD_WORKFLOW.read_text(encoding="utf-8")
+    expected_main_push = (
+        "on:\n"
+        "  push:\n"
+        "    branches:\n"
+        "      - main\n"
+    )
+
+    assert expected_main_push in text
+    assert "  schedule:\n" in text
+    assert '    - cron: "30 1 * * 6"\n' in text
+    assert "  pull_request:\n" not in text
+    assert "  workflow_dispatch:\n" not in text
+    assert "\npermissions: read-all\n" in text
+    job_permissions = re.search(
+        r"(?ms)^    permissions:\n(?P<body>.*?)(?=^    steps:\n)", text
+    )
+    assert job_permissions is not None
+    declared_permissions = set(
+        re.findall(
+            r"^      ([a-z-]+):\s*(read|write|none)\s*$",
+            job_permissions.group("body"),
+            flags=re.MULTILINE,
+        )
+    )
+    assert declared_permissions == {
+        ("actions", "read"),
+        ("contents", "read"),
+        ("security-events", "write"),
+        ("id-token", "write"),
+    }
+    assert "    runs-on: ubuntu-24.04\n" in text
+    assert "    timeout-minutes: 15\n" in text
+    assert "          persist-credentials: false\n" in text
+    assert "          results_file: results.sarif\n" in text
+    assert "          results_format: sarif\n" in text
+    assert "          publish_results: true\n" in text
+    assert "          retention-days: 5\n" in text
+
+    external_actions = []
+    for line in text.splitlines():
+        parsed = _external_action_reference(line)
+        if parsed is not None:
+            external_actions.append(parsed[0])
+    assert external_actions == [
+        "actions/checkout",
+        "ossf/scorecard-action",
+        "actions/upload-artifact",
+        "github/codeql-action/upload-sarif",
+    ]
 
 
 def test_root_action_matches_nested_compatibility_entrypoint():

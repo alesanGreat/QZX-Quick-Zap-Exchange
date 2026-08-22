@@ -82,4 +82,4 @@ if [ -z "$QZX_RUNTIME" ]; then
 fi
 
 # Pass all arguments to the QZX package
-"$QZX_RUNTIME" -m qzx "$@"
+"$QZX_RUNTIME" -B -m qzx "$@"

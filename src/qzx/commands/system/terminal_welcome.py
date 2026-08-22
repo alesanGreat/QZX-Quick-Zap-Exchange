@@ -35,6 +35,7 @@ class TerminalWelcome:
         qzx_version=None,
         system_info_provider=None,
         psutil_loader=None,
+        interactive=False,
     ):
         """
         Initialize the welcome manager
@@ -46,6 +47,8 @@ class TerminalWelcome:
                 for the detailed view.
             psutil_loader (callable): Optional dependency loader used only by
                 the detailed view.
+            interactive (bool): Whether the text is displayed inside the QZX
+                interactive terminal rather than by a one-shot shell command.
         """
         if qzx_version is None:
             from qzx import __version__
@@ -55,6 +58,7 @@ class TerminalWelcome:
         self._system_info = None
         self._system_info_provider = system_info_provider
         self._psutil_loader = psutil_loader or _load_psutil
+        self.interactive = bool(interactive)
 
     @property
     def system_info(self):
@@ -74,7 +78,10 @@ class TerminalWelcome:
         Returns:
             str: Formatted welcome message
         """
-        welcome = basic_welcome_message(self.qzx_version)
+        welcome = basic_welcome_message(
+            self.qzx_version,
+            interactive=self.interactive,
+        )
         if show_full_info:
             welcome += """
 System

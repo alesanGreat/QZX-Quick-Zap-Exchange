@@ -3,9 +3,89 @@
 This file distinguishes released package history from work in the development
 checkout. Changing this file does not publish a package or create a release.
 
-## Unreleased — 2026-08-09
+## Unreleased
+
+## 0.2.2.0.7a6 — 2026-08-21
+
+This release publishes the complete validated engineering campaign to GitHub, PyPI, and qzx.yumbale.com through the mandatory public-surface transaction and parity gate.
+
+QZX - Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+
+<!-- qzx-engineering-campaign-2026-08-21 -->
+### Engineering campaign — 2026-08-21
+
+- Hardened the command metadata contract across the complete catalog, including
+  signature/default/example validation and explicit variadic option passthrough.
+  Variadic data beginning with `-` now requires `--` unless a command explicitly
+  transports another program's argument vector.
+- Rebuilt `getProjectTree` and `createDirectory` around bounded work, deterministic
+  output, link/junction safety, partial-failure evidence, rollback evidence, and
+  adversarial tests.
+- Added shared bounded file-content analysis for `detectFileType`, `isFileBinary`,
+  `isFileEmpty`, and `countLines`: content signatures, distributed sampling,
+  UTF-8/UTF-16 handling, optional libmagic refinement, stable-file fingerprints,
+  explicit symlink opt-in, and structured read/change failures.
+- Rebuilt `isDirectoryEmpty` as a streaming scan with explicit hidden-item policy
+  and correct file/directory/link accounting; rebuilt `countLines` as a constant-
+  memory Unicode logical-line counter with exact CRLF/CR/LF and Unicode separator
+  evidence.
+- Replaced `clearScreen` shell invocation with TTY-aware ANSI output and added a
+  repository-wide static policy that forbids implicit command-shell execution.
+- Strengthened the TypeScript result-contract producer, type-level adversarial
+  checks, runtime demo, and CI validation without side effects on import.
+- Added an installed-wheel smoke harness that creates an isolated environment,
+  installs the built wheel, and exercises real JSON CLI flows; CI now runs it
+  immediately after distribution artifact verification.
+- Expanded deterministic, injected-seam, symlink, encoding, race, rollback,
+  packaging, CLI, and generated-documentation regression coverage.
+
+Behavioral notes: file-inspection commands no longer follow links by default;
+`binary_threshold=0` is rejected as nonsensical; and ambiguous or changing files
+now fail conservatively instead of publishing stale classifications.
+
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+- Hardened the dependency-free TypeScript Result Contract producer. Its public
+  result types are now exported, domain evidence cannot shadow outcome fields,
+  runtime guards reject blank messages, malformed error codes, and contradictory
+  evidence, and the reusable module no longer logs on import. Added separate
+  runnable and adversarial type-check fixtures plus a pinned, checkout-clean CI
+  gate. The Windows symlink-loop regression test now removes its deliberate loop
+  deterministically instead of leaving Pytest unable to clean its temp root.
+- Hardened two network boundaries found by CodeQL's initial repository scan.
+  `checkSslCertificate` now requires TLS 1.2 or newer for both trusted and
+  unverified diagnostic handshakes. `auditRepository` now classifies links from
+  their parsed hostname instead of substring text, skips the complete reserved
+  documentation namespace plus non-public IP literals (including legacy IPv4
+  spellings), refuses embedded URL credentials, and continues safely after a
+  malformed URL instead of suppressing later findings.
+- Stabilized the real `formatCode` integration workflow after repeated GitHub
+  runner cancellations inside `apt-get` and before QZX executed. The fixed
+  Ubuntu 24.04 runner's documented Clang-format, Go, Node, PHP, and Rust tools
+  are now verified explicitly instead of being reinstalled through a mutable
+  regional mirror; pinned Black, Pytest, and Prettier install without root, and
+  the pinned PHP-CS-Fixer download now has bounded retries plus an exact
+  SHA-256 integrity check. A workflow-policy regression test preserves those
+  controls.
+- Added an official OpenSSF Scorecard workflow that publishes an OIDC-authenticated
+  weekly supply-chain assessment and uploads its SARIF findings to GitHub code
+  scanning. The workflow runs only from `main`, uses a fixed Ubuntu runner,
+  bounds its runtime, keeps the exact required reads and writes inside the
+  single analysis job, avoids persisted checkout credentials, and pins every
+  external Action to a full commit SHA. Policy tests preserve those restrictions
+  and the exact set of publisher-approved Actions.
+- Added a dedicated Golden Core platform-evidence issue form for independent
+  real-system captures, selected-command failures, and portability
+  counterexamples. It requires an immutable QZX revision, exact environment,
+  reproduction command and exit status, manually reviewed sanitized evidence,
+  limitations, attribution preference, and explicit public-data permission.
+  The older compatibility form was retained and substantially hardened as the
+  general path for commands outside the 15-command cohort, rather than forcing
+  every one of QZX's 87 commands through a Golden Core-specific vocabulary.
+  Documentation and regression tests keep both routes discoverable and preserve
+  their claim, privacy, attribution, and real-evidence boundaries.
 
 - Exposed the Result Contract conformance Composite Action at repository root so
   external workflows can use the standard `owner/repository@<immutable-sha>`
@@ -81,6 +161,11 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
   indefinitely or treating a non-zero `dotnet --version` exit as usable. The
   probe now has a bounded timeout, so a broken external SDK cannot block QZX
   merely while capability detection runs.
+- Kept the complete `listCommands` terminal catalog while removing its duplicate
+  prose copy from JSON `message`; the structured `commands` field remains the
+  machine-readable source. With the current 87-command catalog, the real
+  PowerShell invocation fell from 59,944 to 50,833 JSON characters (15.2%) while
+  PowerShell and Command Prompt retained the same 98-line human presentation.
 
 ## 0.2.2.0.7a5 — 2026-08-08
 

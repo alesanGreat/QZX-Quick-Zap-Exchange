@@ -131,7 +131,7 @@ class ScaffoldJavaCommand(CommandBase):
 
     def _create_pom_xml(self, project_path, project_name, result):
         pom_path = os.path.join(project_path, 'pom.xml')
-        with open(pom_path, 'w') as f:
+        with open(pom_path, 'w', encoding='utf-8') as f:
             f.write(f'''<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -180,7 +180,7 @@ class ScaffoldJavaCommand(CommandBase):
 
         app_path = os.path.join(src_dir, 'App.java')
         class_name = self._to_class_name(project_name)
-        with open(app_path, 'w') as f:
+        with open(app_path, 'w', encoding='utf-8') as f:
             f.write(f'''package com.example.{project_name};
 
 public class {class_name} {{
@@ -202,7 +202,7 @@ public class {class_name} {{
 
         test_path = os.path.join(test_dir, 'AppTest.java')
         class_name = self._to_class_name(project_name)
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write(f'''package com.example.{project_name};
 
 import org.junit.jupiter.api.Test;
@@ -226,7 +226,7 @@ public class {class_name}Test {{
 
     def _create_readme(self, project_path, project_name, result):
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name.replace('_', ' ').title()}
 
 A Java project created with QZX scaffolding tool.
@@ -253,7 +253,7 @@ mvn test
 
     def _create_gitignore(self, project_path, result):
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''# Compiled class files
 *.class
 

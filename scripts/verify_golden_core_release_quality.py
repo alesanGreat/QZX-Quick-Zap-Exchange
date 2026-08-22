@@ -93,17 +93,6 @@ def attested_command_names(document: dict[str, Any]) -> list[str]:
     return names
 
 
-def current_command_digests(names: list[str]) -> dict[str, str]:
-    loader = CommandLoader()
-    digests: dict[str, str] = {}
-    for name in names:
-        command = loader.get_command(name)
-        if command is None:
-            raise ValueError(f"Golden Core command cannot be loaded: {name}.")
-        digests[name] = command_implementation_digest(type(command))
-    return digests
-
-
 def _valid_sha256(value: Any) -> bool:
     return isinstance(value, str) and _SHA256_PATTERN.fullmatch(value) is not None
 

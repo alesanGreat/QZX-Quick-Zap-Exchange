@@ -68,8 +68,92 @@ jobs:
           --dist-dir "$RUNNER_TEMP/qzx-dist"
           --json
 
+      - name: Exercise the installed wheel outside the checkout
+        run: >-
+          python -B scripts/smoke_installed_distribution.py
+          --dist-dir "$RUNNER_TEMP/qzx-dist"
+
       - name: Validate package rendering for PyPI
         run: python -m twine check "$RUNNER_TEMP"/qzx-dist/*
+
+  result-contract-typescript:
+    name: Result Contract TypeScript producer | TypeScript 5.9.3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out QZX
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned compiler outside the checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm_prefix="${RUNNER_TEMP}/qzx-typescript"
+          npm install --global --prefix "${npm_prefix}" \
+            --ignore-scripts --no-audit --no-fund typescript@5.9.3
+          echo "${npm_prefix}/bin" >> "${GITHUB_PATH}"
+
+      - name: Reject contradictory producer types
+        run: >-
+          tsc --noEmit --strict --exactOptionalPropertyTypes
+          --target ES2022 --module NodeNext --moduleResolution NodeNext
+          examples/result_contract/typescript-minimal.typecheck.ts
+
+      - name: Compile and exercise the producer outside the checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          output_dir="${RUNNER_TEMP}/qzx-typescript-output"
+          tsc --strict --exactOptionalPropertyTypes \
+            --target ES2022 --module commonjs --moduleResolution node \
+            --outDir "${output_dir}" \
+            examples/result_contract/typescript-minimal.ts \
+            examples/result_contract/typescript-minimal.demo.ts
+          producer="$(find "${output_dir}" -type f -name 'typescript-minimal.js' -print -quit)"
+          demo="$(find "${output_dir}" -type f -name 'typescript-minimal.demo.js' -print -quit)"
+          test -n "${producer}"
+          test -n "${demo}"
+          node "${demo}" > "${RUNNER_TEMP}/qzx-typescript-output.jsonl"
+          QZX_PRODUCER="${producer}" \
+          QZX_OUTPUT="${RUNNER_TEMP}/qzx-typescript-output.jsonl" \
+          node <<'NODE'
+          const assert = require("node:assert/strict");
+          const fs = require("node:fs");
+          const producer = require(process.env.QZX_PRODUCER);
+          const results = fs
+            .readFileSync(process.env.QZX_OUTPUT, "utf8")
+            .trim()
+            .split(/\r?\n/)
+            .map((line) => JSON.parse(line));
+
+          assert.equal(results.length, 2);
+          assert.deepEqual(results[0], {
+            item_id: "item-42",
+            value: 7,
+            success: true,
+            message: "Item loaded.",
+          });
+          assert.deepEqual(results[1], {
+            item_id: "missing-42",
+            success: false,
+            message: "The requested item was not found.",
+            error_code: "item_not_found",
+          });
+          assert.throws(
+            () => producer.qzxSuccess("Bad evidence.", { error_code: "bad" }),
+            /must not redefine/,
+          );
+          assert.throws(
+            () => producer.qzxFailure("Bad code.", "Bad-Code", {}),
+            /must match/,
+          );
+          assert.throws(
+            () => producer.qzxSuccess("   ", {}),
+            /non-empty string/,
+          );
+          NODE
 
   result-contract-conformance-action:
     name: Result Contract Composite Action smoke | CPython 3.13

@@ -178,6 +178,7 @@ class RunDiagnosticCommand(CommandBase):
         "platform-specific allowlist"
     )
     category = "system"
+    allow_variadic_option_passthrough = True
 
     result_schema: ClassVar[dict[str, object]] = {
         "type": "object",

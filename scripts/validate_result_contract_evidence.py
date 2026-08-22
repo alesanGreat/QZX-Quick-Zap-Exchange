@@ -8,7 +8,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -278,6 +280,91 @@ def _serialize(report: dict[str, Any]) -> str:
     return json.dumps(report, indent=2, ensure_ascii=False) + "\n"
 
 
+def _path_identities(path_text: str) -> set[str]:
+    """Return lexical and resolvable identities without requiring a valid target."""
+
+    path = Path(path_text)
+    identities = {
+        os.path.normcase(os.path.abspath(os.path.normpath(os.fspath(path))))
+    }
+    try:
+        identities.add(os.path.normcase(str(path.resolve(strict=False))))
+    except (OSError, RuntimeError):
+        # Broken links and symlink loops remain safe through lexical comparison
+        # plus atomic replacement; they must not crash receipt generation.
+        pass
+    return identities
+
+
+def _write_text_atomic(
+    path: Path,
+    content: str,
+    *,
+    replace_file=None,
+) -> None:
+    """Replace one receipt atomically without following the destination link."""
+
+    if replace_file is None:
+        replace_file = os.replace
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(
+            descriptor,
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+        ) as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        replace_file(temporary_path, path)
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+
+def _conflicting_evidence_role(
+    report_path: str,
+    *,
+    success_path: str,
+    failure_path: str,
+    tool_definition_path: str | None,
+) -> str | None:
+    """Return the evidence role that a receipt would overwrite, if any."""
+
+    report = Path(report_path)
+    report_identities = _path_identities(report_path)
+    evidence_paths = {
+        "success": success_path,
+        "failure": failure_path,
+        "tool definition": tool_definition_path,
+    }
+    for role, path_text in evidence_paths.items():
+        if path_text is None:
+            continue
+        evidence = Path(path_text)
+        if report_identities & _path_identities(path_text):
+            return role
+        try:
+            if (
+                os.path.lexists(report)
+                and os.path.lexists(evidence)
+                and report.samefile(evidence)
+            ):
+                return role
+        except OSError:
+            # Normalized-path comparison still protects aliases that can be
+            # resolved even when the platform cannot query file identity.
+            pass
+    return None
+
+
 def main() -> int:
     args = parse_args()
     report = validate_evidence(
@@ -286,13 +373,32 @@ def main() -> int:
         failure_path=args.failure,
         tool_definition_path=args.tool_definition,
     )
+    conflicting_role = (
+        _conflicting_evidence_role(
+            args.report,
+            success_path=args.success,
+            failure_path=args.failure,
+            tool_definition_path=args.tool_definition,
+        )
+        if args.report
+        else None
+    )
+    if conflicting_role is not None:
+        report["success"] = False
+        report["message"] = (
+            "The conformance receipt path conflicts with an evidence input."
+        )
+        report["error_code"] = "receipt_path_conflict"
+        report["details"]["violations"].append(
+            "The report path must differ from the "
+            f"{conflicting_role} evidence path; no receipt was written."
+        )
     serialized = _serialize(report)
 
-    if args.report:
+    if args.report and conflicting_role is None:
         report_path = Path(args.report)
         try:
-            report_path.parent.mkdir(parents=True, exist_ok=True)
-            report_path.write_text(serialized, encoding="utf-8", newline="\n")
+            _write_text_atomic(report_path, serialized)
         except OSError as exception:
             report["success"] = False
             report["message"] = "The conformance receipt could not be written."

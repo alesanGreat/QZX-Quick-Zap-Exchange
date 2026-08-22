@@ -4,19 +4,24 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from pathlib import Path
 
 import pytest
 
 from scripts.verify_distribution_artifacts import (
     find_repository_relative_links,
+    release_readme_marker,
     render_package_readme,
     verify_package_index_links,
+    verify_release_description,
 )
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 README_PATH = PROJECT_ROOT / "README.md"
+COMPATIBILITY_README_PATH = PROJECT_ROOT / "README-English.md"
+MANIFEST_PATH = PROJECT_ROOT / "MANIFEST.in"
 PRODUCT_MANIFEST_PATH = (
     PROJECT_ROOT / "src" / "qzx" / "resources" / "product-manifest.json"
 )
@@ -27,6 +32,20 @@ def package_context() -> tuple[str, str]:
     repository = manifest["urls"]["repository"]
     version = manifest["channels"]["development"]["version"]
     return repository, version
+
+
+def test_readme_identifies_the_current_published_release() -> None:
+    manifest = json.loads(PRODUCT_MANIFEST_PATH.read_text(encoding="utf-8"))
+    version = manifest["channels"]["published"]["version"]
+    content = README_PATH.read_text(encoding="utf-8")
+
+    assert release_readme_marker(version) in content
+    assert f"| Source release described here | `{version}` |" in content
+    verify_release_description(
+        content,
+        expected_version=version,
+        context="repository README.md",
+    )
 
 
 def test_current_readme_becomes_package_index_safe() -> None:
@@ -57,6 +76,16 @@ def test_current_readme_becomes_package_index_safe() -> None:
     verify_package_index_links(rendered, "rendered README")
 
 
+def test_compatibility_readme_remains_a_versionless_pointer() -> None:
+    content = COMPATIBILITY_README_PATH.read_text(encoding="utf-8")
+    relative_links = find_repository_relative_links(content)
+
+    assert "[`README.md`](README.md)" in content
+    assert "src/qzx/resources/product-manifest.json" in content
+    assert re.search(r"(?<!\d)\d+(?:\.\d+){2,}[A-Za-z0-9.-]*", content) is None
+    assert all((PROJECT_ROOT / path).is_file() for path in relative_links)
+
+
 def test_setup_long_description_uses_package_index_renderer() -> None:
     """Keep this integration check dependency-free in the runtime test matrix."""
 
@@ -83,6 +112,17 @@ def test_setup_long_description_uses_package_index_renderer() -> None:
         "repository_url",
         "revision",
     }
+
+
+def test_readme_support_guide_is_available_in_source_distributions() -> None:
+    source = README_PATH.read_text(encoding="utf-8")
+    manifest_lines = {
+        line.strip()
+        for line in MANIFEST_PATH.read_text(encoding="utf-8").splitlines()
+    }
+
+    assert ".github/SUPPORT.md" in find_repository_relative_links(source)
+    assert "include .github/SUPPORT.md" in manifest_lines
 
 
 def test_renderer_preserves_non_repository_links_and_fragments() -> None:

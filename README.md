@@ -37,7 +37,7 @@ qzx getCurrentDateTime
 qzx getCurrentDateTime --output-format iso --json
 ```
 
-This source release is QZX `0.2.2.0.7a5` and requires Python `>=3.13`.
+This source release is QZX `0.2.2.0.7a6` and requires Python `>=3.13`.
 A normal `python -m pip install qzx` selects the latest final release; add
 `--pre` to opt into the newest pre-release. PyPI is authoritative for which
 version those commands currently select.
@@ -48,7 +48,7 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.7a5` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.7a6` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -171,7 +171,9 @@ The repository's existing Windows, Linux, and macOS matrix also captures one
 sanitized 15-command evidence record per runner and validates a combined
 cross-platform summary. The capturer uses only disposable fixtures and an
 authorized loopback HTTP endpoint; it does not request secrets or private
-project data.
+project data. Independent contributors can use the
+[Golden Core platform evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml)
+after manually reviewing the generated JSON for private data.
 
 ### Command maturity is explicit
 
@@ -232,8 +234,8 @@ directly. They prefer the standard CPython 3.13 runtime selected explicitly
 with `QZX_PYTHON`, an active compatible environment, or an existing `uv`
 installation. Ordinary invocations use a validated packaged command index and
 import only the requested command; full discovery remains a development and CI
-integrity check. The basic `qzx Welcome` path avoids system, memory, and storage
-probes; request those details explicitly with `qzx Welcome true`.
+integrity check. The basic `qzx welcome` path avoids system, memory, and storage
+probes; request those details explicitly with `qzx welcome true`.
 
 Optional command groups can be installed with
 `python -m pip install "qzx[filetype]"` or
@@ -272,8 +274,8 @@ change a command result.
 Disable telemetry with either:
 
 ```bash
-QZX_TELEMETRY=0 qzx Welcome
-DO_NOT_TRACK=1 qzx Welcome
+QZX_TELEMETRY=0 qzx welcome
+DO_NOT_TRACK=1 qzx welcome
 ```
 
 An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
@@ -292,7 +294,10 @@ QZX is Alpha software. This list identifies the environments used by the test ma
 Mocked unit tests are not compatibility evidence. Platform claims require
 real-system tests that exercise the installed native dependencies and QZX's
 public interface; the distinction and review rules are documented in the
-[test evidence policy](tests/README.md).
+[test evidence policy](tests/README.md). Submit a canonical cohort capture
+through the [Golden Core evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml),
+or use the [general platform-evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=compatibility_report.yml)
+for any other command or bounded observation.
 
 Complete local stdout snapshots identify their QZX version, Python version,
 operating system, date, fixture, and exit code on the
@@ -316,7 +321,7 @@ operating system, date, fixture, and exit code on the
 - `tests/` contains the public automated Python test suite.
 - `examples/` contains standalone usage examples.
 - `docs/` contains public product philosophy and generated command references.
-- `.github/` contains the public contribution, funding, issue, and CI
+- `.github/` contains the public contribution, support, funding, issue, and CI
   configuration.
 
 ## Contributing
@@ -324,7 +329,8 @@ operating system, date, fixture, and exit code on the
 Start with the [contribution guide](CONTRIBUTING.md) and
 [project philosophy](docs/philosophy.md). Preserve the structured output
 contract, add proportional tests, and keep published and development
-availability explicit.
+availability explicit. For usage help and the right route for questions, bugs,
+or private reports, see the [support guide](.github/SUPPORT.md).
 
 License: [Apache-2.0](LICENSE). The attribution notice is in [NOTICE](NOTICE).
 See [how to contribute](CONTRIBUTING.md), [how to cite QZX](CITATION.cff),

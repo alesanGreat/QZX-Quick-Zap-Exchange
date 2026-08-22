@@ -14,8 +14,23 @@ def test_fast_and_regular_basic_welcome_share_canonical_text():
     message = TerminalWelcome(qzx_version="test").get_welcome_message()
 
     assert message == basic_welcome_message("test")
-    assert "Type 'getSystemInfo'" in message
+    assert "Run 'qzx listCommands'" in message
+    assert "Run 'qzx getSystemInfo'" in message
+    assert "Type 'list'" not in message
     assert "WonderMyEnvironment" not in message
+
+
+def test_interactive_welcome_uses_terminal_ready_instructions():
+    message = TerminalWelcome(
+        qzx_version="test",
+        interactive=True,
+    ).get_welcome_message()
+
+    assert "Type 'listCommands'" in message
+    assert "Type 'help <command>'" in message
+    assert "Type 'exit' or press Ctrl+D to exit" in message
+    assert "qzx listCommands" not in message
+    assert "Type 'list'" not in message
 
 
 def test_fast_startup_claims_attribution_once(tmp_path, capsys):

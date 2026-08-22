@@ -47,6 +47,12 @@ class CommandBase(ABC):
     requires_explicit_approval = False
     approval_when_parameter = None
     backup_target_parameter = None
+
+    # Variadic commands reject option-looking values by default. Commands that
+    # deliberately transport another program's argv opt in; literal paths or
+    # patterns beginning with a dash remain available after the ``--`` marker.
+    allow_variadic_option_passthrough = False
+
     approval_flags = {
         "--dangerously-bypass-approvals-and-sandbox",
         "--yolo",
@@ -160,6 +166,15 @@ class CommandBase(ABC):
             return value
         return value
 
+    def _unknown_option_error(self, token, variadic_parameter):
+        message = "Unknown option '{}' for {}.".format(token, self.name)
+        if variadic_parameter is not None:
+            message += (
+                " Use '--' before a literal value beginning with '-' so typos "
+                "remain distinguishable from data."
+            )
+        return self._usage_error(message)
+
     def parse_arguments(self, args):
         """
         Parse positional and named CLI arguments using command metadata.
@@ -231,16 +246,17 @@ class CommandBase(ABC):
                     None,
                 )
                 if parameter is None:
-                    if variadic_parameter is not None:
+                    if (
+                        variadic_parameter is not None
+                        and self.allow_variadic_option_passthrough
+                    ):
                         positionals.append(token)
                         index += 1
                         continue
-                    return False, None, self._usage_error(
-                        "Option '{}' is not supported by {}.".format(
-                            token,
-                            self.name,
-                        )
-                        )
+                    return False, None, self._unknown_option_error(
+                        token,
+                        variadic_parameter,
+                    )
                 if shared_name == "recursive":
                     recursive_value = token
                     if recursion_depth is None and index + 1 < len(args):
@@ -273,12 +289,16 @@ class CommandBase(ABC):
                 )
                 parameter = option_map.get(lookup_option)
                 if parameter is None:
-                    if variadic_parameter is not None:
+                    if (
+                        variadic_parameter is not None
+                        and self.allow_variadic_option_passthrough
+                    ):
                         positionals.append(token)
                         index += 1
                         continue
-                    return False, None, self._usage_error(
-                        "Unknown option '{}' for {}.".format(token, self.name)
+                    return False, None, self._unknown_option_error(
+                        token,
+                        variadic_parameter,
                     )
 
                 parameter_name = parameter["name"]
@@ -329,10 +349,14 @@ class CommandBase(ABC):
                 isinstance(token, str)
                 and token.startswith("-")
                 and not re.fullmatch(r"-\d+(?:\.\d+)?", token)
-                and variadic_parameter is None
+                and not (
+                    variadic_parameter is not None
+                    and self.allow_variadic_option_passthrough
+                )
             ):
-                return False, None, self._usage_error(
-                    "Unknown option '{}' for {}.".format(token, self.name)
+                return False, None, self._unknown_option_error(
+                    token,
+                    variadic_parameter,
                 )
 
             positionals.append(token)

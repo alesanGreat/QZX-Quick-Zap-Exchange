@@ -1,298 +1,314 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-DetectFileType Command - Identifies file type based on its magic number (file signature)
-"""
+"""Detect file type with bounded built-in signatures and optional libmagic."""
 
-import os
+from __future__ import annotations
+
+from qzx.core.command_base import CommandBase
+from qzx.core.file_content_analysis import (
+    FileChangedDuringReadError,
+    DEFAULT_TYPE_SAMPLE_SIZE,
+    MAX_SAMPLE_SIZE,
+    MIN_SAMPLE_SIZE,
+    DetectedType,
+    analyze_binary_content,
+    categorize_mime_type,
+    common_extensions_for_mime,
+    detect_builtin_type,
+    normalize_boolean,
+    normalize_mime_type,
+    normalize_sample_size,
+    read_distributed_sample,
+    validate_regular_file,
+)
 
 try:
     import magic
-except ImportError:  # Optional dependency; discovery must remain side-effect free.
+except ImportError:  # The built-in detector remains fully usable.
     magic = None
 
-from qzx.core.command_base import CommandBase
+
+_DEFAULT_MAGIC_PROVIDER = object()
+
 
 class DetectFileTypeCommand(CommandBase):
-    """
-    Command to identify file type based on its magic number (file signature)
-    """
-    
+    """Identify one regular file without trusting its extension alone."""
+
     name = "detectFileType"
-    description = "Identifies file type based on its magic number (file signature) rather than extension"
+    description = (
+        "Identifies a regular file from bounded content signatures with an "
+        "optional libmagic refinement and an explicit extension comparison"
+    )
     category = "file"
     _byte_units = ("B", "KB", "MB", "GB", "TB", "PB")
-    
+
     parameters = [
         {
-            'name': 'file_path',
-            'description': 'Path to the file to analyze',
-            'required': True
+            "name": "file_path",
+            "description": "Path to the regular file to identify",
+            "required": True,
+            "type": "str",
         },
         {
-            'name': 'detailed_info',
-            'description': 'Whether to show detailed MIME type information',
-            'required': False,
-            'default': False
-        }
+            "name": "detailed_info",
+            "description": "Include categories, sample evidence, and detector details",
+            "required": False,
+            "default": False,
+            "type": "bool",
+        },
+        {
+            "name": "sample_size",
+            "description": (
+                f"Total content sample budget in bytes ({MIN_SAMPLE_SIZE} through "
+                f"{MAX_SAMPLE_SIZE})"
+            ),
+            "required": False,
+            "default": DEFAULT_TYPE_SAMPLE_SIZE,
+            "type": "int",
+        },
+        {
+            "name": "follow_symlinks",
+            "description": (
+                "Follow reviewed symbolic-link or junction components to their "
+                "resolved regular-file target"
+            ),
+            "required": False,
+            "default": False,
+            "type": "bool",
+        },
     ]
-    
+
     examples = [
         {
-            'command': 'qzx detectFileType image.jpg',
-            'description': 'Identify the real type of image.jpg based on its contents'
+            "command": "qzx detectFileType image.jpg",
+            "description": "Identify a file from its contents rather than its name",
         },
         {
-            'command': 'qzx detectFileType unknown.bin true',
-            'description': 'Identify an unknown file with detailed MIME information'
-        }
+            "command": "qzx detectFileType unknown.bin true",
+            "description": "Include detailed detector and sampling evidence",
+        },
+        {
+            "command": "qzx detectFileType reviewed-link false 65536 true",
+            "description": "Identify the resolved target of an explicitly reviewed link",
+        },
     ]
-    
-    def execute(self, file_path, detailed_info=False):
-        """
-        Identifies file type based on its magic number
-        
-        Args:
-            file_path (str): Path to the file to analyze
-            detailed_info (bool): Whether to include detailed MIME type information
-            
-        Returns:
-            Dictionary with the result of the analysis
-        """
+
+    def __init__(
+        self,
+        *,
+        magic_provider=_DEFAULT_MAGIC_PROVIDER,
+        open_file=None,
+        detect_encoding=None,
+    ):
+        super().__init__()
+        self._magic_provider = (
+            magic if magic_provider is _DEFAULT_MAGIC_PROVIDER else magic_provider
+        )
+        self._open_file = open_file
+        self._detect_encoding = detect_encoding
+
+    def execute(
+        self,
+        file_path,
+        detailed_info=False,
+        sample_size=DEFAULT_TYPE_SAMPLE_SIZE,
+        follow_symlinks=False,
+    ):
+        detailed, error = normalize_boolean(
+            detailed_info,
+            field="detailed_info",
+            command_base=self,
+        )
+        if error is not None:
+            return error
+        sample_budget, error = normalize_sample_size(
+            sample_size,
+            default=DEFAULT_TYPE_SAMPLE_SIZE,
+        )
+        if error is not None:
+            return error
+        follow_links, error = normalize_boolean(
+            follow_symlinks,
+            field="follow_symlinks",
+            command_base=self,
+        )
+        if error is not None:
+            return error
+
+        target, error = validate_regular_file(
+            file_path,
+            follow_symlinks=follow_links,
+        )
+        if error is not None:
+            return error
         try:
-            if magic is None:
-                return {
-                    "success": False,
-                    "error_code": "missing_dependency",
-                    "error": "python-magic is not installed.",
-                    "message": "Install QZX with the filetype extra to use detectFileType.",
-                    "details": {
-                        "remediation": "pip install 'qzx[filetype]'",
-                        "dependency": "python-magic",
-                    },
-                }
-            # Handle string conversion for detailed_info parameter
-            if isinstance(detailed_info, str):
-                detailed_info = detailed_info.lower() in ['true', 'yes', '1', 't', 'y']
-            
-            # Validate file exists
-            if not os.path.exists(file_path):
-                return {
-                    "success": False,
-                    "error": f"File '{file_path}' does not exist"
-                }
-            
-            # Validate it's a file
-            if not os.path.isfile(file_path):
-                return {
-                    "success": False,
-                    "error": f"'{file_path}' is not a file"
-                }
-            
-            # Get file size
-            file_size = os.path.getsize(file_path)
-            
-            # Use python-magic to identify the file type
-            mime_type = magic.from_file(file_path, mime=True)
-            file_description = magic.from_file(file_path)
-            
-            # Get file extension if any
-            _, file_extension = os.path.splitext(file_path)
-            file_extension = file_extension.lower() if file_extension else "none"
-            
-            # Common extensions for detected MIME type
-            common_extensions = self._get_common_extensions_for_mime(mime_type)
-            
-            # Check if the extension matches what would be expected
-            extension_matches = (file_extension[1:] if file_extension.startswith('.') else file_extension) in common_extensions
-            
-            # Determine if it's a binary file
-            is_binary = not mime_type.startswith('text/')
-            
-            # Basic result
-            result = {
-                "success": True,
-                "file_path": os.path.abspath(file_path),
-                "file_size": file_size,
-                "file_size_readable": self._format_bytes(file_size),
-                "mime_type": mime_type,
-                "description": file_description,
-                "extension": file_extension,
-                "is_binary": is_binary,
-                "extension_matches_content": extension_matches,
-                "message": f"File '{file_path}' is a {mime_type} file"
-            }
-            
-            # Add suggested extension if current one doesn't match
-            if not extension_matches and common_extensions:
-                result["suggested_extension"] = f".{common_extensions[0]}"
-                
-                if file_extension != "none":
-                    result["message"] = f"File '{file_path}' has extension '{file_extension}' but is actually a {mime_type} file (should be '.{common_extensions[0]}')"
-                else:
-                    result["message"] = f"File '{file_path}' has no extension but is a {mime_type} file (should have '.{common_extensions[0]}')"
-            
-            # Add detailed info if requested
-            if detailed_info:
-                # Get common file types
-                file_categories = self._categorize_mime_type(mime_type)
-                
-                result["details"] = {
-                    "mime_type": mime_type,
-                    "description": file_description,
-                    "common_extensions": common_extensions,
-                    "categories": file_categories
-                }
-            
-            return result
-            
-        except Exception as e:
+            sample = read_distributed_sample(
+                target,
+                sample_budget,
+                **(
+                    {"open_file": self._open_file}
+                    if self._open_file is not None
+                    else {}
+                ),
+            )
+        except FileChangedDuringReadError as exc:
             return {
                 "success": False,
-                "file_path": file_path,
-                "error": str(e)
+                "error_code": "file_changed_during_read",
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": (
+                    "The file changed while QZX was reading its bounded sample, "
+                    "so no classification was published."
+                ),
+                "details": target.evidence(),
             }
-    
-    def _get_common_extensions_for_mime(self, mime_type):
-        """
-        Return common file extensions for a given MIME type
-        
-        Args:
-            mime_type (str): MIME type string
-            
-        Returns:
-            list: List of common extensions (without leading dot)
-        """
-        mime_to_ext = {
-            # Image formats
-            'image/jpeg': ['jpg', 'jpeg'],
-            'image/png': ['png'],
-            'image/gif': ['gif'],
-            'image/bmp': ['bmp'],
-            'image/webp': ['webp'],
-            'image/tiff': ['tiff', 'tif'],
-            'image/svg+xml': ['svg'],
-            'image/x-icon': ['ico'],
-            
-            # Document formats
-            'application/pdf': ['pdf'],
-            'application/msword': ['doc'],
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
-            'application/vnd.ms-excel': ['xls'],
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
-            'application/vnd.ms-powerpoint': ['ppt'],
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['pptx'],
-            'text/plain': ['txt', 'text'],
-            'text/html': ['html', 'htm'],
-            'text/css': ['css'],
-            'text/csv': ['csv'],
-            'application/json': ['json'],
-            'application/xml': ['xml'],
-            'application/rtf': ['rtf'],
-            
-            # Archive formats
-            'application/zip': ['zip'],
-            'application/x-rar-compressed': ['rar'],
-            'application/gzip': ['gz'],
-            'application/x-tar': ['tar'],
-            'application/x-7z-compressed': ['7z'],
-            
-            # Audio formats
-            'audio/mpeg': ['mp3'],
-            'audio/wav': ['wav'],
-            'audio/ogg': ['ogg'],
-            'audio/midi': ['mid', 'midi'],
-            'audio/aac': ['aac'],
-            'audio/flac': ['flac'],
-            
-            # Video formats
-            'video/mp4': ['mp4'],
-            'video/mpeg': ['mpeg', 'mpg'],
-            'video/x-msvideo': ['avi'],
-            'video/quicktime': ['mov'],
-            'video/webm': ['webm'],
-            'video/x-flv': ['flv'],
-            'video/x-matroska': ['mkv'],
-            
-            # Executable/binary formats
-            'application/x-msdownload': ['exe', 'dll'],
-            'application/x-executable': ['exe'],
-            'application/x-sharedlib': ['so', 'dll'],
-            'application/x-object': ['o', 'obj'],
-            'application/octet-stream': ['bin', 'dat'],
-            
-            # Font formats
-            'font/ttf': ['ttf'],
-            'font/otf': ['otf'],
-            'font/woff': ['woff'],
-            'font/woff2': ['woff2'],
-            
-            # Programming languages
-            'text/x-python': ['py'],
-            'text/x-c': ['c'],
-            'text/x-c++': ['cpp', 'cxx', 'cc'],
-            'text/x-java': ['java'],
-            'text/javascript': ['js'],
-            'application/x-httpd-php': ['php'],
-            'text/x-ruby': ['rb'],
-            'text/x-perl': ['pl'],
-            'text/x-shellscript': ['sh', 'bash'],
-            'text/x-csharp': ['cs'],
-            
-            # Database formats
-            'application/x-sqlite3': ['sqlite', 'db'],
-            'application/vnd.sqlite3': ['sqlite', 'db'],
-            'application/vnd.ms-access': ['mdb', 'accdb']
+        except OSError as exc:
+            return {
+                "success": False,
+                "error_code": "file_read_failed",
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": "QZX could not read the requested file sample.",
+                "details": target.evidence(),
+            }
+
+        binary_analysis = analyze_binary_content(
+            sample,
+            threshold=10.0,
+            path=target.analyzed_path,
+            detect_encoding=self._detect_encoding,
+        )
+        builtin_type = detect_builtin_type(
+            target.analyzed_path,
+            sample,
+            binary_analysis,
+        )
+        selected_type = builtin_type
+        warnings = []
+        libmagic_type, libmagic_description, libmagic_error = (
+            self._detect_with_libmagic(target, sample)
+        )
+        normalized_magic = normalize_mime_type(libmagic_type)
+        strong_builtin = builtin_type.source == "content_signature"
+        if normalized_magic is not None:
+            if strong_builtin:
+                if normalized_magic != builtin_type.mime_type:
+                    warnings.append(
+                        "libmagic disagreed with a strong built-in content "
+                        f"signature ({normalized_magic} versus "
+                        f"{builtin_type.mime_type}); QZX retained the signature."
+                    )
+            elif (
+                normalized_magic != "application/octet-stream"
+                or builtin_type.mime_type == "application/octet-stream"
+            ):
+                selected_type = DetectedType(
+                    normalized_magic,
+                    libmagic_description or normalized_magic,
+                    "libmagic",
+                    95.0,
+                )
+        elif libmagic_type is not None:
+            warnings.append(
+                "libmagic returned a malformed MIME type; the bounded built-in "
+                "detector was used instead."
+            )
+        elif libmagic_error is not None:
+            warnings.append(
+                "libmagic refinement failed; the bounded built-in detector was "
+                f"used instead ({libmagic_error})."
+            )
+
+        if (
+            selected_type.source == "zip_container_plus_extension_hint"
+            and libmagic_type is None
+        ):
+            warnings.append(
+                "The Office Open XML subtype is inferred from the extension only; "
+                "the ZIP container was detected, but its internal package layout "
+                "was not opened or verified."
+            )
+
+        extension = target.absolute_path.suffix.casefold().lstrip(".") or None
+        common_extensions = common_extensions_for_mime(selected_type.mime_type)
+        extension_matches = (
+            extension in common_extensions if common_extensions else None
+        )
+        details = {
+            "detection": selected_type.evidence(),
+            "builtin_detection": builtin_type.evidence(),
+            "libmagic_available": self._magic_provider is not None,
+            "libmagic_mime_type": normalized_magic,
+            "libmagic_agrees_with_builtin": (
+                None
+                if normalized_magic is None
+                else normalized_magic == builtin_type.mime_type
+            ),
+            "container_mime_type": (
+                "application/zip"
+                if builtin_type.source == "zip_container_plus_extension_hint"
+                else None
+            ),
+            "extension_match_status": (
+                "unknown"
+                if extension_matches is None
+                else "matches"
+                if extension_matches
+                else "mismatch"
+            ),
+            "target": target.evidence(),
         }
-        
-        return mime_to_ext.get(mime_type, [])
-    
-    def _categorize_mime_type(self, mime_type):
-        """
-        Categorize a MIME type into user-friendly categories
-        
-        Args:
-            mime_type (str): MIME type string
-            
-        Returns:
-            list: List of categories this file type belongs to
-        """
-        categories = []
-        
-        if mime_type.startswith('image/'):
-            categories.append('Image')
-        
-        if mime_type.startswith('audio/'):
-            categories.append('Audio')
-        
-        if mime_type.startswith('video/'):
-            categories.append('Video')
-        
-        if mime_type.startswith('text/'):
-            categories.append('Text')
-            
-            # Subcategories for text
-            if 'html' in mime_type:
-                categories.append('Web')
-            if any(lang in mime_type for lang in ['python', 'java', 'c++', 'javascript', 'php', 'ruby', 'perl', 'shellscript', 'csharp']):
-                categories.append('Source Code')
-            
-        if mime_type.startswith('application/'):
-            if any(archive in mime_type for archive in ['zip', 'rar', 'gzip', 'tar', '7z', 'x-compressed']):
-                categories.append('Archive')
-            if any(doc in mime_type for doc in ['pdf', 'msword', 'openxmlformats', 'ms-excel', 'ms-powerpoint']):
-                categories.append('Document')
-            if any(exec_type in mime_type for exec_type in ['x-msdownload', 'x-executable', 'x-sharedlib', 'x-mach-binary']):
-                categories.append('Executable')
-            if any(db in mime_type for db in ['sqlite', 'ms-access']):
-                categories.append('Database')
-        
-        if mime_type.startswith('font/'):
-            categories.append('Font')
-            
-        # If no categories matched, use a generic one
-        if not categories:
-            categories.append('Other')
-            
-        return categories 
+        if detailed:
+            details.update(
+                {
+                    "categories": categorize_mime_type(selected_type.mime_type),
+                    "common_extensions": common_extensions,
+                    "sampling": sample.evidence(),
+                    "binary_analysis": binary_analysis,
+                    "libmagic_description": libmagic_description,
+                }
+            )
+
+        result = {
+            "success": True,
+            "message": (
+                f"File '{target.absolute_path}' was identified as "
+                f"{selected_type.mime_type} by {selected_type.source}."
+            ),
+            "file_path": str(target.absolute_path),
+            "analyzed_path": str(target.analyzed_path),
+            "file_size": target.file_size,
+            "file_size_readable": self._format_bytes(float(target.file_size)),
+            "mime_type": selected_type.mime_type,
+            "description": selected_type.description,
+            "is_binary": binary_analysis["is_binary"],
+            "extension": f".{extension}" if extension else None,
+            "extension_matches_content": extension_matches,
+            "details": details,
+        }
+        if extension_matches is False and common_extensions:
+            result["suggested_extension"] = f".{common_extensions[0]}"
+            result["message"] += (
+                f" The current extension does not match; "
+                f"'.{common_extensions[0]}' is the canonical suggestion."
+            )
+        if warnings:
+            result["warnings"] = warnings
+        return result
+
+    def _detect_with_libmagic(self, target, sample):
+        provider = self._magic_provider
+        if provider is None:
+            return None, None, None
+        try:
+            from_buffer = getattr(provider, "from_buffer", None)
+            if callable(from_buffer):
+                mime_type = from_buffer(sample.head, mime=True)
+                description = from_buffer(sample.head, mime=False)
+            else:
+                from_file = getattr(provider, "from_file")
+                mime_type = from_file(str(target.analyzed_path), mime=True)
+                description = from_file(str(target.analyzed_path), mime=False)
+            return mime_type, description, None
+        except Exception as exc:
+            return None, None, f"{type(exc).__name__}: {exc}"

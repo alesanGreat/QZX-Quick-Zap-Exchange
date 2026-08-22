@@ -1,0 +1,40 @@
+name: Public surface parity
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qzx-public-surface-parity
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: GitHub, PyPI, and website parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the public source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install standard CPython 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+
+      - name: Require exact public-surface convergence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python -B scripts/verify_public_surface_parity.py
+          --expected-commit "$GITHUB_SHA"
+          --json

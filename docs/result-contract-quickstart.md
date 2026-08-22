@@ -36,11 +36,15 @@ carry `error` or `error_code`; use `warnings` for non-fatal conditions. When a
 defined optional core or `meta` field is unavailable, omit it instead of
 emitting `null` with the wrong type.
 
-TypeScript producers can copy the dependency-free
+TypeScript producers can copy the side-effect-free, dependency-free
 [`typescript-minimal.ts`](../examples/result_contract/typescript-minimal.ts)
-example. It models success/failure as a discriminated union while preserving
-existing domain fields; it is an implementation example, not a substitute for
-validating emitted JSON against the canonical schema.
+module and its runnable
+[`typescript-minimal.demo.ts`](../examples/result_contract/typescript-minimal.demo.ts).
+The exported helpers preserve domain fields but reserve the QZX outcome fields,
+so contradictory evidence is rejected at compile time and runtime. The
+[`typescript-minimal.typecheck.ts`](../examples/result_contract/typescript-minimal.typecheck.ts)
+fixture is compiled strictly in CI. This remains an implementation example, not
+a substitute for validating emitted JSON against the canonical schema.
 
 Canonical JSON Schema:
 <https://qzx.yumbale.com/schemas/result-contract-v1.schema.json>
@@ -77,6 +81,10 @@ python scripts/validate_result_contract_evidence.py \
   --failure result-contract-evidence/failure.json \
   --report result-contract-evidence/qzx-conformance.json
 ```
+
+Keep the report path distinct from the success, failure, and MCP tool-definition
+inputs. The validator rejects path aliases and hard links to those inputs
+instead of overwriting the evidence that the receipt is meant to identify.
 
 Every generated receipt identifies its own versioned JSON Schema at
 `https://qzx.yumbale.com/schemas/result-contract-conformance-receipt-v1.schema.json`.

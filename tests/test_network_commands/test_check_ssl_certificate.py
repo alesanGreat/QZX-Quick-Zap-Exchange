@@ -1,5 +1,6 @@
 """Deterministic TLS certificate tests for checkSslCertificate."""
 
+import ssl
 from datetime import datetime, timedelta, timezone
 
 from qzx.commands.network.check_ssl_certificate import CheckSslCertificateCommand
@@ -35,6 +36,17 @@ class TestCheckSslCertificateCommand:
 
         assert result["success"] is False
         assert "Port must be an integer" in result["error"]
+
+    def test_tls_context_requires_tls_1_2_for_both_trust_modes(self):
+        verified = self.command._create_tls_context()
+        diagnostic = self.command._create_unverified_tls_context()
+
+        assert verified.minimum_version is ssl.TLSVersion.TLSv1_2
+        assert verified.check_hostname is True
+        assert verified.verify_mode is ssl.CERT_REQUIRED
+        assert diagnostic.minimum_version is ssl.TLSVersion.TLSv1_2
+        assert diagnostic.check_hostname is False
+        assert diagnostic.verify_mode is ssl.CERT_NONE
 
     @staticmethod
     def _certificate(*, host, not_before, not_after):

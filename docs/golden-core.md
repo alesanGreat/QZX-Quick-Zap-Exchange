@@ -78,13 +78,14 @@ Passing one dimension never substitutes for another. Mocked unit tests do not
 become platform evidence, a captured success does not prove every failure path,
 and inclusion in Golden Core does not freeze an interface.
 
-While QZX remains Alpha, an intentional breaking rename can temporarily make a
-selected command development-only even though the previous published package
-contains its predecessor name. The catalog must expose that availability
-honestly instead of rejecting the whole cohort or pretending the new name is
-already installable from PyPI. Such a command cannot satisfy release quality
-until an exact release containing the current name and implementation is
-published and attested.
+The current Golden Core names are present in published pre-release
+`0.2.2.0.7a5` and are covered by its release-quality attestation under
+`docs/release-quality/0.2.2.0.7a5.json`. All 15 commands remain Alpha: published
+and attested evidence closes specific release-quality dimensions, but it does
+not substitute for lifecycle promotion review or independent reproduction. If
+a future Alpha rename makes a selected name development-only again, the catalog
+must expose that availability honestly until a release containing the new name
+is published and attested.
 
 ### Failure evidence must be meaningful, not manufactured
 
@@ -159,6 +160,27 @@ regardless of input order, download directory, or host line-ending convention.
 The aggregate proves only the exact revision, command implementation digests,
 environments, fixtures, arguments, and observed results; it is not a universal
 compatibility guarantee or an automatic Beta promotion.
+
+### Submit independent platform evidence
+
+Run the capturer from a clean checkout at the exact full commit SHA you intend
+to report, open the generated JSON, and review it manually before publishing.
+The automatic replacements cover known checkout, home, user, hostname, fixture,
+and ephemeral-port values; they are a defense in depth, not permission to upload
+an unreviewed file. Never publish credentials, private remotes, internal
+addresses, personal data, proprietary content, or a security vulnerability.
+
+Use the
+[Golden Core platform evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=golden_core_evidence.yml)
+to attach the sanitized record or submit a selected-command failure,
+counterexample, or portability limitation. The form asks for the immutable QZX
+revision, exact environment, command and exit status, repetitions, limitations,
+and public credit preference so a reviewer can distinguish independent evidence
+from QZX's own CI matrix. Negative findings are welcome and do not need to make
+the project look successful to be useful. Evidence for a command outside the
+cohort belongs in the
+[general platform-evidence form](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/issues/new?template=compatibility_report.yml)
+so Golden Core claims remain scoped to the maintained registry.
 
 ## Release-quality attestation
 

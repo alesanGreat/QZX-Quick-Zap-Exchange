@@ -169,7 +169,7 @@ class ScaffoldPythonCommand(CommandBase):
         
         # Create __init__.py file
         init_path = os.path.join(package_dir, '__init__.py')
-        with open(init_path, 'w') as f:
+        with open(init_path, 'w', encoding='utf-8') as f:
             f.write(f'''"""
 {project_name} package.
 
@@ -182,7 +182,7 @@ __version__ = "0.1.0"
         
         # Create a module file
         module_path = os.path.join(package_dir, 'core.py')
-        with open(module_path, 'w') as f:
+        with open(module_path, 'w', encoding='utf-8') as f:
             f.write(f'''"""
 Core functionality for {project_name}.
 """
@@ -227,13 +227,13 @@ def add(a, b):
         
         # Create __init__.py file
         init_path = os.path.join(tests_dir, '__init__.py')
-        with open(init_path, 'w') as f:
+        with open(init_path, 'w', encoding='utf-8') as f:
             f.write('# Test package')
         result["files_created"].append(init_path)
         
         # Create a test file
         test_path = os.path.join(tests_dir, 'test_core.py')
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write(f'''"""
 Tests for {project_name}.core module.
 """
@@ -257,7 +257,7 @@ def test_add():
         
         # Create pytest.ini
         pytest_ini_path = os.path.join(project_path, 'pytest.ini')
-        with open(pytest_ini_path, 'w') as f:
+        with open(pytest_ini_path, 'w', encoding='utf-8') as f:
             f.write(f'''[pytest]
 testpaths = tests
 python_files = test_*.py
@@ -275,7 +275,7 @@ python_functions = test_*
             result (dict): Result dictionary to update
         """
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(f'''# {project_name.replace('_', ' ').title()}
 
 A Python project created with QZX scaffolding tool.
@@ -326,7 +326,7 @@ pytest
             result (dict): Result dictionary to update
         """
         setup_path = os.path.join(project_path, 'setup.py')
-        with open(setup_path, 'w') as f:
+        with open(setup_path, 'w', encoding='utf-8') as f:
             f.write(f'''from setuptools import setup, find_packages
 
 setup(
@@ -361,7 +361,7 @@ setup(
             result (dict): Result dictionary to update
         """
         req_path = os.path.join(project_path, 'requirements.txt')
-        with open(req_path, 'w') as f:
+        with open(req_path, 'w', encoding='utf-8') as f:
             f.write('''# Add your dependencies here
 # or use setup.py for distribution
 
@@ -381,7 +381,7 @@ flake8>=4.0.1
             result (dict): Result dictionary to update
         """
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write('''# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -424,7 +424,7 @@ Thumbs.db
             result (dict): Result dictionary to update
         """
         main_path = os.path.join(project_path, 'main.py')
-        with open(main_path, 'w') as f:
+        with open(main_path, 'w', encoding='utf-8') as f:
             f.write(f'''#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 

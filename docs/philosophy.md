@@ -12,7 +12,7 @@ However, for AI-driven systems and tools designed to be consumed by AI agents, *
 
 AI systems don't have the implicit knowledge and contextual understanding that humans build up over years of experience. What might be obvious to a human user often needs to be explicitly stated for an AI. Verbose outputs provide this critical context.
 
-For example, when `GetCpuLoad` returns not just a percentage but detailed per-core statistics, frequency information, and a formatted message explaining what the numbers mean, it gives AI agents the full picture needed to make informed recommendations.
+For example, when `getCpuLoad` returns not just a percentage but detailed per-core statistics, frequency information, and a formatted message explaining what the numbers mean, it gives AI agents the full picture needed to make informed recommendations.
 
 ### 2. Structured Richness Enables Better Decision Making
 
@@ -130,7 +130,7 @@ Consider how this philosophy manifests in the QZX tool:
 
 3. **File Operations**: Even simple operations come with confirmation, context, and additional information about the files or directories affected.
 
-4. **User Administration**: Commands like `IsAdmin` don't simply return a boolean value but provide detailed information about the user's permissions, the specific admin capabilities present, and OS-specific context about what those permissions mean.
+4. **User Administration**: Commands like `isAdmin` don't simply return a boolean value but provide detailed information about the user's permissions, the specific admin capabilities present, and OS-specific context about what those permissions mean.
 
 5. **Network Operations**: Network-related commands provide not just raw data but interpretive context about connectivity status, performance metrics, and potential issues.
 
@@ -149,7 +149,7 @@ A traditional command might return:
 /home/user/documents
 ```
 
-QZX's `CurrentDir` command returns:
+QZX's `getCurrentDirectory` command returns:
 ```json
 {
   "success": true,
@@ -186,7 +186,7 @@ A traditional command might return:
 True
 ```
 
-QZX's `IsAdmin` command returns:
+QZX's `isAdmin` command returns:
 ```json
 {
   "success": true,

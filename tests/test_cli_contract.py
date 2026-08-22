@@ -11,8 +11,11 @@ import sys
 from pathlib import Path
 import zipfile
 
+from qzx.commands.file.create_directory import CreateDirectoryCommand
 from qzx.commands.file.delete_path import DeletePathCommand
 from qzx.commands.system.list_disk_devices import ListDiskDevicesCommand
+from qzx.commands.system.run_diagnostic_command import RunDiagnosticCommand
+from qzx.commands.system.run_script import RunScriptCommand
 from qzx.commands.system.terminal import QZXTerminal
 from qzx.cli import (
     QZX,
@@ -69,7 +72,7 @@ class RichFixtureCommand(CommandBase):
         }
 
 
-def _run_cli(*arguments, environment_overrides=None):
+def _run_cli(*arguments, environment_overrides=None, text=True):
     environment = os.environ.copy()
     environment["QZX_TELEMETRY"] = "0"
     environment["PYTHONPATH"] = str(REPOSITORY_ROOT / "src")
@@ -78,7 +81,7 @@ def _run_cli(*arguments, environment_overrides=None):
         [sys.executable, "-m", "qzx", *arguments],
         cwd=REPOSITORY_ROOT,
         env=environment,
-        text=True,
+        text=text,
         capture_output=True,
         timeout=30,
         check=False,
@@ -105,6 +108,37 @@ def test_shared_boolean_parser_accepts_only_explicit_boolean_values():
 
     for raw_value in (None, 1, 0, [], {}, "sometimes", ""):
         assert CommandBase._parse_bool(raw_value) is None
+
+
+def test_variadic_option_passthrough_is_explicit_and_literal_dash_values_use_marker():
+    valid, values, error = CreateDirectoryCommand().parse_arguments(["--parth"])
+
+    assert valid is False
+    assert values is None
+    assert error["error_code"] == "usage_error"
+    assert "Use '--' before a literal value" in error["error"]
+
+    valid, values, error = CreateDirectoryCommand().parse_arguments(
+        ["--", "--literal-directory"]
+    )
+
+    assert valid is True
+    assert error is None
+    assert values["directory_paths"] == ["--literal-directory"]
+
+    valid, values, error = RunDiagnosticCommand().parse_arguments(
+        ["uname", "-a"]
+    )
+    assert valid is True
+    assert error is None
+    assert values["args"] == ["-a"]
+
+    valid, values, error = RunScriptCommand().parse_arguments(
+        ["script.py", "--verbose", "-x"]
+    )
+    assert valid is True
+    assert error is None
+    assert values["args"] == ["--verbose", "-x"]
 
 
 def test_discovery_is_complete_and_collision_free():
@@ -337,14 +371,45 @@ def test_json_mode_emits_one_document_and_failure_exit_code(tmp_path):
     assert payload["error_code"] == "file_not_found"
 
 
-def test_json_mode_captures_native_child_output_before_serializing():
+def test_json_mode_keeps_terminal_control_bytes_out_of_redirected_stdout():
     completed = _run_cli("clearScreen", "--json")
 
     payload = json.loads(completed.stdout)
     assert completed.returncode == 0
     assert completed.stdout.startswith("{")
+    assert "\x1b" not in completed.stdout
     assert payload["success"] is True
-    assert payload["screen_cleared"] is True
+    assert payload["screen_cleared"] is False
+    assert payload["details"]["reason"] == "non_interactive_output"
+    assert payload["details"]["shell_spawned"] is False
+
+
+def test_json_mode_emits_utf8_bytes_when_stdout_uses_non_utf8_encoding(
+    tmp_path,
+):
+    tree_root = tmp_path / "tree"
+    nested = tree_root / "nested"
+    nested.mkdir(parents=True)
+    (nested / "unicode-λ.txt").write_text("content", encoding="utf-8")
+
+    completed = _run_cli(
+        "getProjectTree",
+        str(tree_root),
+        "2",
+        "--json",
+        environment_overrides={
+            "PYTHONIOENCODING": "cp1252",
+            "QZX_STATE_DIR": str(tmp_path / "state"),
+        },
+        text=False,
+    )
+
+    stdout = completed.stdout.decode("utf-8")
+    payload = json.loads(stdout)
+    assert completed.returncode == 0
+    assert payload["success"] is True
+    assert "unicode-λ.txt" in payload["tree_text"]
+    assert "└──" in payload["tree_text"]
 
 
 def test_unknown_command_uses_127_and_suggestions():
@@ -610,3 +675,12 @@ def test_interactive_terminal_uses_the_shared_human_and_json_renderers(capsys):
     assert "Items Found: 2" in human_output
     assert "{'" not in human_output
     assert json.loads(json_output)["details"]["ready"] is True
+
+
+def test_interactive_terminal_accepts_a_bom_prefixed_piped_command():
+    terminal = object.__new__(QZXTerminal)
+
+    normalized = terminal.precmd("\ufeffexit")
+
+    assert normalized == "exit"
+    assert terminal.onecmd(normalized) is True

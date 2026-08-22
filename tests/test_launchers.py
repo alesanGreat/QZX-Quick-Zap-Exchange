@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -82,6 +83,46 @@ def test_local_launcher_uses_fast_human_welcome(tmp_path):
     assert ATTRIBUTION in completed.stdout
     assert "Welcome Professor!" in completed.stdout
     assert "QZX welcome screen (basic view) displayed." in completed.stdout
+    assert "Run 'qzx listCommands'" in completed.stdout
+    assert "Run 'qzx terminal'" in completed.stdout
+
+
+def test_local_launcher_does_not_write_bytecode_into_checkout(tmp_path):
+    """Repository launchers must keep the source tree free of Python caches."""
+
+    checkout = tmp_path / "checkout"
+    shutil.copytree(
+        REPOSITORY_ROOT / "src",
+        checkout / "src",
+        ignore=shutil.ignore_patterns("__pycache__", "*.py[co]"),
+    )
+    launcher_name = "qzx.bat" if os.name == "nt" else "qzx.sh"
+    launcher = shutil.copy2(REPOSITORY_ROOT / launcher_name, checkout)
+    environment = os.environ.copy()
+    environment["QZX_PYTHON"] = sys.executable
+    environment["QZX_TELEMETRY"] = "0"
+    environment.pop("PYTHONDONTWRITEBYTECODE", None)
+    environment.pop("PYTHONPYCACHEPREFIX", None)
+    command = (
+        ["cmd.exe", "/d", "/c", str(launcher)]
+        if os.name == "nt"
+        else [str(launcher)]
+    )
+
+    completed = subprocess.run(
+        [*command, "version", "--json"],
+        cwd=checkout,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    assert json.loads(completed.stdout)["success"] is True
+    assert list(checkout.rglob("__pycache__")) == []
+    assert list(checkout.rglob("*.py[co]")) == []
 
 
 def test_lightweight_runtime_metadata_matches_manifest():
