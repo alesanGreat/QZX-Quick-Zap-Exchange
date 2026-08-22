@@ -263,22 +263,22 @@ def test_conflict_detection_handles_lexical_aliases_and_symlink_loops(tmp_path):
     )
 
     loop = tmp_path / "loop"
+    loop.symlink_to(loop.name)
     try:
-        loop.symlink_to(loop.name)
-    except OSError as exception:
-        pytest.skip(f"Symlinks are unavailable on this platform: {exception}")
-    assert (
-        validator._conflicting_evidence_role(
-            str(loop),
-            success_path=str(evidence),
-            failure_path=str(tmp_path / "failure.json"),
-            tool_definition_path=None,
+        assert (
+            validator._conflicting_evidence_role(
+                str(loop),
+                success_path=str(evidence),
+                failure_path=str(tmp_path / "failure.json"),
+                tool_definition_path=None,
+            )
+            is None
         )
-        is None
-    )
+    finally:
+        loop.unlink()
 
 
-def test_atomic_receipt_write_failure_preserves_existing_file(tmp_path, monkeypatch):
+def test_atomic_receipt_write_failure_preserves_existing_file(tmp_path):
     report_path = tmp_path / "receipt.json"
     original = b"previous receipt\n"
     report_path.write_bytes(original)
@@ -286,10 +286,12 @@ def test_atomic_receipt_write_failure_preserves_existing_file(tmp_path, monkeypa
     def refuse_replace(_source, _destination):
         raise OSError("synthetic replace failure")
 
-    monkeypatch.setattr(validator.os, "replace", refuse_replace)
-
     with pytest.raises(OSError, match="synthetic replace failure"):
-        validator._write_text_atomic(report_path, "new receipt\n")
+        validator._write_text_atomic(
+            report_path,
+            "new receipt\n",
+            replace_file=refuse_replace,
+        )
 
     assert report_path.read_bytes() == original
     assert list(tmp_path.glob(".receipt.json.*.tmp")) == []

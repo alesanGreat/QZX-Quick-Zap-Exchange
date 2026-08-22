@@ -296,9 +296,16 @@ def _path_identities(path_text: str) -> set[str]:
     return identities
 
 
-def _write_text_atomic(path: Path, content: str) -> None:
+def _write_text_atomic(
+    path: Path,
+    content: str,
+    *,
+    replace_file=None,
+) -> None:
     """Replace one receipt atomically without following the destination link."""
 
+    if replace_file is None:
+        replace_file = os.replace
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         dir=path.parent,
@@ -316,7 +323,7 @@ def _write_text_atomic(path: Path, content: str) -> None:
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary_path, path)
+        replace_file(temporary_path, path)
     finally:
         if temporary_path.exists():
             temporary_path.unlink()

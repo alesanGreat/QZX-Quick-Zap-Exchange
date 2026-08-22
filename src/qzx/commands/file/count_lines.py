@@ -1,215 +1,419 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-CountLines Command - Counts the number of lines in files with support for wildcards and recursive searching
-Using the centralized recursive file finder utility
-"""
+"""Count logical Unicode lines with bounded memory and stable file evidence."""
 
-import os
-from collections import defaultdict
+from __future__ import annotations
+
+import codecs
 
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
+from qzx.core.file_content_analysis import (
+    DEFAULT_TYPE_SAMPLE_SIZE,
+    FileChangedDuringReadError,
+    analyze_binary_content,
+    normalize_boolean,
+    read_distributed_sample,
+    regular_file_fingerprint,
+    validate_regular_file,
+)
+
 
 class CountLinesCommand(CommandBase):
-    """
-    Command to count the number of lines in files with support for wildcards and recursive searching
-    
-    Supports flags:
-    -r, -R, --recursive: Enable unlimited recursive directory search
-    -rN, --recursiveN: Enable recursive directory search up to N levels deep
-    
-    This version uses the centralized recursive file finder utility.
-    """
-    
+    """Count text lines without loading the complete file into memory."""
+
     name = "countLines"
-    description = "Counts the number of lines in files with support for wildcards and recursive searching"
+    description = (
+        "Counts logical Unicode lines in a stable regular file using bounded-memory "
+        "streaming and explicit newline evidence"
+    )
     category = "file"
-    
+    _CHUNK_SIZE = 64 * 1024
+    _UNICODE_LINE_BREAKS = {
+        "\n": "lf",
+        "\v": "vertical_tab",
+        "\f": "form_feed",
+        "\x1c": "file_separator",
+        "\x1d": "group_separator",
+        "\x1e": "record_separator",
+        "\x85": "next_line",
+        "\u2028": "line_separator",
+        "\u2029": "paragraph_separator",
+    }
+
     parameters = [
         {
-            'name': 'file_path',
-            'description': 'Path to the file(s) to count lines in. Supports wildcards like "*.py"',
-            'required': True
+            "name": "file_path",
+            "description": "Path to the regular text file to count",
+            "required": True,
+            "type": "str",
         },
         {
-            'name': 'recursive',
-            'description': 'Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep',
-            'required': False,
-            'default': None
+            "name": "encoding",
+            "description": (
+                "Text encoding name, or 'auto' to use bounded content detection"
+            ),
+            "required": False,
+            "default": "auto",
+            "type": "str",
         },
         {
-            'name': 'ignore_empty',
-            'description': 'Whether to ignore empty lines when counting',
-            'required': False,
-            'default': False
-        }
+            "name": "follow_symlinks",
+            "description": (
+                "Follow reviewed symbolic-link or junction components to their "
+                "resolved regular-file target"
+            ),
+            "required": False,
+            "default": False,
+            "type": "bool",
+        },
     ]
-    
+
     examples = [
         {
-            'command': 'qzx countLines "script.py"',
-            'description': 'Count the number of lines in a Python script'
+            "command": "qzx countLines source.py",
+            "description": "Count source lines with automatic encoding detection",
         },
         {
-            'command': 'qzx countLines "data/logs.txt"',
-            'description': 'Count the number of lines in a log file'
+            "command": "qzx countLines legacy.txt windows-1252",
+            "description": "Count a file with an explicit legacy encoding",
         },
         {
-            'command': 'qzx countLines "*.py"',
-            'description': 'Count the number of lines in all Python files in the current directory'
+            "command": "qzx countLines reviewed-link auto true",
+            "description": "Count the resolved target of an explicitly reviewed link",
         },
-        {
-            'command': 'qzx countLines "src/**/*.js" -r',
-            'description': 'Count the number of lines in all JavaScript files in the src directory and its subdirectories'
-        },
-        {
-            'command': 'qzx countLines "*.txt" -r2 true',
-            'description': 'Count the number of non-empty lines in all text files in the current directory and subdirectories up to 2 levels deep'
-        }
     ]
 
-    _parse_recursive_parameter = staticmethod(parse_recursive_parameter)
+    def __init__(self, *, open_file=None, detect_encoding=None):
+        super().__init__()
+        self._open_file = open_file or open
+        self._detect_encoding = detect_encoding
 
-    def _find_files(self, file_path, recursive=None):
-        """Return files matching a path pattern and recursion setting."""
-        recursion_depth = parse_recursive_parameter(recursive)
-        return list(
-            find_files(
-                file_path_pattern=file_path,
-                recursive=recursion_depth,
-                file_type="f",
-            )
+    def execute(self, file_path, encoding="auto", follow_symlinks=False):
+        follow_links, error = normalize_boolean(
+            follow_symlinks,
+            field="follow_symlinks",
+            command_base=self,
         )
-    
-    def _count_lines(self, file_path, ignore_empty=False):
-        """
-        Count lines in a single file
-        
-        Args:
-            file_path (str): Path to the file
-            ignore_empty (bool): Whether to ignore empty lines
-            
-        Returns:
-            tuple: (line_count, non_empty_lines, success, error_message)
-        """
-        try:
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as file:
-                if ignore_empty:
-                    lines = [line for line in file if line.strip()]
-                    return (len(lines), len(lines), True, None)
-                else:
-                    lines = file.readlines()
-                    non_empty = sum(1 for line in lines if line.strip())
-                    return (len(lines), non_empty, True, None)
-        except Exception as e:
-            return (0, 0, False, str(e))
-    
-    def execute(self, file_path, recursive=None, ignore_empty=False):
-        """
-        Counts the number of lines in files with support for wildcards and recursive searching
-        
-        Args:
-            file_path: Path to the file(s) to count lines in. Supports wildcards like "*.py"
-            recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels
-            ignore_empty: Whether to ignore empty lines when counting
-            
-        Returns:
-            Dictionary with line count results or error message
-        """
-        try:
-            raw_recursive = recursive
-            recursive = parse_recursive_parameter(recursive)
-            
-            # Convert ignore_empty parameter if it's a string
-            if isinstance(ignore_empty, str):
-                ignore_empty = ignore_empty.lower() in ('true', 'yes', 'y', '1')
-            
-            matching_files = self._find_files(file_path, raw_recursive)
-            
-            # Get a descriptive recursion string for the result message
-            recursion_message = ""
-            if recursive is None:
-                recursion_message = " (including all subdirectories)"
-            elif isinstance(recursive, int) and recursive > 0:
-                recursion_message = f" (including subdirectories up to {recursive} level{'s' if recursive > 1 else ''})"
-            
-            if not matching_files:
-                return {
-                    "success": True,
-                    "files_found": 0,
-                    "message": f"No files found matching '{file_path}'{recursion_message}"
-                }
-            
-            # Count lines in each file
-            results = {}
-            total_lines = 0
-            total_non_empty = 0
-            total_success = 0
-            errors = []
-            extension_stats = defaultdict(int)
-            
-            for file in matching_files:
-                lines, non_empty, success, error = self._count_lines(file, ignore_empty)
-                if success:
-                    results[file] = {
-                        "lines": lines if not ignore_empty else "N/A",
-                        "non_empty_lines": non_empty,
-                        "counted": non_empty if ignore_empty else lines
-                    }
-                    total_lines += lines
-                    total_non_empty += non_empty
-                    total_success += 1
-                    extension_stats[os.path.splitext(file)[1].lower()] += lines
-                else:
-                    results[file] = {
-                        "error": error
-                    }
-                    errors.append(f"{file}: {error}")
-            
-            # Prepare result summary
-            line_type = "non-empty lines" if ignore_empty else "lines"
-            if len(matching_files) == 1:
-                # Result for single file
-                file_path = matching_files[0]
-                if file_path in results and "error" not in results[file_path]:
-                    count = results[file_path]["counted"]
-                    message = f"File '{file_path}' contains {count} {line_type}"
-                    if not ignore_empty and results[file_path]["non_empty_lines"] != results[file_path]["lines"]:
-                        empty_lines = results[file_path]["lines"] - results[file_path]["non_empty_lines"]
-                        message += f" ({empty_lines} empty line{'s' if empty_lines != 1 else ''})"
-                else:
-                    message = f"Error processing file '{file_path}': {results[file_path]['error']}"
-            else:
-                # Result for multiple files
-                total_counted = total_non_empty if ignore_empty else total_lines
-                message = f"Found {len(matching_files)} files matching '{file_path}'{recursion_message}\n"
-                message += f"Total {line_type}: {total_counted}"
-                
-                if total_success < len(matching_files):
-                    message += f"\nSuccessfully processed {total_success} of {len(matching_files)} files"
-                    message += f"\nErrors: {len(errors)}"
-            
-            # Return the result
-            return {
-                "success": True,
-                "files_found": len(matching_files),
-                "files_processed": total_success,
-                "files_analyzed": total_success,
-                "total_lines": total_lines if not ignore_empty else "N/A",
-                "total_non_empty_lines": total_non_empty,
-                "total_empty_lines": total_lines - total_non_empty,
-                "total_counted": total_non_empty if ignore_empty else total_lines,
-                "file_pattern": file_path,
-                "recursive": recursive,
-                "extension_stats": dict(extension_stats),
-                "errors": errors,
-                "file_results": results,
-                "message": message
+        if error is not None:
+            return error
+        normalized_encoding, error = self._normalize_encoding(encoding)
+        if error is not None:
+            return error
+
+        target, error = validate_regular_file(
+            file_path,
+            follow_symlinks=follow_links,
+        )
+        if error is not None:
+            return error
+
+        detection_details = None
+        if normalized_encoding == "auto" and target.file_size == 0:
+            normalized_encoding = "utf-8"
+            detection_details = {
+                "sampling": {
+                    "strategy": "empty_file",
+                    "budget_bytes": DEFAULT_TYPE_SAMPLE_SIZE,
+                    "analyzed_bytes": 0,
+                    "full_file_analyzed": True,
+                    "segments": [],
+                    "short_read_detected": False,
+                },
+                "binary_analysis": {
+                    "is_binary": False,
+                    "detection_method": "empty_file",
+                    "encoding_detected": None,
+                },
             }
-        except Exception as e:
+        elif normalized_encoding == "auto":
+            try:
+                sample = read_distributed_sample(
+                    target,
+                    DEFAULT_TYPE_SAMPLE_SIZE,
+                    open_file=self._open_file,
+                )
+            except FileChangedDuringReadError as exc:
+                return self._changed_result(target, exc, phase="sampling")
+            except OSError as exc:
+                return self._read_failure(target, exc, phase="sampling")
+            binary_analysis = analyze_binary_content(
+                sample,
+                threshold=10.0,
+                path=target.analyzed_path,
+                detect_encoding=self._detect_encoding,
+            )
+            normalized_encoding = binary_analysis.get("encoding_detected")
+            detection_details = {
+                "sampling": sample.evidence(),
+                "binary_analysis": binary_analysis,
+            }
+            if normalized_encoding is None:
+                return {
+                    "success": False,
+                    "error_code": "text_encoding_not_detected",
+                    "error": (
+                        "QZX could not establish a strict text encoding for the "
+                        "requested file."
+                    ),
+                    "message": (
+                        "Line counting requires decodable text; provide an explicit "
+                        "encoding only after reviewing the file contents."
+                    ),
+                    "file_path": str(target.absolute_path),
+                    "analyzed_path": str(target.analyzed_path),
+                    "details": {
+                        "target": target.evidence(),
+                        **detection_details,
+                    },
+                }
+
+        try:
+            scan = self._count_stream(target, normalized_encoding)
+        except FileChangedDuringReadError as exc:
+            return self._changed_result(target, exc, phase="line_scan")
+        except LookupError as exc:
             return {
                 "success": False,
-                "message": f"Error: {str(e)}"
-            } 
+                "error_code": "text_decoder_unavailable",
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": (
+                    f"QZX could not initialize text decoder '{normalized_encoding}'."
+                ),
+                "details": {
+                    "target": target.evidence(),
+                    "encoding": normalized_encoding,
+                },
+            }
+        except UnicodeDecodeError as exc:
+            return {
+                "success": False,
+                "error_code": "text_decode_failed",
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": (
+                    f"File '{target.absolute_path}' is not valid "
+                    f"{normalized_encoding} text."
+                ),
+                "file_path": str(target.absolute_path),
+                "analyzed_path": str(target.analyzed_path),
+                "details": {
+                    "target": target.evidence(),
+                    "encoding": normalized_encoding,
+                    "bytes_scanned_before_failure": getattr(
+                        exc,
+                        "qzx_bytes_scanned",
+                        None,
+                    ),
+                },
+            }
+        except OSError as exc:
+            return self._read_failure(target, exc, phase="line_scan")
+
+        details = {
+            "target": target.evidence(),
+            "encoding": normalized_encoding,
+            "encoding_source": (
+                "content_detection" if detection_details is not None else "explicit"
+            ),
+            **scan,
+        }
+        if detection_details is not None:
+            details.update(detection_details)
+
+        return {
+            "success": True,
+            "message": (
+                f"Counted {scan['line_count']} logical line"
+                f"{'s' if scan['line_count'] != 1 else ''} in "
+                f"'{target.absolute_path}' using {normalized_encoding} streaming."
+            ),
+            "file_path": str(target.absolute_path),
+            "analyzed_path": str(target.analyzed_path),
+            "line_count": scan["line_count"],
+            "non_blank_line_count": scan["non_blank_line_count"],
+            "blank_line_count": scan["blank_line_count"],
+            "empty_line_count": scan["empty_line_count"],
+            "whitespace_only_line_count": scan["whitespace_only_line_count"],
+            "encoding": normalized_encoding,
+            "details": details,
+        }
+
+    @staticmethod
+    def _normalize_encoding(value):
+        if not isinstance(value, str) or not value.strip():
+            return None, {
+                "success": False,
+                "error_code": "invalid_encoding",
+                "error": "encoding must be non-empty text.",
+                "message": "Provide 'auto' or a valid Python codec name.",
+            }
+        normalized = value.strip()
+        if normalized.casefold() == "auto":
+            return "auto", None
+        try:
+            return codecs.lookup(normalized).name, None
+        except LookupError as exc:
+            return None, {
+                "success": False,
+                "error_code": "invalid_encoding",
+                "error": f"{type(exc).__name__}: {exc}",
+                "message": f"Encoding '{normalized}' is not available.",
+            }
+
+    def _count_stream(self, target, encoding):
+        initial_fingerprint = regular_file_fingerprint(target.analyzed_path)
+        if initial_fingerprint != target.fingerprint:
+            raise FileChangedDuringReadError(
+                "The file changed between validation and line scanning."
+            )
+
+        decoder = codecs.getincrementaldecoder(encoding)(errors="strict")
+        state = {
+            "line_count": 0,
+            "non_blank_line_count": 0,
+            "blank_line_count": 0,
+            "empty_line_count": 0,
+            "whitespace_only_line_count": 0,
+            "max_line_length_characters": 0,
+            "current_line_length": 0,
+            "current_line_has_non_whitespace": False,
+            "pending_cr": False,
+            "at_text_start": True,
+            "ends_with_line_break": False,
+            "bytes_scanned": 0,
+            "newline_counts": {
+                "crlf": 0,
+                "cr": 0,
+                **{name: 0 for name in self._UNICODE_LINE_BREAKS.values()},
+            },
+        }
+
+        with self._open_file(target.analyzed_path, "rb") as file_handle:
+            while True:
+                chunk = file_handle.read(self._CHUNK_SIZE)
+                if not chunk:
+                    break
+                state["bytes_scanned"] += len(chunk)
+                try:
+                    decoded = decoder.decode(chunk, final=False)
+                except UnicodeDecodeError as exc:
+                    exc.qzx_bytes_scanned = state["bytes_scanned"]
+                    raise
+                self._consume_text(decoded, state)
+            try:
+                decoded = decoder.decode(b"", final=True)
+            except UnicodeDecodeError as exc:
+                exc.qzx_bytes_scanned = state["bytes_scanned"]
+                raise
+            self._consume_text(decoded, state)
+
+        if state["pending_cr"]:
+            state["newline_counts"]["cr"] += 1
+            state["pending_cr"] = False
+        if state["current_line_length"]:
+            self._finish_line(state)
+            state["ends_with_line_break"] = False
+
+        final_fingerprint = regular_file_fingerprint(target.analyzed_path)
+        if state["bytes_scanned"] != target.file_size:
+            raise FileChangedDuringReadError(
+                "The bytes scanned no longer match the validated file size."
+            )
+        if final_fingerprint != initial_fingerprint:
+            raise FileChangedDuringReadError(
+                "The file changed while logical lines were being counted."
+            )
+
+        state.pop("current_line_length")
+        state.pop("current_line_has_non_whitespace")
+        state.pop("pending_cr")
+        state.pop("at_text_start")
+        state["full_content_scanned"] = True
+        state["memory_policy"] = "incremental_decoder_and_constant_line_state"
+        state["newline_sequence_count"] = sum(state["newline_counts"].values())
+        return state
+
+    def _consume_text(self, text, state):
+        for character in text:
+            if state["at_text_start"]:
+                state["at_text_start"] = False
+                if character == "\ufeff":
+                    continue
+
+            if state["pending_cr"]:
+                state["pending_cr"] = False
+                if character == "\n":
+                    state["newline_counts"]["crlf"] += 1
+                    state["ends_with_line_break"] = True
+                    continue
+                state["newline_counts"]["cr"] += 1
+
+            if character == "\r":
+                self._finish_line(state)
+                state["pending_cr"] = True
+                state["ends_with_line_break"] = True
+                continue
+
+            newline_name = self._UNICODE_LINE_BREAKS.get(character)
+            if newline_name is not None:
+                self._finish_line(state)
+                state["newline_counts"][newline_name] += 1
+                state["ends_with_line_break"] = True
+                continue
+
+            state["current_line_length"] += 1
+            if not character.isspace():
+                state["current_line_has_non_whitespace"] = True
+            state["ends_with_line_break"] = False
+
+    @staticmethod
+    def _finish_line(state):
+        line_length = state["current_line_length"]
+        state["line_count"] += 1
+        state["max_line_length_characters"] = max(
+            state["max_line_length_characters"],
+            line_length,
+        )
+        if state["current_line_has_non_whitespace"]:
+            state["non_blank_line_count"] += 1
+        else:
+            state["blank_line_count"] += 1
+            if line_length == 0:
+                state["empty_line_count"] += 1
+            else:
+                state["whitespace_only_line_count"] += 1
+        state["current_line_length"] = 0
+        state["current_line_has_non_whitespace"] = False
+
+    @staticmethod
+    def _changed_result(target, error, *, phase):
+        return {
+            "success": False,
+            "error_code": "file_changed_during_read",
+            "error": f"{type(error).__name__}: {error}",
+            "message": (
+                "The file changed while QZX was counting lines, so no count was "
+                "published."
+            ),
+            "file_path": str(target.absolute_path),
+            "analyzed_path": str(target.analyzed_path),
+            "details": {
+                "target": target.evidence(),
+                "phase": phase,
+            },
+        }
+
+    @staticmethod
+    def _read_failure(target, error, *, phase):
+        return {
+            "success": False,
+            "error_code": "file_read_failed",
+            "error": f"{type(error).__name__}: {error}",
+            "message": "QZX could not read the requested file while counting lines.",
+            "file_path": str(target.absolute_path),
+            "analyzed_path": str(target.analyzed_path),
+            "details": {
+                "target": target.evidence(),
+                "phase": phase,
+            },
+        }

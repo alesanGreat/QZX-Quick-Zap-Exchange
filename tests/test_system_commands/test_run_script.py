@@ -4,7 +4,6 @@ import os
 import sys
 import time
 
-from qzx.commands.system import run_script as run_script_module
 from qzx.commands.system.run_script import RunScriptCommand
 
 
@@ -96,22 +95,12 @@ def test_script_metadata_survives_self_deletion(tmp_path):
     assert not script.exists()
 
 
-def test_windows_process_group_flags_also_suppress_console_windows(monkeypatch):
-    monkeypatch.setattr(run_script_module.os, "name", "nt")
-    monkeypatch.setattr(
-        run_script_module.subprocess,
-        "CREATE_NEW_PROCESS_GROUP",
-        0x00000200,
-        raising=False,
+def test_windows_process_group_flags_also_suppress_console_windows():
+    options = RunScriptCommand._process_group_options(
+        "nt",
+        create_new_process_group=0x00000200,
+        create_no_window=0x08000000,
     )
-    monkeypatch.setattr(
-        run_script_module.subprocess,
-        "CREATE_NO_WINDOW",
-        0x08000000,
-        raising=False,
-    )
-
-    options = RunScriptCommand._process_group_options()
 
     assert options == {"creationflags": 0x08000200}
 

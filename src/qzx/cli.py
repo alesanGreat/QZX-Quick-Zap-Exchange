@@ -149,14 +149,20 @@ def _json_compatible(value):
 
 
 def _print_json(result):
-    print(
-        json.dumps(
-            _json_compatible(result),
-            indent=2,
-            ensure_ascii=False,
-            allow_nan=False,
-        )
+    """Write one UTF-8 JSON document regardless of the text code page."""
+    serialized = json.dumps(
+        _json_compatible(result),
+        indent=2,
+        ensure_ascii=False,
+        allow_nan=False,
     )
+    binary_stdout = getattr(sys.stdout, "buffer", None)
+    if binary_stdout is None:
+        print(serialized)
+        return
+
+    binary_stdout.write((serialized + "\n").encode("utf-8"))
+    binary_stdout.flush()
 
 
 _HUMAN_ACRONYMS = {
@@ -487,8 +493,8 @@ def _capture_process_stdout():
     """
     Capture Python and child-process stdout.
 
-    ``redirect_stdout`` alone misses native programs such as ``cls``. JSON
-    mode must capture those bytes as progress too, or they can corrupt the
+    ``redirect_stdout`` alone misses native programs launched by commands.
+    JSON mode must capture those bytes as progress too, or they can corrupt the
     single JSON document written by the CLI.
     """
     import tempfile

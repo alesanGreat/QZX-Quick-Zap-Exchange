@@ -96,7 +96,7 @@
       "name": "clearScreen",
       "module": "qzx.commands.system.clear_screen",
       "class_name": "ClearScreenCommand",
-      "description": "Clears the terminal screen",
+      "description": "Clears an interactive terminal directly without spawning cls, clear, or a command shell",
       "category": "system"
     },
     {
@@ -117,14 +117,14 @@
       "name": "countLines",
       "module": "qzx.commands.file.count_lines",
       "class_name": "CountLinesCommand",
-      "description": "Counts the number of lines in files with support for wildcards and recursive searching",
+      "description": "Counts logical Unicode lines in a stable regular file using bounded-memory streaming and explicit newline evidence",
       "category": "file"
     },
     {
       "name": "createDirectory",
       "module": "qzx.commands.file.create_directory",
       "class_name": "CreateDirectoryCommand",
-      "description": "Creates one or more directories at specified paths",
+      "description": "Creates one or more real directories with deduplication, conflict detection, and per-target rollback on failure",
       "category": "file"
     },
     {
@@ -152,7 +152,7 @@
       "name": "detectFileType",
       "module": "qzx.commands.file.detect_file_type",
       "class_name": "DetectFileTypeCommand",
-      "description": "Identifies file type based on its magic number (file signature) rather than extension",
+      "description": "Identifies a regular file from bounded content signatures with an optional libmagic refinement and an explicit extension comparison",
       "category": "file"
     },
     {
@@ -299,7 +299,7 @@
       "name": "getProjectTree",
       "module": "qzx.commands.development.get_project_tree",
       "class_name": "GetProjectTreeCommand",
-      "description": "Generates a clean visual directory tree (ASCII and JSON) excluding heavy directories like node_modules",
+      "description": "Generates one bounded ASCII and JSON directory tree without following descendant symbolic links",
       "category": "development"
     },
     {
@@ -348,21 +348,21 @@
       "name": "isDirectoryEmpty",
       "module": "qzx.commands.file.is_directory_empty",
       "class_name": "IsDirectoryEmptyCommand",
-      "description": "Checks if a directory is empty (contains no files or subdirectories)",
+      "description": "Checks stable directory emptiness with streaming counts, explicit hidden-item policy, and no symbolic-link traversal by default",
       "category": "file"
     },
     {
       "name": "isFileBinary",
       "module": "qzx.commands.file.is_file_binary",
       "class_name": "IsFileBinaryCommand",
-      "description": "Analyzes a file to determine if it's binary or plain text",
+      "description": "Determines whether a regular file is binary or text using bounded start/middle/end content sampling",
       "category": "file"
     },
     {
       "name": "isFileEmpty",
       "module": "qzx.commands.file.is_file_empty",
       "class_name": "IsFileEmptyCommand",
-      "description": "Checks if a file is empty (has zero bytes)",
+      "description": "Checks zero-byte or whitespace-only file emptiness with streaming text decoding and no symbolic-link traversal by default",
       "category": "file"
     },
     {

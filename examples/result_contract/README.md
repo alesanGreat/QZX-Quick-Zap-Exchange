@@ -35,11 +35,23 @@ runner.
 
 ## Minimal TypeScript producer
 
-[`typescript-minimal.ts`](typescript-minimal.ts) shows how an existing
-TypeScript tool can keep its domain-specific fields and add the small QZX
-success/failure envelope without depending on the QZX runtime. The example uses
-a discriminated union so failed results require a stable `error_code` at the
-TypeScript type level.
+[`typescript-minimal.ts`](typescript-minimal.ts) is a side-effect-free,
+dependency-free producer module. It preserves domain fields while reserving the
+QZX outcome fields, exports a discriminated `QzxResult` union, requires stable
+failure codes, and rejects contradictory evidence at both compile time and
+runtime. [`typescript-minimal.demo.ts`](typescript-minimal.demo.ts) emits one
+success and one failure;
+[`typescript-minimal.typecheck.ts`](typescript-minimal.typecheck.ts) contains
+positive and adversarial compile-time cases.
+
+Run the strict compile-time gate without creating `node_modules` in the checkout:
+
+```bash
+npx --yes --package typescript@5.9.3 tsc \
+  --noEmit --strict --exactOptionalPropertyTypes \
+  --target ES2022 --module NodeNext --moduleResolution NodeNext \
+  examples/result_contract/typescript-minimal.typecheck.ts
+```
 
 The example is intentionally transport-neutral. For MCP, place the resulting
 object in `structuredContent`, keep MCP `isError` consistent with `!success`,

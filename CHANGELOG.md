@@ -5,8 +5,55 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.7a6 — 2026-08-21
+
+This release publishes the complete validated engineering campaign to GitHub, PyPI, and qzx.yumbale.com through the mandatory public-surface transaction and parity gate.
+
+QZX - Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
+
+<!-- qzx-engineering-campaign-2026-08-21 -->
+### Engineering campaign — 2026-08-21
+
+- Hardened the command metadata contract across the complete catalog, including
+  signature/default/example validation and explicit variadic option passthrough.
+  Variadic data beginning with `-` now requires `--` unless a command explicitly
+  transports another program's argument vector.
+- Rebuilt `getProjectTree` and `createDirectory` around bounded work, deterministic
+  output, link/junction safety, partial-failure evidence, rollback evidence, and
+  adversarial tests.
+- Added shared bounded file-content analysis for `detectFileType`, `isFileBinary`,
+  `isFileEmpty`, and `countLines`: content signatures, distributed sampling,
+  UTF-8/UTF-16 handling, optional libmagic refinement, stable-file fingerprints,
+  explicit symlink opt-in, and structured read/change failures.
+- Rebuilt `isDirectoryEmpty` as a streaming scan with explicit hidden-item policy
+  and correct file/directory/link accounting; rebuilt `countLines` as a constant-
+  memory Unicode logical-line counter with exact CRLF/CR/LF and Unicode separator
+  evidence.
+- Replaced `clearScreen` shell invocation with TTY-aware ANSI output and added a
+  repository-wide static policy that forbids implicit command-shell execution.
+- Strengthened the TypeScript result-contract producer, type-level adversarial
+  checks, runtime demo, and CI validation without side effects on import.
+- Added an installed-wheel smoke harness that creates an isolated environment,
+  installs the built wheel, and exercises real JSON CLI flows; CI now runs it
+  immediately after distribution artifact verification.
+- Expanded deterministic, injected-seam, symlink, encoding, race, rollback,
+  packaging, CLI, and generated-documentation regression coverage.
+
+Behavioral notes: file-inspection commands no longer follow links by default;
+`binary_threshold=0` is rejected as nonsensical; and ambiguous or changing files
+now fail conservatively instead of publishing stale classifications.
+
+
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
+- Hardened the dependency-free TypeScript Result Contract producer. Its public
+  result types are now exported, domain evidence cannot shadow outcome fields,
+  runtime guards reject blank messages, malformed error codes, and contradictory
+  evidence, and the reusable module no longer logs on import. Added separate
+  runnable and adversarial type-check fixtures plus a pinned, checkout-clean CI
+  gate. The Windows symlink-loop regression test now removes its deliberate loop
+  deterministically instead of leaving Pytest unable to clean its temp root.
 - Hardened two network boundaries found by CodeQL's initial repository scan.
   `checkSslCertificate` now requires TLS 1.2 or newer for both trusted and
   unverified diagnostic handshakes. `auditRepository` now classifies links from

@@ -488,7 +488,7 @@ class AuditRepositoryCommand(CommandBase):
             try:
                 res = subprocess.run(
                     audit_cmd,
-                    cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=25, shell=(os.name == 'nt')
+                    cwd=abs_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=25, shell=False
                 )
                 has_vulns = res.returncode != 0
                 results["dependency_vulnerabilities"].append({

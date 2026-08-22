@@ -136,6 +136,45 @@ def source_bytes(relative_path: str) -> bytes:
     return canonicalize_source_bytes((PROJECT_ROOT / relative_path).read_bytes())
 
 
+def digest_source_paths(relative_paths: list[str] | tuple[str, ...]) -> str:
+    """Hash a deterministic set of maintained source paths.
+
+    The website generator uses this as a Git-independent provenance fallback.
+    Inputs are normalized to unique POSIX-style paths and are restricted to the
+    QZX repository, so callers cannot accidentally fingerprint arbitrary host
+    files or make the digest depend on argument order.
+    """
+
+    normalized_paths: set[str] = set()
+    for value in relative_paths:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("Source paths must be non-empty text.")
+        normalized = Path(value.replace("\\", "/"))
+        if normalized.is_absolute() or ".." in normalized.parts:
+            raise ValueError(
+                "Source paths must be repository-relative without parent traversal."
+            )
+        relative_path = normalized.as_posix()
+        candidate = (PROJECT_ROOT / relative_path).resolve()
+        try:
+            candidate.relative_to(PROJECT_ROOT.resolve())
+        except ValueError as exc:
+            raise ValueError(
+                f"Source path escapes the QZX repository: {value!r}."
+            ) from exc
+        if not candidate.is_file():
+            raise FileNotFoundError(candidate)
+        normalized_paths.add(relative_path)
+
+    digest = hashlib.sha256()
+    for relative_path in sorted(normalized_paths):
+        digest.update(relative_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(source_bytes(relative_path))
+        digest.update(b"\0")
+    return "sha256:" + digest.hexdigest()
+
+
 @lru_cache(maxsize=1)
 def load_lifecycle_digest_document() -> dict[str, Any]:
     """Load lifecycle metadata for semantic per-command digest projection."""

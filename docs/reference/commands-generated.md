@@ -425,37 +425,29 @@ Returns:
 
 ### getProjectTree
 
-Command to visualize a directory structure as a clean text-based tree or JSON model, excluding heavy or private files.
+Build a deterministic project tree without following descendant links.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Generates a clean visual directory tree (ASCII and JSON) excluding heavy directories like node_modules
+**Description:** Generates one bounded ASCII and JSON directory tree without following descendant symbolic links
 
 **Parameters:**
-- `dir_path`: Path to the directory to visualize (defaults to current directory) - Optional (default: `.`)
-- `max_depth`: Maximum depth level of the tree (defaults to 2) - Optional (default: `2`)
-- `exclude_dirs`: Comma-separated directory names to exclude (defaults to standard caches and configs) - Optional (default: `.git,node_modules,__pycache__,.venv,env,dist,build,artifacts,.next,.nuxt,.idea,.vscode`)
-- `include_files`: Whether to list files as well as directories (true/false) - Optional (default: `true`)
+- `dir_path`: Directory to visualize (defaults to the current directory) - Optional (default: `.`)
+- `max_depth`: Maximum descendant depth from 0 through 64 - Optional (default: `2`)
+- `exclude_dirs`: Comma-separated directory names to exclude; matching is case-insensitive - Optional (default: `.git,.idea,.next,.nuxt,.venv,.vscode,__pycache__,artifacts,build,dist,env,node_modules`)
+- `include_files`: List regular files as well as directories; links are always listed but never followed - Optional (default: `true`)
+- `max_entries`: Maximum retained descendants from 1 through 100000 (defaults to 10000) - Optional (default: `10000`)
 
 **Examples:**
 - `qzx getProjectTree`
-  Show directory tree for the current folder up to 2 levels deep
+  Show the current project through two descendant levels
 - `qzx getProjectTree src 3`
-  Show directory tree for the src folder up to 3 levels deep
-- `qzx getProjectTree . 2 .git,node_modules false`
-  Show directory tree excluding only .git and node_modules, showing folders only
+  Show the src tree through three descendant levels
+- `qzx getProjectTree . 2 .git,node_modules false --max_entries 500`
+  Show at most 500 directory/link entries while excluding two names
 
 **Details:**
-Executes directory tree generation
-
-Args:
-    dir_path (str): The starting directory path
-    max_depth (str/int): Maximum depth to traverse
-    exclude_dirs (str, optional): Commas separated exclude folder list
-    include_files (str/bool): Whether to include files in the tree
-
-Returns:
-    Dictionary containing ASCII tree text and JSON tree model
+Return one bounded tree model and render it without rescanning.
 
 ---
 
@@ -1106,73 +1098,56 @@ Copy one entry after validating its complete path relationship.
 
 ### countLines
 
-Command to count the number of lines in files with support for wildcards and recursive searching
-
-Supports flags:
--r, -R, --recursive: Enable unlimited recursive directory search
--rN, --recursiveN: Enable recursive directory search up to N levels deep
-
-This version uses the centralized recursive file finder utility.
+Count text lines without loading the complete file into memory.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Counts the number of lines in files with support for wildcards and recursive searching
+**Description:** Counts logical Unicode lines in a stable regular file using bounded-memory streaming and explicit newline evidence
 
 **Parameters:**
-- `file_path`: Path to the file(s) to count lines in. Supports wildcards like "*.py" - Required
-- `recursive`: Recursion level: -r/--recursive for unlimited depth, -rN/--recursiveN for N levels deep - Optional
-- `ignore_empty`: Whether to ignore empty lines when counting - Optional (default: `false`)
+- `file_path`: Path to the regular text file to count - Required
+- `encoding`: Text encoding name, or 'auto' to use bounded content detection - Optional (default: `auto`)
+- `follow_symlinks`: Follow reviewed symbolic-link or junction components to their resolved regular-file target - Optional (default: `false`)
 
 **Examples:**
-- `qzx countLines "script.py"`
-  Count the number of lines in a Python script
-- `qzx countLines "data/logs.txt"`
-  Count the number of lines in a log file
-- `qzx countLines "*.py"`
-  Count the number of lines in all Python files in the current directory
-- `qzx countLines "src/**/*.js" -r`
-  Count the number of lines in all JavaScript files in the src directory and its subdirectories
-- `qzx countLines "*.txt" -r2 true`
-  Count the number of non-empty lines in all text files in the current directory and subdirectories up to 2 levels deep
+- `qzx countLines source.py`
+  Count source lines with automatic encoding detection
+- `qzx countLines legacy.txt windows-1252`
+  Count a file with an explicit legacy encoding
+- `qzx countLines reviewed-link auto true`
+  Count the resolved target of an explicitly reviewed link
 
 **Details:**
-Counts the number of lines in files with support for wildcards and recursive searching
+Method that executes the command
 
 Args:
-    file_path: Path to the file(s) to count lines in. Supports wildcards like "*.py"
-    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels
-    ignore_empty: Whether to ignore empty lines when counting
+    *args: Positional arguments
+    **kwargs: Keyword arguments
 
 Returns:
-    Dictionary with line count results or error message
+    The result of the command execution
 
 ---
 
 ### createDirectory
 
-Command to create one or more directories at specified paths
+Create one or more real directories without traversing path links.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Creates one or more directories at specified paths
+**Description:** Creates one or more real directories with deduplication, conflict detection, and per-target rollback on failure
 
 **Parameters:**
-- `directory_paths`: One or more paths where directories should be created - Required
+- `directory_paths`: One or more real directory paths to create - Required
 
 **Examples:**
 - `qzx createDirectory "ProjectFolder"`
-  Create a single directory named "ProjectFolder"
+  Create one directory named "ProjectFolder"
 - `qzx createDirectory "src/components" "src/styles" "src/utils"`
-  Create multiple directories for a project structure
+  Create several project directories and report every target independently
 
 **Details:**
-Creates one or more directories at the specified paths
-
-Args:
-    *directory_paths: One or more paths where directories should be created
-
-Returns:
-    Structured operation result
+Create each unique path while preserving reviewable batch evidence.
 
 ---
 
@@ -1241,31 +1216,35 @@ Returns:
 
 ### detectFileType
 
-Command to identify file type based on its magic number (file signature)
+Identify one regular file without trusting its extension alone.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Identifies file type based on its magic number (file signature) rather than extension
+**Description:** Identifies a regular file from bounded content signatures with an optional libmagic refinement and an explicit extension comparison
 
 **Parameters:**
-- `file_path`: Path to the file to analyze - Required
-- `detailed_info`: Whether to show detailed MIME type information - Optional (default: `false`)
+- `file_path`: Path to the regular file to identify - Required
+- `detailed_info`: Include categories, sample evidence, and detector details - Optional (default: `false`)
+- `sample_size`: Total content sample budget in bytes (64 through 16777216) - Optional (default: `65536`)
+- `follow_symlinks`: Follow reviewed symbolic-link or junction components to their resolved regular-file target - Optional (default: `false`)
 
 **Examples:**
 - `qzx detectFileType image.jpg`
-  Identify the real type of image.jpg based on its contents
+  Identify a file from its contents rather than its name
 - `qzx detectFileType unknown.bin true`
-  Identify an unknown file with detailed MIME information
+  Include detailed detector and sampling evidence
+- `qzx detectFileType reviewed-link false 65536 true`
+  Identify the resolved target of an explicitly reviewed link
 
 **Details:**
-Identifies file type based on its magic number
+Method that executes the command
 
 Args:
-    file_path (str): Path to the file to analyze
-    detailed_info (bool): Whether to include detailed MIME type information
+    *args: Positional arguments
+    **kwargs: Keyword arguments
 
 Returns:
-    Dictionary with the result of the analysis
+    The result of the command execution
 
 ---
 
@@ -1579,95 +1558,87 @@ Returns:
 
 ### isDirectoryEmpty
 
-Command to check if a directory is empty
+Check one stable real directory without materializing its listing.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Checks if a directory is empty (contains no files or subdirectories)
+**Description:** Checks stable directory emptiness with streaming counts, explicit hidden-item policy, and no symbolic-link traversal by default
 
 **Parameters:**
-- `directory_path`: Path to the directory to check - Required
-- `include_hidden`: Whether to include hidden files in the check - Optional (default: `false`)
+- `directory_path`: Path to the real directory to inspect - Required
+- `include_hidden`: Count dot-prefixed and platform-hidden entries when deciding whether the directory is empty - Optional (default: `false`)
+- `follow_symlinks`: Follow reviewed symbolic-link or junction components to their resolved directory target - Optional (default: `false`)
 
 **Examples:**
 - `qzx isDirectoryEmpty /path/to/directory`
-  Check if /path/to/directory is empty, ignoring hidden files
+  Check visible emptiness without following links
 - `qzx isDirectoryEmpty /path/to/directory true`
-  Check if /path/to/directory is empty, including hidden files
+  Include hidden entries in the emptiness decision
+- `qzx isDirectoryEmpty reviewed-link true true`
+  Inspect an explicitly reviewed linked directory target
 
 **Details:**
-Checks if a directory is empty
-
-Args:
-    directory_path (str): Path to the directory to check
-    include_hidden (bool, optional): Whether to include hidden files in the check
-
-Returns:
-    Dictionary with the result of the check
+Return exact counts only when the directory remains stable.
 
 ---
 
 ### isFileBinary
 
-Command to check if a file is binary or plain text
+Inspect one regular file with bounded, distributed sampling.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Analyzes a file to determine if it's binary or plain text
+**Description:** Determines whether a regular file is binary or text using bounded start/middle/end content sampling
 
 **Parameters:**
-- `file_path`: Path to the file to analyze - Required
-- `sample_size`: Size of the file sample to analyze (in bytes) - Optional (default: `8192`)
-- `binary_threshold`: Percentage of non-text bytes required to classify as binary - Optional (default: `10`)
+- `file_path`: Path to the regular file to analyze - Required
+- `sample_size`: Total sample budget in bytes (64 through 16777216) - Optional (default: `8192`)
+- `binary_threshold`: Suspicious-control-byte percentage greater than 0 and at most 100, used when no definitive content signature exists - Optional (default: `10.0`)
+- `follow_symlinks`: Follow reviewed symbolic-link or junction components to their resolved regular-file target - Optional (default: `false`)
 
 **Examples:**
 - `qzx isFileBinary script.py`
-  Check if script.py is a binary file
-- `qzx isFileBinary image.jpg`
-  Check if image.jpg is a binary file
-- `qzx isFileBinary unknown.dat 4096 5`
-  Check if unknown.dat is binary, using a 4KB sample and 5% threshold
+  Classify a source file with the default distributed sample
+- `qzx isFileBinary image.jpg 4096 5`
+  Use a 4 KiB sample budget and a 5 percent threshold
+- `qzx isFileBinary reviewed-link --follow_symlinks`
+  Analyze the resolved target of an explicitly reviewed link
 
 **Details:**
-Checks if a file is binary or plain text
+Method that executes the command
 
 Args:
-    file_path (str): Path to the file to analyze
-    sample_size (int): Size of the file sample to analyze (in bytes)
-    binary_threshold (int): Percentage of non-text bytes required to classify as binary
+    *args: Positional arguments
+    **kwargs: Keyword arguments
 
 Returns:
-    Dictionary with the result of the analysis
+    The result of the command execution
 
 ---
 
 ### isFileEmpty
 
-Command to check if a file is empty (has zero bytes)
+Check one regular file without loading its complete content into memory.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Checks if a file is empty (has zero bytes)
+**Description:** Checks zero-byte or whitespace-only file emptiness with streaming text decoding and no symbolic-link traversal by default
 
 **Parameters:**
-- `file_path`: Path to the file to check - Required
-- `consider_whitespace`: Whether to consider whitespace-only files as empty - Optional (default: `false`)
+- `file_path`: Path to the regular file to inspect - Required
+- `consider_whitespace`: Treat a fully decoded file containing only Unicode whitespace as empty - Optional (default: `false`)
+- `follow_symlinks`: Follow reviewed symbolic-link or junction components to their resolved regular-file target - Optional (default: `false`)
 
 **Examples:**
 - `qzx isFileEmpty /path/to/file.txt`
-  Check if file.txt is completely empty (zero bytes)
+  Check whether a regular file has zero bytes
 - `qzx isFileEmpty /path/to/file.txt true`
-  Check if file.txt is empty or contains only whitespace
+  Also treat Unicode whitespace-only text as empty
+- `qzx isFileEmpty reviewed-link true true`
+  Inspect an explicitly reviewed linked file target
 
 **Details:**
-Checks if a file is empty
-
-Args:
-    file_path (str): Path to the file to check
-    consider_whitespace (bool, optional): Whether to consider whitespace-only files as empty
-
-Returns:
-    Dictionary with the result of the check
+Return a stable emptiness decision with its exact proof basis.
 
 ---
 
@@ -2059,24 +2030,21 @@ Returns:
 
 ### clearScreen
 
-Command to clear the terminal screen
+Clear an attached terminal with a direct ANSI control sequence.
 
 **Category:** system
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Clears the terminal screen
+**Description:** Clears an interactive terminal directly without spawning cls, clear, or a command shell
 
 **Parameters:**
 None
 
 **Examples:**
 - `qzx clearScreen`
-  Clear the terminal screen
+  Clear the attached interactive terminal
 
 **Details:**
-Clear the terminal screen
-
-Returns:
-    Dictionary with the operation result
+Clear only a real terminal; redirected output remains untouched.
 
 ---
 
@@ -2711,15 +2679,7 @@ Interactive terminal/shell for QZX commands
   Opt in to persistent history and hide the path
 
 **Details:**
-Launch an interactive terminal for QZX commands
-
-Args:
-    prompt (str, optional): Custom prompt for the terminal
-    history_file (str, optional): Path to history file
-    show_path (str, optional): Whether to show path in prompt ('true' or 'false')
-
-Returns:
-    Dictionary with the result of the operation
+Launch an interactive terminal with metadata-backed arguments.
 
 ---
 

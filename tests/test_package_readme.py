@@ -11,8 +11,10 @@ import pytest
 
 from scripts.verify_distribution_artifacts import (
     find_repository_relative_links,
+    release_readme_marker,
     render_package_readme,
     verify_package_index_links,
+    verify_release_description,
 )
 
 
@@ -30,6 +32,20 @@ def package_context() -> tuple[str, str]:
     repository = manifest["urls"]["repository"]
     version = manifest["channels"]["development"]["version"]
     return repository, version
+
+
+def test_readme_identifies_the_current_published_release() -> None:
+    manifest = json.loads(PRODUCT_MANIFEST_PATH.read_text(encoding="utf-8"))
+    version = manifest["channels"]["published"]["version"]
+    content = README_PATH.read_text(encoding="utf-8")
+
+    assert release_readme_marker(version) in content
+    assert f"| Source release described here | `{version}` |" in content
+    verify_release_description(
+        content,
+        expected_version=version,
+        context="repository README.md",
+    )
 
 
 def test_current_readme_becomes_package_index_safe() -> None:

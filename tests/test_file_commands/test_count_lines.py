@@ -1,104 +1,102 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Test for the CountLines command
-"""
+"""Regression tests for the current single-file countLines contract."""
+
+from __future__ import annotations
+
+import io
 
 from qzx.commands.file.count_lines import CountLinesCommand
 
-class TestCountLinesCommand:
-    """
-    Tests for the CountLines command
-    """
-    
-    def setup_method(self):
-        """Setup for each test"""
-        self.command = CountLinesCommand()
-    
-    def test_parse_recursive_parameter(self):
-        """Test interpretation of the recursive parameter"""
-        # No recursion
-        assert self.command._parse_recursive_parameter(None) == 0
-        
-        # Unlimited recursion
-        assert self.command._parse_recursive_parameter("-r") is None
-        assert self.command._parse_recursive_parameter("--recursive") is None
-        
-        # Specific depth recursion
-        assert self.command._parse_recursive_parameter("-r3") == 3
-        assert self.command._parse_recursive_parameter("--recursive2") == 2
-        
-        # Unrecognized format
-        assert self.command._parse_recursive_parameter("invalid") == 0
-    
-    def test_find_files_single_file(self, tmp_path):
-        """Test finding a single file"""
-        file_path = tmp_path / "test.txt"
-        file_path.write_text("content", encoding="utf-8")
 
-        result = self.command._find_files(str(file_path))
+def test_empty_file_has_zero_logical_lines(tmp_path):
+    target = tmp_path / "empty.txt"
+    target.touch()
 
-        assert result == [str(file_path.resolve())]
+    result = CountLinesCommand().execute(target)
 
-    def test_find_files_directory_no_recursion(self, tmp_path):
-        """Test finding files in a directory without recursion"""
-        file1 = tmp_path / "file1.txt"
-        file2 = tmp_path / "file2.txt"
-        nested = tmp_path / "nested"
-        nested.mkdir()
-        nested_file = nested / "file3.txt"
-        for path in (file1, file2, nested_file):
-            path.write_text("content", encoding="utf-8")
+    assert result["success"] is True
+    assert result["line_count"] == 0
+    assert result["non_blank_line_count"] == 0
+    assert result["blank_line_count"] == 0
+    assert result["details"]["bytes_scanned"] == 0
+    assert result["details"]["full_content_scanned"] is True
 
-        result = self.command._find_files(str(tmp_path), recursive=None)
 
-        assert set(result) == {str(file1.resolve()), str(file2.resolve())}
+def test_unicode_line_breaks_and_blank_lines_are_counted_logically(tmp_path):
+    target = tmp_path / "logical-lines.txt"
+    target.write_bytes("alpha\r\n \u2028omega".encode("utf-8"))
 
-    def test_find_files_recursive(self, tmp_path):
-        """Test finding files recursively"""
-        root_file = tmp_path / "file1.txt"
-        nested = tmp_path / "nested"
-        nested.mkdir()
-        nested_file = nested / "file2.txt"
-        for path in (root_file, nested_file):
-            path.write_text("content", encoding="utf-8")
+    result = CountLinesCommand().execute(target, encoding="utf-8")
 
-        result = self.command._find_files(str(tmp_path), recursive="-r")
+    assert result["success"] is True
+    assert result["line_count"] == 3
+    assert result["non_blank_line_count"] == 2
+    assert result["blank_line_count"] == 1
+    assert result["empty_line_count"] == 0
+    assert result["whitespace_only_line_count"] == 1
+    assert result["details"]["newline_counts"]["crlf"] == 1
+    assert result["details"]["newline_counts"]["line_separator"] == 1
+    assert result["details"]["ends_with_line_break"] is False
 
-        assert set(result) == {str(root_file.resolve()), str(nested_file.resolve())}
-    
-    def test_count_lines_reads_a_real_file(self, tmp_path):
-        file_path = tmp_path / "test.txt"
-        file_path.write_text("Line 1\nLine 2\n\nLine 4\n", encoding="utf-8")
 
-        total_lines, non_empty, success, error = self.command._count_lines(
-            str(file_path), ignore_empty=False
-        )
-        assert (total_lines, non_empty, success, error) == (4, 3, True, None)
+def test_terminal_newline_does_not_create_a_phantom_line(tmp_path):
+    target = tmp_path / "terminated.txt"
+    target.write_bytes(b"one\ntwo\n")
 
-        total_lines, non_empty, success, error = self.command._count_lines(
-            str(file_path), ignore_empty=True
-        )
-        assert (total_lines, non_empty, success, error) == (3, 3, True, None)
+    result = CountLinesCommand().execute(target, encoding="utf-8")
 
-    def test_execute_counts_real_matching_files(self, tmp_path):
-        file1 = tmp_path / "file1.txt"
-        file2 = tmp_path / "file2.txt"
-        ignored = tmp_path / "ignored.py"
-        file1.write_text("1\n2\n\n4\n5\n", encoding="utf-8")
-        file2.write_text("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n", encoding="utf-8")
-        ignored.write_text("not counted\n", encoding="utf-8")
+    assert result["success"] is True
+    assert result["line_count"] == 2
+    assert result["details"]["newline_sequence_count"] == 2
+    assert result["details"]["ends_with_line_break"] is True
 
-        result = self.command.execute(
-            str(tmp_path / "*.txt"), recursive="-r2"
-        )
 
-        assert result["success"] is True
-        assert result["total_lines"] == 15
-        assert result["total_non_empty_lines"] == 14
-        assert result["total_empty_lines"] == 1
-        assert result["files_analyzed"] == 2
-        assert result["file_pattern"] == str(tmp_path / "*.txt")
-        assert result["recursive"] == 2
-        assert result["extension_stats"] == {".txt": 15}
+def test_auto_detection_counts_utf16_text(tmp_path):
+    target = tmp_path / "utf16.txt"
+    target.write_text("one\ntwo\n", encoding="utf-16")
+
+    result = CountLinesCommand().execute(target)
+
+    assert result["success"] is True
+    assert result["encoding"] == "utf-16-le"
+    assert result["line_count"] == 2
+    assert result["details"]["encoding_source"] == "content_detection"
+
+
+def test_invalid_encoding_is_a_usage_failure(tmp_path):
+    target = tmp_path / "text.txt"
+    target.write_bytes(b"text")
+
+    result = CountLinesCommand().execute(target, encoding="definitely-not-a-codec")
+
+    assert result["success"] is False
+    assert result["error_code"] == "invalid_encoding"
+
+
+def test_malformed_explicit_text_fails_without_replacement_characters(tmp_path):
+    target = tmp_path / "broken.txt"
+    target.write_bytes(b"valid\xffinvalid")
+
+    result = CountLinesCommand().execute(target, encoding="utf-8")
+
+    assert result["success"] is False
+    assert result["error_code"] == "text_decode_failed"
+
+
+def test_short_stream_is_reported_as_a_changed_file(tmp_path):
+    target = tmp_path / "changing.txt"
+    target.write_bytes(b"four")
+
+    def shorter_open(_path, _mode):
+        return io.BytesIO(b"x")
+
+    result = CountLinesCommand(open_file=shorter_open).execute(
+        target,
+        encoding="utf-8",
+    )
+
+    assert result["success"] is False
+    assert result["error_code"] == "file_changed_during_read"
+    assert "no count was published" in result["message"]

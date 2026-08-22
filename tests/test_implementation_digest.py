@@ -12,6 +12,7 @@ from qzx.core.implementation_digest import (
     canonicalize_source_bytes,
     command_implementation_digest,
     command_implementation_digest_for_lifecycle,
+    digest_source_paths,
     implementation_source_paths,
     load_lifecycle_digest_document,
 )
@@ -62,3 +63,28 @@ def test_lifecycle_change_invalidates_only_the_semantic_fingerprint_input():
 
     assert original == command_implementation_digest(version)
     assert modified != original
+
+
+def test_repository_source_digest_is_order_and_eol_independent():
+    paths = [
+        "src/qzx/core/implementation_digest.py",
+        "src/qzx/commands/system/version.py",
+    ]
+
+    forward = digest_source_paths(paths)
+    reversed_digest = digest_source_paths(list(reversed(paths)))
+    duplicate_digest = digest_source_paths(paths + [paths[0]])
+
+    assert forward.startswith("sha256:")
+    assert len(forward) == 71
+    assert reversed_digest == forward
+    assert duplicate_digest == forward
+
+
+def test_repository_source_digest_rejects_escape_and_missing_paths():
+    import pytest
+
+    with pytest.raises(ValueError, match="parent traversal"):
+        digest_source_paths(["../outside.txt"])
+    with pytest.raises(FileNotFoundError):
+        digest_source_paths(["src/qzx/does-not-exist.py"])

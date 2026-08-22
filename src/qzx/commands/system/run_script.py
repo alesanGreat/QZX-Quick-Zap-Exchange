@@ -92,6 +92,7 @@ class RunScriptCommand(CommandBase):
         "timeout and bounded retained output"
     )
     category = "system"
+    allow_variadic_option_passthrough = True
     requires_explicit_approval = True
 
     timeout_seconds = 60
@@ -292,13 +293,30 @@ class RunScriptCommand(CommandBase):
         )
 
     @staticmethod
-    def _process_group_options():
-        """Isolate a script so a timeout can stop descendants with it."""
-        if os.name == "nt":
+    def _process_group_options(
+        platform_name=None,
+        *,
+        create_new_process_group=None,
+        create_no_window=None,
+    ):
+        """Return process-isolation flags from explicit platform capabilities."""
+        selected_platform = os.name if platform_name is None else platform_name
+        if selected_platform == "nt":
+            if create_new_process_group is None:
+                create_new_process_group = getattr(
+                    subprocess,
+                    "CREATE_NEW_PROCESS_GROUP",
+                    0,
+                )
+            if create_no_window is None:
+                create_no_window = getattr(
+                    subprocess,
+                    "CREATE_NO_WINDOW",
+                    0,
+                )
             return {
                 "creationflags": (
-                    getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                    create_new_process_group | create_no_window
                 )
             }
         return {"start_new_session": True}
