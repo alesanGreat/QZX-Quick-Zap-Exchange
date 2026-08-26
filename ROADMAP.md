@@ -41,8 +41,8 @@ through separate reviewed operations.
   QZX's own Windows, Linux, macOS, x64 and ARM64 CI evidence.
 - Run a small reproducible benchmark on real tasks before broadening claims
   about time, token, or workflow savings.
-- Improve installation-to-first-value onboarding using observed user friction,
-  not additional commands for their own sake.
+- Measure installation-to-first-value friction from real users and simplify the
+  maintained onboarding path only when evidence identifies a concrete obstacle.
 - Publish costs, a concrete support goal, and reports that separate money,
   credits, donated infrastructure, commercial work, and volunteer time.
 - Add a second trusted project administrator with documented responsibilities
@@ -61,6 +61,9 @@ through separate reviewed operations.
   tests cover both conformance and intentional nonconformance.
 - Golden Core release-quality evidence is bound to published pre-release
   `0.2.2.0.7a5`; this evidence does not itself promote commands beyond Alpha.
+- The no-argument and `welcome` flows provide a read-only first success,
+  catalog exploration, command-specific help, safety guidance, and the same
+  machine-readable onboarding plan without probing the host by default.
 - Public CI includes real Windows, Linux and macOS coverage, including ARM64
   jobs where supported. Platform targets are still narrower claims than
   universal compatibility.

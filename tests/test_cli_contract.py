@@ -82,6 +82,8 @@ def _run_cli(*arguments, environment_overrides=None, text=True):
         cwd=REPOSITORY_ROOT,
         env=environment,
         text=text,
+        encoding="utf-8" if text else None,
+        errors="strict" if text else None,
         capture_output=True,
         timeout=30,
         check=False,
@@ -157,7 +159,10 @@ def test_default_welcome_uses_lazy_index_without_full_discovery():
     result = runtime.execute("welcome", [])
 
     assert result["success"] is True
-    assert "Welcome Professor!" in result["output"]
+    assert "Welcome to QZX - Quick Zap Exchange" in result["output"]
+    assert result["onboarding"][0]["stage"] == "first_success"
+    assert result["onboarding"][0]["command"].endswith("--json")
+    assert result["documentation_url"].endswith("/en/commands")
     assert runtime.command_loader._discovered is False
     assert set(runtime.command_loader.command_modules) == {
         "qzx.commands.system.welcome",
@@ -410,6 +415,37 @@ def test_json_mode_emits_utf8_bytes_when_stdout_uses_non_utf8_encoding(
     assert payload["success"] is True
     assert "unicode-λ.txt" in payload["tree_text"]
     assert "└──" in payload["tree_text"]
+
+
+def test_no_argument_module_entrypoint_uses_the_clean_fast_welcome(tmp_path):
+    completed = _run_cli(
+        environment_overrides={"QZX_STATE_DIR": str(tmp_path)},
+    )
+
+    assert completed.returncode == 0
+    assert "Welcome to QZX - Quick Zap Exchange" in completed.stdout
+    assert "FIRST SUCCESS (read-only)" in completed.stdout
+    assert "Output:" not in completed.stdout
+    assert "Details:" not in completed.stdout
+    assert "Command Maturity" not in completed.stdout
+
+
+def test_human_stdout_is_utf8_even_when_the_inherited_code_page_is_legacy(
+    tmp_path,
+):
+    completed = _run_cli(
+        "about",
+        environment_overrides={
+            "PYTHONIOENCODING": "cp1252",
+            "QZX_STATE_DIR": str(tmp_path),
+        },
+        text=False,
+    )
+
+    stdout = completed.stdout.decode("utf-8", errors="strict")
+    assert completed.returncode == 0
+    assert "QZX — Quick Zap Exchange" in stdout
+    assert "Alejandro Sánchez" in stdout
 
 
 def test_unknown_command_uses_127_and_suggestions():

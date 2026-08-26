@@ -71,3 +71,6 @@ node_modules/
 *.token
 *.token.*
 AGENTS.md
+
+# Local agent conversation exports (never part of the public package)
+codex-conversation-archive/

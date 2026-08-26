@@ -2730,28 +2730,22 @@ Return stable package identity; host facts belong to getSystemInfo.
 
 ### welcome
 
-Command to display the system welcome information
+Introduce QZX and optionally render an explicit system snapshot.
 
 **Category:** system
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Displays the QZX welcome immediately, with optional system details
+**Description:** Introduces QZX with a read-only first-success path and optional system details
 
 **Parameters:**
 - `full_info`: Collect and show system, memory, and storage details; disabled by default for fast startup - Optional (default: `false`)
 
 **Examples:**
 - `qzx welcome`
-  Display the welcome screen immediately
+  Display the read-only onboarding screen immediately
 - `qzx welcome true`
   Collect system details, then display the detailed welcome screen
 
 **Details:**
-Display the welcome screen with system information
-
-Args:
-    full_info (str): Whether to show full information ('true' or 'false')
-
-Returns:
-    Dictionary with the operation result
+Return the canonical onboarding result without probing by default.
 
 ---

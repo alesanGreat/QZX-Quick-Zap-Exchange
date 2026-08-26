@@ -5,6 +5,54 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.7a7 — 2026-08-25
+
+<!-- qzx-release-summary-en:
+This Alpha release introduces a professional read-only onboarding path, deterministic UTF-8 terminal output, and a fail-closed publication transaction that verifies exact artifacts, internal manifests, command inventory, GitHub, PyPI, and qzx.yumbale.com before advancing main.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha incorpora una bienvenida profesional de solo lectura, salida de terminal UTF-8 determinista y una transacción de publicación que falla de forma segura y verifica artefactos exactos, manifiestos internos, inventario de comandos, GitHub, PyPI y qzx.yumbale.com antes de avanzar main.
+-->
+
+### Commercial-quality onboarding and output
+
+- Replaced the no-argument startup path with a fast, dependency-free onboarding
+  experience centered on a safe first success, focused command discovery,
+  explicit help, security guidance, and the canonical online command catalog.
+- Made the regular `welcome` command share that presentation while keeping host
+  inspection strictly opt-in. Detailed output now has a clear visual boundary,
+  collects expensive data once, and never leaks internal exception text.
+- Enforced the shared strict boolean contract for `welcome full_info`; ambiguous
+  values now fail explicitly instead of silently enabling or disabling probes.
+- Standardized human and JSON command-line output on strict UTF-8, including
+  Windows processes that inherit a legacy ANSI code page, and added launcher and
+  first-run attribution regressions for accented and typographic characters.
+- Renamed `getStartupPrograms` to the action-accurate `listStartupPrograms`
+  while QZX remains Alpha, with the command index, tests, README, and roadmap
+  moving together rather than preserving a misleading compatibility alias.
+
+### Publication integrity and public-surface parity
+
+- Rebuilt the public parity verifier for command-index schema v2 and made it open
+  the actual wheel and source distribution. It now proves internal manifest,
+  version, and command-inventory truth instead of trusting external labels.
+- Added real SHA-256 verification of downloaded GitHub Release and PyPI bytes,
+  byte-for-byte cross-surface comparison, annotated-tag dereferencing, bounded
+  artifact reads, and exact website inventory/provenance checks.
+- Restricted GitHub credentials to `api.github.com`; PyPI, the production site,
+  GitHub download pages, and release-asset hosts never receive those secrets.
+- Removed the temporary compatibility adapter that could normalize contradictory
+  metadata. The transaction now derives the published manifest directly from the
+  command index that is packaged and requires the website to expose that same
+  identity without fictitious retired or development-only commands.
+- Added a release preflight that resolves the supported Git/GitHub toolchain,
+  validates Git identity and authentication before any source mutation, and can
+  reuse an existing Git credential in memory without displaying or persisting it.
+- Made bilingual release summaries canonical in this changelog so GitHub Release
+  notes and the website release history cannot drift behind the actual campaign.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.7a6 — 2026-08-21
 
 This release publishes the complete validated engineering campaign to GitHub, PyPI, and qzx.yumbale.com through the mandatory public-surface transaction and parity gate.

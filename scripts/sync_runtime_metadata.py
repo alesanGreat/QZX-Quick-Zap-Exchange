@@ -20,12 +20,20 @@ MANIFEST_PATH = (
 LIFECYCLE_PATH = (
     PROJECT_ROOT / "src" / "qzx" / "resources" / "command-lifecycle.json"
 )
+COMMAND_INDEX_PATH = (
+    PROJECT_ROOT / "src" / "qzx" / "resources" / "command-index.json"
+)
 OUTPUT_PATH = PROJECT_ROOT / "src" / "qzx" / "_build_info.py"
 README_PATH = PROJECT_ROOT / "README.md"
 _RELEASE_MARKER = re.compile(r"This source release is QZX `[^`\r\n]+`")
 _RELEASE_TABLE_ROW = re.compile(
     r"(?m)^(?P<prefix>\| Source release described here \| )"
     r"`[^`\r\n]+`(?P<suffix> \|.*)$"
+)
+_EXPECTED_ONBOARDING_STAGES = (
+    "first_success",
+    "explore",
+    "understand",
 )
 
 
@@ -34,12 +42,93 @@ def load_manifest():
     return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 
 
+def validated_onboarding(manifest=None):
+    """Validate and return the packaged onboarding contract without rewriting it."""
+    manifest = manifest or load_manifest()
+    onboarding = manifest.get("onboarding")
+    urls = manifest.get("urls")
+    if not isinstance(onboarding, dict) or onboarding.get("schema_version") != 1:
+        raise ValueError("Onboarding must be a schema-version 1 object.")
+    if not isinstance(urls, dict):
+        raise ValueError("Product URLs must be an object.")
+    if onboarding.get("default_risk") != "read_only":
+        raise ValueError("Onboarding must remain read-only by default.")
+
+    for key_name in ("documentation_url_key", "security_url_key"):
+        url_key = onboarding.get(key_name)
+        url = urls.get(url_key) if isinstance(url_key, str) else None
+        if not isinstance(url, str) or not url.startswith("https://"):
+            raise ValueError(
+                f"Onboarding {key_name} must resolve to one HTTPS product URL."
+            )
+
+    command_index = json.loads(COMMAND_INDEX_PATH.read_text(encoding="utf-8"))
+    if not isinstance(command_index, dict) or command_index.get("schema_version") != 2:
+        raise ValueError("Command index must use schema version 2.")
+    entries = command_index.get("commands")
+    if not isinstance(entries, list):
+        raise ValueError("Command index must contain a commands list.")
+    command_names = {
+        entry.get("name")
+        for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+    }
+
+    steps = onboarding.get("steps")
+    if not isinstance(steps, list) or len(steps) != len(
+        _EXPECTED_ONBOARDING_STAGES
+    ):
+        raise ValueError("Onboarding must contain exactly three canonical steps.")
+    for expected_stage, step in zip(
+        _EXPECTED_ONBOARDING_STAGES,
+        steps,
+        strict=True,
+    ):
+        if not isinstance(step, dict) or step.get("stage") != expected_stage:
+            raise ValueError(
+                "Onboarding stages must be ordered as first_success, explore, "
+                "and understand."
+            )
+        command = step.get("command")
+        if command not in command_names:
+            raise ValueError(
+                f"Onboarding command {command!r} is not in command-index.json."
+            )
+        arguments = step.get("arguments")
+        if not isinstance(arguments, list) or any(
+            not isinstance(argument, str) or not argument.strip()
+            for argument in arguments
+        ):
+            raise ValueError(
+                f"Onboarding step {expected_stage!r} has invalid arguments."
+            )
+        if not isinstance(step.get("machine_output"), bool):
+            raise ValueError(
+                f"Onboarding step {expected_stage!r} must declare machine_output."
+            )
+        purpose = step.get("purpose")
+        if not isinstance(purpose, dict) or any(
+            not isinstance(purpose.get(language), str)
+            or not purpose[language].strip()
+            for language in ("en", "es")
+        ):
+            raise ValueError(
+                f"Onboarding step {expected_stage!r} must have bilingual purpose."
+            )
+
+    return json.loads(json.dumps(onboarding, ensure_ascii=False))
+
+
 def generated_content(manifest=None):
     """Render the lightweight constants imported during QZX startup."""
     manifest = manifest or load_manifest()
     lifecycle = json.loads(LIFECYCLE_PATH.read_text(encoding="utf-8"))
+    onboarding = validated_onboarding(manifest)
     version = manifest["channels"]["development"]["version"]
     attribution = manifest["product"]["attribution"]
+    urls = manifest["urls"]
+    command_catalog_url = urls[onboarding["documentation_url_key"]]
+    security_guide_url = urls[onboarding["security_url_key"]]
     if not isinstance(version, str) or not version.strip():
         raise ValueError("Development version must be non-empty text.")
     if not isinstance(attribution, str) or not attribution.strip():
@@ -68,9 +157,19 @@ def generated_content(manifest=None):
         'lifecycle manifests."""\n\n'
         "VERSION = {}\n"
         "ATTRIBUTION = {}\n"
+        "COMMAND_CATALOG_URL = {}\n"
+        "SECURITY_GUIDE_URL = {}\n"
+        "ONBOARDING = {}\n"
         "WELCOME_MATURITY = {}\n".format(
             json.dumps(version, ensure_ascii=False),
             json.dumps(attribution, ensure_ascii=False),
+            json.dumps(command_catalog_url, ensure_ascii=False),
+            json.dumps(security_guide_url, ensure_ascii=False),
+            pprint.pformat(
+                onboarding,
+                sort_dicts=False,
+                width=79,
+            ),
             pprint.pformat(
                 welcome_maturity,
                 sort_dicts=False,

@@ -1,101 +1,98 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Welcome Command - Displays the system welcome information
-"""
+"""Professional, read-only onboarding for QZX."""
 
 from qzx import __version__
-from qzx.core.command_base import CommandBase
-
-# Import the welcome module
 from qzx.commands.system.terminal_welcome import TerminalWelcome
+from qzx.core.command_base import CommandBase
+from qzx.welcome_text import (
+    COMMAND_CATALOG_URL,
+    onboarding_plan,
+    safety_guidance,
+    welcome_summary,
+)
+
 
 class WelcomeCommand(CommandBase):
-    """
-    Command to display the system welcome information
-    """
-    
+    """Introduce QZX and optionally render an explicit system snapshot."""
+
     name = "welcome"
     description = (
-        "Displays the QZX welcome immediately, with optional system details"
+        "Introduces QZX with a read-only first-success path and optional "
+        "system details"
     )
     category = "system"
-    
+
     parameters = [
         {
-            'name': 'full_info',
-            'description': (
-                'Collect and show system, memory, and storage details; disabled '
-                'by default for fast startup'
+            "name": "full_info",
+            "description": (
+                "Collect and show system, memory, and storage details; disabled "
+                "by default for fast startup"
             ),
-            'required': False,
-            'default': False,
-            'type': 'bool'
+            "required": False,
+            "default": False,
+            "type": "bool",
         }
     ]
-    
+
     examples = [
         {
-            'command': 'qzx welcome',
-            'description': 'Display the welcome screen immediately'
+            "command": "qzx welcome",
+            "description": "Display the read-only onboarding screen immediately",
         },
         {
-            'command': 'qzx welcome true',
-            'description': 'Collect system details, then display the detailed welcome screen'
-        }
+            "command": "qzx welcome true",
+            "description": (
+                "Collect system details, then display the detailed welcome screen"
+            ),
+        },
     ]
 
     def __init__(self, welcome_factory=None):
         """Accept a deterministic presentation boundary for testing."""
         self._welcome_factory = welcome_factory or TerminalWelcome
-    
+
     def execute(self, full_info=False):
-        """
-        Display the welcome screen with system information
-        
-        Args:
-            full_info (str): Whether to show full information ('true' or 'false')
-            
-        Returns:
-            Dictionary with the operation result
-        """
+        """Return the canonical onboarding result without probing by default."""
+        show_full_info = (
+            False if full_info is None else self._parse_bool(full_info)
+        )
+        if show_full_info is None:
+            return {
+                "success": False,
+                "message": "full_info must be true or false.",
+                "error": "Invalid full_info value.",
+                "error_code": "invalid_full_info",
+                "welcome_displayed": False,
+            }
+
         try:
-            # Convert parameter to boolean
-            if isinstance(full_info, str):
-                show_full_info = full_info.lower() in ('true', 'yes', 'y', '1', 't')
-            else:
-                show_full_info = bool(full_info)
-            
-            # Instantiate the welcome generator
             welcome_generator = self._welcome_factory(qzx_version=__version__)
-            
-            # Get the formatted message
             welcome_message = welcome_generator.get_welcome_message(
                 show_full_info=show_full_info
             )
-            
-            # Create a detailed description of what was displayed
-            info_level = "detailed" if show_full_info else "basic"
-            message = (
-                f"QZX welcome screen ({info_level} view) displayed. "
-                f"Version {__version__}."
-            )
-            
             return {
                 "success": True,
-                "message": message,
+                "message": welcome_summary(
+                    __version__,
+                    detailed=show_full_info,
+                ),
                 "output": welcome_message,
                 "welcome_displayed": True,
-                "info_level": info_level,
-                "qzx_version": __version__
+                "info_level": "detailed" if show_full_info else "basic",
+                "qzx_version": __version__,
+                "onboarding": onboarding_plan(),
+                "documentation_url": COMMAND_CATALOG_URL,
+                "safety": safety_guidance(),
             }
-            
-        except Exception as e:
-            error_message = f"Error displaying welcome screen: {str(e)}"
+        except Exception as exc:
             return {
                 "success": False,
-                "error": error_message,
-                "message": f"Failed to display QZX welcome screen: {str(e)}",
-                "welcome_displayed": False
-            } 
+                "message": "QZX could not render the welcome screen.",
+                "error": "Welcome presentation failed.",
+                "error_code": "welcome_presentation_failed",
+                "exception_type": type(exc).__name__,
+                "welcome_displayed": False,
+            }

@@ -607,7 +607,7 @@
       "name": "welcome",
       "module": "qzx.commands.system.welcome",
       "class_name": "WelcomeCommand",
-      "description": "Displays the QZX welcome immediately, with optional system details",
+      "description": "Introduces QZX with a read-only first-success path and optional system details",
       "category": "system"
     }
   ]

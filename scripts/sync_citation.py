@@ -67,17 +67,17 @@ def render_citation(manifest: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def sync(*, check: bool) -> bool:
-    expected = render_citation(load_product_manifest())
-    actual = OUTPUT_PATH.read_text(encoding="utf-8") if OUTPUT_PATH.exists() else None
+def sync(*, check: bool, output_path: Path = OUTPUT_PATH) -> bool:
+    expected = render_citation(load_product_manifest()).encode("utf-8")
+    actual = output_path.read_bytes() if output_path.exists() else None
     if actual == expected:
         print("CITATION.cff is synchronized with product-manifest.json.")
         return True
     if check:
-        print("CITATION.cff is stale or missing.")
+        print("CITATION.cff is stale, missing, or not canonical UTF-8/LF.")
         return False
-    OUTPUT_PATH.write_text(expected, encoding="utf-8", newline="\n")
-    print("CITATION.cff synchronized with product-manifest.json.")
+    output_path.write_bytes(expected)
+    print("CITATION.cff synchronized with canonical UTF-8/LF bytes.")
     return True
 
 

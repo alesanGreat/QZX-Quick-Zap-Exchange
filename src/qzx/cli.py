@@ -13,6 +13,7 @@ import re
 import sys
 from pathlib import Path
 
+from qzx._stdio import configure_utf8_stdio
 from qzx.core.command_loader import CommandLoader
 from qzx.core.command_index import CommandIndexError
 from qzx.core.result_contract import ensure_result_contract
@@ -613,6 +614,7 @@ def _schedule_optional_telemetry():
 
 
 def main():
+    configure_utf8_stdio()
     json_output, command, args = _parse_cli_request(sys.argv[1:])
     first_run = claim_first_run_attribution()
 

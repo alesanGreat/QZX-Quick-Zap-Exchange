@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CITATION_PATH = REPOSITORY_ROOT / "CITATION.cff"
@@ -142,6 +144,30 @@ def test_citation_and_codemeta_tell_the_same_attribution_story():
     assert f'date-released: "{actual["datePublished"]}"' in citation
     assert '  - "QZX Result Contract"' in citation
     assert '  - "Model Context Protocol"' in citation
+
+
+@pytest.mark.parametrize(
+    ("module", "renderer", "filename"),
+    (
+        (sync_citation, sync_citation.render_citation, "CITATION.cff"),
+        (sync_codemeta, sync_codemeta.render_codemeta, "codemeta.json"),
+    ),
+)
+def test_metadata_sync_rejects_and_repairs_crlf_bytes(
+    module,
+    renderer,
+    filename,
+    tmp_path,
+):
+    manifest = json.loads(PRODUCT_MANIFEST_PATH.read_text(encoding="utf-8"))
+    expected = renderer(manifest).encode("utf-8")
+    target = tmp_path / filename
+    target.write_bytes(expected.replace(b"\n", b"\r\n"))
+
+    assert module.sync(check=True, output_path=target) is False
+    assert module.sync(check=False, output_path=target) is True
+    assert target.read_bytes() == expected
+    assert b"\r\n" not in target.read_bytes()
 
 
 def test_attribution_check_modes_pass_without_rewriting():

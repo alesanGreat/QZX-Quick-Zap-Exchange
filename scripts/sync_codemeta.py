@@ -93,17 +93,17 @@ def render_codemeta(manifest: dict[str, Any]) -> str:
     return json.dumps(build_codemeta(manifest), indent=2, ensure_ascii=False) + "\n"
 
 
-def sync(*, check: bool) -> bool:
-    expected = render_codemeta(load_product_manifest())
-    actual = OUTPUT_PATH.read_text(encoding="utf-8") if OUTPUT_PATH.exists() else None
+def sync(*, check: bool, output_path: Path = OUTPUT_PATH) -> bool:
+    expected = render_codemeta(load_product_manifest()).encode("utf-8")
+    actual = output_path.read_bytes() if output_path.exists() else None
     if actual == expected:
         print("codemeta.json is synchronized with product-manifest.json.")
         return True
     if check:
-        print("codemeta.json is stale or missing.")
+        print("codemeta.json is stale, missing, or not canonical UTF-8/LF.")
         return False
-    OUTPUT_PATH.write_text(expected, encoding="utf-8", newline="\n")
-    print("codemeta.json synchronized with product-manifest.json.")
+    output_path.write_bytes(expected)
+    print("codemeta.json synchronized with canonical UTF-8/LF bytes.")
     return True
 
 

@@ -98,17 +98,62 @@
     "aliases_supported": false,
     "documentation_rule": "Use the canonical lowerCamelCase spelling; command lookup is case-insensitive."
   },
+  "onboarding": {
+    "schema_version": 1,
+    "default_risk": "read_only",
+    "documentation_url_key": "command_catalog",
+    "security_url_key": "security",
+    "steps": [
+      {
+        "stage": "first_success",
+        "command": "getCurrentDateTime",
+        "arguments": [
+          "--output-format",
+          "iso"
+        ],
+        "machine_output": true,
+        "purpose": {
+          "en": "Confirm QZX with a fast, read-only ISO timestamp.",
+          "es": "Confirma QZX con una marca de tiempo ISO rápida y de solo lectura."
+        }
+      },
+      {
+        "stage": "explore",
+        "command": "listCommands",
+        "arguments": [
+          "file"
+        ],
+        "machine_output": false,
+        "purpose": {
+          "en": "Filter the installed catalog to commands related to files.",
+          "es": "Filtra el catálogo instalado para ver comandos relacionados con archivos."
+        }
+      },
+      {
+        "stage": "understand",
+        "command": "help",
+        "arguments": [
+          "findFiles"
+        ],
+        "machine_output": false,
+        "purpose": {
+          "en": "Inspect parameters, examples, maturity, and safety before execution.",
+          "es": "Revisa parámetros, ejemplos, madurez y seguridad antes de ejecutar."
+        }
+      }
+    ]
+  },
   "channels": {
     "published": {
-      "version": "0.2.2.0.7a6",
+      "version": "0.2.2.0.7a7",
       "status": "Alpha",
       "channel": "Published package",
-      "released_at": "2026-08-21",
+      "released_at": "2026-08-25",
       "requires_python": ">=3.13",
       "install_command": "python -m pip install --pre --upgrade qzx",
-      "source": "https://pypi.org/pypi/qzx/0.2.2.0.7a6/json",
+      "source": "https://pypi.org/pypi/qzx/0.2.2.0.7a7/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.7a6-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.7a7-py3-none-any.whl",
         "command_names": [
           "about",
           "addPythonDocstrings",
@@ -154,7 +199,6 @@
           "getNetworkConfig",
           "getProjectTree",
           "getRamInfo",
-          "getStartupPrograms",
           "getSystemInfo",
           "help",
           "inspectImage",
@@ -168,6 +212,7 @@
           "listDiskDevices",
           "listFiles",
           "listProcesses",
+          "listStartupPrograms",
           "listSystemServices",
           "movePath",
           "planProjectBootstrap",
@@ -201,7 +246,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.7a6",
+      "version": "0.2.2.0.7a7",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.13",

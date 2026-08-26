@@ -8,7 +8,7 @@ TerminalWelcome Module - Manages the welcome screen for QZX Terminal
 import importlib
 import platform
 
-from qzx.welcome_text import basic_welcome_message
+from qzx.welcome_text import WELCOME_BORDER, basic_welcome_message
 
 _PSUTIL_UNSET = object()
 _PSUTIL_MODULE = _PSUTIL_UNSET
@@ -58,6 +58,7 @@ class TerminalWelcome:
         self._system_info = None
         self._system_info_provider = system_info_provider
         self._psutil_loader = psutil_loader or _load_psutil
+        self._psutil_module = _PSUTIL_UNSET
         self.interactive = bool(interactive)
 
     @property
@@ -67,6 +68,12 @@ class TerminalWelcome:
             provider = self._system_info_provider or self._get_system_info
             self._system_info = provider()
         return self._system_info
+
+    def _optional_psutil(self):
+        """Resolve the optional dependency at most once per presentation."""
+        if self._psutil_module is _PSUTIL_UNSET:
+            self._psutil_module = self._psutil_loader()
+        return self._psutil_module
     
     def get_welcome_message(self, show_full_info=False):
         """
@@ -82,26 +89,28 @@ class TerminalWelcome:
             self.qzx_version,
             interactive=self.interactive,
         )
-        if show_full_info:
-            welcome += """
-System
-------
-{}
+        if not show_full_info:
+            return welcome
 
-Memory
-------
-{}
-
-Storage
--------
-{}
-=================================================================
-""".format(
-                self._format_system_info(),
-                self._format_ram_info(),
-                self._format_disk_info(),
-            )
-        return welcome
+        lines = welcome.rstrip("\n").splitlines()
+        if lines and lines[-1] == WELCOME_BORDER:
+            lines.pop()
+        basic_message = "\n".join(lines)
+        return (
+            f"{basic_message}\n\n"
+            "DETAILED SYSTEM SNAPSHOT (explicitly requested)\n"
+            "=================================================\n\n"
+            "System\n"
+            "------\n"
+            f"{self._format_system_info()}\n\n"
+            "Memory\n"
+            "------\n"
+            f"{self._format_ram_info()}\n\n"
+            "Storage\n"
+            "-------\n"
+            f"{self._format_disk_info()}\n"
+            f"{WELCOME_BORDER}\n"
+        )
     
     def _get_system_info(self):
         """
@@ -122,7 +131,7 @@ Storage
         
         # Disk probes can block on sleeping or disconnected mount points, so
         # even importing the optional dependency belongs to the detailed path.
-        psutil_module = self._psutil_loader()
+        psutil_module = self._optional_psutil()
         if psutil_module is not None:
             # RAM
             try:
@@ -199,11 +208,10 @@ Storage
             str: Formatted RAM information
         """
         info = self.system_info
-        
-        if self._psutil_loader() is None:
-            return "RAM information not available (requires 'psutil' module)"
-        
+
         if "ram_total" not in info:
+            if self._optional_psutil() is None:
+                return "RAM information not available (requires 'psutil' module)"
             return "RAM information not available"
         
         ram_total = self._format_bytes(info.get("ram_total", 0))
@@ -221,11 +229,10 @@ Storage
             str: Formatted disk information
         """
         info = self.system_info
-        
-        if self._psutil_loader() is None:
-            return "Disk information not available (requires 'psutil' module)"
-        
+
         if "disk_info" not in info or not info["disk_info"]:
+            if self._optional_psutil() is None:
+                return "Disk information not available (requires 'psutil' module)"
             return "Disk information not available"
         
         result = ""

@@ -29,6 +29,8 @@ def test_local_launcher_emits_parseable_json_from_checkout():
         cwd=REPOSITORY_ROOT,
         env=environment,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         timeout=30,
         check=False,
@@ -51,6 +53,8 @@ def test_local_launcher_propagates_command_not_found_exit_code():
         cwd=REPOSITORY_ROOT,
         env=environment,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         timeout=30,
         check=False,
@@ -73,6 +77,8 @@ def test_local_launcher_uses_fast_human_welcome(tmp_path):
         cwd=REPOSITORY_ROOT,
         env=environment,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         timeout=60,
         check=False,
@@ -81,10 +87,22 @@ def test_local_launcher_uses_fast_human_welcome(tmp_path):
     assert completed.returncode == 0, completed.stderr or completed.stdout
     assert completed.stderr == ""
     assert ATTRIBUTION in completed.stdout
-    assert "Welcome Professor!" in completed.stdout
-    assert "QZX welcome screen (basic view) displayed." in completed.stdout
-    assert "Run 'qzx listCommands'" in completed.stdout
-    assert "Run 'qzx terminal'" in completed.stdout
+    assert "Welcome to QZX - Quick Zap Exchange" in completed.stdout
+    assert (
+        "QZX is ready. Start with the read-only first-success path"
+        in completed.stdout
+    )
+    assert (
+        "qzx getCurrentDateTime --output-format iso --json"
+        in completed.stdout
+    )
+    assert "qzx listCommands file" in completed.stdout
+    assert "qzx help findFiles" in completed.stdout
+    assert "qzx terminal" in completed.stdout
+    assert "Output:" not in completed.stdout
+    assert "Details:" not in completed.stdout
+    assert "Command Maturity" not in completed.stdout
+    assert "Professor" not in completed.stdout
 
 
 def test_local_launcher_does_not_write_bytecode_into_checkout(tmp_path):
@@ -114,6 +132,8 @@ def test_local_launcher_does_not_write_bytecode_into_checkout(tmp_path):
         cwd=checkout,
         env=environment,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         timeout=30,
         check=False,
@@ -146,6 +166,8 @@ def test_lightweight_runtime_metadata_matches_manifest():
         ],
         cwd=REPOSITORY_ROOT,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         timeout=30,
         check=False,
@@ -182,6 +204,8 @@ def test_windows_launcher_finds_managed_python_when_path_has_no_python(tmp_path)
         cwd=tmp_path,
         env=environment,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         timeout=30,
         check=False,
