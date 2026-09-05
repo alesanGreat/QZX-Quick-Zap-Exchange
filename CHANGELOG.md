@@ -5,6 +5,37 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.7a8 — 2026-09-04
+
+<!-- qzx-release-summary-en:
+This Alpha release turns project diagnosis into an actionable human briefing while preserving complete JSON evidence, fixes unavailable Git state being reported as clean, and aligns installation, practical onboarding and creator-service discovery across the product.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha convierte el diagnóstico de proyectos en un informe legible con acciones concretas sin perder la evidencia JSON, corrige el estado de Git no disponible que podía mostrarse como limpio y alinea instalación, inicio práctico y acceso a los servicios del creador.
+-->
+
+### Useful first-project workflow
+
+- Added a readable `diagnoseProject` briefing with technologies, dependency
+  counts, Git state, file-scan coverage, severity-ordered findings and remediation.
+  The full structured evidence remains available with `--json`.
+- Separated discovered validation commands from actual test results. Suggested
+  tests, lint, type checks and builds are explicitly marked as not run, and
+  release readiness remains unassessed.
+- Fixed failed Git working-tree inspection being treated as an empty, clean
+  status. Unavailable state now carries an explicit finding and unknown counts.
+- Prevented project paths and metadata from inserting terminal controls or
+  apparent extra command lines into the human briefing.
+- Aligned the first README installation and optional extras with the published
+  Alpha channel, and added installed-version verification before first use.
+- Added a practical project-briefing guide, a Python JSON-consumer example,
+  bilingual website guidance, and a direct route to Alejandro's professional
+  services alongside optional support for the free open-source CLI.
+- Added real CLI and regression tests for human and machine output, read-only
+  operation, incomplete scans, Git failures, prioritization and onboarding.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.7a7 — 2026-08-25
 
 <!-- qzx-release-summary-en:

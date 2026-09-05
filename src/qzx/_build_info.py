@@ -1,6 +1,6 @@
 """Generated startup constants; synchronize from product and lifecycle manifests."""
 
-VERSION = "0.2.2.0.7a7"
+VERSION = "0.2.2.0.7a8"
 ATTRIBUTION = "QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez."
 COMMAND_CATALOG_URL = "https://qzx.yumbale.com/en/commands"
 SECURITY_GUIDE_URL = "https://qzx.yumbale.com/en/security"

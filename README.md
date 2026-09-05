@@ -4,7 +4,8 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 [About Alejandro Sánchez](https://qzx.yumbale.com/en/alejandro-sanchez) ·
 [Contact QZX](mailto:qzx@yumbale.com) ·
-[Support the project](https://qzx.yumbale.com/en/donate)
+[Support the project](https://qzx.yumbale.com/en/donate) ·
+[Work with Alejandro](https://qzx.yumbale.com/en/professional-services#request)
 
 QZX is an open-source Python CLI that gives AI agents, automation, and people
 one documented command vocabulary for supported operations on Windows, Linux,
@@ -30,7 +31,8 @@ operations present in the installed command catalog.
 ## Install the published package
 
 ```bash
-python -m pip install --upgrade qzx
+python -m pip install --pre --upgrade qzx
+qzx version --json
 qzx
 ```
 
@@ -48,7 +50,7 @@ second filters the installed catalog; the third exposes parameters, examples,
 maturity, and safety before execution. Use `qzx welcome true` only when detailed
 host information is explicitly wanted.
 
-This source release is QZX `0.2.2.0.7a7` and requires Python `>=3.13`.
+This source release is QZX `0.2.2.0.7a8` and requires Python `>=3.13`.
 A normal `python -m pip install qzx` selects the latest final release; add
 `--pre` to opt into the newest pre-release. PyPI is authoritative for which
 version those commands currently select.
@@ -59,10 +61,29 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.7a7` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.7a8` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
+
+## Get a useful project briefing
+
+From the root of a project you want to understand, run:
+
+```bash
+qzx diagnoseProject .
+qzx diagnoseProject . --json
+```
+
+The terminal report prioritizes observed findings and remediation, summarizes
+technologies, dependencies and Git state, and lists discovered test, lint and
+build commands. The JSON mode keeps the full structured evidence for an agent
+or automation. Project-owned scripts are never executed by this inspection;
+`success: true` means the diagnosis completed, not that tests passed.
+
+Use the [project briefing workflow](https://github.com/alesanGreat/QZX-Quick-Zap-Exchange/blob/main/docs/project-briefing.md) to combine this
+with a bounded directory tree and language inventory. No account, API key or
+paid feature is required.
 
 ## Output contract
 
@@ -249,8 +270,8 @@ integrity check. The basic `qzx welcome` path avoids system, memory, and storage
 probes; request those details explicitly with `qzx welcome true`.
 
 Optional command groups can be installed with
-`python -m pip install "qzx[filetype]"` or
-`python -m pip install "qzx[ai]"`. Some operations also depend on host tools
+`python -m pip install --pre --upgrade "qzx[filetype]"` or
+`python -m pip install --pre --upgrade "qzx[ai]"`. Some operations also depend on host tools
 such as Git, smartmontools, formatters, or language toolchains.
 
 ## Safety model

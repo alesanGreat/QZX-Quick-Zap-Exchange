@@ -11,6 +11,7 @@ import subprocess
 import tomllib
 from collections import Counter
 from pathlib import Path
+from textwrap import fill
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
@@ -143,7 +144,7 @@ class DiagnoseProjectCommand(CommandBase):
                 "readiness was not assessed."
             )
 
-        return {
+        result = {
             "success": True,
             "message": message,
             "details": {
@@ -158,6 +159,114 @@ class DiagnoseProjectCommand(CommandBase):
                 "summary": summary,
             },
         }
+        result["report"] = self._render_report(result["details"])
+        return result
+
+    @staticmethod
+    def _render_report(details):
+        """Present actionable findings without discarding the machine evidence."""
+        def single_line(value):
+            # Paths and project metadata must not introduce terminal controls
+            # or additional apparent commands into the human presentation.
+            return " ".join(
+                "".join(
+                    character if character.isprintable() else " "
+                    for character in str(value)
+                ).split()
+            )
+
+        summary = details["summary"]
+        dependencies = details["dependencies"]
+        git = details["version_control"]
+        scan = details["file_scan"]
+        technologies = ", ".join(details["technologies"]) or "Not identified"
+        statuses = {
+            "critical": "Critical findings",
+            "attention": "Needs attention",
+            "review": "Review recommended",
+            "no_issues_observed": "No issues observed",
+        }
+        package_count = dependencies["unique_declared_package_count"]
+        manifest_count = dependencies["manifest_count"]
+        package_label = "package" if package_count == 1 else "packages"
+        manifest_label = "manifest" if manifest_count == 1 else "manifests"
+        lines = [
+            "PROJECT BRIEFING",
+            "Path: " + single_line(details["path"]),
+            "Technologies: " + single_line(technologies),
+            (
+                "Dependencies: "
+                f"{package_count} unique declared {package_label} in "
+                f"{manifest_count} {manifest_label}"
+            ),
+        ]
+        if git["status"] == "inspected":
+            state = "clean working tree" if git["clean"] else (
+                f"{git['changed_count']} tracked changes, "
+                f"{git['untracked_count']} untracked paths"
+            )
+            lines.append(f"Git: {single_line(git['branch'])}; {state}")
+        elif git["status"] == "not_repository":
+            lines.append("Git: repository not detected")
+        else:
+            lines.append("Git: state unavailable; do not assume a clean working tree")
+        coverage = "complete" if scan["scan_complete"] else "PARTIAL (limit reached)"
+        if scan["error_count"]:
+            coverage += f"; {scan['error_count']} metadata reads failed"
+        lines.append(
+            f"File scan: {scan['scanned_file_count']} files; {coverage}; "
+            f"{scan['large_file_count']} larger than "
+            f"{scan['large_file_threshold_formatted']}"
+        )
+        lines.extend([
+            "",
+            "FINDINGS - " + statuses[summary["status"]],
+            (
+                f"{summary['issue_count']} issues; "
+                f"{summary['informational_count']} informational observations"
+            ),
+        ])
+        priority = {"high": 0, "medium": 1, "low": 2, "info": 3}
+        issues = sorted(
+            summary["issues"], key=lambda issue: priority[issue["severity"]]
+        )
+        for number, issue in enumerate(issues, 1):
+            heading = (
+                f"{number}. [{issue['severity'].upper()}] "
+                + single_line(issue["title"])
+            )
+            lines.append(fill(heading, width=88, subsequent_indent="   "))
+            lines.append(fill(
+                "Next: " + single_line(issue["remediation"]),
+                width=88, initial_indent="   ", subsequent_indent="   ",
+            ))
+        if not issues:
+            lines.append("No issues were observed within this inspection's scope.")
+
+        verification = summary["verification"]
+        lines.extend(["", "VALIDATION - DISCOVERED, NOT RUN"])
+        labels = {
+            "tests": "Tests", "lint": "Lint",
+            "type_checking": "Type checks", "build": "Build",
+        }
+        for key, label in labels.items():
+            configured = details["validation"][key]["configured"]
+            state = "configured, not run" if configured else "not detected"
+            lines.append(f"{label}: {state}")
+        commands = verification["suggested_commands"]
+        if commands:
+            lines.extend([
+                "", "Review the project scripts before running these commands.",
+                "Run from: " + single_line(details["path"]),
+            ])
+            lines.extend("  " + single_line(command) for command in commands)
+        else:
+            lines.append("No validation command was discovered.")
+        lines.extend([
+            "", "Release readiness: NOT ASSESSED. Inspection is not a test run.",
+            "Use --json for the full structured evidence and finding descriptions.",
+        ])
+        return "\n".join(lines)
 
     @staticmethod
     def _read_document(path, parser, parse_errors):
@@ -609,6 +718,15 @@ class DiagnoseProjectCommand(CommandBase):
             "--porcelain=v1",
             "--untracked-files=all",
         )
+        if status_result["status"] != "ok":
+            return {
+                "status": "error",
+                "repository_root": repository_root,
+                "reason": status_result.get("error") or "Git status failed.",
+                "clean": None,
+                "changed_count": None,
+                "untracked_count": None,
+            }
         status_lines = (
             status_result["stdout"].splitlines()
             if status_result["status"] == "ok"
@@ -863,6 +981,15 @@ class DiagnoseProjectCommand(CommandBase):
                 "Git state could not be inspected",
                 version_control["reason"],
                 "Install Git or make it available on PATH, then repeat the diagnosis.",
+            )
+        elif version_control["status"] == "error":
+            add(
+                "git_inspection_failed",
+                "medium",
+                "Git working-tree state could not be read",
+                version_control["reason"],
+                "Resolve the reported Git error and repeat the diagnosis; "
+                "do not treat unavailable state as a clean working tree.",
             )
         elif not version_control.get("clean", True):
             add(
