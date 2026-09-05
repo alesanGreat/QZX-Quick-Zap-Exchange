@@ -20,13 +20,15 @@ optional and never unlock features or change the product experience.
 [QZX Golden Core](https://qzx.yumbale.com/en/golden-core) ·
 [QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract) ·
 [Recorded output](https://qzx.yumbale.com/en/qzx-in-action) ·
+[When to use QZX](https://qzx.yumbale.com/en/when-to-use) ·
 [Compatibility](https://qzx.yumbale.com/en/compatibility) ·
 [Security and telemetry](https://qzx.yumbale.com/en/security) ·
 [Documentación en español](https://qzx.yumbale.com/es/)
 
 QZX is a local command interface, not a shell replacement, remote execution
 service, or security sandbox. It reduces platform-specific branches only for
-operations present in the installed command catalog.
+operations present in the installed command catalog. If you are choosing between
+QZX, shell composition, or a native API, use the [technical decision guide](https://qzx.yumbale.com/en/when-to-use).
 
 ## Install the published package
 
