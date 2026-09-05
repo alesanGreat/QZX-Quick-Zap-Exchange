@@ -25,7 +25,7 @@ jobs:
 
       - name: Start VM | Oracle Solaris 11.4 CBE x86_64
         id: start-oracle-solaris-11-4-cbe-x86-64
-        uses: vmactions/solaris-vm@315163f088b66e55bbcc45928bd224d4973b2312 # v1.3.8
+        uses: vmactions/solaris-vm@96d8d976f9e67d82ec6c7e8ce9c1060731f9e21c # v1.3.9
         with:
           # 11.4-gcc is Oracle Solaris 11.4 CBE with the GCC toolchain.
           release: "11.4-gcc"
