@@ -59,6 +59,16 @@ QZX supports standard CPython 3.11 or newer. The complete cross-platform
 certification matrix uses standard CPython 3.13.x; experimental free-threaded
 CPython builds, PyPy, and other implementations are not certified.
 
+The 3.11 floor is intentional product policy, not a temporary compatibility
+accident. It was adopted after the QZX test suite passed on standard CPython
+3.11, 3.12, 3.13, and 3.14, because requiring a newer interpreter without a
+technical need would add avoidable installation friction for existing projects,
+servers, CI runners, and automation. CPython 3.13 remains the certification
+runtime to keep the operating-system matrix deep without multiplying every OS
+by every supported Python series. Maintainers should not raise `Requires-Python`
+above 3.11 merely to use newer syntax or simplify development; see the
+[Python compatibility policy](docs/python-compatibility-policy.md).
+
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
 | Source release described here | `0.2.2.0.7` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 87 canonical commands in the generated command index |
