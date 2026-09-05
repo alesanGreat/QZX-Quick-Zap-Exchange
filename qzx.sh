@@ -12,7 +12,7 @@ export PYTHONPATH="$SCRIPT_DIR/src${PYTHONPATH:+:$PYTHONPATH}"
 QZX_RUNTIME=""
 
 is_compatible_python() {
-    "$1" -c 'import platform, sys, sysconfig; raise SystemExit(0 if platform.python_implementation() == "CPython" and sys.version_info[:2] == (3, 13) and sysconfig.get_config_var("Py_GIL_DISABLED") != 1 else 1)' \
+    "$1" -c 'import platform, sys, sysconfig; raise SystemExit(0 if platform.python_implementation() == "CPython" and sys.version_info >= (3, 11) and sysconfig.get_config_var("Py_GIL_DISABLED") != 1 else 1)' \
         >/dev/null 2>&1
 }
 
@@ -32,21 +32,23 @@ if [ -z "$QZX_RUNTIME" ]; then
         "${UV_PYTHON_INSTALL_DIR:-}" \
         "${XDG_DATA_HOME:-${HOME:-}/.local/share}/uv/python"; do
         [ -n "$uv_root" ] && [ -d "$uv_root" ] || continue
-        for candidate in "$uv_root"/cpython-3.13*/bin/python3.13 \
-            "$uv_root"/cpython-3.13*/bin/python; do
-            case "$candidate" in
-                *"+"*) continue ;;
-            esac
-            [ -x "$candidate" ] || continue
-            is_compatible_python "$candidate" || continue
-            QZX_RUNTIME="$candidate"
-            break 2
+        for series in 3.13 3.14 3.12 3.11; do
+            for candidate in "$uv_root"/cpython-"$series"*/bin/python"$series" \
+                "$uv_root"/cpython-"$series"*/bin/python; do
+                case "$candidate" in
+                    *"+"*) continue ;;
+                esac
+                [ -x "$candidate" ] || continue
+                is_compatible_python "$candidate" || continue
+                QZX_RUNTIME="$candidate"
+                break 3
+            done
         done
     done
 fi
 
 if [ -z "$QZX_RUNTIME" ]; then
-    for candidate in python3.13 python3 python; do
+    for candidate in python3.13 python3.14 python3.12 python3.11 python3 python; do
         if command -v "$candidate" >/dev/null 2>&1 \
             && is_compatible_python "$candidate"; then
             QZX_RUNTIME="$(command -v "$candidate")"
@@ -56,11 +58,14 @@ if [ -z "$QZX_RUNTIME" ]; then
 fi
 
 if [ -z "$QZX_RUNTIME" ] && command -v uv >/dev/null 2>&1; then
-    uv_python="$(uv python find 3.13 2>/dev/null || true)"
-    if [ -n "$uv_python" ] && [ -x "$uv_python" ] \
-        && is_compatible_python "$uv_python"; then
-        QZX_RUNTIME="$uv_python"
-    fi
+    for series in 3.13 3.14 3.12 3.11; do
+        uv_python="$(uv python find "$series" 2>/dev/null || true)"
+        if [ -n "$uv_python" ] && [ -x "$uv_python" ] \
+            && is_compatible_python "$uv_python"; then
+            QZX_RUNTIME="$uv_python"
+            break
+        fi
+    done
 fi
 
 if [ -z "$QZX_RUNTIME" ]; then
@@ -73,10 +78,10 @@ if [ -z "$QZX_RUNTIME" ]; then
     done
     if [ "$json_requested" = true ]; then
         printf '%s\n' \
-            '{"success":false,"error_code":"compatible_python_not_found","error":"Standard CPython 3.13 was not found.","message":"QZX requires the standard CPython 3.13.x build. Install it with uv or make a compatible python executable available on PATH."}'
+            '{"success":false,"error_code":"compatible_python_not_found","error":"Compatible standard CPython was not found.","message":"QZX requires standard CPython 3.11 or newer; CPython 3.13.x is the cross-platform certification runtime. Install a compatible runtime with uv or make it available on PATH."}'
     else
         printf '%s\n' \
-            'QZX requires the standard CPython 3.13.x build. Install it with uv or make a compatible python executable available on PATH.'
+            'QZX requires standard CPython 3.11 or newer; CPython 3.13.x is the cross-platform certification runtime. Install a compatible runtime with uv or make it available on PATH.'
     fi
     exit 1
 fi

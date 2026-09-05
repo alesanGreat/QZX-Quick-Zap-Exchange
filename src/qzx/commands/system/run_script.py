@@ -12,6 +12,8 @@ import subprocess
 import sys
 import threading
 
+import psutil
+
 from qzx.core.command_base import CommandBase
 
 
@@ -322,10 +324,35 @@ class RunScriptCommand(CommandBase):
         return {"start_new_session": True}
 
     @staticmethod
+    def _observed_process_tree(process_id):
+        """Snapshot a process tree so termination can be verified independently."""
+        try:
+            root = psutil.Process(process_id)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, ValueError):
+            return []
+        try:
+            descendants = root.children(recursive=True)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            descendants = []
+        return [root, *descendants]
+
+    @staticmethod
+    def _observed_processes_stopped(processes, timeout_seconds=1.0):
+        """Confirm that every process captured before termination has exited."""
+        if not processes:
+            return False
+        try:
+            _gone, alive = psutil.wait_procs(processes, timeout=timeout_seconds)
+        except (psutil.Error, ValueError):
+            return False
+        return not alive
+
+    @staticmethod
     def _terminate_process_tree(process):
         """Stop a timed-out script and its descendants when the OS permits."""
         method = "process_kill_fallback"
         process_tree_confirmed = False
+        observed_processes = RunScriptCommand._observed_process_tree(process.pid)
 
         if os.name == "nt":
             taskkill = shutil.which("taskkill.exe") or shutil.which("taskkill")
@@ -365,6 +392,11 @@ class RunScriptCommand(CommandBase):
             process.wait(timeout=5)
         except (OSError, subprocess.TimeoutExpired):
             pass
+
+        if observed_processes:
+            process_tree_confirmed = RunScriptCommand._observed_processes_stopped(
+                observed_processes
+            )
 
         return {
             "attempted": True,

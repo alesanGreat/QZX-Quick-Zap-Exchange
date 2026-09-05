@@ -9,13 +9,14 @@ API key, or paid feature. QZX remains Alpha software.
 ## Install and confirm your version
 
 ```bash
-python -m pip install --pre --upgrade qzx
+python -m pip install --upgrade qzx
 qzx version --json
 ```
 
-`--pre` opts into the Alpha channel documented here. A normal installation can
-select an older final package. This does not imply that the final package has a
-Stable command contract.
+The normal pip channel installs the current QZX distribution. QZX still has an
+Alpha product contract: a numeric distribution version does not imply a Stable
+command API. Check `qzx version --json` before following version-sensitive
+examples.
 
 ## Get the briefing
 

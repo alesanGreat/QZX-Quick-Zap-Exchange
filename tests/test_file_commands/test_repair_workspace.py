@@ -9,6 +9,7 @@ import zipfile
 
 from qzx.commands.file.audit_workspace import AuditWorkspaceCommand
 from qzx.commands.file.repair_workspace import RepairWorkspaceCommand
+import qzx.core.workspace_audit as workspace_audit
 from qzx.core.workspace_audit import (
     MAX_PLAN_BYTES,
     WorkspaceAuditError,
@@ -421,6 +422,25 @@ def test_recomputed_plan_id_does_not_make_tampered_action_id_valid(tmp_path):
 
     assert result["success"] is False
     assert result["error_code"] == "plan_integrity_failed"
+
+
+def test_windows_junction_fallback_without_native_isjunction(tmp_path, monkeypatch):
+    if os.name != "nt":
+        return
+
+    target = tmp_path / "target"
+    junction = tmp_path / "junction"
+    target.mkdir()
+    completed = subprocess.run(
+        ["cmd.exe", "/d", "/c", "mklink", "/J", str(junction), str(target)],
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+
+    monkeypatch.delattr(os.path, "isjunction", raising=False)
+    assert workspace_audit._is_junction(junction) is True
+    junction.rmdir()
 
 
 def test_action_ancestor_replaced_by_link_is_refused(tmp_path):

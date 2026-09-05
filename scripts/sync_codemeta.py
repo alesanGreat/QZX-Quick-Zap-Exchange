@@ -30,6 +30,8 @@ def build_codemeta(manifest: dict[str, Any]) -> dict[str, Any]:
     product = manifest["product"]
     urls = manifest["urls"]
     published = manifest["channels"]["published"]
+    development = manifest["channels"]["development"]
+    certified_runtime = manifest["compatibility"]["python"]["certified_runtime"]
     author = product["author"]
     author_name = str(author["name"])
     given_name, family_name = author_name.split(" ", 1)
@@ -60,7 +62,9 @@ def build_codemeta(manifest: dict[str, Any]) -> dict[str, Any]:
         "datePublished": published["released_at"],
         "developmentStatus": "active",
         "programmingLanguage": "Python",
-        "runtimePlatform": "CPython 3.13; Python >=3.13",
+        "runtimePlatform": (
+            f"{certified_runtime} certified; Python {development['requires_python']}"
+        ),
         "operatingSystem": product["platforms"],
         "isAccessibleForFree": product["pricing"]["free_to_use"],
         "url": urls["site_origin"] + "/",

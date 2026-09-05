@@ -474,3 +474,58 @@ jobs:
           path: ${{ runner.temp }}/golden-core-platform-summary.json
           if-no-files-found: error
           retention-days: 90
+
+  python-version-range:
+    name: >-
+      QZX supported Python range | ${{ matrix.os }} |
+      CPython ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            python: "3.11"
+          - os: ubuntu-24.04
+            python: "3.11"
+          - os: ubuntu-24.04
+            python: "3.12"
+          - os: ubuntu-24.04
+            python: "3.14"
+    runs-on: ${{ matrix.os }}
+    env:
+      QZX_TELEMETRY: "0"
+    steps:
+      - name: Check out QZX
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install standard CPython ${{ matrix.python }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Verify supported standard CPython runtime
+        shell: python
+        env:
+          EXPECTED_PYTHON: ${{ matrix.python }}
+        run: |
+          import os
+          import platform
+          import sys
+          import sysconfig
+
+          expected = tuple(int(part) for part in os.environ["EXPECTED_PYTHON"].split("."))
+          assert platform.python_implementation() == "CPython"
+          assert sys.version_info[:2] == expected
+          assert sys.version_info >= (3, 11)
+          assert sysconfig.get_config_var("Py_GIL_DISABLED") not in (1, True)
+
+      - name: Install QZX and tests
+        run: python -m pip install --upgrade pip pytest -e .
+
+      - name: Run Python-range regression suite
+        run: >-
+          python -m pytest -q
+          --ignore=tests/integration/test_real_system_dependencies.py

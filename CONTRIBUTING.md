@@ -38,7 +38,7 @@ QZX package release channel.
 
 ## Development and verification
 
-Use a standard global CPython 3.13.x installation and an editable checkout:
+Use the cross-platform reference runtime, standard CPython 3.13.x, and an editable checkout:
 
 ```powershell
 python -m pip install --editable .
@@ -48,12 +48,14 @@ python -m ruff check src tests
 python -m pytest -q
 ```
 
-QZX concentrates its compatibility tests on the standard CPython 3.13.x
-build. Other Python versions or implementations may work, but experimental
-free-threaded CPython builds, PyPy, and other implementations are not
-certified. Evidence from those runtimes is welcome through the form matching
-the tested command when it identifies the exact implementation, version,
-build, and observed boundary.
+QZX accepts standard CPython 3.11 or newer. The cross-platform certification
+matrix remains on standard CPython 3.13.x so operating-system coverage does not
+multiply into an unsustainable version-by-platform matrix. CI separately runs
+version-range regressions across the supported CPython series. Experimental
+free-threaded CPython builds, PyPy, and other implementations are not certified.
+Evidence from those runtimes is welcome through the form matching the tested
+command when it identifies the exact implementation, version, build, and
+observed boundary.
 
 Run the real command as well as proportional automated tests. For website
 changes, use the separate website workspace and its own contribution process;

@@ -229,5 +229,7 @@ def test_windows_launcher_uses_builtin_lookup_instead_of_repeated_where():
     ]
     assert not any(line.startswith("WHERE ") for line in executable_lines)
     assert "%%~$PATH:P" in launcher.upper()
-    assert "CPYTHON-3.13*-WINDOWS-*" in launcher.upper()
+    assert "SYS.VERSION_INFO >= (3, 11)" in launcher.upper()
+    assert "FOR %%V IN (3.13 3.14 3.12 3.11)" in launcher.upper()
+    assert "CPYTHON-%%V*-WINDOWS-*" in launcher.upper()
     assert "%PYTHONLOCATION%" in launcher.upper()

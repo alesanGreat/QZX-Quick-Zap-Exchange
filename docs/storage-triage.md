@@ -7,10 +7,10 @@ The workflow is intentionally diagnostic. It does **not** delete files, clean di
 ## 1. Install or update QZX
 
 ```bash
-python -m pip install --pre --upgrade qzx
+python -m pip install --upgrade qzx
 ```
 
-The current QZX release is pre-release software, so `--pre` is required when you explicitly want the newest published pre-release.
+The normal pip channel installs the current QZX distribution. QZX remains Alpha software; the distribution channel and the command-stability contract are intentionally separate.
 
 ## 2. Run the complete read-only diagnosis
 

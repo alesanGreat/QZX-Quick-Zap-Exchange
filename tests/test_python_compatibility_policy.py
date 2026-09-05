@@ -62,9 +62,10 @@ def test_python_compatibility_policy_is_consistent():
     compatibility = manifest["compatibility"]
     python_policy = compatibility["python"]
 
-    assert development["requires_python"] == ">=3.13"
+    assert development["requires_python"] == ">=3.11"
     assert python_policy["certified_runtime"] == "CPython 3.13.x"
     assert python_policy["certified_build"] == "standard"
+    assert "3.11" in python_policy["statement"]["en"]
     assert "free-threaded" in python_policy["statement"]["en"]
     assert "PyPy" in python_policy["statement"]["en"]
     assert "free-threaded" in python_policy["statement"]["es"]
@@ -142,15 +143,23 @@ def test_packaging_and_ci_read_the_canonical_policy():
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert 'python_requires=DEVELOPMENT_CHANNEL["requires_python"]' in setup
-    assert '"Programming Language :: Python :: 3.13"' in setup
+    for supported_classifier in ("3.11", "3.12", "3.13", "3.14"):
+        assert (
+            f'"Programming Language :: Python :: {supported_classifier}"'
+            in setup
+        )
     assert '"Programming Language :: Python :: Implementation :: CPython"' in setup
-    for unsupported_classifier in ("3.9", "3.10", "3.11", "3.12"):
+    for unsupported_classifier in ("3.9", "3.10"):
         assert (
             f'"Programming Language :: Python :: {unsupported_classifier}"'
             not in setup
         )
     assert 'python: ["3.13"]' in workflow
-    assert "target-version = ['py313']" in pyproject
+    assert "python-version-range:" in workflow
+    for regression_runtime in ("3.11", "3.12", "3.14"):
+        assert f'python: "{regression_runtime}"' in workflow
+    assert "target-version = ['py311']" in pyproject
+    assert 'target-version = "py311"' in pyproject
 
 
 def test_freebsd_15_1_release_amd64_workflow_is_explicit():

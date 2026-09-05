@@ -923,9 +923,7 @@ def _safe_action_target(root, relative):
 
 
 def _entry_type(entry):
-    if entry.is_symlink() or (
-        hasattr(os.path, "isjunction") and os.path.isjunction(entry.path)
-    ):
+    if entry.is_symlink() or _is_junction(entry.path):
         return "symlink"
     mode = entry.stat(follow_symlinks=False).st_mode
     if stat.S_ISREG(mode):
@@ -948,10 +946,26 @@ def _path_type(path):
     return "special"
 
 
+def _is_junction(path):
+    """Recognize Windows junctions across supported Python runtime versions."""
+    native_isjunction = getattr(os.path, "isjunction", None)
+    if native_isjunction is not None:
+        return bool(native_isjunction(path))
+    if os.name != "nt":
+        return False
+
+    mount_point_tag = getattr(stat, "IO_REPARSE_TAG_MOUNT_POINT", None)
+    if mount_point_tag is None:
+        return False
+    try:
+        reparse_tag = os.stat(path, follow_symlinks=False).st_reparse_tag
+    except (AttributeError, OSError):
+        return False
+    return reparse_tag == mount_point_tag
+
+
 def _is_link_like(path):
-    return os.path.islink(path) or (
-        hasattr(os.path, "isjunction") and os.path.isjunction(path)
-    )
+    return os.path.islink(path) or _is_junction(path)
 
 
 def _canonical_digest(value):

@@ -5,6 +5,40 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.7 — 2026-09-05
+
+<!-- qzx-release-summary-en:
+This Alpha release removes two major adoption barriers: normal pip installs now select the current QZX distribution, and standard CPython 3.11+ is supported while 3.13 remains the cross-platform certification runtime; it also hardens Windows junction and timed-out process-tree safety.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha elimina dos barreras importantes de adopción: la instalación normal con pip pasa a seleccionar la distribución actual de QZX y se soporta CPython estándar 3.11+ mientras 3.13 continúa como runtime de certificación multiplataforma; además refuerza la seguridad de junctions de Windows y árboles de procesos terminados por timeout.
+-->
+
+### Easier installation without weakening the safety contract
+
+- Closes the `0.2.2.0.7` pre-release series as a normal numeric distribution
+  while QZX remains Development Status Alpha, so `pip install --upgrade qzx`
+  reaches the current product without requiring users to understand `--pre`.
+- Lowers `Requires-Python` to `>=3.11` from evidence gathered on standard
+  CPython 3.11, 3.12, 3.13 and 3.14, while keeping standard CPython 3.13.x as
+  the complete cross-platform certification runtime and adding a sustainable
+  version-range CI regression matrix.
+- Adds exact Windows junction recognition on Python versions before native
+  `os.path.isjunction`, using the mount-point reparse tag rather than treating
+  every cloud reparse point as a link.
+- Verifies timed-out `runScript` process-tree termination against the processes
+  actually observed before termination instead of trusting the racy exit code
+  returned by `taskkill /T /F`.
+- Aligns package classifiers, launchers, Ruff/Black targets, CodeMeta, README,
+  practical guides, website onboarding, storage-search content and release
+  tooling so the Python floor and pip installation path cannot silently tell
+  different stories.
+- Extends the canonical public-surface transaction to publish either Alpha
+  pre-release distributions or numeric final distributions correctly on GitHub
+  and PyPI while preserving QZX's independent Alpha product status.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.7a9 — 2026-09-04
 
 <!-- qzx-release-summary-en:

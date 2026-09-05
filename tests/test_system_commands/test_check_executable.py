@@ -93,4 +93,5 @@ def test_real_python_version_probe_is_opt_in():
     assert result["available"] is True
     assert Path(result["executable_path"]) == Path(sys.executable).resolve()
     assert result["version_checked"] is True
-    assert result["version"].lstrip("v").startswith("3.13")
+    expected_runtime = f"{sys.version_info.major}.{sys.version_info.minor}"
+    assert result["version"].lstrip("v").startswith(expected_runtime)

@@ -145,15 +145,15 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.7a9",
+      "version": "0.2.2.0.7",
       "status": "Alpha",
       "channel": "Published package",
-      "released_at": "2026-09-04",
-      "requires_python": ">=3.13",
-      "install_command": "python -m pip install --pre --upgrade qzx",
-      "source": "https://pypi.org/pypi/qzx/0.2.2.0.7a9/json",
+      "released_at": "2026-09-05",
+      "requires_python": ">=3.11",
+      "install_command": "python -m pip install --upgrade qzx",
+      "source": "https://pypi.org/pypi/qzx/0.2.2.0.7/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.7a9-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.7-py3-none-any.whl",
         "command_names": [
           "about",
           "addPythonDocstrings",
@@ -247,10 +247,10 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.7a9",
+      "version": "0.2.2.0.7",
       "status": "Alpha",
       "channel": "Development documentation",
-      "requires_python": ">=3.13",
+      "requires_python": ">=3.11",
       "source": "https://github.com/alesanGreat/QZX-Quick-Zap-Exchange"
     }
   },
@@ -264,8 +264,8 @@
       "certified_runtime": "CPython 3.13.x",
       "certified_build": "standard",
       "statement": {
-        "en": "QZX supports the standard CPython 3.13.x build. Other Python versions or implementations may work, but experimental free-threaded CPython builds, PyPy, and other implementations are not certified.",
-        "es": "QZX soporta la compilación estándar de CPython 3.13.x. Otras versiones o implementaciones de Python pueden funcionar, pero las compilaciones experimentales free-threaded de CPython, PyPy y las demás implementaciones no están certificadas."
+        "en": "QZX supports standard CPython 3.11 or newer. Its cross-platform certification matrix uses standard CPython 3.13.x; experimental free-threaded CPython builds, PyPy, and other implementations are not certified.",
+        "es": "QZX soporta CPython estándar 3.11 o posterior. Su matriz de certificación multiplataforma utiliza CPython 3.13.x estándar; las compilaciones experimentales free-threaded de CPython, PyPy y otras implementaciones no están certificadas."
       }
     },
     "ci": {
