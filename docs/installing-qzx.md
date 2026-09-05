@@ -6,6 +6,11 @@ QZX is a standalone command-line application distributed through PyPI. Choose
 the installation path that matches how you use Python rather than forcing QZX
 into an environment that your operating system or another project manages.
 
+For a bilingual, browser-first walkthrough that keeps installation, first-success,
+compatibility, support, and professional-help paths together, use the
+[QZX installation hub](https://qzx.yumbale.com/en/install). This document remains
+the source-adjacent technical version of the same installation boundary.
+
 ## Choose the right path
 
 | Situation | Recommended command |
