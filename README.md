@@ -54,9 +54,10 @@ pipx run --spec qzx qzx version
 
 If pip reports `externally-managed-environment`, do not force the system Python
 with `sudo pip` or `--break-system-packages`; install pipx using your platform's
-supported method and use the isolated route above. See the complete
-[installation guide](docs/installing-qzx.md) for choosing a path, PATH recovery,
-updates, and removal.
+supported method and use the isolated route above. Use the browser-first
+[QZX installation hub](https://qzx.yumbale.com/en/install) to choose a route and
+reach a first success, or the complete technical
+[installation guide](docs/installing-qzx.md) for PATH recovery, updates, and removal.
 
 The no-argument welcome is deliberately fast and read-only. It gives every
 person or agent the same first-minute path without probing disks, memory, or CPU:
