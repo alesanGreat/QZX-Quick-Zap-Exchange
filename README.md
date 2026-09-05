@@ -30,11 +30,33 @@ operations present in the installed command catalog.
 
 ## Install the published package
 
+If you already control the current Python environment, the shortest path remains:
+
 ```bash
 python -m pip install --upgrade qzx
 qzx version --json
 qzx
 ```
+
+For a standalone CLI, `pipx` keeps QZX and its Python dependencies isolated from
+your projects and other Python tools:
+
+```bash
+pipx install qzx
+qzx version --json
+```
+
+Already have pipx and only want to try QZX without keeping it?
+
+```bash
+pipx run --spec qzx qzx version
+```
+
+If pip reports `externally-managed-environment`, do not force the system Python
+with `sudo pip` or `--break-system-packages`; install pipx using your platform's
+supported method and use the isolated route above. See the complete
+[installation guide](docs/installing-qzx.md) for choosing a path, PATH recovery,
+updates, and removal.
 
 The no-argument welcome is deliberately fast and read-only. It gives every
 person or agent the same first-minute path without probing disks, memory, or CPU:

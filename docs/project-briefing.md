@@ -13,10 +13,13 @@ python -m pip install --upgrade qzx
 qzx version --json
 ```
 
-The normal pip channel installs the current QZX distribution. QZX still has an
-Alpha product contract: a numeric distribution version does not imply a Stable
-command API. Check `qzx version --json` before following version-sensitive
-examples.
+The normal pip channel installs the current QZX distribution when you control
+the selected Python environment. For an isolated standalone CLI, use
+`pipx install qzx`; if pip reports `externally-managed-environment`, prefer that
+route instead of overriding the system Python. The [installation guide](installing-qzx.md)
+explains the tradeoff. QZX still has an Alpha product contract: a numeric
+distribution version does not imply a Stable command API. Check
+`qzx version --json` before following version-sensitive examples.
 
 ## Get the briefing
 

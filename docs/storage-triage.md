@@ -10,7 +10,7 @@ The workflow is intentionally diagnostic. It does **not** delete files, clean di
 python -m pip install --upgrade qzx
 ```
 
-The normal pip channel installs the current QZX distribution. QZX remains Alpha software; the distribution channel and the command-stability contract are intentionally separate.
+The normal pip channel installs the current QZX distribution when you control the selected Python environment. For an isolated standalone CLI, use `pipx install qzx`; if pip reports `externally-managed-environment`, prefer that route rather than overriding the system Python. See the [installation guide](installing-qzx.md). QZX remains Alpha software; the distribution channel and the command-stability contract are intentionally separate.
 
 ## 2. Run the complete read-only diagnosis
 
