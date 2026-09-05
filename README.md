@@ -371,8 +371,9 @@ QZX_TELEMETRY=0 qzx welcome
 DO_NOT_TRACK=1 qzx welcome
 ```
 
-An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. See the
-[complete telemetry and deletion policy](https://qzx.yumbale.com/en/security).
+An explicit `QZX_TELEMETRY=1` takes precedence over `DO_NOT_TRACK=1`. Read the
+[technical telemetry and deletion policy](docs/telemetry.md) and the public
+[security model](https://qzx.yumbale.com/en/security).
 
 ## Compatibility evidence
 
