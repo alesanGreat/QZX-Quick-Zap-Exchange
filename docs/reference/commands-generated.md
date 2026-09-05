@@ -70,6 +70,7 @@
   - [checkExecutable](#checkexecutable)
   - [checkSystemPath](#checksystempath)
   - [clearScreen](#clearscreen)
+  - [diagnoseStorage](#diagnosestorage)
   - [explainFileWithGemini](#explainfilewithgemini)
   - [getCpuLoad](#getcpuload)
   - [getCurrentDateTime](#getcurrentdatetime)
@@ -2045,6 +2046,35 @@ None
 
 **Details:**
 Clear only a real terminal; redirected output remains untouched.
+
+---
+
+### diagnoseStorage
+
+Combine capacity, large-file, and duplicate evidence into one workflow.
+
+**Category:** system
+**Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
+**Description:** Diagnoses storage pressure by combining disk capacity, large-file discovery, and byte-verified duplicate analysis without deleting anything
+
+**Parameters:**
+- `path`: Directory to diagnose (defaults to the current directory) - Optional (default: `.`)
+- `min_file_size`: Minimum size for the large-file view, for example 100MiB or 1GB - Optional (default: `100MiB`)
+- `max_files`: Maximum number of largest files returned (1-1000) - Optional (default: `20`)
+- `duplicate_min_size_kb`: Minimum file size in KB considered by the duplicate scan (defaults to 10240 = 10 MiB) - Optional (default: `10240`)
+- `max_depth`: Maximum directory depth scanned for large and duplicate files (0-64; defaults to 6) - Optional (default: `6`)
+- `include_duplicates`: Run the byte-verified duplicate scan in the same workflow (true/false; defaults to true) - Optional (default: `true`)
+
+**Examples:**
+- `qzx diagnoseStorage`
+  Diagnose storage pressure in the current directory with bounded scans
+- `qzx diagnoseStorage C:/ --max-depth 4 --max-files 30`
+  Inspect a Windows volume with a shallower scan and a larger top-file list
+- `qzx diagnoseStorage /home --include-duplicates false --min-file-size 500MiB`
+  Run a faster capacity and large-file diagnosis without hashing duplicates
+
+**Details:**
+Run a bounded, read-only storage diagnosis for one directory tree.
 
 ---
 

@@ -11,11 +11,12 @@ def test_list_commands_reports_the_complete_index_and_maturity():
     result = ListCommandsCommand().invoke([])
 
     assert result["success"] is True
-    assert result["summary"]["commands"] == 87
+    total_commands = sum(len(commands) for commands in result["commands"].values())
+    assert result["summary"]["commands"] == total_commands
     assert result["summary"]["categories"] == 4
     assert result["summary"]["filter"] is None
-    assert result["maturity_summary"] == {"alpha": 87}
-    assert result["message"] == "Available Commands\nCommands: 87"
+    assert result["maturity_summary"] == {"alpha": total_commands}
+    assert result["message"] == f"Available Commands\nCommands: {total_commands}"
     assert len(result["message"]) < 100
     assert set(result["commands"]) == {
         "development",
@@ -23,12 +24,16 @@ def test_list_commands_reports_the_complete_index_and_maturity():
         "network",
         "system",
     }
+    assert any(
+        command["name"] == "diagnoseStorage"
+        for command in result["commands"]["system"]
+    )
     assert result["meta"]["command"] == "listCommands"
     assert result["meta"]["schema_version"] == 1
 
     rendered = _render_human(result)
     assert rendered.startswith(
-        "Available Commands\nCommands: 87\nMaturity: 87 Alpha"
+        f"Available Commands\nCommands: {total_commands}\nMaturity: {total_commands} Alpha"
     )
     assert len(rendered.splitlines()) == (
         result["summary"]["commands"]

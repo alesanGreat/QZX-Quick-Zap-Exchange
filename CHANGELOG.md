@@ -5,6 +5,36 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.7a9 — 2026-09-04
+
+<!-- qzx-release-summary-en:
+This Alpha release adds a one-command read-only storage diagnosis that combines capacity, bounded large-file discovery, and byte-verified duplicate evidence, then connects that workflow to QZX's strongest observed disk-space acquisition path.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha incorpora un diagnóstico de almacenamiento de solo lectura en un único comando que combina capacidad, archivos grandes acotados y evidencia de duplicados verificada byte por byte, y conecta ese flujo con la ruta de adquisición de espacio en disco con mayor señal observada en QZX.
+-->
+
+### Storage diagnosis from search intent to first success
+
+- Added `diagnoseStorage`, a read-only workflow that combines filesystem
+  capacity, a bounded largest-file view, and optional duplicate verification in
+  one structured result while keeping `getDiskSpace`, `findFiles`, and
+  `findDuplicateFiles` independently composable.
+- Reports potential reclaim only for duplicate groups confirmed by size,
+  SHA-256, and byte-for-byte comparison. Large files remain review evidence,
+  never automatic cleanup candidates, and an unavailable duplicate probe is
+  surfaced as an explicit partial result instead of a false all-clear.
+- Added human and JSON CLI validation, real disposable-file evidence, regression
+  coverage for probe failures and read-only behavior, lifecycle metadata,
+  bilingual command documentation, and explicit safety/translation review.
+- Reworked the storage-triage README path, dedicated guide, bilingual
+  `when-to-use` page, and the disk-space article so a visitor can move from the
+  high-intent storage problem to `qzx diagnoseStorage . --json` in one step,
+  with links onward to the command catalog and Alejandro Sánchez's professional
+  services.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.7a8 — 2026-09-04
 
 <!-- qzx-release-summary-en:

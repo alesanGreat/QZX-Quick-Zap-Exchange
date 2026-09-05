@@ -163,6 +163,13 @@
       "category": "development"
     },
     {
+      "name": "diagnoseStorage",
+      "module": "qzx.commands.system.diagnose_storage",
+      "class_name": "DiagnoseStorageCommand",
+      "description": "Diagnoses storage pressure by combining disk capacity, large-file discovery, and byte-verified duplicate analysis without deleting anything",
+      "category": "system"
+    },
+    {
       "name": "downloadFile",
       "module": "qzx.commands.file.download_file",
       "class_name": "DownloadFileCommand",

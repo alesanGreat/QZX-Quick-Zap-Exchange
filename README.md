@@ -50,7 +50,7 @@ second filters the installed catalog; the third exposes parameters, examples,
 maturity, and safety before execution. Use `qzx welcome true` only when detailed
 host information is explicitly wanted.
 
-This source release is QZX `0.2.2.0.7a8` and requires Python `>=3.13`.
+This source release is QZX `0.2.2.0.7a9` and requires Python `>=3.13`.
 A normal `python -m pip install qzx` selects the latest final release; add
 `--pre` to opt into the newest pre-release. PyPI is authoritative for which
 version those commands currently select.
@@ -61,7 +61,7 @@ and other implementations are not certified.
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.7a8` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.7a9` | `>=3.13`; standard CPython 3.13.x is certified | 87 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -87,25 +87,30 @@ paid feature is required.
 
 ## Triage storage without deleting anything
 
-When a disk is getting full, QZX can turn four existing read-only diagnostics
-into one practical sequence:
+When a disk is getting full, QZX can turn capacity, large-file, and verified
+duplicate evidence into one read-only diagnosis:
 
 ```bash
 python -m pip install --pre --upgrade qzx
-qzx getDiskSpace --json
-qzx findFiles . "*" --min-size 100MiB --sort-by size --descending true --limit 20 --json
-qzx findDuplicateFiles . 10240 6 --json
+qzx diagnoseStorage . --json
 ```
 
-Start by measuring the filesystem, then investigate large files and confirm
-actual duplicate content before deciding what should change. Physical-disk
-health is a separate, optional check when `smartctl` is available and you know
-the disk identifier, for example `qzx getDiskHealth PhysicalDrive0 --json` on
-Windows or `qzx getDiskHealth sda --json` on Linux.
+`diagnoseStorage` measures the filesystem containing the target path, returns a
+bounded largest-file view, confirms duplicate groups with size + SHA-256 +
+byte-for-byte comparison, and produces prioritized review guidance. It never
+counts a merely large file as reclaimable space and never deletes anything.
+Use `--include-duplicates false` for a faster first pass; `getDiskSpace`,
+`findFiles`, and `findDuplicateFiles` remain independently available when you
+want to compose the probes yourself.
 
-This workflow never deletes files automatically. See the complete
-[storage-triage workflow](docs/storage-triage.md) for the decision sequence,
-parameter meanings, platform notes, and links to the public disk-space guide.
+Physical-disk health is intentionally separate. When `smartctl` is available
+and you know the disk identifier, use for example
+`qzx getDiskHealth PhysicalDrive0 --json` on Windows or
+`qzx getDiskHealth sda --json` on Linux.
+
+See the complete [storage-triage workflow](docs/storage-triage.md) for tuning,
+result semantics, the underlying probes, platform notes, and links to the
+public disk-space guide.
 
 ## Output contract
 
@@ -257,6 +262,7 @@ qzx findFiles . "*.py" -r --json
 qzx findText "TODO" src -r --json
 qzx getRamInfo --json
 qzx getDiskSpace --json
+qzx diagnoseStorage . --json
 qzx listProcesses "python" --json
 ```
 

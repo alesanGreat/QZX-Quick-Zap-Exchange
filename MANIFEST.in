@@ -34,4 +34,5 @@ recursive-include docs/release-quality *.json
 include docs/result-contract-adoption.md
 include docs/result-contract-quickstart.md
 include docs/result-contract-v1.md
+include docs/storage-triage.md
 include docs/reference/commands-generated.md

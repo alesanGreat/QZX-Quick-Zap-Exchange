@@ -162,6 +162,7 @@
     "movePath": {"stage": "alpha"},
     "planProjectBootstrap": {"stage": "alpha"},
     "diagnoseProject": {"stage": "alpha"},
+    "diagnoseStorage": {"stage": "alpha"},
     "projectLanguages": {"stage": "alpha"},
     "help": {"stage": "alpha"},
     "listCommands": {"stage": "alpha"},
