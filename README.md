@@ -85,6 +85,28 @@ Use the [project briefing workflow](https://github.com/alesanGreat/QZX-Quick-Zap
 with a bounded directory tree and language inventory. No account, API key or
 paid feature is required.
 
+## Triage storage without deleting anything
+
+When a disk is getting full, QZX can turn four existing read-only diagnostics
+into one practical sequence:
+
+```bash
+python -m pip install --pre --upgrade qzx
+qzx getDiskSpace --json
+qzx findFiles . "*" --min-size 100MiB --sort-by size --descending true --limit 20 --json
+qzx findDuplicateFiles . 10240 6 --json
+```
+
+Start by measuring the filesystem, then investigate large files and confirm
+actual duplicate content before deciding what should change. Physical-disk
+health is a separate, optional check when `smartctl` is available and you know
+the disk identifier, for example `qzx getDiskHealth PhysicalDrive0 --json` on
+Windows or `qzx getDiskHealth sda --json` on Linux.
+
+This workflow never deletes files automatically. See the complete
+[storage-triage workflow](docs/storage-triage.md) for the decision sequence,
+parameter meanings, platform notes, and links to the public disk-space guide.
+
 ## Output contract
 
 Every public command returns an object with at least:
