@@ -16,6 +16,7 @@ Donations are welcome because they support ongoing development, but they are
 optional and never unlock features or change the product experience.
 
 [Website](https://qzx.yumbale.com/en/) ·
+[AI agent quickstart](https://qzx.yumbale.com/en/ai-agent-quickstart?qzx_ref=github_readme_agent) ·
 [Command documentation](https://qzx.yumbale.com/en/commands) ·
 [QZX Golden Core](https://qzx.yumbale.com/en/golden-core) ·
 [QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract) ·
@@ -57,7 +58,7 @@ pipx run --spec qzx qzx version
 If pip reports `externally-managed-environment`, do not force the system Python
 with `sudo pip` or `--break-system-packages`; install pipx using your platform's
 supported method and use the isolated route above. Use the browser-first
-[QZX installation hub](https://qzx.yumbale.com/en/install) to choose a route and
+[QZX installation hub](https://qzx.yumbale.com/en/install?qzx_ref=github_readme_install) to choose a route and
 reach a first success, or the complete technical
 [installation guide](docs/installing-qzx.md) for PATH recovery, updates, and removal.
 
@@ -74,6 +75,15 @@ The first command proves the JSON result contract with a bounded timestamp; the
 second filters the installed catalog; the third exposes parameters, examples,
 maturity, and safety before execution. Use `qzx welcome true` only when detailed
 host information is explicitly wanted.
+
+### Continue with Codex, Claude Code, Gemini CLI, or another coding agent
+
+A terminal-capable agent can call QZX as a documented CLI; no dedicated QZX
+plugin is required. The measurable
+[AI-agent quickstart](https://qzx.yumbale.com/en/ai-agent-quickstart?qzx_ref=github_readme_agent)
+shows a read-only project briefing workflow and a copyable instruction block for
+project mechanisms such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. The
+installed QZX catalog remains the source of truth for available commands.
 
 This source release is QZX `0.2.2.0.7` and requires Python `>=3.11`.
 The published QZX distribution uses pip's normal installation channel while the
