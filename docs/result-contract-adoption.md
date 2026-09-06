@@ -276,6 +276,25 @@ failed completed call, schema validation of `structuredContent`, consistency of
 `isError` with `success`, and the backwards-compatible text representation when
 the implementation emits one.
 
+### Ecosystem capability signal — not adoption
+
+During QZX interoperability work, Alejandro Sánchez reported the
+`outputSchema` / explicit `CallToolResult` ambiguity in
+[`nuxt-modules/mcp-toolkit#315`](https://github.com/nuxt-modules/mcp-toolkit/issues/315)
+and proposed an explicit `toolResult()` marker so protocol envelopes remain
+unambiguous when a tool also advertises structured domain output. The upstream
+project later merged its own `toolResult()` implementation in
+[`nuxt-modules/mcp-toolkit#338`](https://github.com/nuxt-modules/mcp-toolkit/pull/338).
+QZX does not claim that the report caused the upstream implementation.
+
+This is useful ecosystem evidence because the helper removes a practical SDK
+barrier to emitting `structuredContent` plus an explicit MCP error state while
+preserving `outputSchema` semantics. It is **not** QZX Result Contract adoption
+by itself. A producer still has to emit a conforming QZX object, keep effective
+MCP `isError` consistent with `!structuredContent.success`, expose a reviewable
+compatible `outputSchema`, and publish the evidence required below before QZX
+can describe that producer as an adopter.
+
 ## Minimum conformance evidence
 
 A credible adoption report includes:
