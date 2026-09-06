@@ -5,7 +5,9 @@ QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 [About Alejandro Sánchez](https://qzx.yumbale.com/en/alejandro-sanchez) ·
 [Contact QZX](mailto:qzx@yumbale.com) ·
 [Support the project](https://qzx.yumbale.com/en/donate) ·
-[Work with Alejandro](https://qzx.yumbale.com/en/professional-services#request)
+[Work with Alejandro](https://qzx.yumbale.com/en/professional-services?qzx_ref=github_readme_services#request)
+
+Professional-service requests return a QZX reference and stay in a private intake queue. The canonical intake route remains `https://qzx.yumbale.com/en/professional-services#request`; the README CTA adds only first-party `qzx_ref` attribution. Operational alerts contain only that reference and the private-admin link, never requester contact details or request content.
 
 QZX is an open-source Python CLI that gives AI agents, automation, and people
 one documented command vocabulary for supported operations on Windows, Linux,
