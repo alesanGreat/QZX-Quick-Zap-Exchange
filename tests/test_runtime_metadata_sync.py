@@ -10,7 +10,11 @@ from scripts import sync_runtime_metadata as metadata_sync
 
 
 def test_stable_channel_projection_is_complete_and_uses_live_command_count():
-    manifest = metadata_sync.load_manifest()
+    manifest = deepcopy(metadata_sync.load_manifest())
+    published = manifest["channels"]["published"]
+    published["version"] = "9.8.7"
+    published["install_command"] = "python -m pip install --upgrade qzx"
+
     rendered = metadata_sync.synchronized_readme_content(manifest)
     command_count = metadata_sync._canonical_command_count()
 
