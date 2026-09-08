@@ -5,6 +5,34 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.8 — 2026-09-08
+
+<!-- qzx-release-summary-en:
+This Alpha release closes the 0.2.2.0.8 pre-release line as the normal installation channel so a standard pip upgrade receives the current 88-command QZX package and its five-SDK Result Contract interoperability evidence without requiring --pre; QZX remains Development Status Alpha and does not promise stable APIs.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha cierra la línea pre-release 0.2.2.0.8 como canal normal de instalación para que una actualización estándar con pip reciba el paquete actual de QZX con 88 comandos y su evidencia de interoperabilidad de Result Contract sobre cinco SDK sin requerir --pre; QZX continúa en Development Status Alpha y no promete APIs estables.
+-->
+
+### Put the current product on the default installation path
+
+- Close the `0.2.2.0.8` pre-release line as a normal numeric distribution so
+  `python -m pip install --upgrade qzx` installs the current QZX package without
+  requiring users, agents, or automation to know PyPI pre-release selection
+  rules.
+- Move the current 88-command catalog onto the default PyPI installation path,
+  including the published `diagnoseStorage` workflow and the five official MCP
+  SDK interoperability references already validated in `0.2.2.0.8a1`.
+- Make the default PyPI project page, GitHub Latest release, package metadata,
+  README/documentation, and `qzx.yumbale.com` describe the same current package
+  instead of exposing an older 87-command numeric release to normal installers.
+- Preserve the product maturity contract: QZX remains `Development Status :: 3
+  - Alpha`, command lifecycle metadata remains authoritative, and this numeric
+  release does not introduce a promise of API stability or backward
+  compatibility.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.8a1 — 2026-09-07
 
 <!-- qzx-release-summary-en:
