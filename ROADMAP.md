@@ -53,9 +53,10 @@ through separate reviewed operations.
 - Apache-2.0 licensing, attribution, governance, security, contribution/DCO,
   trademark, citation, sponsorship, issue-template, and public-roadmap surfaces
   are published and must remain coherent.
-- QZX exposes 87 canonical commands with no compatibility aliases; command
-  lookup is case-insensitive while documentation uses canonical
-  `lowerCamelCase` spelling.
+- QZX exposes its canonical command catalog without compatibility aliases; the
+  generated command index is authoritative for the current count, command
+  lookup is case-insensitive, and documentation uses canonical `lowerCamelCase`
+  spelling.
 - The Result Contract public schema, conformance receipt, evidence validators,
   negative fixtures, immutable GitHub Action pinning examples, and CI smoke
   tests cover both conformance and intentional nonconformance.

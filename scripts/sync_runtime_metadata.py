@@ -30,6 +30,27 @@ _RELEASE_TABLE_ROW = re.compile(
     r"(?m)^(?P<prefix>\| Source release described here \| )"
     r"`[^`\r\n]+`(?P<suffix> \|.*)$"
 )
+_PIP_INSTALL_COMMAND = re.compile(
+    r"(?m)^python -m pip install(?: --pre)? --upgrade qzx$"
+)
+_OPTIONAL_EXTRA_INSTALL = re.compile(
+    r'python -m pip install(?: --pre)? --upgrade "qzx\[(?P<extra>filetype|ai)\]"'
+)
+_PIPX_INSTALL_COMMAND = re.compile(
+    r"(?m)^pipx install(?: --pip-args='--pre')? qzx$"
+)
+_PIPX_RUN_COMMAND = re.compile(
+    r"(?m)^pipx run(?: --pip-args='--pre')? --spec qzx qzx version$"
+)
+_INSTALL_CHANNEL_PARAGRAPH = re.compile(
+    r"(?P<release_line>This source release is QZX `[^`\r\n]+` and requires "
+    r"Python `[^`\r\n]+`\.\r?\n)"
+    r"(?P<body>.*?)(?=\r?\n\r?\nQZX supports standard CPython)",
+    re.DOTALL,
+)
+_COMMAND_COUNT = re.compile(
+    r"\b\d+ canonical commands in the generated command index\b"
+)
 _EXPECTED_ONBOARDING_STAGES = (
     "first_success",
     "explore",
@@ -179,30 +200,100 @@ def generated_content(manifest=None):
     )
 
 
+def _canonical_command_count() -> int:
+    """Return the generated public command count used by release-facing copy."""
+    command_index = json.loads(COMMAND_INDEX_PATH.read_text(encoding="utf-8"))
+    entries = command_index.get("commands") if isinstance(command_index, dict) else None
+    if command_index.get("schema_version") != 2 or not isinstance(entries, list):
+        raise ValueError("Command index must use schema version 2 with a commands list.")
+    names = [
+        entry.get("name")
+        for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+    ]
+    if len(names) != len(entries) or len(set(names)) != len(names):
+        raise ValueError("Command index must contain unique named command entries.")
+    return len(names)
+
+
 def synchronized_readme_content(manifest=None):
-    """Bind the package README to the manifest's immutable published version."""
+    """Project version, install channel, and command inventory into README.md."""
     manifest = manifest or load_manifest()
-    version = manifest["channels"]["published"]["version"]
+    published = manifest["channels"]["published"]
+    version = published["version"]
+    install_command = published["install_command"]
+    supported_install_commands = {
+        "python -m pip install --upgrade qzx",
+        "python -m pip install --pre --upgrade qzx",
+    }
     if not isinstance(version, str) or not version.strip():
         raise ValueError("Published version must be non-empty text.")
+    if install_command not in supported_install_commands:
+        raise ValueError("Published install command is not a supported QZX channel command.")
+
+    prerelease = " --pre " in install_command
+    pipx_install = (
+        "pipx install --pip-args='--pre' qzx"
+        if prerelease
+        else "pipx install qzx"
+    )
+    pipx_run = (
+        "pipx run --pip-args='--pre' --spec qzx qzx version"
+        if prerelease
+        else "pipx run --spec qzx qzx version"
+    )
+    install_prefix = install_command.rsplit(" qzx", 1)[0]
+    channel_paragraph = (
+        "A normal `python -m pip install qzx` selects the latest final release; use\n"
+        "`--pre` to opt into this Alpha pre-release. PyPI is authoritative for the\n"
+        "published package, and `qzx version --json` is authoritative for what is installed."
+        if prerelease
+        else
+        "The published QZX distribution uses pip's normal installation channel while the\n"
+        "product itself remains Alpha software. PyPI is authoritative for the published\n"
+        "package, and `qzx version --json` is authoritative for what is installed."
+    )
 
     content = README_PATH.read_text(encoding="utf-8")
     marker = f"This source release is QZX `{version}`"
     content, marker_count = _RELEASE_MARKER.subn(marker, content)
     content, table_count = _RELEASE_TABLE_ROW.subn(
-        lambda match: (
-            f"{match.group('prefix')}`{version}`{match.group('suffix')}"
-        ),
+        lambda match: f"{match.group('prefix')}`{version}`{match.group('suffix')}",
         content,
     )
-    if marker_count != 1:
-        raise ValueError(
-            "README.md must contain exactly one immutable source-release marker."
-        )
-    if table_count != 1:
-        raise ValueError(
-            "README.md must contain exactly one source-release summary row."
-        )
+    content, pip_count = _PIP_INSTALL_COMMAND.subn(install_command, content)
+    content, extra_count = _OPTIONAL_EXTRA_INSTALL.subn(
+        lambda match: f'{install_prefix} "qzx[{match.group("extra")}]"',
+        content,
+    )
+    content, pipx_install_count = _PIPX_INSTALL_COMMAND.subn(pipx_install, content)
+    content, pipx_run_count = _PIPX_RUN_COMMAND.subn(pipx_run, content)
+    content, channel_count = _INSTALL_CHANNEL_PARAGRAPH.subn(
+        lambda match: match.group("release_line") + channel_paragraph,
+        content,
+    )
+    content, command_count_updates = _COMMAND_COUNT.subn(
+        f"{_canonical_command_count()} canonical commands in the generated command index",
+        content,
+    )
+
+    expected_counts = {
+        "immutable source-release marker": (marker_count, 1),
+        "source-release summary row": (table_count, 1),
+        "pip install examples": (pip_count, 2),
+        "optional-extra install examples": (extra_count, 2),
+        "pipx install example": (pipx_install_count, 1),
+        "pipx run example": (pipx_run_count, 1),
+        "installation-channel paragraph": (channel_count, 1),
+        "command-count summary": (command_count_updates, 1),
+    }
+    mismatches = [
+        f"{label}: expected {expected}, found {actual}"
+        for label, (actual, expected) in expected_counts.items()
+        if actual != expected
+    ]
+    if mismatches:
+        raise ValueError("README.md release projection anchors drifted: " + "; ".join(mismatches))
     return content
 
 

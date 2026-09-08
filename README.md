@@ -108,7 +108,7 @@ above 3.11 merely to use newer syntax or simplify development; see the
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.7` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 87 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.7` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 88 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.

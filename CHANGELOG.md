@@ -85,6 +85,12 @@ Esta versión Alpha convierte la interoperabilidad de QZX Result Contract en evi
   README are now explicitly packaged, and a regression test fails early when a
   future README-linked document is omitted from the source distribution.
 
+- Made release-bound README metadata derive its pip/pipx channel, optional-extra
+  commands, channel explanation, and live command count from canonical product
+  metadata. This also corrects the stale 87-command text: the generated catalog
+  currently contains 88 commands, and future count changes no longer require a
+  manual README edit.
+
 - Made early failures from the reusable Result Contract Action composable.
   Stable `failure_kind` outputs now distinguish rejected evidence from
   operational failures, early input/path/time-limit failures still produce a
