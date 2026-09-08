@@ -38,7 +38,7 @@ QZX, shell composition, or a native API, use the [technical decision guide](http
 If you already control the current Python environment, the shortest path remains:
 
 ```bash
-python -m pip install --upgrade qzx
+python -m pip install --pre --upgrade qzx
 qzx version --json
 qzx
 ```
@@ -47,14 +47,14 @@ For a standalone CLI, `pipx` keeps QZX and its Python dependencies isolated from
 your projects and other Python tools:
 
 ```bash
-pipx install qzx
+pipx install --pip-args='--pre' qzx
 qzx version --json
 ```
 
 Already have pipx and only want to try QZX without keeping it?
 
 ```bash
-pipx run --spec qzx qzx version
+pipx run --pip-args='--pre' --spec qzx qzx version
 ```
 
 If pip reports `externally-managed-environment`, do not force the system Python
@@ -87,10 +87,10 @@ shows a read-only project briefing workflow and a copyable instruction block for
 project mechanisms such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. The
 installed QZX catalog remains the source of truth for available commands.
 
-This source release is QZX `0.2.2.0.7` and requires Python `>=3.11`.
-The published QZX distribution uses pip's normal installation channel while the
-product itself remains Alpha software. PyPI is authoritative for the published
-package, and `qzx version --json` is authoritative for what is installed.
+This source release is QZX `0.2.2.0.8a1` and requires Python `>=3.11`.
+A normal `python -m pip install qzx` selects the latest final release; use
+`--pre` to opt into this Alpha pre-release. PyPI is authoritative for the
+published package, and `qzx version --json` is authoritative for what is installed.
 
 QZX supports standard CPython 3.11 or newer. The complete cross-platform
 certification matrix uses standard CPython 3.13.x; experimental free-threaded
@@ -108,7 +108,7 @@ above 3.11 merely to use newer syntax or simplify development; see the
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.7` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 88 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.8a1` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 88 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -138,7 +138,7 @@ When a disk is getting full, QZX can turn capacity, large-file, and verified
 duplicate evidence into one read-only diagnosis:
 
 ```bash
-python -m pip install --upgrade qzx
+python -m pip install --pre --upgrade qzx
 qzx diagnoseStorage . --json
 ```
 
@@ -353,8 +353,8 @@ integrity check. The basic `qzx welcome` path avoids system, memory, and storage
 probes; request those details explicitly with `qzx welcome true`.
 
 Optional command groups can be installed with
-`python -m pip install --upgrade "qzx[filetype]"` or
-`python -m pip install --upgrade "qzx[ai]"`. Some operations also depend on host tools
+`python -m pip install --pre --upgrade "qzx[filetype]"` or
+`python -m pip install --pre --upgrade "qzx[ai]"`. Some operations also depend on host tools
 such as Git, smartmontools, formatters, or language toolchains.
 
 ## Safety model

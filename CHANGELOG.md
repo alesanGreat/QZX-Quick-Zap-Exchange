@@ -5,6 +5,8 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.8a1 — 2026-09-07
+
 <!-- qzx-release-summary-en:
 This Alpha release turns QZX Result Contract interoperability into reproducible evidence across five official MCP SDKs—TypeScript, Python, Go, C# and Java—while tightening strict JSON validation, composable CI failure reporting, and source-distribution completeness for every README-linked document. The SDK fixtures are QZX-maintained reference evidence, not independent adoption.
 -->
@@ -97,6 +99,8 @@ Esta versión Alpha convierte la interoperabilidad de QZX Result Contract en evi
   safe job summary, and `report=unavailable` prevents downstream workflows from
   claiming a receipt that was never written. The copyable artifact workflow now
   uploads only verdicts that actually produced receipts.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 ## 0.2.2.0.7 — 2026-09-05
 
