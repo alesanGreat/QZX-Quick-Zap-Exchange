@@ -5,6 +5,15 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+<!-- qzx-release-summary-en:
+This Alpha release turns QZX Result Contract interoperability into reproducible evidence across five official MCP SDKs—TypeScript, Python, Go, C# and Java—while tightening strict JSON validation, composable CI failure reporting, and source-distribution completeness for every README-linked document. The SDK fixtures are QZX-maintained reference evidence, not independent adoption.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha convierte la interoperabilidad de QZX Result Contract en evidencia reproducible sobre cinco SDK oficiales de MCP—TypeScript, Python, Go, C# y Java—al tiempo que refuerza la validación JSON estricta, los fallos componibles de CI y la integridad de la distribución fuente para cada documento enlazado desde el README. Los fixtures de SDK son evidencia de referencia mantenida por QZX, no adopción independiente.
+-->
+
+### Verifiable interoperability across five official MCP SDKs
+
 - Hardened Result Contract evidence parsing for cross-language reproducibility.
   The public validators and conformance runner now reject duplicate JSON object
   member names, non-JSON numeric constants, and numbers outside the supported
@@ -68,6 +77,13 @@ checkout. Changing this file does not publish a package or create a release.
   preserves the generated bundle, and the evidence explicitly distinguishes
   exercised JSON-RPC framing from absent raw-frame and HTTP coverage. This is
   QZX-maintained reference evidence, not independent adoption.
+
+### Safer reusable conformance and release integrity
+
+- Closed source-distribution drift detected by the canonical release builder:
+  installation, Python compatibility, and telemetry documents linked from the
+  README are now explicitly packaged, and a regression test fails early when a
+  future README-linked document is omitted from the source distribution.
 
 - Made early failures from the reusable Result Contract Action composable.
   Stable `failure_kind` outputs now distinguish rejected evidence from
