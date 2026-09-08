@@ -24,23 +24,26 @@ inputs:
 
 outputs:
   report:
-    description: Path to the generated deterministic QZX conformance receipt.
+    description: Path to the generated receipt, or unavailable when no receipt exists.
     value: ${{ steps.validate.outputs.report }}
   conformant:
-    description: "'true' when the selected QZX Result Contract profile conforms; otherwise 'false'."
+    description: "'true' only on conformance; inspect failure_kind when this is 'false'."
     value: ${{ steps.validate.outputs.conformant }}
   profile:
-    description: QZX Result Contract profile evaluated by the validator.
+    description: QZX Result Contract profile evaluated, or unavailable before evaluation.
     value: ${{ steps.validate.outputs.profile }}
   receipt_schema:
-    description: Canonical schema URL declared by the generated conformance receipt.
+    description: Canonical receipt schema URL, or unavailable when no receipt exists.
     value: ${{ steps.validate.outputs.receipt_schema }}
   contract_schema_sha256:
-    description: SHA-256 of the exact QZX Result Contract v1 schema used by the validator.
+    description: SHA-256 of the exact contract schema used, or unavailable before evaluation.
     value: ${{ steps.validate.outputs.contract_schema_sha256 }}
   output_schema_mode:
-    description: MCP outputSchema evidence mode, or not_applicable for non-MCP profiles.
+    description: MCP outputSchema mode, not_applicable, or unavailable before evaluation.
     value: ${{ steps.validate.outputs.output_schema_mode }}
+  failure_kind:
+    description: "Failure class: 'none', 'conformance', or 'operational'."
+    value: ${{ steps.validate.outputs.failure_kind }}
 
 runs:
   using: composite

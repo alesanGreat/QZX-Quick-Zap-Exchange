@@ -214,3 +214,35 @@ def test_standalone_validator_supports_stdin_and_json_reports():
     assert report["success"] is True
     assert report["details"]["contract"] == RESULT_CONTRACT_SCHEMA_URL
     assert report["details"]["violations"] == []
+
+
+def test_standalone_validator_rejects_non_interoperable_json():
+    cases = (
+        (
+            '{"success":true,"success":false,"message":"Ambiguous."}',
+            "Duplicate JSON object member name",
+        ),
+        (
+            '{"success":true,"message":"Non-standard.","value":NaN}',
+            "JSON does not permit the numeric token NaN",
+        ),
+        (
+            '{"success":true,"message":"Out of range.","value":1e9999}',
+            "JSON number is outside the supported finite range",
+        ),
+    )
+
+    for document, expected_error in cases:
+        process = subprocess.run(
+            [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
+            cwd=REPOSITORY_ROOT,
+            input=document,
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        assert process.returncode == 1, process.stderr
+        report = json.loads(process.stdout)
+        assert report["error_code"] == "invalid_json_input"
+        assert expected_error in report["error"]

@@ -89,3 +89,14 @@ def test_every_manifest_case_file_exists_and_is_valid_json():
         path = Path(DEFAULT_MANIFEST.parent, case["file"])
         assert path.is_file()
         json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_conformance_runner_rejects_duplicate_manifest_members(tmp_path):
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        '{"schema_version":1,"schema_version":1,"cases":[]}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Duplicate JSON object member name"):
+        run_conformance(manifest_path)

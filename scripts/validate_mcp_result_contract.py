@@ -21,6 +21,11 @@ from qzx.core.result_contract import (  # noqa: E402
     load_result_contract_schema,
     result_contract_violations,
 )
+from qzx.core.strict_json import (  # noqa: E402
+    StrictJsonError,
+    load_json_path_or_stdin,
+    loads_json_document,
+)
 
 
 MCP_SPECIFICATION_VERSIONS = (
@@ -78,26 +83,41 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_document(path: str):
-    if path == "-":
-        return json.load(sys.stdin)
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
 def _extract_tool_result(document):
     violations = []
     if not isinstance(document, dict):
         return None, ["The MCP input must be a JSON object."]
 
-    if "error" in document and "result" not in document:
-        return None, [
-            "MCP protocol errors are not completed QZX Result Contract results."
-        ]
-
-    if "jsonrpc" in document or "result" in document:
+    has_result = "result" in document
+    has_error = "error" in document
+    if "jsonrpc" in document or has_result or has_error:
         if document.get("jsonrpc") != "2.0":
             violations.append("A JSON-RPC envelope must declare jsonrpc as '2.0'.")
+
+        if has_result == has_error:
+            violations.append(
+                "A JSON-RPC response must contain exactly one of result or error."
+            )
+            return None, violations
+
+        if has_error:
+            violations.append(
+                "MCP protocol errors are not completed QZX Result Contract results."
+            )
+            return None, violations
+
+        response_id = document.get("id")
+        if not (
+            isinstance(response_id, str)
+            or (
+                isinstance(response_id, int)
+                and not isinstance(response_id, bool)
+            )
+        ):
+            violations.append(
+                "An MCP JSON-RPC result response must include a string or integer id."
+            )
+
         result = document.get("result")
         if not isinstance(result, dict):
             violations.append(
@@ -118,8 +138,8 @@ def _backcompat_text_matches(content, structured_content):
         if item.get("type") != "text" or not isinstance(item.get("text"), str):
             continue
         try:
-            decoded = json.loads(item["text"])
-        except json.JSONDecodeError:
+            decoded = loads_json_document(item["text"])
+        except (json.JSONDecodeError, StrictJsonError):
             continue
         if decoded == structured_content:
             return True
@@ -364,9 +384,9 @@ def main() -> int:
     specification_version = args.spec_version
     tools_spec_url = MCP_TOOLS_SPEC_URLS[specification_version]
     try:
-        document = load_document(args.path)
+        document = load_json_path_or_stdin(args.path, sys.stdin)
         tool_definition = (
-            load_document(args.tool_definition)
+            load_json_path_or_stdin(args.tool_definition, sys.stdin)
             if args.tool_definition
             else None
         )
@@ -390,7 +410,7 @@ def main() -> int:
                 "violations": violations,
             },
         }
-    except (OSError, json.JSONDecodeError) as exception:
+    except (OSError, json.JSONDecodeError, StrictJsonError) as exception:
         result = {
             "success": False,
             "message": "The MCP profile input could not be read as JSON.",

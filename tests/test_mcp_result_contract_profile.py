@@ -204,6 +204,40 @@ def test_protocol_error_is_not_a_completed_qzx_result():
     assert details["backcompat_text_matches"] is False
 
 
+def test_jsonrpc_response_cannot_mix_result_and_error():
+    document = load_fixture("mcp-success.json")
+    document["error"] = {"code": -32603, "message": "Contradictory error."}
+
+    violations, warnings, details = validator.validate_mcp_profile(document)
+
+    assert violations == [
+        "A JSON-RPC response must contain exactly one of result or error."
+    ]
+    assert warnings == []
+    assert details["backcompat_text_matches"] is False
+
+
+def test_jsonrpc_result_response_requires_an_mcp_request_id():
+    for invalid_id in (None, True, 1.5):
+        document = load_fixture("mcp-success.json")
+        document["id"] = invalid_id
+
+        violations, _, _ = validator.validate_mcp_profile(document)
+
+        assert (
+            "An MCP JSON-RPC result response must include a string or integer id."
+            in violations
+        )
+
+    document = load_fixture("mcp-success.json")
+    del document["id"]
+    violations, _, _ = validator.validate_mcp_profile(document)
+    assert (
+        "An MCP JSON-RPC result response must include a string or integer id."
+        in violations
+    )
+
+
 def test_backwards_compatibility_text_is_a_warning_not_core_failure():
     document = {
         "resultType": "complete",
@@ -245,6 +279,28 @@ def test_cli_json_report_accepts_full_jsonrpc_response():
     assert report["details"]["mcp_specification"] == "2026-07-28"
     assert report["details"]["output_schema_checked"] is True
     assert report["details"]["violations"] == []
+
+
+def test_mcp_cli_rejects_duplicate_jsonrpc_members(tmp_path):
+    duplicate_response = tmp_path / "duplicate-response.json"
+    duplicate_response.write_text(
+        '{"jsonrpc":"2.0","id":1,"result":{},"result":{}}',
+        encoding="utf-8",
+    )
+
+    process = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), str(duplicate_response), "--json"],
+        cwd=REPOSITORY_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert process.returncode == 1, process.stderr
+    report = json.loads(process.stdout)
+    assert report["error_code"] == "invalid_json_input"
+    assert "Duplicate JSON object member name" in report["error"]
 
 
 def test_cli_accepts_checked_in_2025_11_25_fixture_without_result_type():
