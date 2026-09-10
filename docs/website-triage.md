@@ -138,6 +138,14 @@ state, sampling interval and escalation policy explicitly. Run a bounded probe
 from an authorized second network when the observation point matters. A
 single diagnostic does not establish an SLA or a performance benchmark.
 
+## Get help or tell Alejandro what happened
+
+The browser guide offers direct installation and command help alongside optional
+feedback about usefulness or a blocker. Your response selects a next step; it
+does not run a diagnostic or share your destination or terminal output. For a
+reproducible problem, open the existing GitHub bug report form and review what
+you submit. [Read the feedback policy](telemetry.md#optional-workflow-feedback).
+
 ## Support or integrate the workflow
 
 The CLI is free. [Support QZX development](https://qzx.yumbale.com/en/donate)

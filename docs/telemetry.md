@@ -130,6 +130,33 @@ so deployment tests do not masquerade as user adoption.
 The public, bilingual disclosure for website analytics and CLI telemetry is the
 [QZX security page](https://qzx.yumbale.com/en/security).
 
+### Optional workflow feedback
+
+The [project quickstart](https://qzx.yumbale.com/en/ai-agent-quickstart) and
+[website diagnostic guide](https://qzx.yumbale.com/en/troubleshoot-website-dns-tls-http)
+offer optional categorical feedback: helpful, blocked during installation,
+blocked while running, or unclear results. Help remains available without a
+response or account. Each choice gives an immediate relevant next step.
+
+Only the selected closed category and workflow identifier travel through the
+existing website analytics session, alongside its existing page and server-observed
+metadata. The feature does not read or send terminal output, a project, an entered
+destination, clipboard contents, free text, contact details or new fingerprints.
+The immediate confirmation describes the choice, not successful server delivery;
+the help remains useful offline and the existing bounded queue retries delivery.
+
+Private reporting uses the latest received choice per exact browser session and
+workflow in the selected period. It shows guide views, successful copies and
+self-reported outcomes by source, tracked reference and original landing page,
+without requiring a CLI activation. Percentages are withheld below five
+respondents. No response is not failure, and views before feedback became
+available are not unanswered invitations. These voluntary responses are not
+independent execution evidence, representative satisfaction, installations or income.
+
+The bug report link selects the repository's existing form. It never submits an
+issue automatically or inserts local destinations or terminal output. A public
+report requires GitHub sign-in and deliberate review by its sender.
+
 ## Why QZX measures this
 
 The project uses these signals to answer bounded product questions such as:
