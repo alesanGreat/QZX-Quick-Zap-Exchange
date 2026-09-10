@@ -1,17 +1,30 @@
 # QZX — Quick Zap Exchange
 
+QZX is an open-source Python CLI that gives AI agents, automation, and people
+one documented command vocabulary for supported operations on Windows, Linux,
+and macOS. Get a useful diagnosis in the terminal, or add `--json` for structured
+evidence another program can consume.
+
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
 [About Alejandro Sánchez](https://qzx.yumbale.com/en/alejandro-sanchez) ·
-[Contact QZX](mailto:qzx@yumbale.com) ·
 [Support the project](https://qzx.yumbale.com/en/donate) ·
-[Work with Alejandro](https://qzx.yumbale.com/en/professional-services?qzx_ref=github_readme_services#request)
+[Work with Alejandro](https://qzx.yumbale.com/en/professional-services?qzx_ref=github_readme_services#request) ·
+[Contact QZX](mailto:qzx@yumbale.com)
 
-Professional-service requests return a QZX reference and stay in a private intake queue. The canonical intake route remains `https://qzx.yumbale.com/en/professional-services#request`; the README CTA adds only first-party `qzx_ref` attribution. Operational alerts contain only that reference and the private-admin link, never requester contact details or request content.
+## Start with a problem, not a command catalog
 
-QZX is an open-source Python CLI that gives AI agents, automation, and people
-one documented command vocabulary for supported operations on Windows, Linux,
-and macOS.
+After [installing QZX](#install-the-published-package), choose one useful job:
+
+| Your task | First command | Complete workflow |
+|---|---|---|
+| Understand an unfamiliar codebase before editing | `qzx diagnoseProject .` | [Project briefing](https://qzx.yumbale.com/en/ai-agent-quickstart#inspect-project) |
+| Find what is consuming disk space without deleting files | `qzx diagnoseStorage .` | [Storage triage](docs/storage-triage.md) |
+| Investigate a website that is not responding as expected | `qzx checkUrlStatus https://example.com 10 --json` | [DNS, TLS and HTTP triage](https://qzx.yumbale.com/en/troubleshoot-website-dns-tls-http) |
+
+The project dot means the current directory. Replace the example URL with a
+safe, read-only endpoint you are authorized to inspect. A completed diagnostic
+is not a clean bill of health: inspect its findings, not only `success`.
 
 QZX is completely free to use. There are no paid plans or paid features.
 Donations are welcome because they support ongoing development, but they are
@@ -20,12 +33,7 @@ optional and never unlock features or change the product experience.
 [Website](https://qzx.yumbale.com/en/) ·
 [AI agent quickstart](https://qzx.yumbale.com/en/ai-agent-quickstart?qzx_ref=github_readme_agent) ·
 [Command documentation](https://qzx.yumbale.com/en/commands) ·
-[QZX Golden Core](https://qzx.yumbale.com/en/golden-core) ·
-[QZX Result Contract v1](https://qzx.yumbale.com/en/result-contract) ·
 [Recorded output](https://qzx.yumbale.com/en/qzx-in-action) ·
-[When to use QZX](https://qzx.yumbale.com/en/when-to-use) ·
-[Compatibility](https://qzx.yumbale.com/en/compatibility) ·
-[Security and telemetry](https://qzx.yumbale.com/en/security) ·
 [Documentación en español](https://qzx.yumbale.com/es/)
 
 QZX is a local command interface, not a shell replacement, remote execution
@@ -439,6 +447,15 @@ operating system, date, fixture, and exit code on the
 - `docs/` contains public product philosophy and generated command references.
 - `.github/` contains the public contribution, support, funding, issue, and CI
   configuration.
+
+## Support and professional work
+
+If a workflow is useful, [support continued QZX development](https://qzx.yumbale.com/en/donate)
+or [discuss an integration or automation with Alejandro Sánchez](https://qzx.yumbale.com/en/professional-services?qzx_ref=github_readme_services#request).
+The open-source CLI remains free; professional scope and acceptance criteria
+are agreed separately.
+
+Professional-service requests return a QZX reference and stay in a private intake queue. The canonical intake route remains `https://qzx.yumbale.com/en/professional-services#request`; the README CTA adds only first-party `qzx_ref` attribution. Operational alerts contain only that reference and the private-admin link, never requester contact details or request content.
 
 ## Contributing
 

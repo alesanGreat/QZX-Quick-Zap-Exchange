@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "kind": "controlled_cli_observation",
+  "qzx_version": "0.2.2.0.8",
+  "wheel_sha256": "cfe595ff708f08f65cd1a89cb22445c3113e583b930183275aee3c40edd2ddb6",
+  "runtime": {
+    "python": "3.13.13",
+    "implementation": "CPython",
+    "system": "Windows",
+    "machine": "AMD64"
+  },
+  "scope": "Controlled fixtures on one Windows machine; not third-party adoption, production uptime or a benchmark. HTTP 404 uses a temporary loopback HTTP server; .invalid is a negative DNS case. Full JSON stdout values are preserved.",
+  "observations": [
+    {
+      "fixture": "http_404",
+      "captured_at": "2026-09-10T04:22:16.547315+00:00",
+      "exit_code": 0,
+      "stdout": {
+        "success": true,
+        "url": "http://127.0.0.1:65462/missing",
+        "is_online": false,
+        "response_time_ms": 63.89,
+        "status_code": 404,
+        "reason": "Not Found",
+        "headers": {
+          "Content-Length": "0",
+          "Server": "BaseHTTP/0.6 Python/3.13.13",
+          "Date": "Thu, 10 Sep 2026 04:22:16 GMT"
+        },
+        "status_detail": "HTTP Error 404: Not Found",
+        "message": "URL 'http://127.0.0.1:65462/missing' responded with client/server error status (Status: 404 Not Found, Time: 63.89ms).",
+        "meta": {
+          "command": "checkUrlStatus",
+          "command_maturity": {
+            "stage": "alpha",
+            "label": "Alpha",
+            "sequence": 2,
+            "public_executable": true,
+            "stability": "interface_may_change",
+            "summary": "Available for real use and feedback while its interface and behavior can still evolve.",
+            "promotion_review_required": false,
+            "assessment_scope": "development_checkout"
+          },
+          "duration_ms": 76.326,
+          "schema_version": 1
+        }
+      }
+    },
+    {
+      "fixture": "dns_missing",
+      "captured_at": "2026-09-10T04:22:15.786005+00:00",
+      "exit_code": 1,
+      "stdout": {
+        "success": false,
+        "error_code": "dns_name_not_found",
+        "domain": "qzx-workflow.invalid",
+        "records": {
+          "A": [],
+          "AAAA": [],
+          "MX": [],
+          "TXT": [],
+          "NS": [],
+          "CNAME": []
+        },
+        "record_status": {
+          "A": "name_not_found",
+          "AAAA": "name_not_found",
+          "MX": "name_not_found",
+          "TXT": "name_not_found",
+          "NS": "name_not_found",
+          "CNAME": "name_not_found"
+        },
+        "errors": [
+          "DNS name 'qzx-workflow.invalid' does not exist."
+        ],
+        "error": "DNS name 'qzx-workflow.invalid' does not exist.",
+        "remediation": "Check the spelling and whether the domain is registered.",
+        "message": "DNS name 'qzx-workflow.invalid' does not exist.",
+        "meta": {
+          "command": "checkDns",
+          "command_maturity": {
+            "stage": "alpha",
+            "label": "Alpha",
+            "sequence": 2,
+            "public_executable": true,
+            "stability": "interface_may_change",
+            "summary": "Available for real use and feedback while its interface and behavior can still evolve.",
+            "promotion_review_required": false,
+            "assessment_scope": "development_checkout"
+          },
+          "duration_ms": 1162.494,
+          "schema_version": 1
+        }
+      }
+    }
+  ]
+}
