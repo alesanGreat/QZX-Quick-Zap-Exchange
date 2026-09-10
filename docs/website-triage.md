@@ -42,6 +42,26 @@ and the destination, whose logs can record the requests. Do not use a URL that
 triggers a server-side action. Review hostnames, URL query parameters and result
 contents before sharing evidence; do not include credentials in a URL.
 
+## Prepare commands for your own website
+
+The browser guide also includes a local command preparer. Enter a hostname or
+an HTTPS URL such as `https://status.example.com:8443/health`; it separates the
+DNS hostname, TLS port and HTTP endpoint automatically. A bare hostname assumes
+HTTPS and port 443. Review the generated URL before running each line.
+
+The preparer does not execute QZX, contact the destination, send the input to the
+website server, or save it. Internationalized hostnames are shown in their ASCII
+DNS form. Editing the destination clears the previous commands until you prepare
+again, and Turbo navigation discards the entered destination from its snapshots.
+The original example remains available when JavaScript is disabled.
+
+This deliberately shell-neutral preparer supports hostnames, optional ports and
+simple ASCII paths. It rejects IP addresses, credentials, query parameters,
+fragments, percent-encoded paths and shell metacharacters instead of silently
+removing or changing them. These are limits of the **web preparer**, not a new
+restriction on the published CLI. Use the command references for other endpoints.
+Preparing or copying commands is not evidence that a diagnostic ran successfully.
+
 ## Read the evidence, not only the exit code
 
 `success` describes whether the diagnostic completed. A completed check can
