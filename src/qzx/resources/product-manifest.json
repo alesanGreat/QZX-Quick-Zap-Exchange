@@ -145,15 +145,15 @@
   },
   "channels": {
     "published": {
-      "version": "0.2.2.0.8",
+      "version": "0.2.2.0.9",
       "status": "Alpha",
       "channel": "Published package",
-      "released_at": "2026-09-08",
+      "released_at": "2026-09-10",
       "requires_python": ">=3.11",
       "install_command": "python -m pip install --upgrade qzx",
-      "source": "https://pypi.org/pypi/qzx/0.2.2.0.8/json",
+      "source": "https://pypi.org/pypi/qzx/0.2.2.0.9/json",
       "wheel": {
-        "filename": "qzx-0.2.2.0.8-py3-none-any.whl",
+        "filename": "qzx-0.2.2.0.9-py3-none-any.whl",
         "command_names": [
           "about",
           "addPythonDocstrings",
@@ -179,6 +179,7 @@
           "detectFileType",
           "diagnoseProject",
           "diagnoseStorage",
+          "diagnoseWebsite",
           "downloadFile",
           "explainFileWithGemini",
           "extractZip",
@@ -247,7 +248,7 @@
       }
     },
     "development": {
-      "version": "0.2.2.0.8",
+      "version": "0.2.2.0.9",
       "status": "Alpha",
       "channel": "Development documentation",
       "requires_python": ">=3.11",

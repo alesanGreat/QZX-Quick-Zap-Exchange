@@ -20,11 +20,12 @@ After [installing QZX](#install-the-published-package), choose one useful job:
 |---|---|---|
 | Understand an unfamiliar codebase before editing | `qzx diagnoseProject .` | [Project briefing](https://qzx.yumbale.com/en/ai-agent-quickstart#inspect-project) |
 | Find what is consuming disk space without deleting files | `qzx diagnoseStorage .` | [Storage triage](docs/storage-triage.md) |
-| Investigate a website that is not responding as expected | `qzx checkUrlStatus https://example.com 10 --json` | [DNS, TLS and HTTP triage](https://qzx.yumbale.com/en/troubleshoot-website-dns-tls-http) |
+| Investigate a website that is not responding as expected | `qzx diagnoseWebsite example.com --json` | [One-command DNS, TLS and HTTP triage](https://qzx.yumbale.com/en/troubleshoot-website-dns-tls-http) |
 
-The project dot means the current directory. Replace the example URL with a
-safe, read-only endpoint you are authorized to inspect. A completed diagnostic
-is not a clean bill of health: inspect its findings, not only `success`.
+The project dot means the current directory. Replace the example hostname or URL
+with a safe, read-only destination you are authorized to inspect. A completed
+diagnostic is not a clean bill of health: inspect its findings and status fields,
+not only `success`.
 
 QZX is completely free to use. There are no paid plans or paid features.
 Donations are welcome because they support ongoing development, but they are
@@ -95,7 +96,7 @@ shows a read-only project briefing workflow and a copyable instruction block for
 project mechanisms such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. The
 installed QZX catalog remains the source of truth for available commands.
 
-This source release is QZX `0.2.2.0.8` and requires Python `>=3.11`.
+This source release is QZX `0.2.2.0.9` and requires Python `>=3.11`.
 The published QZX distribution uses pip's normal installation channel while the
 product itself remains Alpha software. PyPI is authoritative for the published
 package, and `qzx version --json` is authoritative for what is installed.
@@ -116,7 +117,7 @@ above 3.11 merely to use newer syntax or simplify development; see the
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.8` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 88 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.9` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 89 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.

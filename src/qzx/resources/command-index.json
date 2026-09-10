@@ -170,6 +170,13 @@
       "category": "system"
     },
     {
+      "name": "diagnoseWebsite",
+      "module": "qzx.commands.network.diagnose_website",
+      "class_name": "DiagnoseWebsiteCommand",
+      "description": "Diagnoses why an HTTPS website may be failing by correlating DNS, TLS certificate, and HTTP reachability evidence",
+      "category": "network"
+    },
+    {
       "name": "downloadFile",
       "module": "qzx.commands.file.download_file",
       "class_name": "DownloadFileCommand",

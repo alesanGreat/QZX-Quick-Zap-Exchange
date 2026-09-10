@@ -5,6 +5,37 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.9 — 2026-09-10
+
+<!-- qzx-release-summary-en:
+This Alpha release turns website troubleshooting into one read-only diagnoseWebsite workflow that correlates DNS, trusted TLS, and HTTP evidence, identifies the layer to inspect first, preserves raw probe results for agents and automation, and validates targets before network access; the public website guide now prepares that single command while retaining the three specialized probes for deeper inspection.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha convierte el diagnóstico de sitios web en un único flujo de solo lectura diagnoseWebsite que correlaciona evidencia DNS, TLS confiable y HTTP, identifica la primera capa que conviene revisar, conserva resultados crudos para agentes y automatización, y valida los destinos antes del acceso de red; la guía web pública ahora prepara ese único comando y mantiene las tres sondas especializadas para profundizar.
+-->
+
+### Diagnose a website with one command
+
+- Add `diagnoseWebsite`, a read-only workflow that correlates DNS resolution,
+  trusted TLS certificate validation, and HTTP reachability in one result. It
+  reports `overall_status`, `primary_issue_layer`, per-layer status, findings,
+  prioritized next actions, and the raw evidence from every completed probe.
+- Preserve useful evidence instead of manufacturing certainty: an authoritative
+  DNS name-not-found result skips downstream checks that cannot succeed, while
+  resolver, TLS-engine, or HTTP-probe failures remain explicit partial diagnostic
+  evidence rather than being mislabeled as website outages.
+- Harden the input boundary before network access. The workflow defaults bare
+  hostnames to HTTPS and rejects non-HTTPS schemes, embedded credentials, query
+  strings, fragments, shell-sensitive input, numeric-address forms, and invalid
+  ports before starting a probe.
+- Turn the bilingual website-triage guide into a one-command first success while
+  keeping `checkDns`, `checkSslCertificate`, and `checkUrlStatus` available as
+  transparent deep probes. The guide, agent briefing, command catalog, Spanish
+  metadata, safety policy, and GitHub documentation now describe the same
+  89-command product surface.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.8 — 2026-09-08
 
 <!-- qzx-release-summary-en:

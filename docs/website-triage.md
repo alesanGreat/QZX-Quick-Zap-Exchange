@@ -2,9 +2,10 @@
 
 QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
 
-A website that does not load is not a single diagnosis. Use three existing
-commands to separate name resolution, TLS certificate evidence and the response
-from a specific HTTP endpoint before changing anything.
+A website that does not load is not a single diagnosis. Start with one QZX
+workflow that correlates name resolution, trusted TLS certificate evidence and
+the response from a specific HTTPS endpoint before changing anything. The three
+underlying probes remain available when you need to inspect a layer independently.
 
 [Browser guide in English](https://qzx.yumbale.com/en/troubleshoot-website-dns-tls-http) ·
 [Guía en español](https://qzx.yumbale.com/es/diagnosticar-sitio-web-dns-tls-http)
@@ -16,16 +17,36 @@ python -m pip install --upgrade qzx
 qzx version --json
 ```
 
-These commands are available in published Alpha `0.2.2.0.8`; they do not require
-a new development build, a QZX account or an API key. See the
-[installation guide](installing-qzx.md) for pipx and managed Python environments.
-Use the installed help as the source of truth for parameters.
+`diagnoseWebsite` is part of the QZX package surface described by this source
+tree. Upgrade to the current published package and use `qzx help diagnoseWebsite`
+to verify the installed contract before automation. No QZX account or API key is
+required. See the [installation guide](installing-qzx.md) for pipx and managed
+Python environments.
 
-## Run three independent checks
+## Start with one correlated diagnosis
 
-Replace `example.com` with an authorized hostname and the HTTPS URL with a safe,
-read-only endpoint. DNS and TLS take a hostname, not a URL. Run each line
-separately, including when an earlier diagnostic produces a failure:
+Replace `example.com` with an authorized hostname or a safe, read-only HTTPS path:
+
+```bash
+qzx diagnoseWebsite https://example.com --json
+```
+
+Bare hostnames default to HTTPS. The result keeps one valid JSON document with
+`overall_status`, `primary_issue_layer`, per-layer `probe_status`, findings,
+recommended next actions and the raw results of every completed DNS, TLS and HTTP
+probe. An authoritative DNS name-not-found result stops downstream probes that
+cannot add useful evidence; an internal or inconclusive probe is reported as a
+partial diagnosis rather than being mislabeled as a website outage.
+
+Remove `--json` for readable terminal output. The optional `timeout` parameter
+controls the HTTP request timeout only; it is not a deadline for the whole
+workflow.
+
+## Go deeper with the independent probes
+
+`diagnoseWebsite` is the default workflow. Run the underlying probes separately
+when you need to isolate one layer, compare observations, or tune the HTTP timeout
+independently:
 
 ```bash
 qzx checkDns example.com --json
@@ -33,26 +54,24 @@ qzx checkSslCertificate example.com 443 --json
 qzx checkUrlStatus https://example.com 10 --json
 ```
 
-The HTTP timeout argument is 10 seconds, not a shared deadline for all three
-commands. Remove `--json` for readable terminal output. Several JSON outputs are
-separate documents; concatenating them does not create one valid JSON document.
-
 These are network probes, not configuration changes. They contact DNS resolvers
 and the destination, whose logs can record the requests. Do not use a URL that
 triggers a server-side action. Review hostnames, URL query parameters and result
-contents before sharing evidence; do not include credentials in a URL.
+contents before sharing evidence; the workflow already rejects embedded credentials, query strings, and fragments before probing.
 
 ## Prepare commands for your own website
 
 The browser guide also includes a local command preparer. Enter a hostname or
-an HTTPS URL such as `https://status.example.com:8443/health`; it separates the
-DNS hostname, TLS port and HTTP endpoint automatically. A bare hostname assumes
-HTTPS and port 443. Review the generated URL before running each line.
+an HTTPS URL such as `https://status.example.com:8443/health`; it prepares the
+single `diagnoseWebsite` command and keeps the three underlying probe commands
+visible for deeper inspection. A bare hostname assumes HTTPS and port 443.
+Review the generated URL before running it.
 
 The preparer does not execute QZX, contact the destination, send the input to the
 website server, or save it. Internationalized hostnames are shown in their ASCII
-DNS form. Editing the destination clears the previous commands until you prepare
-again, and Turbo navigation discards the entered destination from its snapshots.
+DNS form. Editing the destination clears the previous diagnosis and deep-probe commands
+until you prepare again, and Turbo navigation discards the entered destination
+from its snapshots.
 The original example remains available when JavaScript is disabled.
 
 This deliberately shell-neutral preparer supports hostnames, optional ports and
@@ -64,9 +83,10 @@ Preparing or copying commands is not evidence that a diagnostic ran successfully
 
 ## Read the evidence, not only the exit code
 
-`success` describes whether the diagnostic completed. A completed check can
-report a target problem. Keep the process exit code and the domain-specific
-fields; neither replaces the other.
+`success` describes whether the diagnostic workflow completed, not whether the
+website is healthy. Start with `overall_status`, `primary_issue_layer` and
+`probe_status`, then verify the conclusion against `findings` and the raw `dns`,
+`tls` and `http` evidence. A completed diagnosis can still report a target problem.
 
 ### DNS: did the name resolve from this host?
 
@@ -127,11 +147,12 @@ establish cross-platform compatibility, real adoption, uptime or performance.
 
 ## Ask an agent for the next useful check
 
-> Using these three QZX results, identify the earliest layer with evidence of a
-> problem. Distinguish a failed diagnostic from an unhealthy target and an
-> inconclusive query. Cite actual fields, separate facts from assumptions, and
-> propose one next check. Do not change DNS, certificates, firewall rules or
-> deployments. Do not claim the application works merely because HTTP returned 200.
+> Using this QZX `diagnoseWebsite` result, verify `primary_issue_layer` against
+> `findings` and the raw `dns`, `tls` and `http` evidence. Distinguish an unhealthy
+> target from a partial or failed probe, cite actual fields, separate facts from
+> assumptions, and propose one next check. Do not change DNS, certificates,
+> firewall rules or deployments. Do not claim the application works merely because
+> HTTP returned 200.
 
 For a recurring check, define the endpoint's expected status, acceptable TLS
 state, sampling interval and escalation policy explicitly. Run a bounded probe
@@ -156,6 +177,7 @@ emergency-response commitment.
 
 ## References and limitations
 
+- [diagnoseWebsite](https://qzx.yumbale.com/en/commands/diagnose-website)
 - [checkDns](https://qzx.yumbale.com/en/commands/check-dns)
 - [checkSslCertificate](https://qzx.yumbale.com/en/commands/check-ssl-certificate)
 - [checkUrlStatus](https://qzx.yumbale.com/en/commands/check-url-status)

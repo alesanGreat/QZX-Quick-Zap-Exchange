@@ -63,6 +63,7 @@
   - [checkDns](#checkdns)
   - [checkSslCertificate](#checksslcertificate)
   - [checkUrlStatus](#checkurlstatus)
+  - [diagnoseWebsite](#diagnosewebsite)
   - [getNetworkConfig](#getnetworkconfig)
   - [testInternetSpeed](#testinternetspeed)
 - [System Commands](#system-commands)
@@ -1902,6 +1903,31 @@ Args:
 
 Returns:
     Dictionary with response metrics, headers, and online status
+
+---
+
+### diagnoseWebsite
+
+Turn three network probes into one actionable website diagnosis.
+
+**Category:** network
+**Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
+**Description:** Diagnoses why an HTTPS website may be failing by correlating DNS, TLS certificate, and HTTP reachability evidence
+
+**Parameters:**
+- `target`: Domain or HTTPS URL to diagnose, optionally including a port or path - Required
+- `timeout`: HTTP request timeout in seconds (0.1-60; defaults to 10) - Optional (default: `10.0`)
+
+**Examples:**
+- `qzx diagnoseWebsite example.com`
+  Diagnose DNS, TLS, and HTTP for a website in one command
+- `qzx diagnoseWebsite https://example.com/docs --json`
+  Return a structured diagnosis for a specific HTTPS path
+- `qzx diagnoseWebsite example.com:8443/status --timeout 15 --json`
+  Diagnose an HTTPS service on a custom port with a longer HTTP timeout
+
+**Details:**
+Run bounded read-only probes and explain the most likely failing layer.
 
 ---
 
