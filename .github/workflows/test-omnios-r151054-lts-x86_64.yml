@@ -25,7 +25,7 @@ jobs:
 
       - name: Start VM | OmniOS r151054 LTS x86_64
         id: start-omnios-r151054-lts-x86-64
-        uses: vmactions/omnios-vm@027e3ec08fed6fb740ab5f300c2605f9de02997a # v1.3.4
+        uses: vmactions/omnios-vm@317e4f8069dad8a65e1520808f1a68ef3fd20565 # v1.3.6
         with:
           # r151054-build is the r151054 LTS image with its build toolchain.
           release: "r151054-build"
