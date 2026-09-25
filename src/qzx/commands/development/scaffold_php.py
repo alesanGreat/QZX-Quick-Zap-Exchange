@@ -85,35 +85,7 @@ class ScaffoldPhpCommand(CommandBase):
             )
             if not result["success"]:
                 return result
-            project_path = result["project_path"]
-            
-            # Create standard PHP project structure
-            src_dir = os.path.join(project_path, 'src')
-            os.makedirs(src_dir)
-            result["files_created"].append(src_dir)
-            
-            # Create files
-            namespace = self._get_namespace(project_name)
-            self._create_composer_json(project_path, project_name, namespace, with_tests, result)
-            self._create_core_php(src_dir, namespace, result)
-            self._create_index_php(project_path, namespace, result)
-            self._create_gitignore(project_path, result)
-            self._create_readme(project_path, project_name, with_tests, result)
-            
-            if with_tests:
-                self._create_tests(project_path, namespace, result)
-            
-            # Create a descriptive message
-            tests_msg = "with PHPUnit test scaffolding" if with_tests else "without tests"
-            
-            message = (
-                f"Successfully created PHP project '{project_name}' at {project_path} {tests_msg}. "
-                f"Created {len(result['files_created'])} files and directories. "
-                f"Use 'composer install' and 'php index.php' to run."
-            )
-            
-            result["message"] = message
-            return result
+            return self._populate_project(project_name, with_tests, result)
             
         except Exception as e:
             return {
@@ -123,6 +95,41 @@ class ScaffoldPhpCommand(CommandBase):
                 "project_name": project_name
             }
             
+    def _populate_project(self, project_name, with_tests, result):
+        """Create PHP project files and finalize the successful result."""
+        project_path = result["project_path"]
+        src_dir = os.path.join(project_path, 'src')
+        os.makedirs(src_dir)
+        result["files_created"].append(src_dir)
+
+        namespace = self._get_namespace(project_name)
+        self._create_composer_json(
+            project_path,
+            project_name,
+            namespace,
+            with_tests,
+            result,
+        )
+        self._create_core_php(src_dir, namespace, result)
+        self._create_index_php(project_path, namespace, result)
+        self._create_gitignore(project_path, result)
+        self._create_readme(project_path, project_name, with_tests, result)
+        if with_tests:
+            self._create_tests(project_path, namespace, result)
+
+        tests_msg = (
+            "with PHPUnit test scaffolding"
+            if with_tests
+            else "without tests"
+        )
+        result["message"] = (
+            f"Successfully created PHP project '{project_name}' at {project_path} "
+            f"{tests_msg}. "
+            f"Created {len(result['files_created'])} files and directories. "
+            f"Use 'composer install' and 'php index.php' to run."
+        )
+        return result
+
     def _get_namespace(self, project_name):
         """Converts kebab-case project name to StudlyCaps Namespace"""
         parts = project_name.split('-')
