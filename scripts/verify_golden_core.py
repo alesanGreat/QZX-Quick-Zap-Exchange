@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -21,21 +20,18 @@ COMMAND_INDEX_PATH = SOURCE_ROOT / "qzx" / "resources" / "command-index.json"
 LIFECYCLE_PATH = SOURCE_ROOT / "qzx" / "resources" / "command-lifecycle.json"
 if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from qzx.core.command_loader import CommandLoader  # noqa: E402
-
-
-_ROLE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-_REQUIRED_DIMENSIONS = {
-    "behavioral_tests",
-    "policy_review",
-    "success_evidence",
-    "failure_evidence",
-    "result_contract_review",
-    "platform_evidence",
-    "release_quality",
-    "lifecycle_review",
-}
+from scripts.golden_core_registry_validation import (  # noqa: E402
+    command_registry_context,
+    validate_catalog,
+    validate_commands,
+    validate_failure_policy,
+    validate_readiness_dimensions,
+    validate_registry_metadata,
+    validate_release_quality_policy,
+)
 
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
@@ -64,297 +60,35 @@ def validate_golden_core(
     catalog_path: Path | None = None,
 ) -> list[str]:
     """Return deterministic validation errors for the Golden Core registry."""
-
     registry = registry if registry is not None else load_golden_core()
     command_index = load_json(COMMAND_INDEX_PATH, "command-index.json")
     lifecycle = load_json(LIFECYCLE_PATH, "command-lifecycle.json")
-    errors: list[str] = []
 
-    if registry.get("schema_version") != 1:
-        errors.append("golden-core.json must use schema_version 1.")
-    if registry.get("name") != "QZX Golden Core":
-        errors.append("golden-core.json must identify QZX Golden Core.")
-    if registry.get("status") != "candidate":
-        errors.append("Golden Core must remain a candidate until separately reviewed.")
-    if registry.get("target_maturity") != "beta":
-        errors.append("Golden Core target_maturity must be beta.")
-    for field in (
-        "selected_on",
-        "maintainer",
-        "purpose",
-        "purpose_es",
-        "disclaimer",
-        "disclaimer_es",
-    ):
-        if not _nonempty_text(registry.get(field)):
-            errors.append(f"Golden Core {field} must be non-empty text.")
+    errors = []
+    errors.extend(validate_registry_metadata(registry))
+    errors.extend(validate_readiness_dimensions(registry))
 
-    principles = registry.get("selection_principles")
-    if not isinstance(principles, list) or len(principles) < 4:
-        errors.append("Golden Core must declare at least four selection principles.")
-    else:
-        for index, principle in enumerate(principles):
-            if not isinstance(principle, dict) or any(
-                not _nonempty_text(principle.get(locale))
-                for locale in ("en", "es")
-            ):
-                errors.append(
-                    f"selection_principles[{index}] must contain English "
-                    "and Spanish text."
-                )
+    (
+        indexed_names,
+        lifecycle_commands,
+        lifecycle_stages,
+        context_errors,
+    ) = command_registry_context(command_index, lifecycle)
+    errors.extend(context_errors)
 
-    dimensions = registry.get("readiness_dimensions")
-    dimension_ids: list[str] = []
-    if not isinstance(dimensions, list):
-        errors.append("Golden Core readiness_dimensions must be an array.")
-    else:
-        for index, item in enumerate(dimensions):
-            if not isinstance(item, dict):
-                errors.append(f"readiness_dimensions[{index}] must be an object.")
-                continue
-            dimension_id = item.get("id")
-            description = item.get("description")
-            description_es = item.get("description_es")
-            if not isinstance(dimension_id, str) or _ROLE_PATTERN.fullmatch(dimension_id) is None:
-                errors.append(
-                    f"readiness_dimensions[{index}].id must use lower_snake_case."
-                )
-            else:
-                dimension_ids.append(dimension_id)
-            if not _nonempty_text(description):
-                errors.append(
-                    f"readiness_dimensions[{index}].description must be non-empty text."
-                )
-            if not _nonempty_text(description_es):
-                errors.append(
-                    f"readiness_dimensions[{index}].description_es must be non-empty text."
-                )
-        duplicates = sorted(
-            item for item, count in Counter(dimension_ids).items() if count > 1
-        )
-        if duplicates:
-            errors.append(
-                "Golden Core readiness dimensions are duplicated: "
-                + ", ".join(duplicates)
-                + "."
-            )
-        missing_dimensions = sorted(_REQUIRED_DIMENSIONS - set(dimension_ids))
-        extra_dimensions = sorted(set(dimension_ids) - _REQUIRED_DIMENSIONS)
-        if missing_dimensions:
-            errors.append(
-                "Golden Core is missing readiness dimensions: "
-                + ", ".join(missing_dimensions)
-                + "."
-            )
-        if extra_dimensions:
-            errors.append(
-                "Golden Core has unknown readiness dimensions: "
-                + ", ".join(extra_dimensions)
-                + "."
-            )
-
-    indexed = command_index.get("commands")
-    indexed_names = {
-        item.get("name")
-        for item in indexed
-        if isinstance(item, dict) and isinstance(item.get("name"), str)
-    } if isinstance(indexed, list) else set()
-    lifecycle_commands = lifecycle.get("commands")
-    lifecycle_stages = lifecycle.get("stages")
-    if not indexed_names:
-        errors.append("The packaged command index has no commands.")
-    if not isinstance(lifecycle_commands, dict) or not isinstance(lifecycle_stages, dict):
-        errors.append("The packaged command lifecycle registry is incomplete.")
-        lifecycle_commands = {}
-        lifecycle_stages = {}
-
-    commands = registry.get("commands")
-    command_names: list[str] = []
-    loader = CommandLoader()
-    if not isinstance(commands, list) or not 10 <= len(commands) <= 20:
-        errors.append("Golden Core must contain between 10 and 20 commands.")
-        commands = []
-    for index, item in enumerate(commands):
-        context = f"commands[{index}]"
-        if not isinstance(item, dict):
-            errors.append(f"{context} must be an object.")
-            continue
-        name = item.get("name")
-        role = item.get("role")
-        rationale = item.get("rationale")
-        rationale_es = item.get("rationale_es")
-        if not _nonempty_text(name):
-            errors.append(f"{context}.name must be non-empty text.")
-            continue
-        command_names.append(name)
-        if not isinstance(role, str) or _ROLE_PATTERN.fullmatch(role) is None:
-            errors.append(f"{context}.role must use lower_snake_case.")
-        if not _nonempty_text(rationale) or len(rationale.strip()) < 30:
-            errors.append(f"{context}.rationale must explain the selection.")
-        if not _nonempty_text(rationale_es) or len(rationale_es.strip()) < 30:
-            errors.append(f"{context}.rationale_es must explain the selection.")
-        if name not in indexed_names:
-            errors.append(f"Golden Core command is absent from command-index.json: {name}.")
-            continue
-        lifecycle_entry = lifecycle_commands.get(name)
-        if not isinstance(lifecycle_entry, dict):
-            errors.append(f"Golden Core command has no lifecycle entry: {name}.")
-        else:
-            stage_name = lifecycle_entry.get("stage")
-            stage = lifecycle_stages.get(stage_name)
-            if not isinstance(stage, dict) or stage.get("public_executable") is not True:
-                errors.append(f"Golden Core command is not publicly executable: {name}.")
-        command = loader.get_command(name)
-        if command is None:
-            errors.append(f"Golden Core command could not be loaded: {name}.")
-            continue
-        if command.name != name:
-            errors.append(f"Golden Core command does not use its canonical name: {name}.")
-        if bool(getattr(command, "requires_explicit_approval", False)):
-            errors.append(f"Golden Core command requires high-risk approval: {name}.")
-        if getattr(command, "backup_target_parameter", None) is not None:
-            errors.append(f"Golden Core command declares a mutation backup target: {name}.")
-
-    duplicate_commands = sorted(
-        name for name, count in Counter(command_names).items() if count > 1
+    command_names, command_errors = validate_commands(
+        registry,
+        indexed_names,
+        lifecycle_commands,
+        lifecycle_stages,
     )
-    if duplicate_commands:
-        errors.append(
-            "Golden Core commands are duplicated: "
-            + ", ".join(duplicate_commands)
-            + "."
-        )
-
-    failure_policy = registry.get("failure_evidence_policy")
-    if not isinstance(failure_policy, dict):
-        errors.append("Golden Core must declare failure_evidence_policy.")
-    else:
-        required_failures = failure_policy.get("required_commands")
-        not_applicable = failure_policy.get("not_applicable")
-        if not isinstance(required_failures, list) or any(
-            not _nonempty_text(name) for name in required_failures
-        ):
-            errors.append(
-                "failure_evidence_policy.required_commands must be a text array."
-            )
-            required_failures = []
-        if not isinstance(not_applicable, dict):
-            errors.append(
-                "failure_evidence_policy.not_applicable must be an object."
-            )
-            not_applicable = {}
-        else:
-            for name, explanation in not_applicable.items():
-                if not _nonempty_text(name) or not isinstance(explanation, dict):
-                    errors.append(
-                        "Every failure-evidence not_applicable entry must be an object."
-                    )
-                    continue
-                if not _nonempty_text(explanation.get("reason")):
-                    errors.append(
-                        f"Failure evidence N/A reason is missing for {name}."
-                    )
-                if not _nonempty_text(explanation.get("reason_es")):
-                    errors.append(
-                        f"Failure evidence Spanish N/A reason is missing for {name}."
-                    )
-        required_set = set(required_failures)
-        not_applicable_set = set(not_applicable)
-        command_set = set(command_names)
-        duplicated_required = sorted(
-            name
-            for name, count in Counter(required_failures).items()
-            if count > 1
-        )
-        if duplicated_required:
-            errors.append(
-                "Failure-evidence required commands are duplicated: "
-                + ", ".join(duplicated_required)
-                + "."
-            )
-        overlap = sorted(required_set & not_applicable_set)
-        if overlap:
-            errors.append(
-                "Failure evidence cannot be both required and not applicable: "
-                + ", ".join(overlap)
-                + "."
-            )
-        unknown = sorted((required_set | not_applicable_set) - command_set)
-        missing = sorted(command_set - (required_set | not_applicable_set))
-        if unknown:
-            errors.append(
-                "Failure-evidence policy contains unknown commands: "
-                + ", ".join(unknown)
-                + "."
-            )
-        if missing:
-            errors.append(
-                "Failure-evidence policy does not classify commands: "
-                + ", ".join(missing)
-                + "."
-            )
-
-    release_quality_policy = registry.get("release_quality_policy")
-    if not isinstance(release_quality_policy, dict):
-        errors.append("Golden Core must declare release_quality_policy.")
-    else:
-        attestation_path = release_quality_policy.get("attestation_path")
-        blocking_label = release_quality_policy.get("blocking_issue_label")
-        if (
-            not _nonempty_text(attestation_path)
-            or not str(attestation_path).startswith("docs/release-quality/")
-            or not str(attestation_path).endswith(".json")
-            or ".." in str(attestation_path).split("/")
-        ):
-            errors.append(
-                "release_quality_policy.attestation_path must be a safe docs/release-quality JSON path."
-            )
-        if not _nonempty_text(blocking_label):
-            errors.append(
-                "release_quality_policy.blocking_issue_label must be non-empty text."
-            )
-        for flag in (
-            "requires_exact_release_tag",
-            "requires_verified_distribution_hashes",
-            "requires_successful_ci",
-            "requires_digest_bound_platform_evidence",
-            "requires_zero_known_release_blockers",
-        ):
-            if release_quality_policy.get(flag) is not True:
-                errors.append(
-                    f"release_quality_policy.{flag} must be true."
-                )
-        if not _nonempty_text(release_quality_policy.get("note")):
-            errors.append("release_quality_policy.note must be non-empty text.")
-        if not _nonempty_text(release_quality_policy.get("note_es")):
-            errors.append("release_quality_policy.note_es must be non-empty text.")
+    errors.extend(command_errors)
+    errors.extend(validate_failure_policy(registry, command_names))
+    errors.extend(validate_release_quality_policy(registry))
 
     if catalog_path is not None:
         catalog = load_json(catalog_path, "generated command catalog")
-        catalog_commands = catalog.get("commands")
-        if not isinstance(catalog_commands, dict):
-            errors.append("The generated command catalog has no commands object.")
-        else:
-            for name in command_names:
-                command = catalog_commands.get(name)
-                if not isinstance(command, dict):
-                    errors.append(f"Generated catalog is missing Golden Core command: {name}.")
-                    continue
-                safety = command.get("safety")
-                availability = command.get("availability")
-                if not isinstance(safety, dict) or safety.get("operation") != "read-only":
-                    errors.append(f"Reviewed policy is not read-only for Golden Core command: {name}.")
-                if isinstance(safety, dict) and safety.get("privilege_sensitive") is not False:
-                    errors.append(f"Golden Core command is privilege-sensitive: {name}.")
-                if isinstance(safety, dict) and safety.get("shares_external_data") is not False:
-                    errors.append(f"Golden Core command shares external data: {name}.")
-                if not isinstance(availability, dict) or not isinstance(
-                    availability.get("included_in_pypi"), bool
-                ):
-                    errors.append(
-                        f"Golden Core command has invalid package-availability metadata: {name}."
-                    )
-
+        errors.extend(validate_catalog(catalog, command_names))
     return errors
 
 
