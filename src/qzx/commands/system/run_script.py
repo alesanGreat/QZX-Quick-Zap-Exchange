@@ -6,7 +6,6 @@
 import locale
 import os
 import platform
-import signal
 import shutil
 import subprocess
 import sys
@@ -14,6 +13,8 @@ import threading
 
 import psutil
 
+from qzx.commands.system._script_execution_workflow import execute_script
+from qzx.commands.system._script_process_control import terminate_process_tree
 from qzx.core.command_base import CommandBase
 
 
@@ -144,136 +145,12 @@ class RunScriptCommand(CommandBase):
 
     def execute(self, script_path, *args):
         """Execute a supported script and return a bounded structured result."""
-        try:
-            absolute_script = os.path.abspath(os.fspath(script_path))
-        except TypeError:
-            return self._failure(
-                "invalid_script_path",
-                "script_path must be a filesystem path.",
-                script_path=str(script_path),
-            )
-
-        if not os.path.exists(absolute_script):
-            return self._failure(
-                "script_not_found",
-                f"Script does not exist: {absolute_script}",
-                script_path=absolute_script,
-            )
-        if not os.path.isfile(absolute_script):
-            return self._failure(
-                "script_not_regular_file",
-                f"Script path is not a regular file: {absolute_script}",
-                script_path=absolute_script,
-            )
-
-        try:
-            command, script_type = self._command_for_script(absolute_script, args)
-        except ValueError as exc:
-            return self._failure(
-                "unsupported_script_type",
-                str(exc),
-                script_path=absolute_script,
-            )
-
-        try:
-            script_info = self._script_info(
-                absolute_script,
-                script_type,
-                len(args),
-            )
-        except OSError as exc:
-            return self._failure(
-                "script_metadata_unavailable",
-                f"Could not inspect the {script_type} script before execution: {exc}",
-                script_path=absolute_script,
-                script_type=script_type,
-            )
-
-        try:
-            process = subprocess.Popen(
-                command,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                bufsize=0,
-                **self._process_group_options(),
-            )
-        except OSError as exc:
-            return self._failure(
-                "script_start_failed",
-                f"Could not start the {script_type} script: {exc}",
-                script_path=absolute_script,
-                script_type=script_type,
-            )
-
-        assert process.stdout is not None
-        assert process.stderr is not None
-        stdout_capture = _BoundedPipeCapture(
-            process.stdout,
-            self.retained_output_bytes,
+        return execute_script(
+            self,
+            _BoundedPipeCapture,
+            script_path,
+            args,
         )
-        stderr_capture = _BoundedPipeCapture(
-            process.stderr,
-            self.retained_output_bytes,
-        )
-        stdout_capture.start()
-        stderr_capture.start()
-
-        try:
-            exit_code = process.wait(timeout=self.timeout_seconds)
-        except subprocess.TimeoutExpired:
-            termination = self._terminate_process_tree(process)
-            stdout = stdout_capture.finish()
-            stderr = stderr_capture.finish()
-            return {
-                "success": False,
-                "message": (
-                    f"{script_type} script '{os.path.basename(absolute_script)}' "
-                    f"exceeded the {self.timeout_seconds}-second timeout."
-                ),
-                "error": "Script execution timed out.",
-                "error_code": "script_timeout",
-                "script": script_info,
-                "execution": {
-                    "timeout_seconds": self.timeout_seconds,
-                    "exit_code": None,
-                    "timed_out": True,
-                    "termination": termination,
-                },
-                "stdout": stdout,
-                "stderr": stderr,
-            }
-
-        stdout = stdout_capture.finish()
-        stderr = stderr_capture.finish()
-
-        success = exit_code == 0
-        if success:
-            message = (
-                f"Executed {script_type} script "
-                f"'{os.path.basename(absolute_script)}' successfully."
-            )
-        else:
-            message = (
-                f"{script_type} script '{os.path.basename(absolute_script)}' "
-                f"exited with code {exit_code}."
-            )
-        result = {
-            "success": success,
-            "message": message,
-            "script": script_info,
-            "execution": {
-                "timeout_seconds": self.timeout_seconds,
-                "exit_code": exit_code,
-                "timed_out": False,
-            },
-            "stdout": stdout,
-            "stderr": stderr,
-        }
-        if not success:
-            result["error"] = "Script returned a non-zero exit code."
-            result["error_code"] = "script_failed"
-        return result
 
     @staticmethod
     def _command_for_script(script_path, args):
@@ -350,61 +227,11 @@ class RunScriptCommand(CommandBase):
     @staticmethod
     def _terminate_process_tree(process):
         """Stop a timed-out script and its descendants when the OS permits."""
-        method = "process_kill_fallback"
-        process_tree_confirmed = False
-        observed_processes = RunScriptCommand._observed_process_tree(process.pid)
-
-        if os.name == "nt":
-            taskkill = shutil.which("taskkill.exe") or shutil.which("taskkill")
-            if taskkill:
-                try:
-                    completed = subprocess.run(
-                        [taskkill, "/PID", str(process.pid), "/T", "/F"],
-                        stdin=subprocess.DEVNULL,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        timeout=10,
-                        check=False,
-                        creationflags=getattr(
-                            subprocess,
-                            "CREATE_NO_WINDOW",
-                            0,
-                        ),
-                    )
-                    method = "taskkill_tree"
-                    process_tree_confirmed = completed.returncode == 0
-                except (OSError, subprocess.TimeoutExpired):
-                    pass
-        else:
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-                method = "process_group_kill"
-                process_tree_confirmed = True
-            except OSError:
-                pass
-
-        if process.poll() is None:
-            try:
-                process.kill()
-            except OSError:
-                pass
-        try:
-            process.wait(timeout=5)
-        except (OSError, subprocess.TimeoutExpired):
-            pass
-
-        if observed_processes:
-            process_tree_confirmed = RunScriptCommand._observed_processes_stopped(
-                observed_processes
-            )
-
-        return {
-            "attempted": True,
-            "scope": "process_tree",
-            "method": method,
-            "process_tree_confirmed": process_tree_confirmed,
-            "root_process_stopped": process.poll() is not None,
-        }
+        return terminate_process_tree(
+            process,
+            RunScriptCommand._observed_process_tree,
+            RunScriptCommand._observed_processes_stopped,
+        )
 
     @staticmethod
     def _script_info(script_path, script_type, argument_count):
