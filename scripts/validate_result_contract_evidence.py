@@ -27,6 +27,7 @@ from qzx.core.result_contract import (  # noqa: E402
     result_contract_violations,
 )
 from qzx.core.strict_json import StrictJsonError, loads_json_document  # noqa: E402
+from result_contract_evidence_render import render_receipt  # noqa: E402
 from validate_mcp_result_contract import validate_mcp_profile  # noqa: E402
 
 REPORT_SCHEMA_VERSION = 1
@@ -203,33 +204,65 @@ def validate_evidence(
     tool_definition_path: str | None = None,
 ) -> dict[str, Any]:
     """Return one deterministic evidence receipt for a success/failure pair."""
+    _validate_profile_name(profile)
+    (
+        tool_definition,
+        tool_definition_digest,
+        global_violations,
+        global_warnings,
+    ) = _profile_materials(profile, tool_definition_path)
+    cases = _evidence_cases(
+        profile,
+        success_path,
+        failure_path,
+        tool_definition,
+    )
+    return _evidence_receipt(
+        profile=profile,
+        success_path=success_path,
+        failure_path=failure_path,
+        tool_definition_path=tool_definition_path,
+        tool_definition_digest=tool_definition_digest,
+        global_violations=global_violations,
+        global_warnings=global_warnings,
+        cases=cases,
+    )
 
+
+def _validate_profile_name(profile):
     if profile != PROFILE_CORE and profile not in MCP_PROFILE_TO_SPECIFICATION:
         raise ValueError(f"Unsupported QZX Result Contract profile: {profile}")
 
-    global_violations: list[str] = []
-    global_warnings: list[str] = []
-    tool_definition: Any | None = None
-    tool_definition_digest: str | None = None
 
+def _profile_materials(profile, tool_definition_path):
+    violations: list[str] = []
+    warnings: list[str] = []
+    tool_definition: Any | None = None
+    digest: str | None = None
     if profile in MCP_PROFILE_TO_SPECIFICATION:
         if not tool_definition_path:
-            global_violations.append(
+            violations.append(
                 "The MCP profile requires --tool-definition so outputSchema is reviewable."
             )
         else:
-            (
-                tool_definition,
-                tool_definition_digest,
-                tool_definition_errors,
-            ) = _read_json(tool_definition_path)
-            global_violations.extend(tool_definition_errors)
+            tool_definition, digest, read_errors = _read_json(
+                tool_definition_path
+            )
+            violations.extend(read_errors)
     elif tool_definition_path:
-        global_warnings.append(
+        warnings.append(
             "--tool-definition is ignored by the transport-neutral core profile."
         )
+    return tool_definition, digest, violations, warnings
 
-    cases = [
+
+def _evidence_cases(
+    profile,
+    success_path,
+    failure_path,
+    tool_definition,
+):
+    return [
         _validate_case(
             name="success",
             path_text=success_path,
@@ -246,7 +279,21 @@ def validate_evidence(
         ),
     ]
 
-    success = not global_violations and all(case["conformant"] for case in cases)
+
+def _evidence_receipt(
+    *,
+    profile,
+    success_path,
+    failure_path,
+    tool_definition_path,
+    tool_definition_digest,
+    global_violations,
+    global_warnings,
+    cases,
+):
+    success = not global_violations and all(
+        case["conformant"] for case in cases
+    )
     return {
         "receipt_schema": CONFORMANCE_RECEIPT_SCHEMA_URL,
         "success": success,
@@ -264,18 +311,20 @@ def validate_evidence(
             "validation_materials": _validation_materials(),
             "profile": profile,
             "mcp_specification": MCP_PROFILE_TO_SPECIFICATION.get(profile),
-            "tool_definition": (
-                {
-                    "file": tool_definition_path,
-                    "sha256": tool_definition_digest,
-                }
-                if tool_definition_path
-                else None
+            "tool_definition": _tool_definition_receipt(
+                tool_definition_path,
+                tool_definition_digest,
             ),
             "violations": global_violations,
             "cases": cases,
         },
     }
+
+
+def _tool_definition_receipt(path, digest):
+    if not path:
+        return None
+    return {"file": path, "sha256": digest}
 
 
 def _serialize(report: dict[str, Any]) -> str:
@@ -367,6 +416,48 @@ def _conflicting_evidence_role(
     return None
 
 
+def _report_conflict_role(args):
+    if not args.report:
+        return None
+    return _conflicting_evidence_role(
+        args.report,
+        success_path=args.success,
+        failure_path=args.failure,
+        tool_definition_path=args.tool_definition,
+    )
+
+
+def _apply_receipt_conflict(report, args, conflicting_role):
+    if conflicting_role is None:
+        return
+    report["success"] = False
+    report["message"] = (
+        "The conformance receipt path conflicts with an evidence input."
+    )
+    report["error_code"] = "receipt_path_conflict"
+    report["details"]["violations"].append(
+        "The report path must differ from the "
+        f"{conflicting_role} evidence path; no receipt was written."
+    )
+
+
+def _write_receipt(report, args, conflicting_role):
+    serialized = _serialize(report)
+    if not args.report or conflicting_role is not None:
+        return serialized
+    try:
+        _write_text_atomic(Path(args.report), serialized)
+        return serialized
+    except OSError as exception:
+        report["success"] = False
+        report["message"] = "The conformance receipt could not be written."
+        report["error_code"] = "receipt_write_failed"
+        report["details"]["violations"].append(
+            f"Could not write {args.report}: {exception}"
+        )
+        return _serialize(report)
+
+
 def main() -> int:
     args = parse_args()
     report = validate_evidence(
@@ -375,61 +466,10 @@ def main() -> int:
         failure_path=args.failure,
         tool_definition_path=args.tool_definition,
     )
-    conflicting_role = (
-        _conflicting_evidence_role(
-            args.report,
-            success_path=args.success,
-            failure_path=args.failure,
-            tool_definition_path=args.tool_definition,
-        )
-        if args.report
-        else None
-    )
-    if conflicting_role is not None:
-        report["success"] = False
-        report["message"] = (
-            "The conformance receipt path conflicts with an evidence input."
-        )
-        report["error_code"] = "receipt_path_conflict"
-        report["details"]["violations"].append(
-            "The report path must differ from the "
-            f"{conflicting_role} evidence path; no receipt was written."
-        )
-    serialized = _serialize(report)
-
-    if args.report and conflicting_role is None:
-        report_path = Path(args.report)
-        try:
-            _write_text_atomic(report_path, serialized)
-        except OSError as exception:
-            report["success"] = False
-            report["message"] = "The conformance receipt could not be written."
-            report["error_code"] = "receipt_write_failed"
-            report["details"]["violations"].append(
-                f"Could not write {args.report}: {exception}"
-            )
-            serialized = _serialize(report)
-
-    if args.json:
-        sys.stdout.write(serialized)
-    else:
-        prefix = "[OK]" if report["success"] else "[FAIL]"
-        print(f"{prefix} {report['message']}")
-        print(f"  Profile: {report['details']['profile']}")
-        for case in report["details"]["cases"]:
-            marker = "OK" if case["conformant"] else "FAIL"
-            print(f"  [{marker}] {case['name']}: {case['file']}")
-            for violation in case["violations"]:
-                print(f"    - {violation}")
-            for warning in case["warnings"]:
-                print(f"    [WARN] {warning}")
-        for violation in report["details"]["violations"]:
-            print(f"  - {violation}")
-        for warning in report["warnings"]:
-            print(f"  [WARN] {warning}")
-        if args.report:
-            print(f"  Receipt: {args.report}")
-
+    conflicting_role = _report_conflict_role(args)
+    _apply_receipt_conflict(report, args, conflicting_role)
+    serialized = _write_receipt(report, args, conflicting_role)
+    render_receipt(report, args, serialized)
     return 0 if report["success"] else 1
 
 
