@@ -26,6 +26,41 @@ def duplicate_totals(groups) -> tuple[int, int]:
     return copies, redundant
 
 
+def duplicate_result(inventory, groups, format_bytes, *, depth, minimum, excluded):
+    """Build the structured duplicate-file result from verified evidence."""
+    copies, redundant = duplicate_totals(groups)
+    return {
+        "success": True,
+        "message": duplicate_message(inventory, groups, format_bytes),
+        "scan_path": inventory.root,
+        "total_groups": len(groups),
+        "total_duplicate_files": copies,
+        "reclaimable_bytes": redundant,
+        "reclaimable_space_readable": format_bytes(redundant),
+        "reclaimable_space_basis": "logical_content_bytes",
+        "physical_reclaimable_bytes": None,
+        "space_estimate_note": SPACE_ESTIMATE_NOTE,
+        "duplicate_groups": groups,
+        "hardlink_aliases": inventory.hardlink_aliases,
+        "read_only": True,
+        "partial": inventory.partial,
+        "scan_complete": not inventory.partial,
+        "scan_scope": {
+            "max_depth": depth,
+            "depth_inclusive": True,
+            "min_size_bytes": minimum,
+            "excluded_directories": sorted(excluded),
+            "follow_directory_links": False,
+            "hydrate_offline_files": False,
+        },
+        "scan_statistics": inventory.statistics,
+        "warnings": inventory.warnings,
+        "warning_count": inventory.warning_count,
+        "warning_counts": dict(inventory.warning_counts),
+        "warning_sample_truncated": inventory.warning_count > len(inventory.warnings),
+    }
+
+
 def duplicate_group_lines(groups, format_bytes, *, max_groups=5, max_paths=8):
     """Prioritize redundant content, not just the size of an individual file."""
     ranked = sorted(groups.values(), key=_group_rank)

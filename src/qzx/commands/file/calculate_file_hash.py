@@ -5,9 +5,7 @@
 CalculateFileHash Command - Computes MD5, SHA-1, or SHA-256 cryptographic hashes for a file
 """
 
-import os
-import hashlib
-
+from qzx.commands.file._file_hash_operation import execute_file_hash
 from qzx.core.command_base import CommandBase
 
 class CalculateFileHashCommand(CommandBase):
@@ -45,73 +43,5 @@ class CalculateFileHashCommand(CommandBase):
     ]
     
     def execute(self, file_path, algorithm='sha256'):
-        """
-        Calculates the hash of a file
-        
-        Args:
-            file_path (str): Path to the file
-            algorithm (str, optional): Cryptographic algorithm (sha256, sha1, md5)
-            
-        Returns:
-            Dictionary with hash results and metadata
-        """
-        try:
-            # Validate file exists
-            if not os.path.exists(file_path):
-                return {
-                    "success": False,
-                    "error": f"File '{file_path}' does not exist."
-                }
-            
-            # Validate it's a file
-            if not os.path.isfile(file_path):
-                return {
-                    "success": False,
-                    "error": f"'{file_path}' is not a file."
-                }
-            
-            # Clean and validate algorithm
-            algorithm = algorithm.strip().lower()
-            supported_algos = {
-                'sha256': hashlib.sha256,
-                'sha1': hashlib.sha1,
-                'md5': hashlib.md5
-            }
-            
-            if algorithm not in supported_algos:
-                return {
-                    "success": False,
-                    "error": f"Unsupported hash algorithm '{algorithm}'. Supported algorithms: {', '.join(supported_algos.keys())}"
-                }
-            
-            # Compute hash by reading in chunks of 64KB (good for memory efficiency)
-            hash_obj = supported_algos[algorithm]()
-            file_size = os.path.getsize(file_path)
-            
-            with open(file_path, 'rb') as f:
-                for chunk in iter(lambda: f.read(65536), b''):
-                    hash_obj.update(chunk)
-            
-            calculated_hash = hash_obj.hexdigest()
-            
-            # Prepare response
-            result = {
-                "success": True,
-                "file_path": os.path.abspath(file_path),
-                "algorithm": algorithm,
-                "hash": calculated_hash,
-                "file_size": file_size,
-                "file_size_readable": self._format_bytes(file_size),
-                "message": f"{algorithm.upper()} hash for '{file_path}': {calculated_hash}"
-            }
-            
-            return result
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "file_path": file_path,
-                "error": str(e),
-                "message": f"Failed to calculate file hash: {str(e)}"
-            }
-            
+        """Calculate a supported cryptographic digest for one file."""
+        return execute_file_hash(self, file_path, algorithm)

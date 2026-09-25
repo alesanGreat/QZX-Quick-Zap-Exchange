@@ -14,6 +14,25 @@ class CollidingDigestFindDuplicateFilesCommand(FindDuplicateFilesCommand):
     def _get_sha256(self, _filepath):
         return "collision"
 
+
+def _write_duplicate_fixture(root):
+    contents = {
+        "dup_a1.txt": "A" * 20480,
+        "dup_a2.txt": "A" * 20480,
+        "dup_a3.txt": "A" * 20480,
+        "dup_b1.txt": "B" * 30720,
+        "dup_b2.txt": "B" * 30720,
+        "diff_b3.txt": "C" * 30720,
+        "tiny_dup1.txt": "D" * 2048,
+        "tiny_dup2.txt": "D" * 2048,
+    }
+    for name, content in contents.items():
+        (root / name).write_text(content, encoding="utf-8")
+    git_dir = root / ".git"
+    git_dir.mkdir()
+    (git_dir / "dup_a4.txt").write_text("A" * 20480, encoding="utf-8")
+
+
 class TestFindDuplicateFilesCommand:
     """
     Tests for the FindDuplicateFiles command
@@ -39,74 +58,21 @@ class TestFindDuplicateFilesCommand:
         assert "is not a directory" in result["error"]
         
     def test_find_duplicates(self, tmp_path):
-        """Test scanning files and locating duplicate groups based on content hashing and size filtering"""
-        # Create structure:
-        # root/
-        #   dup_a1.txt (20KB - content A)
-        #   dup_a2.txt (20KB - content A)
-        #   dup_a3.txt (20KB - content A)
-        #   dup_b1.txt (30KB - content B)
-        #   dup_b2.txt (30KB - content B)
-        #   diff_b3.txt (30KB - content C, same size but different content!)
-        #   tiny_dup1.txt (2KB - content D, should be ignored by default min_size_kb=10)
-        #   tiny_dup2.txt (2KB - content D, ignored)
-        #   .git/
-        #     dup_a4.txt (20KB - content A, inside ignored dir, should not be scanned!)
-        
-        content_a = "A" * 20480  # 20 KB
-        content_b = "B" * 30720  # 30 KB
-        content_c = "C" * 30720  # 30 KB
-        content_d = "D" * 2048   # 2 KB
-        
-        with open(tmp_path / "dup_a1.txt", "w") as f:
-            f.write(content_a)
-        with open(tmp_path / "dup_a2.txt", "w") as f:
-            f.write(content_a)
-        with open(tmp_path / "dup_a3.txt", "w") as f:
-            f.write(content_a)
-            
-        with open(tmp_path / "dup_b1.txt", "w") as f:
-            f.write(content_b)
-        with open(tmp_path / "dup_b2.txt", "w") as f:
-            f.write(content_b)
-        with open(tmp_path / "diff_b3.txt", "w") as f:
-            f.write(content_c)
-            
-        with open(tmp_path / "tiny_dup1.txt", "w") as f:
-            f.write(content_d)
-        with open(tmp_path / "tiny_dup2.txt", "w") as f:
-            f.write(content_d)
-            
-        git_dir = tmp_path / ".git"
-        git_dir.mkdir()
-        with open(git_dir / "dup_a4.txt", "w") as f:
-            f.write(content_a)
-            
-        # 1. Run scan with default min_size_kb = 10
+        """Find verified duplicate groups while respecting size and scope filters."""
+        _write_duplicate_fixture(tmp_path)
+
         result = self.command.execute(str(tmp_path), min_size_kb=10)
-        
+
         assert result["success"] is True
-        # We expect 2 duplicate groups: Group A (3 files), Group B (2 files).
-        # diff_b3 has same size but different content, so not duplicate.
-        # tiny_dup files are under 10KB, so skipped.
-        # git dir is skipped.
         assert result["total_groups"] == 2
         assert result["total_duplicate_files"] == 5
-        
-        # Calculate expected reclaimable bytes:
-        # Group A: 20KB * (3 - 1) = 40KB
-        # Group B: 30KB * (2 - 1) = 30KB
-        # Total = 70KB = 71680 bytes
         assert result["reclaimable_bytes"] == 71680
-        
-        # 2. Run scan with min_size_kb = 1 (to include tiny files)
+
         result_tiny = self.command.execute(str(tmp_path), min_size_kb=1)
+
         assert result_tiny["success"] is True
-        # Group A (3 files), Group B (2 files), Group D (2 files). Total groups = 3
         assert result_tiny["total_groups"] == 3
         assert result_tiny["total_duplicate_files"] == 7
-        
-        # Group D reclaimable: 2KB * (2 - 1) = 2KB. New total reclaimable = 72KB = 73728 bytes
         assert result_tiny["reclaimable_bytes"] == 73728
 
     def test_digest_collision_does_not_create_false_duplicate_group(

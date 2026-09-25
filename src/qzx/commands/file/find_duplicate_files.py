@@ -15,9 +15,7 @@ from ._duplicate_inventory import (
     collect_inventory,
     file_snapshot,
 )
-from ._duplicate_presentation import (
-    SPACE_ESTIMATE_NOTE, duplicate_message, duplicate_totals,
-)
+from ._duplicate_presentation import duplicate_result
 from ._duplicate_verification import verified_duplicate_groups
 
 
@@ -101,34 +99,14 @@ class FindDuplicateFilesCommand(CommandBase):
             self._format_bytes,
             snapshot_reader=self._snapshot_reader,
         )
-        copies, redundant = duplicate_totals(duplicates)
-        return {
-            "success": True,
-            "message": duplicate_message(inventory, duplicates, self._format_bytes),
-            "scan_path": root,
-            "total_groups": len(duplicates),
-            "total_duplicate_files": copies,
-            "reclaimable_bytes": redundant,
-            "reclaimable_space_readable": self._format_bytes(redundant),
-            "reclaimable_space_basis": "logical_content_bytes",
-            "physical_reclaimable_bytes": None,
-            "space_estimate_note": SPACE_ESTIMATE_NOTE,
-            "duplicate_groups": duplicates,
-            "hardlink_aliases": inventory.hardlink_aliases,
-            "read_only": True,
-            "partial": inventory.partial,
-            "scan_complete": not inventory.partial,
-            "scan_scope": {
-                "max_depth": depth, "depth_inclusive": True, "min_size_bytes": minimum,
-                "excluded_directories": sorted(EXCLUDED_DIRECTORIES),
-                "follow_directory_links": False, "hydrate_offline_files": False,
-            },
-            "scan_statistics": inventory.statistics,
-            "warnings": inventory.warnings,
-            "warning_count": inventory.warning_count,
-            "warning_counts": dict(inventory.warning_counts),
-            "warning_sample_truncated": inventory.warning_count > len(inventory.warnings),
-        }
+        return duplicate_result(
+            inventory,
+            duplicates,
+            self._format_bytes,
+            depth=depth,
+            minimum=minimum,
+            excluded=EXCLUDED_DIRECTORIES,
+        )
 
     @staticmethod
     def _failure(code, message):
