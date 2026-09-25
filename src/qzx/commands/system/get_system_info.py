@@ -5,10 +5,12 @@
 
 import getpass
 import os
-import platform
-import sys
 
-from qzx import __version__
+from qzx.commands.system._system_info_core import collect_core_info
+from qzx.commands.system._system_info_workflow import (
+    build_system_info_message,
+    execute_system_info,
+)
 from qzx.core.command_base import CommandBase
 
 
@@ -85,62 +87,7 @@ class GetSystemInfoCommand(CommandBase):
 
     def execute(self, detailed=False, include_environment=False):
         """Build the requested report without emitting side-effect output."""
-        try:
-            detailed = self._normalize_bool(detailed)
-            include_environment = self._normalize_bool(include_environment)
-        except ValueError as exc:
-            return {
-                "success": False,
-                "error_code": "invalid_boolean",
-                "error": str(exc),
-                "message": (
-                    "The detailed and include_environment values must each be "
-                    "true or false."
-                ),
-                "details": {
-                    "detailed": detailed,
-                    "include_environment": include_environment,
-                },
-            }
-
-        try:
-            info = self._collect_core_info(include_environment)
-        except (OSError, RuntimeError, ValueError) as exc:
-            return {
-                "success": False,
-                "error_code": "system_info_unavailable",
-                "error": f"{type(exc).__name__}: {exc}",
-                "message": (
-                    "QZX could not collect the portable system summary. "
-                    "Verify that the current directory and operating-system "
-                    "account information are accessible, then retry."
-                ),
-                "details": {
-                    "detailed_requested": detailed,
-                    "environment_requested": include_environment,
-                },
-            }
-
-        warnings = []
-        if detailed:
-            details, detail_warnings = self._details_collector()
-            info.update(details)
-            warnings.extend(detail_warnings)
-
-        message = self._build_message(
-            info,
-            detailed=detailed,
-            include_environment=include_environment,
-            warnings=warnings,
-        )
-        return {
-            "success": True,
-            "message": message,
-            "system_info": info,
-            "details_requested": detailed,
-            "environment_included": include_environment,
-            "warnings": warnings,
-        }
+        return execute_system_info(self, detailed, include_environment)
 
     @classmethod
     def _normalize_bool(cls, value):
@@ -150,60 +97,7 @@ class GetSystemInfoCommand(CommandBase):
         return parsed
 
     def _collect_core_info(self, include_environment):
-        system_name = platform.system()
-        machine = platform.machine()
-        info = {
-            "qzx": {"version": __version__},
-            "os": system_name,
-            "os_version": platform.version(),
-            "os_release": platform.release(),
-            "machine": machine,
-            "processor": platform.processor() or "unknown",
-            "architecture": {
-                "bits": 64 if sys.maxsize > 2**32 else 32,
-                "machine": machine,
-            },
-            "platform": sys.platform,
-            "python": {
-                "version": platform.python_version(),
-                "implementation": platform.python_implementation(),
-                "compiler": platform.python_compiler(),
-                "build": list(platform.python_build()),
-            },
-            "network": {"hostname": platform.node() or "unknown"},
-            "user": {
-                "username": self._current_username(),
-                "home_directory": os.path.expanduser("~"),
-            },
-            "environment": {
-                "current_directory": os.getcwd(),
-                "variables_included": include_environment,
-            },
-        }
-
-        if include_environment:
-            info["environment"]["environment_variables"] = (
-                self._get_important_env_vars()
-            )
-
-        if system_name == "Windows":
-            info["windows"] = {
-                "edition": platform.win32_edition(),
-                "version": list(platform.win32_ver()),
-            }
-        elif system_name == "Linux":
-            linux_info = {"libc": list(platform.libc_ver())}
-            try:
-                linux_info["distribution"] = (
-                    platform.freedesktop_os_release()
-                )
-            except OSError:
-                pass
-            info["linux"] = linux_info
-        elif system_name == "Darwin":
-            info["macos"] = {"version": list(platform.mac_ver())}
-
-        return info
+        return collect_core_info(self, include_environment)
 
     @staticmethod
     def _current_username():
@@ -250,57 +144,12 @@ class GetSystemInfoCommand(CommandBase):
         include_environment,
         warnings,
     ):
-        python_info = info["python"]
-        message = (
-            "System: {} {} on {} ({}-bit). Python {} {}. "
-            "Host: {}; user: {}; current directory: {}.".format(
-                info["os"],
-                info["os_release"],
-                info["machine"] or "unknown architecture",
-                info["architecture"]["bits"],
-                python_info["implementation"],
-                python_info["version"],
-                info["network"]["hostname"],
-                info["user"]["username"],
-                info["environment"]["current_directory"],
-            )
+        return build_system_info_message(
+            info,
+            detailed=detailed,
+            include_environment=include_environment,
+            warnings=warnings,
         )
-
-        if detailed:
-            available = [
-                label
-                for field, label in (
-                    ("memory", "RAM"),
-                    ("storage", "storage"),
-                )
-                if field in info
-            ]
-            message += " Detailed sections: {}.".format(
-                ", ".join(available) if available else "none available"
-            )
-            message += (
-                " GPU discovery stays opt-in through 'qzx getGpuInfo' "
-                "because it may invoke native vendor tools."
-            )
-        else:
-            message += (
-                " Add --detailed for RAM and storage without probing GPUs."
-            )
-
-        if include_environment:
-            count = len(
-                info["environment"].get("environment_variables", {})
-            )
-            message += f" Included {count} selected environment variables."
-        else:
-            message += (
-                " Environment-variable values were not included; add "
-                "--include-environment to request them locally."
-            )
-
-        if warnings:
-            message += " Partial-data warnings: {}.".format(len(warnings))
-        return message
 
     def _get_important_env_vars(self):
         """Return only the documented local allowlist; never expand it implicitly."""
