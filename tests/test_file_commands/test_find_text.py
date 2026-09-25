@@ -106,3 +106,22 @@ def test_execute_searches_real_file_and_recursive_directory(tmp_path):
     assert recursive["files_searched"] == 1
     assert recursive["files_with_matches"] == 1
     assert recursive["total_matches"] == 1
+
+
+def test_execute_supports_quoted_multiple_targets_with_spaces(tmp_path):
+    first_dir = tmp_path / "first folder"
+    second_dir = tmp_path / "second folder"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "first.txt"
+    second = second_dir / "second.txt"
+    first.write_text("needle\n", encoding="utf-8")
+    second.write_text("needle\nneedle\n", encoding="utf-8")
+
+    targets = f'"{first}" "{second}"'
+    result = FindTextCommand().execute("needle", targets, colored=False)
+
+    assert result["success"] is True
+    assert result["files_searched"] == 2
+    assert result["files_with_matches"] == 2
+    assert result["total_matches"] == 3
