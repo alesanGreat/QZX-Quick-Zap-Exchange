@@ -135,3 +135,13 @@ def test_usage_telemetry_respects_opt_out_without_creating_state(tmp_path):
     )
     assert status == {"scheduled": False, "reason": "disabled"}
     assert not usage_telemetry._usage_state_path(state_directory=tmp_path).exists()
+
+
+
+def test_default_interaction_snapshot_is_coarse_only():
+    snapshot = usage_telemetry.interaction_snapshot()
+
+    assert set(snapshot) == {"interactive", "foreground", "recent_input"}
+    assert isinstance(snapshot["interactive"], bool)
+    assert snapshot["foreground"] in {True, False, None}
+    assert snapshot["recent_input"] in {True, False, None}
