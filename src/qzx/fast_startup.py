@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 
 from qzx._build_info import ATTRIBUTION, VERSION
 from qzx._stdio import configure_utf8_stdio
@@ -31,7 +32,12 @@ def _telemetry_definitely_disabled(environ):
     return _normalized_bool(environ.get("DO_NOT_TRACK")) is True
 
 
-def _schedule_optional_telemetry(environ, telemetry_scheduler=None):
+def _schedule_optional_telemetry(
+    environ,
+    telemetry_scheduler=None,
+    usage_recorder=None,
+    usage_result=None,
+):
     if _telemetry_definitely_disabled(environ):
         return
     try:
@@ -48,6 +54,12 @@ def _schedule_optional_telemetry(environ, telemetry_scheduler=None):
         status = telemetry_scheduler(VERSION, environ=environ)
         if status.get("details", {}).get("notice") and telemetry_notice:
             print(telemetry_notice, file=sys.stderr)
+        if usage_result is not None:
+            if usage_recorder is None:
+                from qzx.usage_telemetry import record_command_usage_and_schedule
+
+                usage_recorder = record_command_usage_and_schedule
+            usage_recorder(VERSION, usage_result, environ=environ)
     except Exception as exc:
         if _normalized_bool(environ.get("QZX_TELEMETRY_DEBUG")) is True:
             print(
@@ -58,9 +70,10 @@ def _schedule_optional_telemetry(environ, telemetry_scheduler=None):
             )
 
 
-def main(environ=None, telemetry_scheduler=None):
+def main(environ=None, telemetry_scheduler=None, usage_recorder=None):
     """Render the clean onboarding screen, then schedule optional telemetry."""
     configure_utf8_stdio()
+    started = time.perf_counter()
     environ = os.environ if environ is None else environ
     sections = []
     if claim_first_run_attribution(environ):
@@ -76,5 +89,12 @@ def main(environ=None, telemetry_scheduler=None):
     _schedule_optional_telemetry(
         environ,
         telemetry_scheduler=telemetry_scheduler,
+        usage_recorder=usage_recorder,
+        usage_result={
+            "meta": {
+                "command": "welcome",
+                "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+            }
+        },
     )
     return 0

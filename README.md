@@ -96,7 +96,7 @@ shows a read-only project briefing workflow and a copyable instruction block for
 project mechanisms such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. The
 installed QZX catalog remains the source of truth for available commands.
 
-This source release is QZX `0.2.2.0.10` and requires Python `>=3.11`.
+This source release is QZX `0.2.2.0.11` and requires Python `>=3.11`.
 The published QZX distribution uses pip's normal installation channel while the
 product itself remains Alpha software. PyPI is authoritative for the published
 package, and `qzx version --json` is authoritative for what is installed.
@@ -117,7 +117,7 @@ above 3.11 merely to use newer syntax or simplify development; see the
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.10` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 89 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.11` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 89 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -401,16 +401,19 @@ delegating mutating commands.
 
 ## Pseudonymous CLI telemetry
 
-Telemetry is enabled by default and schedules at most one
-`version_first_run` event per QZX version and random local installation
-identifier. It sends random installation and event UUIDs, QZX/Python/OS
-metadata, architecture, virtual-environment and known-CI flags. The server also
-observes the request IP and receipt time.
+Telemetry is enabled by default and uses two deliberately low-frequency
+signals: at most one `version_first_run` event per QZX version and random local
+installation identifier, plus closed 10-day `usage_window` summaries. Usage is
+aggregated locally before transmission. A closed window contains canonical
+command names with invocation counts and accumulated/max execution time, plus
+coarse counts/days for TTY, foreground-terminal and recent-OS-input evidence.
+The server also observes the request IP and receipt time.
 
-It does not send command names, arguments, terminal input, paths, environment
-values, usernames, hostnames, file contents, process lists, or hardware serial
-numbers. Raw IPs are retained for 1,825 days. Network or storage failures never
-change a command result.
+QZX never sends command arguments, terminal input or output, paths, environment
+values, usernames, hostnames, file contents, key values, pointer coordinates,
+trajectories, clicks, raw HID events, process lists, or hardware serial numbers.
+Raw IPs are retained for 1,825 days. Network or storage failures never change a
+command result.
 
 Disable telemetry with either:
 

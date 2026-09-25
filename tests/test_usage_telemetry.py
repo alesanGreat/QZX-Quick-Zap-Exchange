@@ -30,13 +30,13 @@ def _join_usage_workers():
             worker.join(timeout=2)
 
 
-def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path, monkeypatch):
+def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path):
     activation = _prepare_activation_state(tmp_path)
-    monkeypatch.setattr(
-        usage_telemetry,
-        "interaction_snapshot",
-        lambda: {"interactive": True, "foreground": True, "recent_input": True},
-    )
+    interaction_provider = lambda: {
+        "interactive": True,
+        "foreground": True,
+        "recent_input": True,
+    }
     requests = []
 
     def opener(outgoing, timeout):
@@ -63,6 +63,7 @@ def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path, monkey
             state_directory=tmp_path,
             opener=opener,
             now=moment,
+            interaction_provider=interaction_provider,
         )
         assert status["scheduled"] is False
 
@@ -73,6 +74,7 @@ def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path, monkey
         state_directory=tmp_path,
         opener=opener,
         now=datetime(2026, 1, 11, 12, tzinfo=timezone.utc),
+        interaction_provider=interaction_provider,
     )
     assert status == {
         "scheduled": True,

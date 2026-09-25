@@ -21,20 +21,26 @@ CLI telemetry is enabled by default unless it is disabled through
 `QZX_TELEMETRY=0` or `DO_NOT_TRACK=1`. An explicit `QZX_TELEMETRY=1` takes
 precedence over `DO_NOT_TRACK=1`.
 
-QZX schedules at most one `version_first_run` event for each QZX version and
-random local installation identifier. A failed network attempt may remain
-pending and retry later, but telemetry failure never changes the success,
-failure, standard output, or structured result of the QZX command that caused
-the check.
+QZX emits two deliberately low-frequency event families:
 
-### What the CLI sends
+1. **Version activation.** At most one `version_first_run` event for each QZX
+   version and random local installation identifier.
+2. **Closed 10-day usage windows.** Command invocations are first aggregated
+   locally by UTC day. Windows are globally aligned to 10-day calendar blocks
+   anchored at 2026-01-01. After a block closes, QZX attempts to send one
+   previously unsent block when QZX next runs. An offline machine therefore
+   does not generate background traffic merely because ten days elapsed.
 
-The payload is allow-listed in `src/qzx/telemetry.py`. It contains:
+A failed network attempt may remain pending and retry later, but telemetry
+failure never changes the success, failure, standard output, structured result,
+or exit status of the QZX command that caused the check.
 
-- telemetry schema version;
-- event type (`version_first_run`);
-- random event UUID;
-- random local installation UUID;
+### Version-activation payload
+
+The allow-listed activation payload contains:
+
+- telemetry schema version and event type;
+- random event UUID and random local installation UUID;
 - QZX version;
 - Python version and implementation;
 - operating-system family, release, and kernel description;
@@ -42,28 +48,69 @@ The payload is allow-listed in `src/qzx/telemetry.py`. It contains:
 - whether QZX is running inside a virtual environment;
 - whether a known CI marker is active.
 
-The receiving server also observes the request IP address and receipt time as a
-normal consequence of receiving the HTTP request.
+### Ten-day usage payload
 
-The random installation UUID is generated locally. It is not derived from
-hardware, a Windows SID, an operating-system account, a hostname, or user
-files.
+A closed usage window contains only aggregates for commands actually observed
+during that block:
 
-### What the CLI does not send
+- canonical QZX command name;
+- invocation count;
+- accumulated execution time and maximum observed execution time;
+- total invocation count and number of active UTC days;
+- counts/days where stdin/stdout represented an interactive TTY;
+- counts/days where foreground-terminal state was observable and positive;
+- counts/days where a coarse recent-OS-input signal was available and positive;
+- QZX version used when the report was emitted and whether a known CI marker
+  was active.
 
-The CLI telemetry payload does **not** contain:
+The server computes average duration from the accumulated time and count, then
+uses these aggregates for the private Top-10 command rankings and for an
+explainable Human Evidence Score. Timing is QZX's existing command-level
+`meta.duration_ms`; commands are not instrumented individually.
 
-- QZX command names or arguments;
-- terminal input;
+The recent-input signal currently exists only where QZX can query a coarse OS
+idle/input state safely. It is intentionally treated as one weak evidence
+dimension: it does not reveal whether the input was keyboard, mouse, touch, or
+synthetic input, and it is never treated as proof by itself.
+
+### What QZX does not send
+
+Neither event family contains:
+
+- command arguments;
+- terminal input or terminal output;
 - filesystem paths;
 - environment-variable values;
 - usernames or hostnames;
 - file names or file contents;
-- process lists;
+- process names or process lists;
+- individual key values, key timing, mouse/pointer coordinates, trajectories,
+  clicks, touch coordinates, or raw HID events;
 - hardware serial numbers.
 
+The command name itself is present only in the closed 10-day aggregate described
+above. Individual command invocations never leave the machine as separate
+telemetry events.
+
+The receiving server also observes the request IP address and receipt time as a
+normal consequence of receiving the HTTP request. The random installation UUID
+is generated locally; it is not derived from hardware, a Windows SID, an
+operating-system account, a hostname, or user files.
+
+### Human Evidence Score
+
+The private administration dashboard scores **evidence**, not identity. Its
+versioned model keeps independent dimensions separate: external origin,
+interactive terminal evidence, coarse recent-input evidence, persistence across
+days, continuity across QZX versions, and an explicitly reserved independent
+verification dimension. Recurrence alone cannot promote an installation to a
+human tier, and no installation is called “verified” without an independent
+verification signal. The dashboard exposes the dimension weights and aggregate
+tier counts so the score remains auditable instead of becoming a black box.
+
 The implementation is public at
-[`src/qzx/telemetry.py`](../src/qzx/telemetry.py).
+[`src/qzx/telemetry.py`](../src/qzx/telemetry.py) and
+[`src/qzx/usage_telemetry.py`](../src/qzx/usage_telemetry.py).
 
 ## Disable CLI telemetry
 
@@ -83,20 +130,23 @@ An explicit `QZX_TELEMETRY=1` overrides `DO_NOT_TRACK=1`.
 
 ## Local telemetry state
 
-QZX keeps a small local JSON state file so it can generate a random
-installation identifier, avoid repeatedly sending the same version activation,
-and remember pending delivery state.
+QZX keeps two small local JSON state files. `telemetry.json` owns the random
+installation identifier plus version-activation delivery state.
+`usage-telemetry.json` contains only daily command aggregates, coarse
+interaction counters, sent 10-day period identifiers, and at most one exact
+pending aggregate report.
 
-Default locations are:
+Default directories are:
 
-- Windows: `%LOCALAPPDATA%\qzx\telemetry.json`
-- macOS: `~/Library/Application Support/qzx/telemetry.json`
-- Linux and other Unix-like systems: `$XDG_STATE_HOME/qzx/telemetry.json` when
-  `XDG_STATE_HOME` is set, otherwise `~/.local/state/qzx/telemetry.json`
+- Windows: `%LOCALAPPDATA%\qzx\`
+- macOS: `~/Library/Application Support/qzx/`
+- Linux and other Unix-like systems: `$XDG_STATE_HOME/qzx/` when
+  `XDG_STATE_HOME` is set, otherwise `~/.local/state/qzx/`
 
-Set `QZX_TELEMETRY_STATE_DIR` to move this local state to another directory.
-The file is ordinary local state; QZX does not bind it to a particular Windows
-installation or credential store.
+Set `QZX_TELEMETRY_STATE_DIR` to move both local files to another directory.
+They are ordinary local state; QZX does not bind them to a particular Windows
+installation or credential store. Disabling telemetry stops both recording and
+delivery; it does not require deleting the local files.
 
 ## Retention and deletion
 

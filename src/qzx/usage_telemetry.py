@@ -16,6 +16,8 @@ from __future__ import print_function
 import atexit
 import ctypes
 import json
+import time
+from contextlib import contextmanager
 import math
 import os
 import sys
@@ -36,6 +38,8 @@ _MAX_STATE_DAYS = 120
 _RECENT_INPUT_SECONDS = 300
 _THREAD_JOIN_SECONDS = 0.35
 _REQUEST_TIMEOUT_SECONDS = 1.5
+_LOCK_WAIT_SECONDS = 0.20
+_LOCK_RETRY_SECONDS = 0.01
 
 
 def _utc_day(now=None):
@@ -52,6 +56,60 @@ def _usage_state_path(environ=None, state_directory=None):
         else telemetry.telemetry_state_path(environ=environ).parent
     )
     return directory / _USAGE_STATE_FILENAME
+
+
+def _acquire_state_lock(handle):
+    if os.name == "nt":
+        import msvcrt
+
+        handle.seek(0, os.SEEK_END)
+        if handle.tell() == 0:
+            handle.write(b"\0")
+            handle.flush()
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        return ("windows", msvcrt)
+
+    import fcntl
+
+    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    return ("posix", fcntl)
+
+
+def _release_state_lock(handle, backend):
+    kind, module = backend
+    if kind == "windows":
+        handle.seek(0)
+        module.locking(handle.fileno(), module.LK_UNLCK, 1)
+    else:
+        module.flock(handle.fileno(), module.LOCK_UN)
+
+
+@contextmanager
+def _state_lock(path):
+    """Bound concurrent aggregate updates without delaying a QZX command."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = path.with_name(path.name + ".lock")
+    handle = lock_path.open("a+b")
+    backend = None
+    deadline = time.monotonic() + _LOCK_WAIT_SECONDS
+    try:
+        while True:
+            try:
+                backend = _acquire_state_lock(handle)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("QZX usage telemetry state is busy.")
+                time.sleep(_LOCK_RETRY_SECONDS)
+        yield
+    finally:
+        if backend is not None:
+            try:
+                _release_state_lock(handle, backend)
+            except OSError:
+                pass
+        handle.close()
 
 
 def _new_usage_state(installation_id):
@@ -382,22 +440,29 @@ def _build_report(state, qzx_version, environ, today):
 
 
 def _mark_report_sent(state_path, event):
-    state = _load_usage_state(state_path, event["installation_id"])
-    pending = state.get("pending_report")
-    if not isinstance(pending, dict) or pending.get("event_id") != event["event_id"]:
+    try:
+        with _state_lock(state_path):
+            state = _load_usage_state(state_path, event["installation_id"])
+            pending = state.get("pending_report")
+            if not isinstance(pending, dict) or pending.get("event_id") != event["event_id"]:
+                return
+            period_key = str(event["window_start"])
+            if period_key not in state["sent_periods"]:
+                state["sent_periods"].append(period_key)
+            start = date.fromisoformat(event["window_start"])
+            end = date.fromisoformat(event["window_end"])
+            state["days"] = {
+                key: value
+                for key, value in state.get("days", {}).items()
+                if _safe_day(key) is None or not (start <= _safe_day(key) <= end)
+            }
+            state["pending_report"] = None
+            _write_usage_state(state_path, state)
+    except TimeoutError:
+        # The server already deduplicates event/window retries. If another QZX
+        # process owns the short local lock, leave the exact pending report for
+        # a later invocation rather than blocking or losing concurrent counts.
         return
-    period_key = str(event["window_start"])
-    if period_key not in state["sent_periods"]:
-        state["sent_periods"].append(period_key)
-    start = date.fromisoformat(event["window_start"])
-    end = date.fromisoformat(event["window_end"])
-    state["days"] = {
-        key: value
-        for key, value in state.get("days", {}).items()
-        if _safe_day(key) is None or not (start <= _safe_day(key) <= end)
-    }
-    state["pending_report"] = None
-    _write_usage_state(state_path, state)
 
 
 def send_usage_report(
@@ -446,6 +511,7 @@ def record_command_usage_and_schedule(
     endpoint=telemetry.TELEMETRY_ENDPOINT,
     opener=None,
     now=None,
+    interaction_provider=None,
 ):
     """Record one known-command aggregate and schedule one closed 10-day report."""
     environ = os.environ if environ is None else environ
@@ -457,13 +523,19 @@ def record_command_usage_and_schedule(
 
     installation_id = _activation_installation_id(environ, state_directory)
     state_path = _usage_state_path(environ, state_directory)
-    state = _load_usage_state(state_path, installation_id)
     current_day = _utc_day(now)
     command, duration_ms = command_result
-    _record_day(state, current_day, command, duration_ms, interaction_snapshot())
-    _prune_state(state, current_day)
-    event = _build_report(state, qzx_version, environ, current_day)
-    _write_usage_state(state_path, state)
+    interaction_provider = interaction_snapshot if interaction_provider is None else interaction_provider
+    interaction = interaction_provider()
+    try:
+        with _state_lock(state_path):
+            state = _load_usage_state(state_path, installation_id)
+            _record_day(state, current_day, command, duration_ms, interaction)
+            _prune_state(state, current_day)
+            event = _build_report(state, qzx_version, environ, current_day)
+            _write_usage_state(state_path, state)
+    except TimeoutError:
+        return {"scheduled": False, "reason": "state_busy"}
     if event is None:
         return {"scheduled": False, "reason": "window_open"}
     _start_worker(event, state_path, endpoint, opener, environ)

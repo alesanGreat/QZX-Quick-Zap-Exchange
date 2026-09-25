@@ -32,9 +32,11 @@ TELEMETRY_POLICY_URL = (
     "blob/main/docs/telemetry.md"
 )
 TELEMETRY_NOTICE = (
-    "QZX telemetry: one version-activation event sends a random installation "
-    "ID, IP observed by the server, and QZX/Python/OS details; never commands, "
-    "paths, usernames, hostnames, or file content. Disable with "
+    "QZX telemetry: version activation plus privacy-bounded 10-day usage "
+    "summaries may send a random installation ID, server-observed IP, "
+    "QZX/Python/OS details, canonical command counts/timing aggregates, and "
+    "coarse interaction evidence; never arguments, terminal input/output, "
+    "paths, key values, pointer coordinates, or file content. Disable with "
     "QZX_TELEMETRY=0. Details: {policy_url}"
 ).format(policy_url=TELEMETRY_POLICY_URL)
 
