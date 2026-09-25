@@ -93,33 +93,7 @@ class ScaffoldJavaCommand(CommandBase):
             )
             if not result["success"]:
                 return result
-            project_path = result["project_path"]
-
-            package_path = f"com/example/{project_name}"
-            package_dir_path = package_path.replace('/', os.sep)
-
-            self._create_pom_xml(project_path, project_name, result)
-            self._create_source_directory(project_path, project_name, package_dir_path, result)
-            if with_tests:
-                self._create_test_directory(project_path, project_name, package_dir_path, result)
-            self._create_readme(project_path, project_name, result)
-            self._create_gitignore(project_path, result)
-
-            tests_msg = "with test scaffolding" if with_tests else "without tests"
-
-            message = (
-                f"Successfully created Java project '{project_name}' at {project_path} "
-                f"{tests_msg}. "
-                f"Created {len(result['files_created'])} files and directories. "
-                f"Use 'cd {project_path} && mvn compile' to build the project."
-            )
-
-            if not self._is_maven_installed():
-                message += " Note: Maven doesn't appear to be installed. "
-                message += "Install from https://maven.apache.org/install.html to build the project."
-
-            result["message"] = message
-            return result
+            return self._populate_project(project_name, with_tests, result)
 
         except Exception as e:
             return {
@@ -128,6 +102,44 @@ class ScaffoldJavaCommand(CommandBase):
                 "message": f"Failed to create Java project scaffolding: {str(e)}",
                 "project_name": project_name
             }
+
+    def _populate_project(self, project_name, with_tests, result):
+        """Create Java project files and finalize the successful result."""
+        project_path = result["project_path"]
+        package_path = f"com/example/{project_name}"
+        package_dir_path = package_path.replace('/', os.sep)
+
+        self._create_pom_xml(project_path, project_name, result)
+        self._create_source_directory(
+            project_path,
+            project_name,
+            package_dir_path,
+            result,
+        )
+        if with_tests:
+            self._create_test_directory(
+                project_path,
+                project_name,
+                package_dir_path,
+                result,
+            )
+        self._create_readme(project_path, project_name, result)
+        self._create_gitignore(project_path, result)
+
+        tests_msg = "with test scaffolding" if with_tests else "without tests"
+        message = (
+            f"Successfully created Java project '{project_name}' at {project_path} "
+            f"{tests_msg}. "
+            f"Created {len(result['files_created'])} files and directories. "
+            f"Use 'cd {project_path} && mvn compile' to build the project."
+        )
+        if not self._is_maven_installed():
+            message += " Note: Maven doesn't appear to be installed. "
+            message += (
+                "Install from https://maven.apache.org/install.html to build the project."
+            )
+        result["message"] = message
+        return result
 
     def _create_pom_xml(self, project_path, project_name, result):
         pom_path = os.path.join(project_path, 'pom.xml')
