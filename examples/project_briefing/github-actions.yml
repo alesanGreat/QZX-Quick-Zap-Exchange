@@ -1,0 +1,45 @@
+# Copy to .github/workflows/qzx-project-briefing.yml in your own repository.
+# Also copy project_briefing.py to .github/qzx/project_briefing.py.
+# Manual opt-in: the artifact contains project paths and observations.
+name: QZX project briefing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  briefing:
+    runs-on: ubuntu-24.04
+    env:
+      QZX_TELEMETRY: '0'
+      DO_NOT_TRACK: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.13'
+      - name: Install the QZX version verified for this example
+        run: >-
+          python -I -m pip install --only-binary=:all: 'qzx==0.2.2.0.9'
+      - name: Inspect the checked-out project without running its workflows
+        id: briefing
+        continue-on-error: true
+        run: >-
+          python -I .github/qzx/project_briefing.py "$GITHUB_WORKSPACE"
+          --output "$RUNNER_TEMP/qzx-project-briefing"
+      - name: Preserve the report and raw evidence, including diagnostic failures
+        if: ${{ always() && steps.briefing.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qzx-project-briefing
+          path: ${{ runner.temp }}/qzx-project-briefing/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Keep failed inspections visibly failed
+        if: ${{ always() && steps.briefing.outcome != 'success' }}
+        run: exit 1

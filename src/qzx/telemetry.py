@@ -277,36 +277,12 @@ def send_event(event, state_path, endpoint=TELEMETRY_ENDPOINT, opener=None,
     # On synced Windows workspaces that can take several seconds, so keep it
     # inside the already-backgrounded network path instead of charging every
     # QZX invocation for a transport it will usually never need.
-    from urllib import request as urllib_request
-
-    opener = urllib_request.urlopen if opener is None else opener
-    payload = json.dumps(event, separators=(",", ":"), sort_keys=True).encode(
-        "utf-8"
-    )
-    outgoing = urllib_request.Request(
-        endpoint,
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "User-Agent": "qzx-telemetry/1",
-        },
-        method="POST",
-    )
-
     try:
-        response = opener(outgoing, timeout=timeout)
-        try:
-            status = response.getcode()
-        finally:
-            close = getattr(response, "close", None)
-            if close:
-                close()
+        outgoing, default_opener = _outgoing_request(event, endpoint)
+        transport = default_opener if opener is None else opener
+        status = _response_status(transport(outgoing, timeout=timeout))
         if 200 <= status < 300:
-            _mark_sent(
-                state_path,
-                event["qzx_version"],
-                event["event_id"],
-            )
+            _mark_sent(state_path, event["qzx_version"], event["event_id"])
             return {
                 "success": True,
                 "message": "Telemetry version activation accepted.",
@@ -323,63 +299,51 @@ def send_event(event, state_path, endpoint=TELEMETRY_ENDPOINT, opener=None,
     }
 
 
+def _outgoing_request(event, endpoint):
+    from urllib import request as urllib_request
+
+    payload = json.dumps(event, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    outgoing = urllib_request.Request(
+        endpoint,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "qzx-telemetry/1",
+        },
+        method="POST",
+    )
+    return outgoing, urllib_request.urlopen
+
+
+def _response_status(response):
+    try:
+        return response.getcode()
+    finally:
+        close = getattr(response, "close", None)
+        if close:
+            close()
+
+
 def schedule_version_telemetry(qzx_version, environ=None, state_directory=None,
                                endpoint=TELEMETRY_ENDPOINT, opener=None):
     """Schedule a non-blocking activation event once for each QZX version."""
     environ = os.environ if environ is None else environ
     if not telemetry_enabled(environ):
-        return {
-            "success": True,
-            "message": "QZX telemetry is disabled.",
-            "details": {"scheduled": False, "reason": "disabled"},
-        }
+        return _unscheduled_status("QZX telemetry is disabled.", "disabled")
 
     try:
-        state_path = telemetry_state_path(environ, state_directory)
-        state = _load_state(state_path)
-        version = str(qzx_version)[:32]
-        if version in state["sent_versions"]:
-            return {
-                "success": True,
-                "message": "This QZX version activation was already reported.",
-                "details": {"scheduled": False, "reason": "already_sent"},
-            }
-
-        event_id = state["pending_versions"].get(version)
-        if not event_id:
-            event_id = str(uuid.uuid4())
-            state["pending_versions"][version] = event_id
-
-        show_notice = not state["notice_shown"]
-        state["notice_shown"] = True
-        _write_state(state_path, state)
-        event = build_event(
-            version,
-            state["installation_id"],
-            event_id,
-            environ,
+        prepared = _prepare_activation(qzx_version, environ, state_directory)
+        if prepared["status"] is not None:
+            return prepared["status"]
+        _start_worker(
+            prepared["event"], prepared["state_path"], endpoint, opener, environ,
         )
-
-        worker = threading.Thread(
-            target=send_event,
-            kwargs={
-                "event": event,
-                "state_path": state_path,
-                "endpoint": endpoint,
-                "opener": opener,
-                "environ": environ,
-            },
-            name="qzx-telemetry",
-        )
-        worker.daemon = True
-        worker.start()
-        atexit.register(worker.join, _THREAD_JOIN_SECONDS)
         return {
             "success": True,
             "message": "QZX version activation telemetry was scheduled.",
             "details": {
                 "scheduled": True,
-                "notice": show_notice,
+                "notice": prepared["show_notice"],
                 "policy_url": TELEMETRY_POLICY_URL,
             },
         }
@@ -390,3 +354,54 @@ def schedule_version_telemetry(qzx_version, environ=None, state_directory=None,
             "message": "Telemetry could not be scheduled; QZX is unaffected.",
             "details": {"scheduled": False, "reason": "local_state_error"},
         }
+
+
+def _unscheduled_status(message, reason):
+    return {
+        "success": True,
+        "message": message,
+        "details": {"scheduled": False, "reason": reason},
+    }
+
+
+def _prepare_activation(qzx_version, environ, state_directory):
+    state_path = telemetry_state_path(environ, state_directory)
+    state = _load_state(state_path)
+    version = str(qzx_version)[:32]
+    if version in state["sent_versions"]:
+        return {
+            "status": _unscheduled_status(
+                "This QZX version activation was already reported.",
+                "already_sent",
+            )
+        }
+    event_id = state["pending_versions"].get(version)
+    if not event_id:
+        event_id = str(uuid.uuid4())
+        state["pending_versions"][version] = event_id
+    show_notice = not state["notice_shown"]
+    state["notice_shown"] = True
+    _write_state(state_path, state)
+    return {
+        "status": None,
+        "state_path": state_path,
+        "show_notice": show_notice,
+        "event": build_event(version, state["installation_id"], event_id, environ),
+    }
+
+
+def _start_worker(event, state_path, endpoint, opener, environ):
+    worker = threading.Thread(
+        target=send_event,
+        kwargs={
+            "event": event,
+            "state_path": state_path,
+            "endpoint": endpoint,
+            "opener": opener,
+            "environ": environ,
+        },
+        name="qzx-telemetry",
+    )
+    worker.daemon = True
+    worker.start()
+    atexit.register(worker.join, _THREAD_JOIN_SECONDS)

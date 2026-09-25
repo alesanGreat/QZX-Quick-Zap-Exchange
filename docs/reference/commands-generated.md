@@ -107,7 +107,7 @@ Every executable command has a fail-closed lifecycle assessment. Planning and pr
 
 ### addPythonDocstrings
 
-Command to generate documentation templates for Python code
+Preview or add docstring templates to one Python source file.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -130,24 +130,13 @@ Command to generate documentation templates for Python code
   Back up myfile.py, then replace existing docstrings
 
 **Details:**
-Generates documentation templates for Python code
-
-Args:
-    file_path (str): Path to the Python file to process
-    style (str, optional): Documentation style (google, numpy, sphinx)
-    overwrite (bool, optional): Whether to overwrite existing docstrings
-    dry_run (bool, optional): Preview changes without modifying the file
-
-Returns:
-    Dictionary with the result of the operation
+Execute the command and return its structured result.
 
 ---
 
 ### analyzeComplexity
 
-Command to analyze code complexity metrics for development environments
-
-This version uses the centralized recursive file finder utility.
+Analyze complexity metrics for supported source files.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -167,22 +156,13 @@ This version uses the centralized recursive file finder utility.
   Generate a summary report analyzing up to 2 levels deep
 
 **Details:**
-Analyzes code complexity of files or directories
-
-Args:
-    file_path: Path to file or directory to analyze
-    recursive: Whether to recursively analyze directories: -r/--recursive for unlimited, -rN/--recursiveN for N levels
-    detail_level: Report detail level (detailed or summary)
-
-Returns:
-    Analysis results as string
+Execute the command and return its structured result.
 
 ---
 
 ### auditRepository
 
-Command to audit a repository for hardcoded secrets, large files, duplicate assets,
-broken symlinks, .gitignore issues, license compliance, and basic vulnerability patterns.
+Audit a repository for common security and quality problems.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -198,13 +178,13 @@ broken symlinks, .gitignore issues, license compliance, and basic vulnerability 
   Audit project at specified path
 
 **Details:**
-Executes the repository audit
+Execute the repository audit.
 
 ---
 
 ### cleanDevelopmentArtifacts
 
-Identify and optionally remove known development-generated directories.
+Identify and optionally remove known generated directories.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -222,21 +202,13 @@ Identify and optionally remove known development-generated directories.
   Back up the current directory, then remove every matched generated directory
 
 **Details:**
-Scan for generated development directories and optionally remove them.
-
-Args:
-    scan_path (str): The starting directory path
-    dry_run (bool): Whether to skip actual deletion
-    max_depth (int): Traversal depth limit
-
-Returns:
-    Dictionary with results and details
+Scan for generated directories and optionally remove them.
 
 ---
 
 ### compareFiles
 
-Compare two files and report their differences.
+Compare text line-by-line and binary files by exact bytes and SHA-256.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -259,16 +231,7 @@ Compare two files and report their differences.
   Check whether two binary files are exactly equal by bytes and SHA-256
 
 **Details:**
-Compare two files and report their differences.
-
-Args:
-    file1: Path to the first file.
-    file2: Path to the second file.
-    mode: Comparison mode (full, summary, percent).
-    max_bytes: Maximum allowed size of each file in bytes.
-
-Returns:
-    The comparison result in the requested format.
+Return a bounded comparison in the requested mode.
 
 ---
 
@@ -302,7 +265,7 @@ Promote one reviewed artifact to a remote path over SSH.
   Backs up the artifact, then performs a verified deployment
 
 **Details:**
-Build a deployment plan and optionally execute it.
+Execute the command and return its structured result.
 
 ---
 
@@ -324,17 +287,13 @@ Inspect project health without executing project-owned scripts.
   Diagnose the project at the specified path
 
 **Details:**
-Inspect a project and separate observations from unexecuted checks.
+Execute the command and return its structured result.
 
 ---
 
 ### findUnusedCode
 
 Identify review candidates, not definitive dead code.
-
-Dynamic dispatch, framework discovery, and reflection cannot always be
-proven through source tokens, so the command deliberately reports
-candidates instead of claiming that deletion is safe.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -352,18 +311,11 @@ candidates instead of claiming that deletion is safe.
 **Details:**
 Find definitions with no statically visible references.
 
-Args:
-    scan_path (str): Path to scan
-
-Returns:
-    Dictionary with review candidates and analysis details.
-
 ---
 
 ### formatCode
 
-Command to format source code files by auto-detecting the language
-and invoking the matching formatter tool.
+Auto-detect source languages and invoke their formatter.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -385,21 +337,13 @@ and invoking the matching formatter tool.
   Dry-run format to see which files would change
 
 **Details:**
-Formats source code files by auto-detecting language and invoking the appropriate formatter.
-
-Args:
-    path (str): File or directory to format
-    language (str): Optional language override
-    dry_run (str): If 'true', only check without writing changes
-
-Returns:
-    dict: Result summary
+Format or check selected source files.
 
 ---
 
 ### getGitStatus
 
-Command to retrieve comprehensive, structured information about a Git repository
+Retrieve comprehensive, structured Git repository information.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -415,13 +359,7 @@ Command to retrieve comprehensive, structured information about a Git repository
   Show git status for the repository at C:/some/path
 
 **Details:**
-Retrieves Git repository details and status
-
-Args:
-    repo_path (str): The path to check
-
-Returns:
-    Dictionary containing Git status data
+Retrieve Git details for ``repo_path`` without mutating it.
 
 ---
 
@@ -449,7 +387,7 @@ Build a deterministic project tree without following descendant links.
   Show at most 500 directory/link entries while excluding two names
 
 **Details:**
-Return one bounded tree model and render it without rescanning.
+Execute the command and return its structured result.
 
 ---
 
@@ -475,14 +413,7 @@ Describe bootstrap work without writing files or running tools.
   Detect one unambiguous stack from existing manifests
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -511,13 +442,13 @@ Prepare version metadata without committing, tagging, or publishing.
   Back up a clean project, then atomically prepare an explicit Python pre-release without committing or tagging
 
 **Details:**
-Build a deterministic plan and optionally apply its metadata edits.
+Execute the command and return its structured result.
 
 ---
 
 ### projectLanguages
 
-Build a trustworthy, AI-ready profile of a project's code languages.
+Build a trustworthy, AI-ready profile of project languages.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -533,11 +464,7 @@ Build a trustworthy, AI-ready profile of a project's code languages.
   Profile languages in the src/ directory
 
 **Details:**
-Analyze a project in one pass and return language composition metrics.
-
-Percentages for the main composition are based on source code lines.
-If all detected source files are empty, the command falls back to bytes
-and then file counts while reporting that basis explicitly.
+Execute the command and return its structured result.
 
 ---
 
@@ -727,15 +654,7 @@ Creates a new JavaScript project with standard directory structure and basic fil
   Creates a new JavaScript project with Jest tests in the specified directory
 
 **Details:**
-Creates a basic scaffolding for a JavaScript program
-
-Args:
-    project_name (str): Name of the JavaScript project to create
-    path (str): Path where to create the project
-    with_tests (str): Whether to include test scaffolding
-
-Returns:
-    Dictionary with the operation results and status
+Create a runnable project, validating options before any file writes.
 
 ---
 
@@ -821,16 +740,7 @@ Creates a new Python project with standard directory structure and basic files.
   Creates a new Python project named "api_service" without tests in the current directory
 
 **Details:**
-Creates a basic scaffolding for a Python program
-
-Args:
-    project_name (str): Name of the Python project to create
-    path (str): Path where to create the project
-    with_tests (str): Whether to include test scaffolding
-    create_venv (str): Whether to create a virtual environment
-
-Returns:
-    Dictionary with the operation results and status
+Generate files and actionable next steps, without implicit installation.
 
 ---
 
@@ -892,21 +802,13 @@ Creates a new TypeScript project with standard directory structure and basic fil
   Creates a new TypeScript project with Jest/ts-jest tests in the specified directory
 
 **Details:**
-Creates a basic scaffolding for a TypeScript program
-
-Args:
-    project_name (str): Name of the TypeScript project to create
-    path (str): Path where to create the project
-    with_tests (str): Whether to include test scaffolding
-
-Returns:
-    Dictionary with the operation results and status
+Create a runnable project, validating options before any file writes.
 
 ---
 
 ### traceCircularImports
 
-Command to detect circular import dependencies in Python projects.
+Detect circular dependencies between Python modules.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -922,19 +824,13 @@ Command to detect circular import dependencies in Python projects.
   Search for circular imports specifically inside src/qzx
 
 **Details:**
-Executes circular imports detection
-
-Args:
-    scan_path (str): Path to scan
-
-Returns:
-    Dictionary with circular import analysis details
+Analyze Python imports below ``scan_path``.
 
 ---
 
 ### traceEnvVar
 
-Command to trace environment variable usage across files, templates, and codebases.
+Trace environment-variable usage across supported project files.
 
 **Category:** development
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -952,15 +848,7 @@ Command to trace environment variable usage across files, templates, and codebas
   Trace usage of STRIPE_API_KEY in C:/my-project
 
 **Details:**
-Executes the trace environment variable diagnostic
-
-Args:
-    var_name (str): Name of environment variable
-    project_path (str): Path to search
-    recursive (bool/str): Recursive search setting
-
-Returns:
-    Dictionary with trace diagnostic details
+Return masked definitions and bounded source references.
 
 ---
 
@@ -988,14 +876,7 @@ Describe cleanup candidates without changing the audited workspace.
   Save a plan that repairWorkspace can validate later
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -1120,14 +1001,7 @@ Count text lines without loading the complete file into memory.
   Count the resolved target of an explicitly reviewed link
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -1205,14 +1079,7 @@ Delete a file, symlink, or directory after a safety backup.
   Back up and delete a directory and all descendants
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -1239,14 +1106,7 @@ Identify one regular file without trusting its extension alone.
   Identify the resolved target of an explicitly reviewed link
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -1350,7 +1210,7 @@ Returns:
 
 ### findDuplicateFiles
 
-Command to recursively identify duplicate files inside a folder to optimize disk usage.
+Identify duplicate content without treating hardlink aliases as extra copies.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -1368,15 +1228,7 @@ Command to recursively identify duplicate files inside a folder to optimize disk
   Search for all duplicate files of any size inside C:/my-assets
 
 **Details:**
-Locates duplicate files
-
-Args:
-    scan_path (str): Root folder to scan
-    min_size_kb (str/int): Size threshold to filter files
-    max_depth (str/int): Folder depth limit
-
-Returns:
-    Dictionary containing duplicate file lists and disk reclaim details
+Scan depth 0..64 inclusively; return useful partial evidence explicitly.
 
 ---
 
@@ -1411,7 +1263,7 @@ Search for files without mixing in directory listings or content grep.
   Find recently modified log files in one directory
 
 **Details:**
-Find files and return complete, consistently structured metadata.
+Stream metadata, retain only the requested view, and expose coverage gaps.
 
 ---
 
@@ -1607,14 +1459,7 @@ Inspect one regular file with bounded, distributed sampling.
   Analyze the resolved target of an explicitly reviewed link
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -1720,33 +1565,34 @@ Move a complete filesystem entry and report its committed state.
 
 ### readFile
 
-Command to read and display the content of a file
+Read one regular file without silently replacing undecodable bytes.
 
 **Category:** file
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
 **Description:** Reads and displays the content of a file
 
 **Parameters:**
-- `file_path`: Path to the file to read - Required
-- `max_lines`: Maximum number of lines to read (if not provided, reads the entire file) - Optional
+- `file_path`: Path to the text file to read - Required
+- `max_lines`: Maximum lines per page; omitted means no line limit within max_bytes. Zero reads no content. - Optional
+- `max_bytes`: Source bytes per page (1 to 16777216; default 65536), plus a four-byte encoding probe. Split characters remain for the next page. - Optional (default: `65536`)
+- `offset`: Zero-based source byte offset. Use the exact next_read values to continue without repeating or losing text. - Optional (default: `0`)
+- `encoding`: auto detects a Unicode BOM, otherwise requires UTF-8. Explicit UTF-8/16/32, ASCII, Latin-1, CP1252, CP437 and CP850 are supported; decoding is strict. - Optional (default: `auto`)
+- `expected_fingerprint`: Optional stat fingerprint token from next_read. Rejects ordinary file changes between pages; this is not a content hash or immutable snapshot. - Optional
 
 **Examples:**
 - `qzx readFile myfile.txt`
-  Read the entire content of myfile.txt
-- `qzx readFile myfile.txt 10`
-  Read the first 10 lines of myfile.txt
+  Read up to 64 KiB of text, preserving Unicode and original line endings
+- `qzx readFile myfile.txt 10 --json`
+  Read the first ten lines within the byte budget and inspect next_read
 - `qzx readFile "path with spaces/myfile.txt"`
   Read a file with spaces in the path
+- `qzx readFile application.log --max-bytes 4096 --offset 0 --json`
+  Start a bounded log-reading workflow; continue with the returned next_read values
+- `qzx readFile legacy.txt --encoding cp1252 --json`
+  Read a known Windows-1252 file without replacing accented characters
 
 **Details:**
-Reads and displays the content of a file
-
-Args:
-    file_path (str): Path to the file to read
-    max_lines (int, optional): Maximum number of lines to read. If not provided, reads the entire file.
-
-Returns:
-    Dictionary with file content and metadata
+Return one lossless page and explicit continuation metadata.
 
 ---
 
@@ -1772,14 +1618,7 @@ Apply a reviewed cleanup plan through staging and revalidation.
   Back up the workspace, revalidate both actions, then apply them
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -1822,7 +1661,7 @@ Returns:
 
 ### checkDns
 
-Command to inspect and return all common DNS records for a specific domain name.
+Inspect common DNS records for one domain name.
 
 **Category:** network
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -1836,13 +1675,7 @@ Command to inspect and return all common DNS records for a specific domain name.
   Get all DNS records for google.com
 
 **Details:**
-Queries DNS records for a domain
-
-Args:
-    domain (str): Domain to query
-
-Returns:
-    Dictionary with resolved DNS records
+Query the supported DNS record types and return a stable result.
 
 ---
 
@@ -1865,20 +1698,13 @@ Fetch, decode, and analyze a server certificate.
   Inspect an expired certificate while reporting the trust failure
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
 ### checkUrlStatus
 
-Command to verify connectivity and retrieve metadata for a target URL
+Verify connectivity and retrieve metadata for a target URL.
 
 **Category:** network
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -1895,14 +1721,7 @@ Command to verify connectivity and retrieve metadata for a target URL
   Check a URL with a custom 3-second timeout
 
 **Details:**
-Executes an HTTP request to check URL status
-
-Args:
-    url (str): Target URL
-    timeout (float/str, optional): Connection timeout in seconds
-
-Returns:
-    Dictionary with response metrics, headers, and online status
+Execute one bounded HTTP request and return transport evidence.
 
 ---
 
@@ -2000,7 +1819,7 @@ None
   Display QZX product and attribution details
 
 **Details:**
-Return the canonical installed-package identity.
+Return identity and reachable next steps without opening a browser.
 
 ---
 
@@ -2029,7 +1848,7 @@ Locate an executable and run it only after explicit opt-in.
 
 ### checkSystemPath
 
-Command to inspect PATH environment variable health, check for invalid or duplicate directories, and resolve command conflicts.
+Inspect PATH directories and optional executable resolution order.
 
 **Category:** system
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -2045,13 +1864,7 @@ Command to inspect PATH environment variable health, check for invalid or duplic
   Diagnose PATH and list all physical locations of python executables, in order of execution precedence
 
 **Details:**
-Diagnoses PATH and optional binary locations
-
-Args:
-    binary_name (str, optional): Name of executable to find
-
-Returns:
-    Dictionary with PATH analysis and executable locations
+Diagnose PATH entries and optionally locate matching executables.
 
 ---
 
@@ -2100,7 +1913,7 @@ Combine capacity, large-file, and duplicate evidence into one workflow.
   Run a faster capacity and large-file diagnosis without hashing duplicates
 
 **Details:**
-Run a bounded, read-only storage diagnosis for one directory tree.
+Run a bounded, read-only diagnosis without upgrading partial evidence.
 
 ---
 
@@ -2283,7 +2096,7 @@ Run one exact smartctl binary with bounded time and no shell.
 
 ### getDiskSpace
 
-Command to get information about disk space usage
+Command to get information about disk space usage.
 
 **Category:** system
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -2301,13 +2114,7 @@ Command to get information about disk space usage
   Get information about the /home partition (Linux/Mac)
 
 **Details:**
-Gets disk space information for the specified path or all disks
-
-Args:
-    path (str, optional): Path to get information from. If not provided, all disks will be shown.
-
-Returns:
-    Dictionary with disk information and success status
+Get disk information for one path or all visible partitions.
 
 ---
 
@@ -2617,14 +2424,7 @@ Inspect active and stopped services through the native manager.
   List only active running system services
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -2653,14 +2453,7 @@ Execute one read-only diagnostic with a strict argument grammar.
   List connections numerically without name resolution
 
 **Details:**
-Method that executes the command
-
-Args:
-    *args: Positional arguments
-    **kwargs: Keyword arguments
-
-Returns:
-    The result of the command execution
+Execute the command and return its structured result.
 
 ---
 
@@ -2707,7 +2500,7 @@ Command to run a comprehensive diagnostic of the host operating system.
   Run quick essential check
 
 **Details:**
-Executes the system diagnostic check
+Execute the system diagnostic check.
 
 ---
 

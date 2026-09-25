@@ -7,28 +7,25 @@ from qzx.core.command_base import CommandBase
 
 
 class CheckDnsCommand(CommandBase):
-    """
-    Command to inspect and return all common DNS records for a specific domain name.
-    """
-    
+    """Inspect common DNS records for one domain name."""
+
     name = "checkDns"
-    description = (
-        "Queries A, AAAA, MX, TXT, NS, and CNAME DNS records for a given domain"
-    )
+    description = "Queries A, AAAA, MX, TXT, NS, and CNAME DNS records for a given domain"
     category = "network"
-    
+    _record_types = ("A", "AAAA", "MX", "TXT", "NS", "CNAME")
+
     parameters = [
         {
-            'name': 'domain',
-            'description': 'Domain name to query (e.g. google.com)',
-            'required': True
+            "name": "domain",
+            "description": "Domain name to query (e.g. google.com)",
+            "required": True,
         }
     ]
-    
+
     examples = [
         {
-            'command': 'qzx checkDns google.com',
-            'description': 'Get all DNS records for google.com'
+            "command": "qzx checkDns google.com",
+            "description": "Get all DNS records for google.com",
         }
     ]
 
@@ -36,201 +33,222 @@ class CheckDnsCommand(CommandBase):
         self._resolver_factory = resolver_factory
 
     def execute(self, domain):
-        """
-        Queries DNS records for a domain
-        
-        Args:
-            domain (str): Domain to query
-            
-        Returns:
-            Dictionary with resolved DNS records
-        """
+        """Query the supported DNS record types and return a stable result."""
         domain = str(domain).strip().rstrip(".").lower()
         if not domain:
-            return {
-                "success": False,
-                "error_code": "invalid_domain",
-                "error": "Domain name must not be empty.",
-                "message": "Domain name must not be empty.",
-                "remediation": "Pass a DNS name such as example.com.",
-            }
+            return self._invalid_domain("Domain name must not be empty.")
 
+        modules, error = self._dns_modules()
+        if error:
+            return error
+        dns_exception, dns_name, dns_resolver = modules
+
+        ascii_domain, error = self._validated_domain(domain, dns_name)
+        if error:
+            return error
+        resolver, error = self._resolver(dns_exception, dns_resolver)
+        if error:
+            return error
+        return self._query_all(
+            ascii_domain,
+            resolver,
+            dns_exception,
+            dns_name,
+            dns_resolver,
+        )
+
+    @staticmethod
+    def _dns_modules():
         try:
             import dns.exception
             import dns.name
             import dns.resolver
         except ImportError:
-            return {
+            return None, {
                 "success": False,
                 "error_code": "missing_dependency",
                 "error": "The required 'dnspython' package is not installed.",
                 "remediation": "Reinstall QZX with its required dependencies.",
-                "details": {
-                    "dependency": "dnspython",
-                },
+                "details": {"dependency": "dnspython"},
                 "message": (
-                    "DNS inspection requires the maintained 'dnspython' "
-                    "dependency. Reinstall QZX dependencies and try again."
+                    "DNS inspection requires the maintained 'dnspython' dependency. "
+                    "Reinstall QZX dependencies and try again."
                 ),
             }
+        return (dns.exception, dns.name, dns.resolver), None
 
+    def _validated_domain(self, domain, dns_name):
         try:
             ascii_domain = domain.encode("idna").decode("ascii")
-            dns.name.from_text(ascii_domain + ".")
+            dns_name.from_text(ascii_domain + ".")
         except (
             UnicodeError,
-            dns.name.BadEscape,
-            dns.name.EmptyLabel,
-            dns.name.NameTooLong,
+            dns_name.BadEscape,
+            dns_name.EmptyLabel,
+            dns_name.NameTooLong,
         ):
-            return {
-                "success": False,
-                "error_code": "invalid_domain",
-                "error": f"'{domain}' is not a valid DNS name.",
-                "message": (
-                    f"Failed to inspect DNS: '{domain}' is not a valid DNS name."
-                ),
-                "remediation": "Pass a valid DNS name such as example.com.",
-            }
+            return None, self._invalid_domain(
+                f"'{domain}' is not a valid DNS name.",
+                message=f"Failed to inspect DNS: '{domain}' is not a valid DNS name.",
+            )
+        return ascii_domain, None
 
-        record_types = ("A", "AAAA", "MX", "TXT", "NS", "CNAME")
-        results = {
-            record_type: []
-            for record_type in record_types
-        }
-        record_status = {
-            record_type: "pending"
-            for record_type in record_types
-        }
-        ttl = {
-            record_type: None
-            for record_type in record_types
-        }
-        errors = []
-
+    def _resolver(self, dns_exception, dns_resolver):
         try:
             resolver = (
                 self._resolver_factory()
                 if self._resolver_factory is not None
-                else dns.resolver.Resolver(configure=True)
+                else dns_resolver.Resolver(configure=True)
             )
-        except (OSError, dns.exception.DNSException) as exc:
-            return {
+        except (OSError, dns_exception.DNSException) as exc:
+            return None, {
                 "success": False,
                 "error_code": "dns_resolver_unavailable",
                 "error": f"Could not initialize the DNS resolver: {exc}",
-                "remediation": (
-                    "Check the operating system DNS configuration and retry."
-                ),
+                "remediation": "Check the operating system DNS configuration and retry.",
                 "message": (
-                    "DNS inspection could not start because no usable "
-                    "resolver configuration was available."
+                    "DNS inspection could not start because no usable resolver "
+                    "configuration was available."
                 ),
             }
-        for r_type in record_types:
-            try:
-                answer = resolver.resolve(
-                    ascii_domain,
-                    r_type,
-                    lifetime=10.0,
-                    search=False,
-                )
-                values = [
-                    self._format_rdata(r_type, rdata)
-                    for rdata in answer
-                ]
-                results[r_type] = list(dict.fromkeys(values))
-                ttl[r_type] = answer.rrset.ttl if answer.rrset is not None else None
-                if (
-                    r_type == "MX"
-                    and any(
-                        rdata.preference == 0
-                        and rdata.exchange == dns.name.root
-                        for rdata in answer
-                    )
-                ):
-                    record_status[r_type] = "null_mx"
-                else:
-                    record_status[r_type] = "resolved"
-            except dns.resolver.NoAnswer:
-                record_status[r_type] = "no_record"
-            except dns.resolver.NXDOMAIN:
-                return {
-                    "success": False,
-                    "error_code": "dns_name_not_found",
-                    "domain": ascii_domain,
-                    "records": results,
-                    # NXDOMAIN is authoritative for the queried name, not only
-                    # for the record type that happened to return it. Earlier
-                    # transient per-type failures cannot make records exist.
-                    "record_status": {
-                        key: "name_not_found"
-                        for key in record_status
-                    },
-                    "errors": [f"DNS name '{ascii_domain}' does not exist."],
-                    "error": f"DNS name '{ascii_domain}' does not exist.",
-                    "remediation": (
-                        "Check the spelling and whether the domain is registered."
-                    ),
-                    "message": f"DNS name '{ascii_domain}' does not exist.",
-                }
-            except (
-                dns.resolver.LifetimeTimeout,
-                dns.resolver.NoNameservers,
-                dns.exception.DNSException,
-            ) as exc:
-                record_status[r_type] = "query_failed"
-                errors.append(f"{r_type} query failed: {exc}")
+        return resolver, None
 
-        summary = {k: len(v) for k, v in results.items()}
+    def _query_all(self, ascii_domain, resolver, dns_exception, dns_name, dns_resolver):
+        records = {record_type: [] for record_type in self._record_types}
+        statuses = {record_type: "pending" for record_type in self._record_types}
+        ttl = {record_type: None for record_type in self._record_types}
+        errors = []
+        for record_type in self._record_types:
+            outcome = self._query_record(
+                resolver,
+                ascii_domain,
+                record_type,
+                dns_exception,
+                dns_name,
+                dns_resolver,
+            )
+            if outcome["status"] == "name_not_found":
+                return self._nxdomain_result(ascii_domain, records, statuses)
+            records[record_type] = outcome["values"]
+            statuses[record_type] = outcome["status"]
+            ttl[record_type] = outcome["ttl"]
+            if outcome["error"]:
+                errors.append(outcome["error"])
+        return self._aggregate_result(ascii_domain, records, statuses, ttl, errors)
+
+    def _query_record(
+        self,
+        resolver,
+        ascii_domain,
+        record_type,
+        dns_exception,
+        dns_name,
+        dns_resolver,
+    ):
+        try:
+            answer = resolver.resolve(
+                ascii_domain,
+                record_type,
+                lifetime=10.0,
+                search=False,
+            )
+            values = list(
+                dict.fromkeys(self._format_rdata(record_type, rdata) for rdata in answer)
+            )
+            status = self._answer_status(record_type, answer, dns_name)
+            ttl = answer.rrset.ttl if answer.rrset is not None else None
+            return {"values": values, "status": status, "ttl": ttl, "error": None}
+        except dns_resolver.NoAnswer:
+            return {"values": [], "status": "no_record", "ttl": None, "error": None}
+        except dns_resolver.NXDOMAIN:
+            return {"values": [], "status": "name_not_found", "ttl": None, "error": None}
+        except (
+            dns_resolver.LifetimeTimeout,
+            dns_resolver.NoNameservers,
+            dns_exception.DNSException,
+        ) as exc:
+            return {
+                "values": [],
+                "status": "query_failed",
+                "ttl": None,
+                "error": f"{record_type} query failed: {exc}",
+            }
+
+    @staticmethod
+    def _answer_status(record_type, answer, dns_name):
+        if record_type != "MX":
+            return "resolved"
+        has_null_mx = any(
+            rdata.preference == 0 and rdata.exchange == dns_name.root for rdata in answer
+        )
+        return "null_mx" if has_null_mx else "resolved"
+
+    def _aggregate_result(self, ascii_domain, records, statuses, ttl, errors):
+        summary = {key: len(value) for key, value in records.items()}
         successful_queries = sum(
             status in {"resolved", "null_mx", "no_record"}
-            for status in record_status.values()
+            for status in statuses.values()
         )
-
-        msg = f"DNS records inspected for '{ascii_domain}':\n"
-        for r_type, count in summary.items():
-            status = record_status[r_type]
-            if status == "null_mx":
-                msg += (
-                    f"- {r_type}: Null MX (0 .); this domain explicitly "
-                    "does not accept email\n"
-                )
-            elif count > 0:
-                values = ", ".join(results[r_type][:3])
-                if len(results[r_type]) > 3:
-                    values += f" (+{count - 3} more)"
-                msg += f"- {r_type} ({count}): {values}\n"
-            elif status == "query_failed":
-                msg += f"- {r_type}: Query failed\n"
-            else:
-                msg += f"- {r_type}: None found\n"
-
         result = {
             "success": successful_queries > 0,
             "domain": ascii_domain,
-            "records": results,
+            "records": records,
             "summary": summary,
-            "record_status": record_status,
+            "record_status": statuses,
             "ttl_seconds": ttl,
             "errors": errors,
-            "message": msg
+            "message": self._message(ascii_domain, records, statuses, summary),
         }
         if successful_queries == 0:
             result.update(
                 {
                     "error_code": "dns_queries_failed",
-                    "error": (
-                        "Every DNS record query failed before a definitive "
-                        "answer was received."
-                    ),
-                    "remediation": (
-                        "Check network connectivity and configured DNS "
-                        "servers, then retry."
-                    ),
+                    "error": "Every DNS record query failed before a definitive answer was received.",
+                    "remediation": "Check network connectivity and configured DNS servers, then retry.",
                 }
             )
         return result
+
+    def _message(self, ascii_domain, records, statuses, summary):
+        lines = [f"DNS records inspected for '{ascii_domain}':"]
+        for record_type, count in summary.items():
+            status = statuses[record_type]
+            if status == "null_mx":
+                detail = "Null MX (0 .); this domain explicitly does not accept email"
+            elif count > 0:
+                values = ", ".join(records[record_type][:3])
+                suffix = f" (+{count - 3} more)" if count > 3 else ""
+                detail = f"({count}): {values}{suffix}"
+            elif status == "query_failed":
+                detail = "Query failed"
+            else:
+                detail = "None found"
+            lines.append(f"- {record_type}: {detail}")
+        return "\n".join(lines) + "\n"
+
+    def _nxdomain_result(self, ascii_domain, records, statuses):
+        message = f"DNS name '{ascii_domain}' does not exist."
+        return {
+            "success": False,
+            "error_code": "dns_name_not_found",
+            "domain": ascii_domain,
+            "records": records,
+            "record_status": {key: "name_not_found" for key in statuses},
+            "errors": [message],
+            "error": message,
+            "remediation": "Check the spelling and whether the domain is registered.",
+            "message": message,
+        }
+
+    @staticmethod
+    def _invalid_domain(error, *, message=None):
+        return {
+            "success": False,
+            "error_code": "invalid_domain",
+            "error": error,
+            "message": message or error,
+            "remediation": "Pass a valid DNS name such as example.com.",
+        }
 
     @staticmethod
     def _format_rdata(record_type, rdata):
@@ -239,7 +257,6 @@ class CheckDnsCommand(CommandBase):
             return f"{rdata.preference} {rdata.exchange.to_text()}"
         if record_type == "TXT":
             return "".join(
-                part.decode("utf-8", errors="replace")
-                for part in rdata.strings
+                part.decode("utf-8", errors="replace") for part in rdata.strings
             )
         return rdata.to_text()

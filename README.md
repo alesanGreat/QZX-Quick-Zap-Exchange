@@ -96,7 +96,7 @@ shows a read-only project briefing workflow and a copyable instruction block for
 project mechanisms such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. The
 installed QZX catalog remains the source of truth for available commands.
 
-This source release is QZX `0.2.2.0.9` and requires Python `>=3.11`.
+This source release is QZX `0.2.2.0.10` and requires Python `>=3.11`.
 The published QZX distribution uses pip's normal installation channel while the
 product itself remains Alpha software. PyPI is authoritative for the published
 package, and `qzx version --json` is authoritative for what is installed.
@@ -117,7 +117,7 @@ above 3.11 merely to use newer syntax or simplify development; see the
 
 | Source | Version | Python | Command surface |
 |---|---:|---:|---|
-| Source release described here | `0.2.2.0.9` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 89 canonical commands in the generated command index |
+| Source release described here | `0.2.2.0.10` | `>=3.11`; standard CPython 3.13.x is the cross-platform certification runtime | 89 canonical commands in the generated command index |
 
 PyPI is authoritative for what `pip install qzx` installs. The installed
 runtime is authoritative for its own command list.
@@ -167,6 +167,23 @@ and you know the disk identifier, use for example
 See the complete [storage-triage workflow](docs/storage-triage.md) for tuning,
 result semantics, the underlying probes, platform notes, and links to the
 public disk-space guide.
+
+
+## Read text in bounded pages (development preview)
+
+The development checkout adds lossless Unicode reads, byte budgets, explicit
+continuation and file-change guards to `readFile`. This upgrade is **not in
+the published 0.2.2.0.9 package**. Try the self-checking example from this checkout:
+
+```console
+python examples/read_file_pages.py --demo --page-bytes 32
+```
+
+It reads a generated multilingual UTF-16 document through real QZX CLI calls
+and verifies the exact text without using personal data or an external service.
+See the complete workflow in [English](docs/reading-files.md) or
+[Spanish](docs/reading-files.es.md), including completion checks, strict
+encoding, active-log limitations, and an executable bounded-memory consumer.
 
 ## Output contract
 

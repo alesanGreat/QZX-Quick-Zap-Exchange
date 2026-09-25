@@ -624,6 +624,10 @@ def verify_sdist(
         conformance_manifest_name = (
             f"{root}/examples/result_contract/manifest.json"
         )
+        native_manifest_name = f"{root}/native/project_languages/Cargo.toml"
+        native_lock_name = f"{root}/native/project_languages/Cargo.lock"
+        native_source_name = f"{root}/native/project_languages/src/lib.rs"
+        native_smoke_name = f"{root}/scripts/smoke_native_project_languages.py"
         example_names = [
             f"{root}/{path.relative_to(PROJECT_ROOT).as_posix()}"
             for path in sorted(RESULT_CONTRACT_EXAMPLES_ROOT.rglob("*"))
@@ -664,6 +668,10 @@ def verify_sdist(
             platform_merge_name: members.get(platform_merge_name),
             adopters_name: members.get(adopters_name),
             conformance_manifest_name: members.get(conformance_manifest_name),
+            native_manifest_name: members.get(native_manifest_name),
+            native_lock_name: members.get(native_lock_name),
+            native_source_name: members.get(native_source_name),
+            native_smoke_name: members.get(native_smoke_name),
             **{name: members.get(name) for name in example_names},
             **{name: members.get(name) for name in readme_link_names},
         }

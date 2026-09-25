@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77.0.3", "wheel"]
+requires = ["setuptools>=77.0.3", "setuptools-rust>=1.13,<2", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.black]
@@ -21,3 +21,19 @@ select = ["E9", "E722", "F401", "F63", "F7", "F82"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.cibuildwheel]
+build = "cp313-*"
+skip = ["*-musllinux_i686"]
+environment = { QZX_BUILD_NATIVE = "required" }
+test-command = "python {project}/scripts/smoke_native_project_languages.py"
+
+[tool.cibuildwheel.linux]
+before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal"
+environment = { QZX_BUILD_NATIVE = "required", PATH = "$HOME/.cargo/bin:$PATH" }
+
+[tool.cibuildwheel.macos]
+environment = { QZX_BUILD_NATIVE = "required" }
+
+[tool.cibuildwheel.windows]
+environment = { QZX_BUILD_NATIVE = "required" }

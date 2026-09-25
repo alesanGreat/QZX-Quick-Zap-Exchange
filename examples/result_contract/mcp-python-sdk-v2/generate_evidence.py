@@ -114,43 +114,43 @@ def wire_document(model: Any) -> dict[str, Any]:
     return model.model_dump(by_alias=True, exclude_none=True, mode="json")
 
 
-async def generate(output_directory: Path) -> dict[str, Any]:
-    contract_schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    server = build_server(contract_schema)
+async def collect_sdk_results(server: Server[Any]) -> tuple[Any, Any, Any]:
+    """Run the official client and return the discovered tool plus both cases."""
 
     async with Client(server, mode=PROTOCOL_VERSION) as client:
         if client.protocol_version != PROTOCOL_VERSION:
             raise RuntimeError(
                 f"Expected MCP {PROTOCOL_VERSION}, got {client.protocol_version}."
             )
-
         listed_tools = await client.list_tools()
         matching_tools = [tool for tool in listed_tools.tools if tool.name == TOOL_NAME]
         if len(matching_tools) != 1:
-            raise RuntimeError(
-                "The official MCP client did not discover lookup_widget."
-            )
-
+            raise RuntimeError("The official MCP client did not discover lookup_widget.")
         success_result = await client.call_tool(TOOL_NAME, {"fail": False})
         failure_result = await client.call_tool(TOOL_NAME, {"fail": True})
+    return matching_tools[0], success_result, failure_result
 
-    tool_definition = wire_document(matching_tools[0])
-    success = wire_document(success_result)
-    failure = wire_document(failure_result)
+
+def validate_sdk_results(
+    contract_schema: dict[str, Any],
+    tool_definition: dict[str, Any],
+    success: dict[str, Any],
+    failure: dict[str, Any],
+) -> None:
+    """Verify the result-contract invariants exercised by this reference."""
 
     if tool_definition.get("outputSchema") != contract_schema:
-        raise RuntimeError(
-            "The official SDK changed the canonical inline output schema."
-        )
-    if (
-        success.get("resultType") != "complete"
-        or failure.get("resultType") != "complete"
-    ):
+        raise RuntimeError("The official SDK changed the canonical inline output schema.")
+    if success.get("resultType") != "complete" or failure.get("resultType") != "complete":
         raise RuntimeError("The official SDK did not retain MCP completed-result tags.")
     if success.get("isError") is not False or failure.get("isError") is not True:
         raise RuntimeError("The official SDK observed an inconsistent result pair.")
 
-    evidence_metadata = {
+
+def build_evidence_metadata(output_directory: Path) -> dict[str, Any]:
+    """Describe the exact SDK/runtime context used by the evidence run."""
+
+    return {
         "evidence_kind": "qzx_maintained_reference",
         "independent_adoption": False,
         "protocol": PROTOCOL_VERSION,
@@ -178,19 +178,40 @@ async def generate(output_directory: Path) -> dict[str, Any]:
         ],
     }
 
+
+def write_evidence_documents(
+    output_directory: Path,
+    documents: tuple[tuple[str, dict[str, Any]], ...],
+) -> None:
+    """Persist normalized JSON evidence with stable UTF-8/LF formatting."""
+
     output_directory.mkdir(parents=True, exist_ok=True)
-    documents = (
-        ("tool-definition.json", tool_definition),
-        ("success.json", success),
-        ("failure.json", failure),
-        ("evidence-metadata.json", evidence_metadata),
-    )
     for filename, document in documents:
         (output_directory / filename).write_text(
             json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
             newline="\n",
         )
+
+
+async def generate(output_directory: Path) -> dict[str, Any]:
+    contract_schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    server = build_server(contract_schema)
+    listed_tool, success_result, failure_result = await collect_sdk_results(server)
+    tool_definition = wire_document(listed_tool)
+    success = wire_document(success_result)
+    failure = wire_document(failure_result)
+    validate_sdk_results(contract_schema, tool_definition, success, failure)
+    evidence_metadata = build_evidence_metadata(output_directory)
+    write_evidence_documents(
+        output_directory,
+        (
+            ("tool-definition.json", tool_definition),
+            ("success.json", success),
+            ("failure.json", failure),
+            ("evidence-metadata.json", evidence_metadata),
+        ),
+    )
     return evidence_metadata
 
 

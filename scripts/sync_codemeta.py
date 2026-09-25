@@ -26,16 +26,40 @@ def load_product_manifest() -> dict[str, Any]:
     return manifest
 
 
+def author_person(product: dict[str, Any]) -> dict[str, Any]:
+    """Project the canonical author facts to one CodeMeta Person."""
+    author = product["author"]
+    author_name = str(author["name"])
+    given_name, family_name = author_name.split(" ", 1)
+    return {
+        "@id": PERSON_ID,
+        "@type": "Person",
+        "name": author_name,
+        "givenName": given_name,
+        "familyName": family_name,
+        "email": "qzx@yumbale.com",
+        "url": author["profile_url"],
+        "sameAs": author["same_as"],
+    }
+
+
+def related_links(urls: dict[str, Any]) -> list[str]:
+    """Return maintained technical references in stable order."""
+    return [
+        urls["result_contract"],
+        urls["result_contract_receipt_schema"],
+        urls["golden_core"],
+        urls["compatibility"],
+        urls["security"],
+    ]
+
+
 def build_codemeta(manifest: dict[str, Any]) -> dict[str, Any]:
     product = manifest["product"]
     urls = manifest["urls"]
     published = manifest["channels"]["published"]
     development = manifest["channels"]["development"]
     certified_runtime = manifest["compatibility"]["python"]["certified_runtime"]
-    author = product["author"]
-    author_name = str(author["name"])
-    given_name, family_name = author_name.split(" ", 1)
-
     return {
         "@context": CODEMETA_CONTEXT,
         "@type": "SoftwareSourceCode",
@@ -43,16 +67,7 @@ def build_codemeta(manifest: dict[str, Any]) -> dict[str, Any]:
         "description": product["description"]["en"],
         "applicationCategory": "DeveloperApplication",
         "applicationSubCategory": "Command-line interface",
-        "author": {
-            "@id": PERSON_ID,
-            "@type": "Person",
-            "name": author_name,
-            "givenName": given_name,
-            "familyName": family_name,
-            "email": "qzx@yumbale.com",
-            "url": author["profile_url"],
-            "sameAs": author["same_as"],
-        },
+        "author": author_person(product),
         "maintainer": PERSON_ID,
         "codeRepository": urls["repository"],
         "issueTracker": urls["issues"],
@@ -62,33 +77,18 @@ def build_codemeta(manifest: dict[str, Any]) -> dict[str, Any]:
         "datePublished": published["released_at"],
         "developmentStatus": "active",
         "programmingLanguage": "Python",
-        "runtimePlatform": (
-            f"{certified_runtime} certified; Python {development['requires_python']}"
-        ),
+        "runtimePlatform": f"{certified_runtime} certified; Python {development['requires_python']}",
         "operatingSystem": product["platforms"],
         "isAccessibleForFree": product["pricing"]["free_to_use"],
         "url": urls["site_origin"] + "/",
         "installUrl": urls["package"],
         "readme": urls["repository"] + "/blob/main/README.md",
         "releaseNotes": urls["changelog"],
-        "relatedLink": [
-            urls["result_contract"],
-            urls["result_contract_receipt_schema"],
-            urls["golden_core"],
-            urls["compatibility"],
-            urls["security"],
-        ],
+        "relatedLink": related_links(urls),
         "keywords": [
-            "QZX",
-            "QZX Result Contract",
-            "AI agents",
-            "automation",
-            "command-line interface",
-            "cross-platform",
-            "structured JSON",
-            "JSON Schema",
-            "Model Context Protocol",
-            "interoperability",
+            "QZX", "QZX Result Contract", "AI agents", "automation",
+            "command-line interface", "cross-platform", "structured JSON",
+            "JSON Schema", "Model Context Protocol", "interoperability",
         ],
     }
 

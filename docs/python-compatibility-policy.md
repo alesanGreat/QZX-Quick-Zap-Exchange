@@ -94,6 +94,20 @@ used as evidence that `Requires-Python` should be raised to 3.13. Conversely,
 changing every fixed certification job to 3.11 would weaken the deliberate
 separation between support-range regression and deep platform certification.
 
+## Native acceleration without narrowing adoption
+
+Performance-sensitive QZX features may ship native Rust acceleration without
+raising the Python floor or making a Rust toolchain an installation requirement.
+For `projectLanguages`, common Windows, Linux, and macOS platforms receive a
+`cp311-abi3` wheel containing the Tokei-backed native engine. The release must
+also retain the `py3-none-any` wheel and source distribution. When no compatible
+native wheel exists, QZX keeps the portable Python backend instead of failing
+installation.
+
+The `abi3` floor intentionally matches the supported CPython 3.11 minimum. A
+native optimization is therefore not evidence for raising `Requires-Python`,
+and the universal wheel is a release invariant rather than a temporary fallback.
+
 ## Automatic guardrails
 
 `tests/test_python_compatibility_policy.py` is intended to make accidental drift

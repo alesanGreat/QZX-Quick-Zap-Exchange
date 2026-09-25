@@ -6,7 +6,7 @@ QZX is a standalone command-line application distributed through PyPI. Choose
 the installation path that matches how you use Python rather than forcing QZX
 into an environment that your operating system or another project manages.
 
-For a bilingual, browser-first walkthrough that keeps installation, first-success,
+For a multilingual, browser-first walkthrough that keeps installation, first-success,
 compatibility, support, and professional-help paths together, use the
 [QZX installation hub](https://qzx.yumbale.com/en/install). This document remains
 the source-adjacent technical version of the same installation boundary.
@@ -58,6 +58,66 @@ qzx version --json
 
 A project virtual environment is a good example because its dependencies are
 already isolated from the operating-system Python.
+
+## Installed, but the terminal cannot find `qzx`?
+
+Use the recovery path for the installation you actually made. A missing launcher
+on PATH is not proof that the package is absent. The
+[installation hub's recovery section](https://qzx.yumbale.com/en/install#command-not-found)
+provides the same decision path in every published website language.
+
+### After a pip installation: keep the same interpreter
+
+Run QZX as a Python module through the exact interpreter that ran
+`python -m pip install --upgrade qzx`. This does not depend on the `qzx` launcher
+being on PATH:
+
+```bash
+python -m qzx version --json
+python -m qzx getCurrentDateTime --output-format iso --json
+```
+
+When installation used `python3` or `py -3.13`, use that same prefix in **every**
+command, including pip and QZX. Do not install with one interpreter and try to
+recover through another. An activated environment or an explicit Python path is
+more reliable than guessing which of several installations the shell selected.
+
+If the module command reports `No module named qzx`, activate the environment
+where you installed QZX and inspect that interpreter before reinstalling:
+
+```bash
+python -m pip --version
+python -m pip show qzx
+```
+
+If pip cannot find the package here, QZX is absent from this interpreter. If
+`qzx version --json` and `python -m qzx version --json` show different versions,
+the two entry points resolve different installations; update only the one you
+intend to use. Do not replace system Python or delete another project's packages
+to repair a launcher. An `externally-managed-environment` error still needs the
+managed-environment guidance below, not an override.
+
+After verification, open your own project folder and run
+`python -m qzx diagnoseProject .` with the same pip-installed interpreter for a
+useful read-only briefing. QZX does not execute the project's discovered test or
+build scripts. Review returned personal paths before sharing a diagnostic.
+
+### After a pipx installation: restore pipx's launcher
+
+First run `pipx list`. If QZX is listed, run `pipx ensurepath`, follow its
+instructions to refresh or reopen the terminal, and retry `qzx version --json`.
+If QZX is not listed, use the pipx installation path above.
+
+The system Python normally cannot import a package isolated by pipx.
+**`python -m qzx` is not a pipx repair.** Also, `pipx run` evaluates a temporary
+environment, not the installation shown by `pipx list`; a successful temporary
+run does not prove that the existing launcher works.
+
+These instructions use standard [Python module execution](https://docs.python.org/3/using/cmdline.html#cmdoption-m)
+and [pip's interpreter selection](https://pip.pypa.io/en/stable/user_guide/#running-pip),
+not a new QZX feature or an unpublished package version. See
+[pipx's installation guidance](https://pipx.pypa.io/stable/installation/) for its
+platform-specific PATH setup.
 
 ## If pip says `externally-managed-environment`
 

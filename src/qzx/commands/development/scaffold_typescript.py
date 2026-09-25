@@ -7,6 +7,9 @@ ScaffoldTypeScript Command - Creates a basic scaffolding for a TypeScript progra
 
 import os
 
+from ._node_scaffold_readme import node_project_readme
+
+from ._scaffold_result_schema import starter_result_schema
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
@@ -23,6 +26,7 @@ class ScaffoldTypeScriptCommand(CommandBase):
     name = "scaffoldTypeScript"
     description = "Creates a basic scaffolding for a TypeScript program"
     category = "development"
+    result_schema = starter_result_schema(python=False)
     
     parameters = [
         {
@@ -57,71 +61,52 @@ class ScaffoldTypeScriptCommand(CommandBase):
     ]
     
     def execute(self, project_name, path='.', with_tests=True):
-        """
-        Creates a basic scaffolding for a TypeScript program
-        
-        Args:
-            project_name (str): Name of the TypeScript project to create
-            path (str): Path where to create the project
-            with_tests (str): Whether to include test scaffolding
-            
-        Returns:
-            Dictionary with the operation results and status
-        """
+        "Create a runnable project, validating options before any file writes."
+        result = None
         try:
-            # Convert string parameters to appropriate types
             with_tests = parse_scaffold_boolean(with_tests, "with_tests")
-            
-            # Normalize and validate project name
             project_name = normalize_project_name(
-                project_name,
-                separator="-",
-                replacement_characters=(" ", "_"),
+                project_name, separator="-", replacement_characters=(" ", "_"),
             )
             result = prepare_scaffold_project(
-                project_name,
-                path,
-                {"with_tests": with_tests},
+                project_name, path, {"with_tests": with_tests},
             )
             if not result["success"]:
                 return result
-            project_path = result["project_path"]
-            
-            # Create standard TypeScript project structure
-            src_dir = os.path.join(project_path, 'src')
-            os.makedirs(src_dir)
-            result["files_created"].append(src_dir)
-            
-            # Create files
-            self._create_package_json(project_path, project_name, with_tests, result)
-            self._create_tsconfig_json(project_path, result)
-            self._create_index_ts(src_dir, project_name, result)
-            self._create_gitignore(project_path, result)
-            self._create_readme(project_path, project_name, with_tests, result)
-            
-            if with_tests:
-                self._create_tests(project_path, result)
-            
-            # Create a descriptive message
+            self._create_project_files(result["project_path"], project_name, with_tests, result)
             tests_msg = "with Jest/ts-jest test scaffolding" if with_tests else "without tests"
-            
-            message = (
-                f"Successfully created TypeScript project '{project_name}' at {project_path} {tests_msg}. "
-                f"Created {len(result['files_created'])} files and directories. "
-                f"Use 'npm install', 'npm run build' and 'npm start' to run."
+            result["message"] = (
+                f"Created TypeScript project '{project_name}' at {result['project_path']} "
+                f"{tests_msg}. Use 'npm install', 'npm run build' and 'npm start' to run."
             )
-            
-            result["message"] = message
             return result
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Error creating TypeScript project: {str(e)}",
-                "message": f"Failed to create TypeScript project scaffolding: {str(e)}",
-                "project_name": project_name
+        except Exception as error:
+            failure = {
+                "success": False, "error": str(error), "project_name": project_name,
+                "message": f"Could not create TypeScript project: {error}",
             }
-            
+            if result is not None:
+                failure.update(project_path=result["project_path"],
+                               files_created=result["files_created"], partial=True)
+            return failure
+
+    def _create_project_files(self, project_path, project_name, with_tests, result):
+        "Write the selected starter layout; no package manager is executed."
+        # Create standard TypeScript project structure
+        src_dir = os.path.join(project_path, 'src')
+        os.makedirs(src_dir)
+        result["files_created"].append(src_dir)
+        
+        # Create files
+        self._create_package_json(project_path, project_name, with_tests, result)
+        self._create_tsconfig_json(project_path, result)
+        self._create_index_ts(src_dir, project_name, result)
+        self._create_gitignore(project_path, result)
+        self._create_readme(project_path, project_name, with_tests, result)
+        
+        if with_tests:
+            self._create_tests(project_path, result)
+
     def _create_package_json(self, project_path, project_name, with_tests, result):
         pkg_path = os.path.join(project_path, 'package.json')
         
@@ -130,6 +115,7 @@ class ScaffoldTypeScriptCommand(CommandBase):
         content = f'''{{
   "name": "{project_name}",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "A TypeScript project created with QZX scaffolding tool",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -156,13 +142,13 @@ class ScaffoldTypeScriptCommand(CommandBase):
             
         content += '\n  }\n}\n'
         
-        with open(pkg_path, 'w', encoding='utf-8') as f:
+        with open(pkg_path, 'x', encoding='utf-8') as f:
             f.write(content)
         result["files_created"].append(pkg_path)
         
     def _create_tsconfig_json(self, project_path, result):
         tsconfig_path = os.path.join(project_path, 'tsconfig.json')
-        with open(tsconfig_path, 'w', encoding='utf-8') as f:
+        with open(tsconfig_path, 'x', encoding='utf-8') as f:
             f.write('''{
   "compilerOptions": {
     "target": "es2022",
@@ -184,7 +170,7 @@ class ScaffoldTypeScriptCommand(CommandBase):
         
     def _create_index_ts(self, src_dir, project_name, result):
         index_path = os.path.join(src_dir, 'index.ts')
-        with open(index_path, 'w', encoding='utf-8') as f:
+        with open(index_path, 'x', encoding='utf-8') as f:
             f.write(f'''// Main entry point for {project_name}
 
 export function hello(): string {{
@@ -195,13 +181,15 @@ export function add(a: number, b: number): number {{
   return a + b;
 }}
 
-console.log(hello());
+if (require.main === module) {{
+  console.log(hello());
+}}
 ''')
         result["files_created"].append(index_path)
         
     def _create_gitignore(self, project_path, result):
         gitignore_path = os.path.join(project_path, '.gitignore')
-        with open(gitignore_path, 'w', encoding='utf-8') as f:
+        with open(gitignore_path, 'x', encoding='utf-8') as f:
             f.write('''node_modules/
 dist/
 .npm
@@ -214,46 +202,12 @@ coverage/
         result["files_created"].append(gitignore_path)
         
     def _create_readme(self, project_path, project_name, with_tests, result):
+        content = node_project_readme(project_name, with_tests, typescript=True)
         readme_path = os.path.join(project_path, 'README.md')
-        with open(readme_path, 'w', encoding='utf-8') as f:
-            f.write(f'''# {project_name.title()}
-
-A TypeScript project created with QZX scaffolding tool.
-
-## Installation
-
-```bash
-npm install
-```
-
-## Build
-
-```bash
-npm run build
-```
-
-## Running the application
-
-To run the compiled production bundle:
-```bash
-npm start
-```
-
-To run in development mode directly:
-```bash
-npm run dev
-```
-''')
-            if with_tests:
-                f.write(f'''
-## Testing
-
-```bash
-npm test
-```
-''')
+        with open(readme_path, 'x', encoding='utf-8') as stream:
+            stream.write(content)
         result["files_created"].append(readme_path)
-        
+
     def _create_tests(self, project_path, result):
         tests_dir = os.path.join(project_path, 'tests')
         os.makedirs(tests_dir, exist_ok=True)
@@ -261,7 +215,7 @@ npm test
         
         # Write jest config
         jest_config_path = os.path.join(project_path, 'jest.config.js')
-        with open(jest_config_path, 'w', encoding='utf-8') as f:
+        with open(jest_config_path, 'x', encoding='utf-8') as f:
             f.write('''module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
@@ -271,7 +225,7 @@ npm test
         result["files_created"].append(jest_config_path)
         
         test_file_path = os.path.join(tests_dir, 'index.test.ts')
-        with open(test_file_path, 'w', encoding='utf-8') as f:
+        with open(test_file_path, 'x', encoding='utf-8') as f:
             f.write('''import { hello, add } from '../src/index';
 
 test('hello returns greeting', () => {

@@ -60,55 +60,42 @@ def _validate_stage_definitions(document):
 
     sequences = set()
     for stage_name, stage in stages.items():
-        if not isinstance(stage, dict):
-            raise CommandLifecycleError(
-                "Command lifecycle stage '{}' must be an object.".format(stage_name)
-            )
-        _require_text(stage.get("label"), "{}.label".format(stage_name))
-        _require_text(stage.get("summary"), "{}.summary".format(stage_name))
-        _require_text(
-            stage.get("stability"),
-            "{}.stability".format(stage_name),
-        )
-        sequence = stage.get("sequence")
-        if not isinstance(sequence, int) or isinstance(sequence, bool):
-            raise CommandLifecycleError(
-                "Command lifecycle stage '{}.sequence' must be an integer.".format(
-                    stage_name
-                )
-            )
-        if sequence in sequences:
-            raise CommandLifecycleError(
-                "Command lifecycle sequence {} is duplicated.".format(sequence)
-            )
-        sequences.add(sequence)
-        if not isinstance(stage.get("public_executable"), bool):
-            raise CommandLifecycleError(
-                "Command lifecycle stage '{}.public_executable' must be boolean.".format(
-                    stage_name
-                )
-            )
-        if not isinstance(stage.get("promotion_review_required"), bool):
-            raise CommandLifecycleError(
-                "Command lifecycle stage "
-                "'{}.promotion_review_required' must be boolean.".format(
-                    stage_name
-                )
-            )
-        requirements = stage.get("promotion_requirements")
-        if not isinstance(requirements, list) or not requirements:
-            raise CommandLifecycleError(
-                "Command lifecycle stage "
-                "'{}.promotion_requirements' must be a non-empty list.".format(
-                    stage_name
-                )
-            )
-        for index, requirement in enumerate(requirements):
-            _require_text(
-                requirement,
-                "{}.promotion_requirements[{}]".format(stage_name, index),
-            )
+        sequences.add(_validate_stage_entry(stage_name, stage, sequences))
+    _validate_stage_policy(stages)
 
+
+def _validate_stage_entry(stage_name, stage, existing_sequences):
+    if not isinstance(stage, dict):
+        raise CommandLifecycleError(
+            "Command lifecycle stage '{}' must be an object.".format(stage_name)
+        )
+    for field in ("label", "summary", "stability"):
+        _require_text(stage.get(field), "{}.{}".format(stage_name, field))
+    sequence = stage.get("sequence")
+    if not isinstance(sequence, int) or isinstance(sequence, bool):
+        raise CommandLifecycleError(
+            "Command lifecycle stage '{}.sequence' must be an integer.".format(stage_name)
+        )
+    if sequence in existing_sequences:
+        raise CommandLifecycleError(
+            "Command lifecycle sequence {} is duplicated.".format(sequence)
+        )
+    for field in ("public_executable", "promotion_review_required"):
+        if not isinstance(stage.get(field), bool):
+            raise CommandLifecycleError(
+                "Command lifecycle stage '{}.{}' must be boolean.".format(stage_name, field)
+            )
+    requirements = stage.get("promotion_requirements")
+    if not isinstance(requirements, list) or not requirements:
+        raise CommandLifecycleError(
+            "Command lifecycle stage '{}.promotion_requirements' must be a non-empty list.".format(stage_name)
+        )
+    for index, requirement in enumerate(requirements):
+        _require_text(requirement, "{}.promotion_requirements[{}]".format(stage_name, index))
+    return sequence
+
+
+def _validate_stage_policy(stages):
     configured_review_stages = {
         stage_name
         for stage_name, stage in stages.items()
@@ -122,7 +109,6 @@ def _validate_stage_definitions(document):
                 ", ".join(sorted(configured_review_stages)),
             )
         )
-
     for stage_name in ROADMAP_STAGES | {"retired"}:
         if stages[stage_name]["public_executable"]:
             raise CommandLifecycleError(
@@ -172,6 +158,17 @@ def _validate_promotion_review(command_name, review, replacement_required, comma
             )
         )
 
+    _validate_review_date(command_name, review)
+    _require_text(
+        review.get("rationale"),
+        "commands.{}.review.rationale".format(command_name),
+    )
+    _validate_review_evidence(command_name, review.get("evidence"))
+    if replacement_required:
+        _validate_replacement(command_name, review.get("replacement"), commands)
+
+
+def _validate_review_date(command_name, review):
     reviewed_on = _require_text(
         review.get("reviewed_on"),
         "commands.{}.review.reviewed_on".format(command_name),
@@ -186,11 +183,9 @@ def _validate_promotion_review(command_name, review, replacement_required, comma
                 command_name
             )
         ) from exc
-    _require_text(
-        review.get("rationale"),
-        "commands.{}.review.rationale".format(command_name),
-    )
-    evidence = review.get("evidence")
+
+
+def _validate_review_evidence(command_name, evidence):
     if not isinstance(evidence, list) or not evidence:
         raise CommandLifecycleError(
             "Lifecycle review evidence for '{}' must be a non-empty list.".format(
@@ -203,16 +198,17 @@ def _validate_promotion_review(command_name, review, replacement_required, comma
             "commands.{}.review.evidence[{}]".format(command_name, index),
         )
 
-    if replacement_required:
-        replacement = _require_text(
-            review.get("replacement"),
-            "commands.{}.review.replacement".format(command_name),
+
+def _validate_replacement(command_name, value, commands):
+    replacement = _require_text(
+        value,
+        "commands.{}.review.replacement".format(command_name),
+    )
+    if replacement == command_name or replacement not in commands:
+        raise CommandLifecycleError(
+            "Deprecated command '{}' must identify another public command "
+            "as its replacement.".format(command_name)
         )
-        if replacement == command_name or replacement not in commands:
-            raise CommandLifecycleError(
-                "Deprecated command '{}' must identify another public command "
-                "as its replacement.".format(command_name)
-            )
 
 
 def _validate_command_entries(document):
@@ -224,57 +220,49 @@ def _validate_command_entries(document):
         )
 
     for command_name, entry in commands.items():
-        _require_text(command_name, "commands key")
-        if not isinstance(entry, dict):
-            raise CommandLifecycleError(
-                "Lifecycle entry for '{}' must be an object.".format(command_name)
-            )
-        if set(entry) - {"stage", "note", "review"}:
-            raise CommandLifecycleError(
-                "Lifecycle entry for '{}' contains unsupported fields: {}.".format(
-                    command_name,
-                    ", ".join(
-                        sorted(set(entry) - {"stage", "note", "review"})
-                    ),
-                )
-            )
-        stage_name = _require_text(
-            entry.get("stage"),
-            "commands.{}.stage".format(command_name),
+        _validate_command_entry(command_name, entry, stages, commands)
+
+
+def _validate_command_entry(command_name, entry, stages, commands):
+    _require_text(command_name, "commands key")
+    if not isinstance(entry, dict):
+        raise CommandLifecycleError(
+            "Lifecycle entry for '{}' must be an object.".format(command_name)
         )
-        stage = stages.get(stage_name)
-        if stage is None:
-            raise CommandLifecycleError(
-                "Command '{}' uses unknown lifecycle stage '{}'.".format(
-                    command_name,
-                    stage_name,
-                )
+    unsupported = set(entry) - {"stage", "note", "review"}
+    if unsupported:
+        raise CommandLifecycleError(
+            "Lifecycle entry for '{}' contains unsupported fields: {}.".format(
+                command_name, ", ".join(sorted(unsupported))
             )
-        if not stage["public_executable"]:
-            raise CommandLifecycleError(
-                "Public command '{}' cannot use non-executable stage '{}'.".format(
-                    command_name,
-                    stage_name,
-                )
-            )
-        note = entry.get("note")
-        if note is not None:
-            _require_text(note, "commands.{}.note".format(command_name))
-        review = entry.get("review")
-        if stage["promotion_review_required"] and review is None:
-            raise CommandLifecycleError(
-                "Command '{}' cannot claim '{}' without a promotion review.".format(
-                    command_name,
-                    stage_name,
-                )
-            )
-        if review is not None:
-            _validate_promotion_review(
-                command_name,
-                review,
-                replacement_required=stage_name == "deprecated",
-                commands=commands,
-            )
+        )
+    stage_name = _require_text(entry.get("stage"), "commands.{}.stage".format(command_name))
+    stage = stages.get(stage_name)
+    if stage is None:
+        raise CommandLifecycleError(
+            "Command '{}' uses unknown lifecycle stage '{}'.".format(command_name, stage_name)
+        )
+    if not stage["public_executable"]:
+        raise CommandLifecycleError(
+            "Public command '{}' cannot use non-executable stage '{}'.".format(command_name, stage_name)
+        )
+    if entry.get("note") is not None:
+        _require_text(entry["note"], "commands.{}.note".format(command_name))
+    _validate_command_review(command_name, entry.get("review"), stage_name, stage, commands)
+
+
+def _validate_command_review(command_name, review, stage_name, stage, commands):
+    if stage["promotion_review_required"] and review is None:
+        raise CommandLifecycleError(
+            "Command '{}' cannot claim '{}' without a promotion review.".format(command_name, stage_name)
+        )
+    if review is not None:
+        _validate_promotion_review(
+            command_name,
+            review,
+            replacement_required=stage_name == "deprecated",
+            commands=commands,
+        )
 
 
 def _validate_roadmap_entries(document):
@@ -287,49 +275,40 @@ def _validate_roadmap_entries(document):
     public_names = {name.lower() for name in document["commands"]}
     proposed_names = set()
     for item_id, entry in roadmap.items():
-        _require_text(item_id, "roadmap key")
-        if not isinstance(entry, dict):
-            raise CommandLifecycleError(
-                "Roadmap entry '{}' must be an object.".format(item_id)
-            )
-        if set(entry) != {"proposed_name", "stage", "summary"}:
-            raise CommandLifecycleError(
-                "Roadmap entry '{}' must contain proposed_name, stage, and summary.".format(
-                    item_id
-                )
-            )
-        proposed_name = _require_text(
-            entry.get("proposed_name"),
-            "roadmap.{}.proposed_name".format(item_id),
+        proposed_names.add(
+            _validate_roadmap_entry(item_id, entry, public_names, proposed_names)
         )
-        stage_name = _require_text(
-            entry.get("stage"),
-            "roadmap.{}.stage".format(item_id),
+
+
+def _validate_roadmap_entry(item_id, entry, public_names, proposed_names):
+    _require_text(item_id, "roadmap key")
+    if not isinstance(entry, dict):
+        raise CommandLifecycleError(
+            "Roadmap entry '{}' must be an object.".format(item_id)
         )
-        _require_text(
-            entry.get("summary"),
-            "roadmap.{}.summary".format(item_id),
+    if set(entry) != {"proposed_name", "stage", "summary"}:
+        raise CommandLifecycleError(
+            "Roadmap entry '{}' must contain proposed_name, stage, and summary.".format(item_id)
         )
-        normalized_name = proposed_name.lower()
-        if normalized_name in public_names:
-            raise CommandLifecycleError(
-                "Roadmap item '{}' duplicates public command '{}'.".format(
-                    item_id,
-                    proposed_name,
-                )
-            )
-        if normalized_name in proposed_names:
-            raise CommandLifecycleError(
-                "Roadmap proposed command '{}' is duplicated.".format(proposed_name)
-            )
-        proposed_names.add(normalized_name)
-        if stage_name not in ROADMAP_STAGES:
-            raise CommandLifecycleError(
-                "Roadmap item '{}' must be planning or proof_of_concept, not '{}'.".format(
-                    item_id,
-                    stage_name,
-                )
-            )
+    proposed_name = _require_text(
+        entry.get("proposed_name"), "roadmap.{}.proposed_name".format(item_id)
+    )
+    stage_name = _require_text(entry.get("stage"), "roadmap.{}.stage".format(item_id))
+    _require_text(entry.get("summary"), "roadmap.{}.summary".format(item_id))
+    normalized_name = proposed_name.lower()
+    if normalized_name in public_names:
+        raise CommandLifecycleError(
+            "Roadmap item '{}' duplicates public command '{}'.".format(item_id, proposed_name)
+        )
+    if normalized_name in proposed_names:
+        raise CommandLifecycleError(
+            "Roadmap proposed command '{}' is duplicated.".format(proposed_name)
+        )
+    if stage_name not in ROADMAP_STAGES:
+        raise CommandLifecycleError(
+            "Roadmap item '{}' must be planning or proof_of_concept, not '{}'.".format(item_id, stage_name)
+        )
+    return normalized_name
 
 
 def validate_lifecycle_document(document):

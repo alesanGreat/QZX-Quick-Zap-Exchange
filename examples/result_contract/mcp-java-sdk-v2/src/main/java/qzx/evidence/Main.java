@@ -86,66 +86,79 @@ public final class Main {
 		Path absoluteEvidence = evidenceDirectory.toAbsolutePath().normalize();
 		Files.createDirectories(absoluteEvidence);
 		Map<String, Object> canonicalSchema = readMap(schemaPath);
-
-		ServerParameters parameters = ServerParameters.builder(javaCommand())
-			.args("-cp", System.getProperty("java.class.path"), Main.class.getName(), "--server",
-					schemaPath.toAbsolutePath().normalize().toString())
-			.build();
-		StdioClientTransport transport = new StdioClientTransport(parameters, JSON);
-		McpSyncClient client = McpClient.sync(transport)
-			.clientInfo(McpSchema.Implementation.builder("qzx-java-reference-client", "1.0.0").build())
-			.requestTimeout(Duration.ofSeconds(30))
-			.build();
-
+		McpSyncClient client = createClient(schemaPath);
 		try {
-			McpSchema.InitializeResult initialized = client.initialize();
-			if (!PROTOCOL_VERSION.equals(initialized.protocolVersion())) {
-				throw new IllegalStateException(
-						"Expected MCP " + PROTOCOL_VERSION + ", received " + initialized.protocolVersion());
-			}
-
-			McpSchema.Tool listedTool = client.listTools()
-				.tools()
-				.stream()
-				.filter(tool -> TOOL_NAME.equals(tool.name()))
-				.findFirst()
-				.orElseThrow();
-			if (!canonicalSchema.equals(listedTool.outputSchema())) {
-				throw new IllegalStateException("The official SDK changed the canonical inline output schema.");
-			}
-
+			McpSchema.InitializeResult initialized = initializeClient(client);
+			McpSchema.Tool listedTool = discoverTool(client, canonicalSchema);
 			McpSchema.CallToolResult success = call(client, false);
 			McpSchema.CallToolResult failure = call(client, true);
 			assertResult(success, true);
 			assertResult(failure, false);
-
 			writeJson(absoluteEvidence.resolve("tool-definition.json"), listedTool);
 			writeJson(absoluteEvidence.resolve("success.json"), success);
 			writeJson(absoluteEvidence.resolve("failure.json"), failure);
 			Map<String, String> evidenceSha256 = verifyEvidenceDigests(absoluteEvidence);
-
-			Map<String, Object> metadata = new LinkedHashMap<>();
-			metadata.put("evidence_kind", "qzx_maintained_reference");
-			metadata.put("independent_adoption", false);
-			metadata.put("sdk", "modelcontextprotocol/java-sdk");
-			metadata.put("artifact", "io.modelcontextprotocol.sdk:mcp");
-			metadata.put("artifact_version", SDK_VERSION);
-			metadata.put("protocol_version", initialized.protocolVersion());
-			metadata.put("runtime", System.getProperty("java.runtime.version"));
-			metadata.put("operating_system", System.getProperty("os.name"));
-			metadata.put("transport", "subprocess_stdio_newline_delimited_json_rpc");
-			metadata.put("jsonrpc_framing_exercised", true);
-			metadata.put("wire_capture_retained", false);
-			metadata.put("http_exercised", false);
-			metadata.put("sse_exercised", false);
-			metadata.put("output_schema_mode", "canonical_inline");
-			metadata.put("contract_evidence_sha256", evidenceSha256);
-			metadata.put("tool", TOOL_NAME);
+			Map<String, Object> metadata = buildMetadata(initialized.protocolVersion(), evidenceSha256);
 			writeJson(absoluteEvidence.resolve("evidence-metadata.json"), metadata);
 		}
 		finally {
 			client.closeGracefully();
 		}
+	}
+
+	private static McpSyncClient createClient(Path schemaPath) {
+		ServerParameters parameters = ServerParameters.builder(javaCommand())
+			.args("-cp", System.getProperty("java.class.path"), Main.class.getName(), "--server",
+					schemaPath.toAbsolutePath().normalize().toString())
+			.build();
+		StdioClientTransport transport = new StdioClientTransport(parameters, JSON);
+		return McpClient.sync(transport)
+			.clientInfo(McpSchema.Implementation.builder("qzx-java-reference-client", "1.0.0").build())
+			.requestTimeout(Duration.ofSeconds(30))
+			.build();
+	}
+
+	private static McpSchema.InitializeResult initializeClient(McpSyncClient client) {
+		McpSchema.InitializeResult initialized = client.initialize();
+		if (!PROTOCOL_VERSION.equals(initialized.protocolVersion())) {
+			throw new IllegalStateException(
+					"Expected MCP " + PROTOCOL_VERSION + ", received " + initialized.protocolVersion());
+		}
+		return initialized;
+	}
+
+	private static McpSchema.Tool discoverTool(McpSyncClient client, Map<String, Object> canonicalSchema) {
+		McpSchema.Tool listedTool = client.listTools()
+			.tools()
+			.stream()
+			.filter(tool -> TOOL_NAME.equals(tool.name()))
+			.findFirst()
+			.orElseThrow();
+		if (!canonicalSchema.equals(listedTool.outputSchema())) {
+			throw new IllegalStateException("The official SDK changed the canonical inline output schema.");
+		}
+		return listedTool;
+	}
+
+	private static Map<String, Object> buildMetadata(String protocolVersion, Map<String, String> evidenceSha256) {
+		Map<String, Object> metadata = new LinkedHashMap<>();
+		metadata.put("evidence_kind", "qzx_maintained_reference");
+		metadata.put("independent_adoption", false);
+		metadata.put("sdk", "modelcontextprotocol/java-sdk");
+		metadata.put("artifact", "io.modelcontextprotocol.sdk:mcp");
+		metadata.put("artifact_version", SDK_VERSION);
+		metadata.put("protocol_version", protocolVersion);
+		metadata.put("runtime", System.getProperty("java.runtime.version"));
+		metadata.put("operating_system", System.getProperty("os.name"));
+		metadata.put("transport", "subprocess_stdio_newline_delimited_json_rpc");
+		metadata.put("jsonrpc_framing_exercised", true);
+		metadata.put("wire_capture_retained", false);
+		metadata.put("http_exercised", false);
+		metadata.put("sse_exercised", false);
+		metadata.put("output_schema_mode", "canonical_inline");
+		metadata.put("contract_evidence_sha256", evidenceSha256);
+		metadata.put("tool", TOOL_NAME);
+		return metadata;
 	}
 
 	private static McpSchema.CallToolResult call(McpSyncClient client, boolean fail) {

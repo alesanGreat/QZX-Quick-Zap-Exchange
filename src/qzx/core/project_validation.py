@@ -22,130 +22,125 @@ def inspect_validation_workflows(
         ("dependencies", "devDependencies"),
     )
     composer_dev = _mapping_section(composer_json, "require-dev")
-
-    tests = _validation_record()
-    test_directories = [
-        name for name in ("tests", "test", "spec") if (project_root / name).is_dir()
-    ]
-    if test_directories:
-        tests["configs"].extend(test_directories)
-    if "Python" in technologies and (
-        test_directories
-        or "pytest.ini" in root_names
-        or isinstance(tool_config.get("pytest"), dict)
-    ):
-        tests["tools"].append("pytest")
-        tests["commands"].append("python -m pytest")
-        if isinstance(tool_config.get("pytest"), dict):
-            tests["configs"].append("pyproject.toml [tool.pytest]")
-    if "test" in package_scripts:
-        tests["tools"].append(_detect_node_test_tool(package_dependencies))
-        tests["commands"].append(_package_manager_command(root_names, "test"))
-        tests["configs"].append("package.json [scripts.test]")
-    if "phpunit/phpunit" in composer_dev or {
-        "phpunit.xml",
-        "phpunit.xml.dist",
-    } & root_names:
-        tests["tools"].append("phpunit")
-        tests["commands"].append("vendor/bin/phpunit")
-    if "Rust" in technologies:
-        tests["tools"].append("cargo test")
-        tests["commands"].append("cargo test")
-    if "Go" in technologies:
-        tests["tools"].append("go test")
-        tests["commands"].append("go test ./...")
-    _finalize_validation_record(tests)
-
-    lint = _validation_record()
-    python_linters = {
-        "ruff": "ruff",
-        "black": "black",
-        "isort": "isort",
-        "flake8": "flake8",
-        "pylint": "pylint",
-    }
-    for section, label in python_linters.items():
-        if section in tool_config:
-            lint["tools"].append(label)
-            lint["configs"].append(f"pyproject.toml [tool.{section}]")
-    if "ruff" in lint["tools"]:
-        lint["commands"].append("python -m ruff check .")
-    if "lint" in package_scripts:
-        lint["tools"].append("package script")
-        lint["commands"].append(_package_manager_command(root_names, "lint"))
-        lint["configs"].append("package.json [scripts.lint]")
-    eslint_configs = [
-        name
-        for name in root_names
-        if name.startswith(".eslintrc") or name.startswith("eslint.config.")
-    ]
-    if eslint_configs:
-        lint["tools"].append("ESLint")
-        lint["configs"].extend(eslint_configs)
-    _finalize_validation_record(lint)
-
-    type_checking = _validation_record()
-    if "mypy" in tool_config:
-        type_checking["tools"].append("mypy")
-        type_checking["configs"].append("pyproject.toml [tool.mypy]")
-        type_checking["commands"].append("python -m mypy .")
-    if "pyright" in tool_config or "pyrightconfig.json" in root_names:
-        type_checking["tools"].append("pyright")
-        type_checking["configs"].append(
-            "pyproject.toml [tool.pyright]"
-            if "pyright" in tool_config
-            else "pyrightconfig.json"
-        )
-        type_checking["commands"].append("pyright")
-    if "tsconfig.json" in root_names:
-        type_checking["tools"].append("TypeScript")
-        type_checking["configs"].append("tsconfig.json")
-        type_checking["commands"].append("npx tsc --noEmit")
-    if "typecheck" in package_scripts:
-        type_checking["tools"].append("package script")
-        type_checking["configs"].append("package.json [scripts.typecheck]")
-        type_checking["commands"].append(
-            _package_manager_command(root_names, "typecheck")
-        )
-    _finalize_validation_record(type_checking)
-
-    build = _validation_record()
-    if "Python" in technologies and (
-        "setup.py" in root_names
-        or isinstance(pyproject, dict)
-        and isinstance(pyproject.get("build-system"), dict)
-    ):
-        build["tools"].append("PEP 517")
-        build["configs"].append(
-            "pyproject.toml [build-system]"
-            if isinstance(pyproject, dict)
-            and isinstance(pyproject.get("build-system"), dict)
-            else "setup.py"
-        )
-        build["commands"].append("python -m build")
-    if "build" in package_scripts:
-        build["tools"].append("package script")
-        build["configs"].append("package.json [scripts.build]")
-        build["commands"].append(_package_manager_command(root_names, "build"))
-    if "Rust" in technologies:
-        build["tools"].append("cargo")
-        build["commands"].append("cargo build")
-    if "Go" in technologies:
-        build["tools"].append("go")
-        build["commands"].append("go build ./...")
-    _finalize_validation_record(build)
-
     return {
         "execution_policy": "discovery_only",
         "execution_note": (
             "diagnoseProject never executes project-owned tests, linters, type "
             "checkers, builds, package scripts, hooks, or installers."
         ),
-        "tests": tests,
-        "lint": lint,
-        "type_checking": type_checking,
-        "build": build,
+        "tests": _inspect_test_workflows(
+            project_root, root_names, technologies, tool_config,
+            package_scripts, package_dependencies, composer_dev,
+        ),
+        "lint": _inspect_lint_workflows(root_names, tool_config, package_scripts),
+        "type_checking": _inspect_type_workflows(
+            root_names, tool_config, package_scripts,
+        ),
+        "build": _inspect_build_workflows(
+            root_names, technologies, pyproject, package_scripts,
+        ),
     }
+
+
+def _inspect_test_workflows(
+    project_root, root_names, technologies, tool_config,
+    package_scripts, package_dependencies, composer_dev,
+):
+    record = _validation_record()
+    directories = [
+        name for name in ("tests", "test", "spec") if (project_root / name).is_dir()
+    ]
+    record["configs"].extend(directories)
+    has_pytest = (
+        "Python" in technologies
+        and (directories or "pytest.ini" in root_names or isinstance(tool_config.get("pytest"), dict))
+    )
+    if has_pytest:
+        record["tools"].append("pytest")
+        record["commands"].append("python -m pytest")
+        if isinstance(tool_config.get("pytest"), dict):
+            record["configs"].append("pyproject.toml [tool.pytest]")
+    if "test" in package_scripts:
+        record["tools"].append(_detect_node_test_tool(package_dependencies))
+        record["commands"].append(_package_manager_command(root_names, "test"))
+        record["configs"].append("package.json [scripts.test]")
+    if "phpunit/phpunit" in composer_dev or {"phpunit.xml", "phpunit.xml.dist"} & root_names:
+        record["tools"].append("phpunit")
+        record["commands"].append("vendor/bin/phpunit")
+    for technology, tool, command in (
+        ("Rust", "cargo test", "cargo test"),
+        ("Go", "go test", "go test ./..."),
+    ):
+        if technology in technologies:
+            record["tools"].append(tool)
+            record["commands"].append(command)
+    return _finalized_validation_record(record)
+
+
+def _inspect_lint_workflows(root_names, tool_config, package_scripts):
+    record = _validation_record()
+    for section in ("ruff", "black", "isort", "flake8", "pylint"):
+        if section in tool_config:
+            record["tools"].append(section)
+            record["configs"].append(f"pyproject.toml [tool.{section}]")
+    if "ruff" in record["tools"]:
+        record["commands"].append("python -m ruff check .")
+    if "lint" in package_scripts:
+        record["tools"].append("package script")
+        record["commands"].append(_package_manager_command(root_names, "lint"))
+        record["configs"].append("package.json [scripts.lint]")
+    eslint_configs = [
+        name for name in root_names
+        if name.startswith(".eslintrc") or name.startswith("eslint.config.")
+    ]
+    if eslint_configs:
+        record["tools"].append("ESLint")
+        record["configs"].extend(eslint_configs)
+    return _finalized_validation_record(record)
+
+
+def _inspect_type_workflows(root_names, tool_config, package_scripts):
+    record = _validation_record()
+    if "mypy" in tool_config:
+        record["tools"].append("mypy")
+        record["configs"].append("pyproject.toml [tool.mypy]")
+        record["commands"].append("python -m mypy .")
+    if "pyright" in tool_config or "pyrightconfig.json" in root_names:
+        record["tools"].append("pyright")
+        record["configs"].append(
+            "pyproject.toml [tool.pyright]" if "pyright" in tool_config else "pyrightconfig.json"
+        )
+        record["commands"].append("pyright")
+    if "tsconfig.json" in root_names:
+        record["tools"].append("TypeScript")
+        record["configs"].append("tsconfig.json")
+        record["commands"].append("npx tsc --noEmit")
+    if "typecheck" in package_scripts:
+        record["tools"].append("package script")
+        record["configs"].append("package.json [scripts.typecheck]")
+        record["commands"].append(_package_manager_command(root_names, "typecheck"))
+    return _finalized_validation_record(record)
+
+
+def _inspect_build_workflows(root_names, technologies, pyproject, package_scripts):
+    record = _validation_record()
+    pyproject_build = isinstance(pyproject, dict) and isinstance(pyproject.get("build-system"), dict)
+    if "Python" in technologies and ("setup.py" in root_names or pyproject_build):
+        record["tools"].append("PEP 517")
+        record["configs"].append("pyproject.toml [build-system]" if pyproject_build else "setup.py")
+        record["commands"].append("python -m build")
+    if "build" in package_scripts:
+        record["tools"].append("package script")
+        record["configs"].append("package.json [scripts.build]")
+        record["commands"].append(_package_manager_command(root_names, "build"))
+    for technology, tool, command in (
+        ("Rust", "cargo", "cargo build"),
+        ("Go", "go", "go build ./..."),
+    ):
+        if technology in technologies:
+            record["tools"].append(tool)
+            record["commands"].append(command)
+    return _finalized_validation_record(record)
 
 
 def _mapping_values(document: Any, keys: tuple[str, ...]) -> dict[str, object]:
@@ -183,6 +178,11 @@ def _finalize_validation_record(record: dict[str, object]) -> None:
     record["status"] = (
         "configured_not_run" if record["configured"] else "not_configured"
     )
+
+
+def _finalized_validation_record(record: dict[str, object]) -> dict[str, object]:
+    _finalize_validation_record(record)
+    return record
 
 
 def _detect_node_test_tool(dependencies: dict[str, object]) -> str:

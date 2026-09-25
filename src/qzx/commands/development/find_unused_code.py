@@ -3,617 +3,81 @@
 
 """Find definitions that have no statically visible source-code references."""
 
-import os
-import re
-import ast
-from collections import Counter
-
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import (
-    SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
-    find_files,
+
+from ._unused_code_analysis import execute_unused_code_analysis
+from ._unused_symbol_extractors import (
+    extract_cpp_symbols,
+    extract_csharp_symbols,
+    extract_go_symbols,
+    extract_java_symbols,
+    extract_js_ts_symbols,
+    extract_kotlin_symbols,
+    extract_php_symbols,
+    extract_python_symbols,
+    extract_rust_symbols,
 )
 
-class FindUnusedCodeCommand(CommandBase):
-    """
-    Identify review candidates, not definitive dead code.
 
-    Dynamic dispatch, framework discovery, and reflection cannot always be
-    proven through source tokens, so the command deliberately reports
-    candidates instead of claiming that deletion is safe.
-    """
-    
+class FindUnusedCodeCommand(CommandBase):
+    """Identify review candidates, not definitive dead code."""
+
     name = "findUnusedCode"
-    description = "Finds functions, classes, and exports with no statically visible references so they can be reviewed for removal"
+    description = (
+        "Finds functions, classes, and exports with no statically visible "
+        "references so they can be reviewed for removal"
+    )
     category = "development"
-    
+
     parameters = [
         {
-            'name': 'scan_path',
-            'description': 'Path to scan for files (defaults to current directory)',
-            'required': False,
-            'default': '.'
+            "name": "scan_path",
+            "description": "Path to scan for files (defaults to current directory)",
+            "required": False,
+            "default": ".",
         }
     ]
-    
+
     examples = [
         {
-            'command': 'qzx findUnusedCode',
-            'description': 'Find unused-code candidates in the current directory'
+            "command": "qzx findUnusedCode",
+            "description": "Find unused-code candidates in the current directory",
         },
         {
-            'command': 'qzx findUnusedCode "src/"',
-            'description': 'Find unused-code candidates in the src/ directory'
-        }
+            "command": 'qzx findUnusedCode "src/"',
+            "description": "Find unused-code candidates in the src/ directory",
+        },
     ]
-    
+
     SUPPORTED_EXTENSIONS = {
-        '.py', '.js', '.jsx', '.ts', '.tsx', '.php',
-        '.rs', '.cpp', '.hpp', '.cc', '.cxx', '.h',
-        '.go', '.java', '.kt', '.cs'
+        ".py",
+        ".js",
+        ".jsx",
+        ".ts",
+        ".tsx",
+        ".php",
+        ".rs",
+        ".cpp",
+        ".hpp",
+        ".cc",
+        ".cxx",
+        ".h",
+        ".go",
+        ".java",
+        ".kt",
+        ".cs",
     }
-    
-    def execute(self, scan_path='.'):
-        """
-        Find definitions with no statically visible references.
-        
-        Args:
-            scan_path (str): Path to scan
-            
-        Returns:
-            Dictionary with review candidates and analysis details.
-        """
-        abs_scan_path = os.path.abspath(scan_path)
-        if not os.path.exists(abs_scan_path):
-            return {
-                "success": False,
-                "error": f"Path '{scan_path}' does not exist.",
-                "message": f"Path '{scan_path}' does not exist."
-            }
-            
-        # 1. Discover all source files
-        files = []
-        def file_callback(file_path):
-            files.append(file_path)
-            return True
-            
-        def file_filter(file_path):
-            _, ext = os.path.splitext(file_path)
-            return ext.lower() in self.SUPPORTED_EXTENSIONS
-            
-        if os.path.isdir(abs_scan_path):
-            for file_path in find_files(
-                abs_scan_path,
-                recursive=True,
-                exclude_dirs=SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
-                file_type='f',
-            ):
-                if file_filter(file_path):
-                    file_callback(file_path)
-        elif os.path.isfile(abs_scan_path) and file_filter(abs_scan_path):
-            files.append(abs_scan_path)
-            
-        if not files:
-            return {
-                "success": True,
-                "candidate_symbols_count": 0,
-                "candidate_symbols": [],
-                "message": "No supported source files found to analyze."
-            }
-            
-        # 2. Count tokens in every file. A set is insufficient here because a
-        # declaration and an in-file use share the same token; the count lets
-        # us distinguish a definition-only occurrence from a real reference.
-        token_counts = {}
-        file_contents = {}
-        
-        word_pattern = re.compile(r'\b[A-Za-z0-9_]+\b')
-        
-        for file_path in files:
-            try:
-                # Skip massive files
-                if os.path.getsize(file_path) > 1 * 1024 * 1024:
-                    continue
-                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                    content = f.read()
-                    file_contents[file_path] = content
-                    token_counts[file_path] = Counter(word_pattern.findall(content))
-            except Exception:
-                pass
-                
-        # 3. Extract defined symbols (Function/Class names) from each file
-        symbols = []
-        for file_path in files:
-            if file_path not in file_contents:
-                continue
-                
-            _, ext = os.path.splitext(file_path)
-            content = file_contents[file_path]
-            rel_path = os.path.relpath(file_path, abs_scan_path).replace(os.path.sep, '/')
-            
-            if ext.lower() == '.py':
-                self._extract_python_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() in ('.js', '.jsx', '.ts', '.tsx'):
-                self._extract_js_ts_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() == '.php':
-                self._extract_php_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() == '.rs':
-                self._extract_rust_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() in ('.cpp', '.hpp', '.cc', '.cxx', '.h'):
-                self._extract_cpp_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() == '.go':
-                self._extract_go_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() == '.java':
-                self._extract_java_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() == '.kt':
-                self._extract_kotlin_symbols(content, file_path, rel_path, symbols)
-            elif ext.lower() == '.cs':
-                self._extract_csharp_symbols(content, file_path, rel_path, symbols)
-                
-        # 4. Check references for each symbol
-        candidate_symbols = []
-        for sym in symbols:
-            name = sym["name"]
-            def_file = sym["file_abs"]
-            
-            referenced = False
-            # The definition itself contributes one occurrence in its file.
-            # A second in-file occurrence or any occurrence elsewhere is a
-            # reference and therefore evidence that the symbol is in use.
-            for file_path, counts in token_counts.items():
-                minimum_references = 1 if file_path == def_file else 0
-                if counts[name] > minimum_references:
-                    referenced = True
-                    break
-                    
-            if not referenced:
-                candidate_symbols.append({
-                    "name": name,
-                    "type": sym["type"],
-                    "file": sym["file_rel"],
-                    "line_number": sym["line_number"],
-                    "reason": "No statically visible references were found in the analyzed source files.",
-                })
-                
-        # 5. Format message (Verbose is Gold)
-        msg = "Unused Code Candidate Report:\n"
-        msg += f"- Total files scanned: {len(files)}\n"
-        msg += f"- Total symbols analyzed: {len(symbols)}\n"
-        msg += f"- Candidates requiring review: {len(candidate_symbols)}\n"
-        
-        if candidate_symbols:
-            msg += "\nPotentially unused definitions (review dynamic or reflective uses before removal):\n"
-            for index, sym in enumerate(candidate_symbols[:15], 1):
-                msg += f"  {index}. [{sym['type'].upper()}] '{sym['name']}' at {sym['file']}:{sym['line_number']}\n"
-            if len(candidate_symbols) > 15:
-                msg += f"  ... and {len(candidate_symbols) - 15} more candidates.\n"
-        else:
-            msg += "\nNo unused-code candidates were detected.\n"
-            
-        return {
-            "success": True,
-            "scan_path": abs_scan_path,
-            "analyzed_symbols_count": len(symbols),
-            "candidate_symbols_count": len(candidate_symbols),
-            "candidate_symbols": candidate_symbols,
-            "message": msg
-        }
-        
-    def _extract_python_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts module-level function and class definitions from Python AST"""
-        try:
-            tree = ast.parse(content, filename=file_path)
-            for node in tree.body:
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    name = node.name
-                    # Skip private/internal methods and tests
-                    if name.startswith('_') or name.startswith('test_'):
-                        continue
-                    symbols.append({
-                        "name": name,
-                        "type": "function",
-                        "file_abs": file_path,
-                        "file_rel": rel_path,
-                        "line_number": node.lineno
-                    })
-                elif isinstance(node, ast.ClassDef):
-                    name = node.name
-                    if name.startswith('_'):
-                        continue
-                    base_names = {
-                        base.id
-                        if isinstance(base, ast.Name)
-                        else base.attr
-                        if isinstance(base, ast.Attribute)
-                        else ""
-                        for base in node.bases
-                    }
-                    if "CommandBase" in base_names:
-                        continue
-                    if (
-                        name.startswith("Test")
-                        and (
-                            rel_path.startswith("tests/")
-                            or os.path.basename(rel_path).startswith("test_")
-                        )
-                    ):
-                        continue
-                    symbols.append({
-                        "name": name,
-                        "type": "class",
-                        "file_abs": file_path,
-                        "file_rel": rel_path,
-                        "line_number": node.lineno
-                    })
-        except Exception:
-            pass
-            
-    def _extract_js_ts_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts exported functions, classes, interfaces, or variables from JS/TS using regex"""
-        # Match 'export function name', 'export class name', etc.
-        pattern = re.compile(
-            r'^\s*export\s+(?:default\s+)?(?:const|let|var|function|class|interface|type|async\s+function)\s+([A-Za-z0-9_]+)',
-            re.MULTILINE
-        )
-        
-        # Match 'export default class name', 'export default function name'
-        default_pattern = re.compile(
-            r'^\s*export\s+default\s+(?:class|function)\s+([A-Za-z0-9_]+)',
-            re.MULTILINE
-        )
-        
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            match = pattern.search(line)
-            if not match:
-                match = default_pattern.search(line)
-                
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_'):
-                    continue
-                # Determine type
-                sym_type = "export"
-                if "class" in line:
-                    sym_type = "class"
-                elif "function" in line:
-                    sym_type = "function"
-                elif "interface" in line or "type" in line:
-                    sym_type = "interface"
-                    
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
 
-    def _extract_php_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts PHP classes, interfaces, traits, and functions using regex"""
-        # Match 'class ClassName', 'interface InterfaceName', 'trait TraitName'
-        class_pattern = re.compile(
-            r'^\s*(?:abstract\s+|final\s+)?(?:class|interface|trait)\s+([A-Za-z0-9_]+)',
-            re.MULTILINE | re.IGNORECASE
-        )
-        # Match functions
-        func_pattern = re.compile(
-            r'^\s*(?:public\s+|protected\s+|private\s+|static\s+|final\s+)*function\s+([A-Za-z0-9_]+)',
-            re.MULTILINE | re.IGNORECASE
-        )
-        
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            # Check classes/interfaces/traits
-            match = class_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_'):
-                    continue
-                sym_type = "class"
-                if "interface" in line.lower():
-                    sym_type = "interface"
-                elif "trait" in line.lower():
-                    sym_type = "trait"
-                    
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-                continue
-                
-            # Check functions
-            match = func_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                # Skip magic methods and tests
-                if name.startswith('__') or name.lower().startswith('test'):
-                    continue
-                symbols.append({
-                    "name": name,
-                    "type": "function",
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
+    _extract_python_symbols = extract_python_symbols
+    _extract_js_ts_symbols = extract_js_ts_symbols
+    _extract_php_symbols = extract_php_symbols
+    _extract_rust_symbols = extract_rust_symbols
+    _extract_cpp_symbols = extract_cpp_symbols
+    _extract_go_symbols = extract_go_symbols
+    _extract_java_symbols = extract_java_symbols
+    _extract_kotlin_symbols = extract_kotlin_symbols
+    _extract_csharp_symbols = extract_csharp_symbols
 
-    def _extract_rust_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts Rust struct, enum, fn, trait definitions using regex"""
-        # Match pub/pub(crate)/etc. fn/struct/enum/trait/type/union name
-        pattern = re.compile(
-            r'^\s*(?:pub(?:\([^\)]+\))?\s+)?(?:fn|struct|enum|trait|type|union)\s+([A-Za-z0-9_]+)',
-            re.MULTILINE
-        )
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            match = pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_') or name.startswith('test_'):
-                    continue
-                # Determine type
-                sym_type = "function"
-                if "struct" in line:
-                    sym_type = "struct"
-                elif "enum" in line:
-                    sym_type = "enum"
-                elif "trait" in line:
-                    sym_type = "trait"
-                elif "type" in line:
-                    sym_type = "type"
-                elif "union" in line:
-                    sym_type = "union"
-                    
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-
-    def _extract_go_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts Go function and type definitions using regex"""
-        # Match 'func Name(', 'type Name struct', 'type Name interface', 'type Name func'
-        func_pattern = re.compile(
-            r'^\s*func\s+(?:\([^\)]*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(',
-            re.MULTILINE
-        )
-        type_pattern = re.compile(
-            r'^\s*type\s+([A-Za-z_][A-Za-z0-9_]*)\s+(?:struct|interface|func)',
-            re.MULTILINE
-        )
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            match = func_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_') or name == 'main' or name == 'init':
-                    continue
-                symbols.append({
-                    "name": name,
-                    "type": "function",
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-                continue
-            match = type_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_'):
-                    continue
-                sym_type = "struct"
-                if "interface" in line:
-                    sym_type = "interface"
-                elif "func" in line:
-                    sym_type = "type"
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-
-    def _extract_java_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts Java class, interface, enum, and method definitions using regex"""
-        class_pattern = re.compile(
-            r'^\s*(?:public\s+|private\s+|protected\s+|abstract\s+|final\s+)?'
-            r'(?:class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)',
-            re.MULTILINE
-        )
-        method_pattern = re.compile(
-            r'^\s*(?:public\s+|private\s+|protected\s+|static\s+|final\s+|abstract\s+)*'
-            r'(?:[A-Za-z_][A-Za-z0-9_<>\[\],\s]*\s+)?'
-            r'([A-Za-z_][A-Za-z0-9_]*)\s*\(',
-            re.MULTILINE
-        )
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            match = class_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_'):
-                    continue
-                sym_type = "class"
-                if "interface" in line:
-                    sym_type = "interface"
-                elif "enum" in line:
-                    sym_type = "enum"
-                elif "record" in line:
-                    sym_type = "record"
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-                continue
-            match = method_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name in ('if', 'while', 'for', 'switch', 'catch', 'synchronized', 'try', 'main'):
-                    continue
-                if name.startswith('_') or name.lower().startswith('test'):
-                    continue
-                symbols.append({
-                    "name": name,
-                    "type": "method",
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-
-    def _extract_kotlin_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts Kotlin class, interface, object, and function definitions using regex"""
-        class_pattern = re.compile(
-            r'^\s*(?:abstract\s+|sealed\s+|data\s+|open\s+|inner\s+)?'
-            r'(?:class|interface|object|enum\s+class|data\s+class)\s+([A-Za-z_][A-Za-z0-9_]*)',
-            re.MULTILINE
-        )
-        func_pattern = re.compile(
-            r'^\s*(?:private\s+|protected\s+|internal\s+|public\s+)?'
-            r'(?:inline\s+|tailrec\s+|suspend\s+)?fun\s+(?:<[^>]+>\s*)?'
-            r'([A-Za-z_][A-Za-z0-9_]*)\s*\(',
-            re.MULTILINE
-        )
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            match = class_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_'):
-                    continue
-                sym_type = "class"
-                if "interface" in line:
-                    sym_type = "interface"
-                elif "object" in line:
-                    sym_type = "object"
-                elif "enum" in line:
-                    sym_type = "enum"
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-                continue
-            match = func_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_') or name.lower().startswith('test'):
-                    continue
-                symbols.append({
-                    "name": name,
-                    "type": "function",
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-
-    def _extract_csharp_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts C# class, interface, enum, struct, and method definitions using regex"""
-        class_pattern = re.compile(
-            r'^\s*(?:public\s+|private\s+|protected\s+|internal\s+|abstract\s+|sealed\s+|static\s+|partial\s+)*'
-            r'(?:class|interface|enum|struct|record)\s+([A-Za-z_][A-Za-z0-9_]*)',
-            re.MULTILINE
-        )
-        method_pattern = re.compile(
-            r'^\s*(?:public\s+|private\s+|protected\s+|internal\s+|static\s+|abstract\s+|sealed\s+|override\s+|virtual\s+|async\s+)*'
-            r'(?:[A-Za-z_][A-Za-z0-9_<>\[\],\s]*\s+)?'
-            r'([A-Za-z_][A-Za-z0-9_]*)\s*\(',
-            re.MULTILINE
-        )
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            match = class_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_'):
-                    continue
-                sym_type = "class"
-                if "interface" in line:
-                    sym_type = "interface"
-                elif "enum" in line:
-                    sym_type = "enum"
-                elif "struct" in line:
-                    sym_type = "struct"
-                elif "record" in line:
-                    sym_type = "record"
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-                continue
-            match = method_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name in ('if', 'while', 'for', 'foreach', 'switch', 'catch', 'using', 'lock', 'Main'):
-                    continue
-                if name.startswith('_') or name.lower().startswith('test'):
-                    continue
-                symbols.append({
-                    "name": name,
-                    "type": "method",
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-
-    def _extract_cpp_symbols(self, content, file_path, rel_path, symbols):
-        """Extracts C++ class, struct, union, and function definitions using regex"""
-        # Match class/struct/union definitions
-        class_pattern = re.compile(
-            r'^\s*(?:class|struct|union)\s+([A-Za-z0-9_]+)\b',
-            re.MULTILINE
-        )
-        # Match function declarations/definitions (simplified: return_type name(args))
-        func_pattern = re.compile(
-            r'^\s*(?:inline\s+|static\s+|virtual\s+)?(?:[A-Za-z0-9_\:\<\>]+(?:\s*\*|\s*&)?\s+)+([A-Za-z0-9_]+)\s*\([^\)]*\)\s*(?:const)?\s*[\{;]',
-            re.MULTILINE
-        )
-        lines = content.splitlines()
-        for idx, line in enumerate(lines, 1):
-            match = class_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                if name.startswith('_'):
-                    continue
-                sym_type = "class"
-                if "struct" in line:
-                    sym_type = "struct"
-                elif "union" in line:
-                    sym_type = "union"
-                symbols.append({
-                    "name": name,
-                    "type": sym_type,
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
-                continue
-                
-            match = func_pattern.search(line)
-            if match:
-                name = match.group(1).strip()
-                # Skip keywords that look like function names, or main
-                if name in ('if', 'while', 'for', 'switch', 'catch', 'main', 'return'):
-                    continue
-                if name.startswith('_'):
-                    continue
-                symbols.append({
-                    "name": name,
-                    "type": "function",
-                    "file_abs": file_path,
-                    "file_rel": rel_path,
-                    "line_number": idx
-                })
+    def execute(self, scan_path="."):
+        """Find definitions with no statically visible references."""
+        return execute_unused_code_analysis(self, scan_path)

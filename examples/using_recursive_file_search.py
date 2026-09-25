@@ -16,6 +16,26 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from qzx.core.command_base import CommandBase
 from qzx.core.recursive_findfiles_utils import find_files
 
+
+def _exclusions(exclude, exclude_dir):
+    """Normalize the optional comma-separated exclusion arguments."""
+    return (
+        exclude.split(',') if exclude else [],
+        exclude_dir.split(',') if exclude_dir else [],
+    )
+
+
+def _search_result(found_count, start_time):
+    """Print and return the common search summary."""
+    elapsed_time = time.time() - start_time
+    print(f"\nSearch complete. Found {found_count} files in {elapsed_time:.2f} seconds.")
+    return {
+        "status": "success",
+        "found_count": found_count,
+        "elapsed_time": elapsed_time,
+    }
+
+
 class ExampleFindCommand(CommandBase):
     """
     Example command showing how to use the centralized recursive file finding module
@@ -88,9 +108,7 @@ class ExampleFindCommand(CommandBase):
             exclude (str): Comma-separated list of patterns to exclude
             exclude_dir (str): Comma-separated list of directory patterns to exclude
         """
-        # Process exclude patterns
-        exclude_patterns = exclude.split(',') if exclude else []
-        exclude_directories = exclude_dir.split(',') if exclude_dir else []
+        exclude_patterns, exclude_directories = _exclusions(exclude, exclude_dir)
         
         # Build the full pattern
         file_path_pattern = os.path.join(directory, pattern)
@@ -119,15 +137,7 @@ class ExampleFindCommand(CommandBase):
             # The callback already prints the file, we don't need to do anything here
             pass
         
-        # Report summary
-        elapsed_time = time.time() - start_time
-        print(f"\nSearch complete. Found {found_count} files in {elapsed_time:.2f} seconds.")
-        
-        return {
-            "status": "success",
-            "found_count": found_count,
-            "elapsed_time": elapsed_time
-        }
+        return _search_result(found_count, start_time)
 
 
 # Alternative approach - using the list version for simpler code
@@ -146,9 +156,7 @@ class SimpleExampleFindCommand(CommandBase):
         """
         Execute the simple example command
         """
-        # Process exclude patterns
-        exclude_patterns = exclude.split(',') if exclude else []
-        exclude_directories = exclude_dir.split(',') if exclude_dir else []
+        exclude_patterns, exclude_directories = _exclusions(exclude, exclude_dir)
         
         # Build the full pattern
         file_path_pattern = os.path.join(directory, pattern)
@@ -174,13 +182,4 @@ class SimpleExampleFindCommand(CommandBase):
         for file_path in results:
             print(f"Found: {file_path}")
         
-        # Report summary
-        elapsed_time = time.time() - start_time
-        found_count = len(results)
-        print(f"\nSearch complete. Found {found_count} files in {elapsed_time:.2f} seconds.")
-        
-        return {
-            "status": "success",
-            "found_count": found_count,
-            "elapsed_time": elapsed_time
-        } 
+        return _search_result(len(results), start_time)

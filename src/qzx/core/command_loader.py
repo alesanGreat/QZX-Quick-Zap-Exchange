@@ -17,6 +17,117 @@ from .command_index import (
     validate_loaded_command,
 )
 
+
+def _record_import_failure(loader, module_name, exc):
+    message = str(exc)
+    loader.load_errors[module_name] = {
+        "type": type(exc).__name__,
+        "message": message,
+        "missing_dependency": (
+            loader._extract_missing_module_name(message)
+            if isinstance(exc, ImportError)
+            else None
+        ),
+    }
+
+
+def _import_command_module(loader, module_name, import_module):
+    try:
+        module = import_module(module_name)
+    except Exception as exc:
+        _record_import_failure(loader, module_name, exc)
+        return None
+    loader.command_modules[module_name] = module
+    return module
+
+
+def _indexed_command_class(module, entry):
+    command_class = getattr(module, entry["class_name"], None)
+    valid = (
+        isinstance(command_class, type)
+        and issubclass(command_class, CommandBase)
+        and command_class is not CommandBase
+        and command_class.__module__ == module.__name__
+    )
+    if not valid:
+        raise CommandIndexError(
+            "Indexed command '{}' does not resolve to the declared "
+            "CommandBase subclass '{}.{}'.".format(
+                entry["name"], entry["module"], entry["class_name"]
+            )
+        )
+    return validate_loaded_command(entry, command_class)
+
+
+def _register_indexed_command(loader, entry, command_class):
+    normalized = entry["name"].lower()
+    existing = loader.commands.get(normalized)
+    if existing is not None and existing is not command_class:
+        raise CommandIndexError(
+            "Indexed command '{}' conflicts with a command already "
+            "loaded from '{}'.".format(entry["name"], existing.__module__)
+        )
+    loader.commands[normalized] = command_class
+    return command_class
+
+
+def _load_indexed(loader, entry, import_module):
+    module = _import_command_module(loader, entry["module"], import_module)
+    if module is None:
+        return None
+    command_class = _indexed_command_class(module, entry)
+    return _register_indexed_command(loader, entry, command_class)
+
+
+def _module_command_classes(module):
+    import inspect
+
+    return (
+        obj for _name, obj in inspect.getmembers(module)
+        if inspect.isclass(obj)
+        and issubclass(obj, CommandBase)
+        and obj is not CommandBase
+        and obj.__module__ == module.__name__
+    )
+
+
+def _register_discovered_command(loader, command_class, module_name):
+    instance = command_class()
+    normalized = instance.name.lower()
+    existing = loader.commands.get(normalized)
+    if existing is not None and existing is not command_class:
+        loader.registration_warnings.append(
+            "Duplicate canonical command '{}': {} conflicts with {}".format(
+                instance.name, command_class.__module__, existing.__module__
+            )
+        )
+        return
+    loader.commands[normalized] = command_class
+    if len(sys.argv) > 2 and '--verbose' in sys.argv:
+        print(f"Registered command: {normalized} ({module_name})")
+
+
+def _report_verbose_import_failure(module_name, exc):
+    if "--verbose" not in sys.argv:
+        return
+    label = "Import error" if isinstance(exc, ImportError) else "Error"
+    print(
+        "{} loading module {}: {}".format(label, module_name, str(exc)),
+        file=sys.stderr,
+    )
+
+
+def _load_discovered_module(loader, module_name, import_module):
+    try:
+        module = import_module(module_name)
+        loader.command_modules[module_name] = module
+        for command_class in _module_command_classes(module):
+            _register_discovered_command(loader, command_class, module_name)
+    except Exception as exc:
+        _record_import_failure(loader, module_name, exc)
+        _report_verbose_import_failure(module_name, exc)
+
+
 class CommandLoader:
     """
     Loads command classes from specified directories and manages them
@@ -149,57 +260,7 @@ class CommandLoader:
 
     def _load_indexed_command(self, entry):
         """Import and register exactly one class named by the validated index."""
-        module_name = entry["module"]
-        try:
-            module = importlib.import_module(module_name)
-        except ImportError as exc:
-            error_msg = str(exc)
-            self.load_errors[module_name] = {
-                "type": "ImportError",
-                "message": error_msg,
-                "missing_dependency": self._extract_missing_module_name(
-                    error_msg
-                ),
-            }
-            return None
-        except Exception as exc:
-            self.load_errors[module_name] = {
-                "type": type(exc).__name__,
-                "message": str(exc),
-                "missing_dependency": None,
-            }
-            return None
-
-        self.command_modules[module_name] = module
-        command_class = getattr(module, entry["class_name"], None)
-        if (
-            not isinstance(command_class, type)
-            or not issubclass(command_class, CommandBase)
-            or command_class is CommandBase
-            or command_class.__module__ != module.__name__
-        ):
-            raise CommandIndexError(
-                "Indexed command '{}' does not resolve to the declared "
-                "CommandBase subclass '{}.{}'.".format(
-                    entry["name"],
-                    module_name,
-                    entry["class_name"],
-                )
-            )
-
-        validate_loaded_command(entry, command_class)
-        normalized = entry["name"].lower()
-        existing = self.commands.get(normalized)
-        if existing is not None and existing is not command_class:
-            raise CommandIndexError(
-                "Indexed command '{}' conflicts with a command already "
-                "loaded from '{}'.".format(
-                    entry["name"],
-                    existing.__module__,
-                )
-            )
-        self.commands[normalized] = command_class
-        return command_class
+        return _load_indexed(self, entry, importlib.import_module)
     
     def _load_command_from_module(self, module_name):
         """
@@ -208,72 +269,7 @@ class CommandLoader:
         Args:
             module_name: Fully qualified module name
         """
-        import inspect
-
-        try:
-            # Import the module
-            module = importlib.import_module(module_name)
-            self.command_modules[module_name] = module
-            
-            # Find all command classes in the module
-            for name, obj in inspect.getmembers(module):
-                # Check if it's a class that inherits from CommandBase and is not CommandBase itself
-                if (inspect.isclass(obj) and 
-                    issubclass(obj, CommandBase) and 
-                    obj is not CommandBase and
-                    obj.__module__ == module.__name__):
-                    
-                    # Instantiate the command
-                    command_instance = obj()
-                    
-                    # Get the command name and ensure it's lowercase for case-insensitive lookup
-                    command_name = command_instance.name.lower()
-                    
-                    existing = self.commands.get(command_name)
-                    if existing is not None and existing is not obj:
-                        warning = (
-                            "Duplicate canonical command '{}': {} conflicts with {}"
-                        ).format(
-                            command_instance.name,
-                            obj.__module__,
-                            existing.__module__,
-                        )
-                        self.registration_warnings.append(warning)
-                        continue
-
-                    # Register the command by its lowercase name
-                    self.commands[command_name] = obj
-                    
-                    # Print registration info solo en modo verbose
-                    if len(sys.argv) > 2 and '--verbose' in sys.argv:
-                        print(f"Registered command: {command_name} ({module_name})")
-        except ImportError as e:
-            error_msg = str(e)
-            self.load_errors[module_name] = {
-                "type": "ImportError",
-                "message": error_msg,
-                "missing_dependency": self._extract_missing_module_name(error_msg),
-            }
-            
-            if "--verbose" in sys.argv:
-                print(
-                    "Import error loading module {}: {}".format(
-                        module_name,
-                        error_msg,
-                    ),
-                    file=sys.stderr,
-                )
-        except Exception as e:
-            self.load_errors[module_name] = {
-                "type": type(e).__name__,
-                "message": str(e),
-                "missing_dependency": None,
-            }
-            if "--verbose" in sys.argv:
-                print(
-                    "Error loading module {}: {}".format(module_name, str(e)),
-                    file=sys.stderr,
-                )
+        _load_discovered_module(self, module_name, importlib.import_module)
     
     def get_command(self, command_name):
         """

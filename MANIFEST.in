@@ -20,6 +20,10 @@ include scripts/validate_result_contract_evidence.py
 include scripts/verify_golden_core.py
 include scripts/verify_golden_core_release_quality.py
 include scripts/verify_distribution_artifacts.py
+include scripts/smoke_native_project_languages.py
+include native/project_languages/Cargo.toml
+include native/project_languages/Cargo.lock
+recursive-include native/project_languages/src *.rs
 recursive-include src/qzx/resources *.json
 recursive-include examples/result_contract *.json *.md *.ts *.mjs *.py *.in *.txt *.yaml *.go *.mod *.sum *.cs *.csproj *.java *.xml *.properties *.cmd mvnw
 include .github/SUPPORT.md
@@ -39,3 +43,7 @@ include docs/result-contract-v1.md
 include docs/storage-triage.md
 include docs/telemetry.md
 include docs/reference/commands-generated.md
+include docs/python-starter.md
+include docs/reading-files.md
+include docs/reading-files.es.md
+include examples/read_file_pages.py

@@ -3,9 +3,11 @@
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 from setuptools import find_packages, setup
+from setuptools_rust import Binding, RustExtension
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -55,6 +57,21 @@ long_description = distribution_helpers.render_package_readme(
     repository_url=PRODUCT_URLS["repository"],
     revision=f"v{DEVELOPMENT_CHANNEL['version']}",
 )
+
+# The release pipeline builds native platform wheels plus a py3-none-any wheel.
+# Unsupported platforms therefore keep the portable backend without Rust.
+_native_mode = os.environ.get("QZX_BUILD_NATIVE", "auto").strip().casefold()
+rust_extensions = []
+if _native_mode not in {"0", "false", "no", "off", "portable"}:
+    rust_extensions = [
+        RustExtension(
+            "qzx._project_languages_native",
+            path="native/project_languages/Cargo.toml",
+            binding=Binding.PyO3,
+            py_limited_api=True,
+            optional=_native_mode not in {"1", "true", "yes", "on", "required"},
+        )
+    ]
 
 # Dependencias específicas de la plataforma
 install_requires = [
@@ -152,6 +169,9 @@ setup(
     python_requires=DEVELOPMENT_CHANNEL["requires_python"],
     install_requires=install_requires,
     extras_require=extras_require,
+    rust_extensions=rust_extensions,
+    options={"bdist_wheel": {"py_limited_api": "cp311"}},
+    zip_safe=False,
     entry_points={
         "console_scripts": [
             "qzx=qzx:main",

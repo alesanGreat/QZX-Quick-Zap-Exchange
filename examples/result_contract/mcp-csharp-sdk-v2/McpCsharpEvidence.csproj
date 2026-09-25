@@ -10,4 +10,8 @@
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol.Core" Version="[2.2.0]" />
   </ItemGroup>
+  <!-- GOD_CODE_GUARD_HOOK -->
+  <Target Name="GodCodeGuard" BeforeTargets="BeforeBuild">
+    <Exec Command="call &quot;$(MSBuildProjectDirectory)\..\..\..\..\god-code-gate.cmd&quot;" />
+  </Target>
 </Project>

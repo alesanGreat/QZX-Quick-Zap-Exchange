@@ -117,6 +117,25 @@ for issue in result["details"]["summary"]["issues"]:
 The report contains project paths and observations. Review it before posting it
 publicly or sending it to an external service.
 
+## Save a briefing for an agent or teammate
+
+The [copyable report exporter](../examples/project_briefing/README.md) turns the
+published `diagnoseProject` result into `briefing.md`, complete `diagnosis.json`,
+retained stderr, and a versioned receipt with file hashes. It is an example to
+keep alongside your tools, **not an additional command installed by pip**.
+
+Use the example's dedicated-environment instructions with the verified QZX
+0.2.2.0.9 package. Choose a new output directory outside the inspected project;
+existing reports are never overwritten. Nonzero exits, invalid JSON and explicit
+failed results remain failures. Partial scan evidence is kept without claiming
+that tests passed or that the project is ready to release.
+
+The same directory includes an opt-in, manual GitHub Actions template. Local
+export does not upload anything; the optional template uploads reports to that
+repository's artifacts. Review paths and observations before sharing. Its hosted
+execution has not been validated; the example documents the actual Windows
+end-to-end test separately from its static workflow checks.
+
 ## Go further
 
 Read the [complete command reference](https://qzx.yumbale.com/en/commands) or the

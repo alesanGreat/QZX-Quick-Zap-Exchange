@@ -1,233 +1,143 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-FindDuplicateFiles Command - Scans directories recursively for duplicate files by hashing and comparing sizes.
-"""
+"""Find independent duplicate files with explicit scope and evidence completeness."""
 
 import os
 
 from qzx.core.command_base import CommandBase
 from qzx.core.path_operation_utils import file_sha256, files_identical
+from qzx.core.storage_validation import (
+    StorageInputError, bounded_integer, minimum_file_bytes, storage_directory,
+)
+from ._duplicate_inventory import (
+    EXCLUDED_DIRECTORIES,
+    collect_inventory,
+    file_snapshot,
+)
+from ._duplicate_presentation import (
+    SPACE_ESTIMATE_NOTE, duplicate_message, duplicate_totals,
+)
+from ._duplicate_verification import verified_duplicate_groups
+
 
 class FindDuplicateFilesCommand(CommandBase):
-    """
-    Command to recursively identify duplicate files inside a folder to optimize disk usage.
-    """
-    
+    """Identify duplicate content without treating hardlink aliases as extra copies."""
+
     name = "findDuplicateFiles"
     description = "Scans a directory for identical files using size, SHA-256, and byte-for-byte verification"
     category = "file"
     _byte_units = ("B", "KB", "MB", "GB")
-    
+
     parameters = [
         {
-            'name': 'scan_path',
-            'description': 'Path to start searching for duplicate files (defaults to current directory)',
-            'required': False,
-            'default': '.'
+            "name": "scan_path",
+            "description": "Path to start searching for duplicate files (defaults to current directory)",
+            "required": False,
+            "default": ".",
         },
         {
-            'name': 'min_size_kb',
-            'description': 'Minimum file size in KB to consider for duplicates (defaults to 10)',
-            'required': False,
-            'default': '10'
+            "name": "min_size_kb",
+            "description": "Minimum file size in KB to consider for duplicates (defaults to 10)",
+            "required": False,
+            "default": "10",
         },
         {
-            'name': 'max_depth',
-            'description': 'Maximum depth level to walk directories recursively (defaults to 4)',
-            'required': False,
-            'default': '4'
-        }
+            "name": "max_depth",
+            "description": "Maximum depth level to walk directories recursively (defaults to 4)",
+            "required": False,
+            "default": "4",
+        },
     ]
-    
+
     examples = [
         {
-            'command': 'qzx findDuplicateFiles',
-            'description': 'Search for duplicates in the current directory (min 10KB)'
+            "command": "qzx findDuplicateFiles",
+            "description": "Search for duplicates in the current directory (min 10KB)",
         },
         {
-            'command': 'qzx findDuplicateFiles C:/my-assets 0',
-            'description': 'Search for all duplicate files of any size inside C:/my-assets'
-        }
+            "command": "qzx findDuplicateFiles C:/my-assets 0",
+            "description": "Search for all duplicate files of any size inside C:/my-assets",
+        },
     ]
-    
-    def execute(self, scan_path='.', min_size_kb='10', max_depth='4'):
-        """
-        Locates duplicate files
-        
-        Args:
-            scan_path (str): Root folder to scan
-            min_size_kb (str/int): Size threshold to filter files
-            max_depth (str/int): Folder depth limit
-            
-        Returns:
-            Dictionary containing duplicate file lists and disk reclaim details
-        """
-        abs_path = os.path.abspath(scan_path)
-        
-        if not os.path.exists(abs_path):
-            return {
-                "success": False,
-                "error": f"Path '{scan_path}' does not exist.",
-                "message": f"Path '{scan_path}' does not exist."
-            }
-            
-        if not os.path.isdir(abs_path):
-            return {
-                "success": False,
-                "error": f"'{scan_path}' is not a directory.",
-                "message": f"'{scan_path}' is not a directory."
-            }
-            
-        # Parse params
-        try:
-            min_bytes = float(min_size_kb) * 1024
-        except ValueError:
-            min_bytes = 10 * 1024
-            
-        try:
-            depth_limit = int(max_depth)
-        except ValueError:
-            depth_limit = 4
-            
-        # 1. Group files by size first (fast pre-filter)
-        files_by_size = {}
-        base_depth = abs_path.count(os.sep)
-        
-        try:
-            for root, dirs, files in os.walk(abs_path, topdown=True):
-                current_depth = root.count(os.sep) - base_depth
-                if current_depth >= depth_limit:
-                    dirs.clear()
-                    continue
-                    
-                # Skip heavy system/dependency dirs
-                for skip in [".git", "node_modules", ".venv", "env"]:
-                    if skip in dirs:
-                        dirs.remove(skip)
-                        
-                for f in files:
-                    fp = os.path.join(root, f)
-                    try:
-                        if os.path.islink(fp):
-                            continue
-                        size = os.path.getsize(fp)
-                        if size >= min_bytes:
-                            if size not in files_by_size:
-                                files_by_size[size] = []
-                            files_by_size[size].append(fp)
-                    except OSError:
-                        pass
-                        
-            # Filter sizes with multiple candidate files
-            size_candidates = {s: files for s, files in files_by_size.items() if len(files) > 1}
-            
-            # 2. Hash candidates to confirm duplicates
-            duplicates = {}
-            for size, file_list in size_candidates.items():
-                hashes = {}
-                for fp in file_list:
-                    h = self._get_sha256(fp)
-                    if h:
-                        if h not in hashes:
-                            hashes[h] = []
-                        hashes[h].append(fp)
-                        
-                # A matching digest is only a candidate. Partition every
-                # candidate set with an exact byte comparison before claiming
-                # that files are identical.
-                for h, paths in hashes.items():
-                    exact_groups = []
-                    for path in paths:
-                        for exact_group in exact_groups:
-                            if self._files_identical(path, exact_group[0]):
-                                exact_group.append(path)
-                                break
-                        else:
-                            exact_groups.append([path])
 
-                    duplicate_index = 0
-                    for exact_group in exact_groups:
-                        if len(exact_group) <= 1:
-                            continue
-                        duplicate_index += 1
-                        group_key = (
-                            h
-                            if duplicate_index == 1
-                            else f"{h}:{duplicate_index}"
-                        )
-                        duplicates[group_key] = {
-                            "sha256": h,
-                            "verification": "byte_for_byte",
-                            "size_bytes": size,
-                            "size_readable": self._format_bytes(size),
-                            "files": sorted(exact_group)
-                        }
-                        
-            # 3. Calculate reclaimable space
-            reclaimable_bytes = 0
-            total_duplicate_groups = len(duplicates)
-            total_duplicate_files = 0
-            
-            for h, info in duplicates.items():
-                count = len(info["files"])
-                total_duplicate_files += count
-                # Space reclaimed = size * (count - 1)
-                reclaimable_bytes += info["size_bytes"] * (count - 1)
-                
-            readable_reclaim = self._format_bytes(reclaimable_bytes)
-            
-            msg = f"Duplicate files scan completed for '{abs_path}':\n"
-            msg += f"- Duplicate groups identified: {total_duplicate_groups}\n"
-            msg += f"- Total duplicate file copies: {total_duplicate_files}\n"
-            msg += f"- Reclaimable space: {readable_reclaim}\n"
-            
-            if total_duplicate_groups > 0:
-                msg += "\nTop Duplicate Groups:\n"
-                # Sort duplicate groups by size descending
-                sorted_dups = sorted(duplicates.items(), key=lambda x: x[1]["size_bytes"], reverse=True)
-                for h, info in sorted_dups[:5]:
-                    rel_paths = [os.path.relpath(p, abs_path) for p in info["files"]]
-                    msg += (
-                        f"  - [{info['size_readable']}] "
-                        f"SHA-256: {info['sha256'][:12]}... "
-                        "(byte-for-byte verified)\n"
-                    )
-                    for rel_p in rel_paths:
-                        msg += f"    -> {rel_p}\n"
-                if len(sorted_dups) > 5:
-                    msg += f"  ... and {len(sorted_dups) - 5} more groups.\n"
-                    
-            return {
-                "success": True,
-                "scan_path": abs_path,
-                "total_groups": total_duplicate_groups,
-                "total_duplicate_files": total_duplicate_files,
-                "reclaimable_bytes": reclaimable_bytes,
-                "reclaimable_space_readable": readable_reclaim,
-                "duplicate_groups": duplicates,
-                "message": msg
-            }
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "message": f"Failed to search for duplicate files: {str(e)}"
-            }
-            
-    def _get_sha256(self, filepath):
-        """Compute a SHA-256 content digest in bounded chunks."""
+    def __init__(
+        self,
+        *,
+        hash_reader=file_sha256,
+        compare_reader=files_identical,
+        walk_factory=os.walk,
+        snapshot_reader=file_snapshot,
+    ):
+        """Expose deterministic filesystem/content boundaries for tests and embedding."""
+        self._hash_reader = hash_reader
+        self._compare_reader = compare_reader
+        self._walk_factory = walk_factory
+        self._snapshot_reader = snapshot_reader
+
+    def execute(self, scan_path=".", min_size_kb="10", max_depth="4"):
+        """Scan depth 0..64 inclusively; return useful partial evidence explicitly."""
         try:
-            return file_sha256(filepath)
-        except OSError:
-            return None
+            root = storage_directory(scan_path)
+            minimum = minimum_file_bytes(min_size_kb)
+            depth = bounded_integer(max_depth, "max_depth", 0, 64)
+        except StorageInputError as exc:
+            return self._failure(exc.code, str(exc))
+        except ValueError as exc:
+            return self._failure("invalid_parameter", str(exc))
+        inventory = collect_inventory(
+            root,
+            minimum,
+            depth,
+            walk_factory=self._walk_factory,
+            snapshot_reader=self._snapshot_reader,
+        )
+        if not inventory.statistics["directories_scanned"]:
+            return self._failure("directory_unreadable", f"Cannot scan directory '{root}'.")
+        duplicates = verified_duplicate_groups(
+            inventory,
+            self._get_sha256,
+            self._files_identical,
+            self._format_bytes,
+            snapshot_reader=self._snapshot_reader,
+        )
+        copies, redundant = duplicate_totals(duplicates)
+        return {
+            "success": True,
+            "message": duplicate_message(inventory, duplicates, self._format_bytes),
+            "scan_path": root,
+            "total_groups": len(duplicates),
+            "total_duplicate_files": copies,
+            "reclaimable_bytes": redundant,
+            "reclaimable_space_readable": self._format_bytes(redundant),
+            "reclaimable_space_basis": "logical_content_bytes",
+            "physical_reclaimable_bytes": None,
+            "space_estimate_note": SPACE_ESTIMATE_NOTE,
+            "duplicate_groups": duplicates,
+            "hardlink_aliases": inventory.hardlink_aliases,
+            "read_only": True,
+            "partial": inventory.partial,
+            "scan_complete": not inventory.partial,
+            "scan_scope": {
+                "max_depth": depth, "depth_inclusive": True, "min_size_bytes": minimum,
+                "excluded_directories": sorted(EXCLUDED_DIRECTORIES),
+                "follow_directory_links": False, "hydrate_offline_files": False,
+            },
+            "scan_statistics": inventory.statistics,
+            "warnings": inventory.warnings,
+            "warning_count": inventory.warning_count,
+            "warning_counts": dict(inventory.warning_counts),
+            "warning_sample_truncated": inventory.warning_count > len(inventory.warnings),
+        }
 
     @staticmethod
-    def _files_identical(first_path, second_path):
-        """Confirm equality without trusting a digest alone."""
-        try:
-            return files_identical(first_path, second_path)
-        except OSError:
-            return False
+    def _failure(code, message):
+        return {"success": False, "error_code": code, "error": message, "message": message}
+
+    def _get_sha256(self, filepath):
+        """I/O failures are recorded by the verification layer, never silenced."""
+        return self._hash_reader(filepath)
+
+    def _files_identical(self, first_path, second_path):
+        """A digest match is only a candidate, not proof of equal bytes."""
+        return self._compare_reader(first_path, second_path)

@@ -64,6 +64,18 @@ class TestProjectLanguagesCommand:
             "CSS": 5,
         }
 
+    def test_preserves_cpp_language_name(self, tmp_path):
+        (tmp_path / "widget.cpp").write_text(
+            "class Widget { public: int value() const { return 1; } };\n",
+            encoding="utf-8",
+        )
+
+        result = self.command.execute(str(tmp_path))
+
+        assert result["success"] is True
+        assert result["languages_found"] == {"C++": 1}
+        assert result["languages"][0]["language"] == "C++"
+
     def test_respects_gitignore_and_builtin_dependency_directories(self, tmp_path):
         (tmp_path / ".gitignore").write_text("ignored.py\n", encoding="utf-8")
         (tmp_path / "kept.py").write_text("print('kept')\n", encoding="utf-8")
@@ -147,3 +159,75 @@ class TestProjectLanguagesCommand:
         assert retired_alias is None
         assert retired_duplicate is None
         assert canonical.name == "projectLanguages"
+
+    def test_native_backend_contract_if_available(self, tmp_path):
+        import qzx.commands.development._project_language_native as native_adapter
+
+        if not native_adapter.native_available():
+            return
+
+        (tmp_path / "app.py").write_text(
+            "# comment\nprint('QZX')\n\n",
+            encoding="utf-8",
+        )
+        result = ProjectLanguagesCommand().execute(str(tmp_path))
+
+        assert result["success"] is True
+        assert result["analysis_engine"]["language_detection"] == "Tokei"
+        assert result["analysis_engine"]["native"] is True
+        assert result["languages_found"] == {"Python": 1}
+        language = result["languages"][0]
+        assert language["code_lines"] == 1
+        assert language["comment_lines"] == 1
+        assert language["blank_lines"] == 1
+
+
+    def test_native_batch_matches_separate_scans_if_available(self, tmp_path):
+        import qzx.commands.development._project_language_native as native_adapter
+
+        if not native_adapter.native_available():
+            return
+
+        python_root = tmp_path / "python"
+        rust_root = tmp_path / "rust"
+        python_root.mkdir()
+        rust_root.mkdir()
+        (python_root / "app.py").write_text(
+            "# comment\nprint('QZX')\n",
+            encoding="utf-8",
+        )
+        (rust_root / "lib.rs").write_text(
+            "// comment\nfn main() {}\n",
+            encoding="utf-8",
+        )
+
+        separate = [
+            ProjectLanguagesCommand().execute(str(python_root)),
+            ProjectLanguagesCommand().execute(str(rust_root)),
+        ]
+        batch = native_adapter.scan_native_batch_result(
+            ProjectLanguagesCommand(),
+            [python_root, rust_root],
+        )
+
+        def totals(results):
+            combined = {}
+            for result in results:
+                for entry in result["languages"] + result["supporting_formats"]:
+                    stats = combined.setdefault(
+                        entry["language"],
+                        {
+                            "file_count": 0,
+                            "bytes": 0,
+                            "total_lines": 0,
+                            "code_lines": 0,
+                            "comment_lines": 0,
+                            "blank_lines": 0,
+                        },
+                    )
+                    for key in stats:
+                        stats[key] += entry[key]
+            return combined
+
+        assert batch["analysis_engine"]["language_detection"] == "Tokei"
+        assert totals([batch]) == totals(separate)

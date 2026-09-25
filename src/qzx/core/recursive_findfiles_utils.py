@@ -11,8 +11,9 @@ wildcards, excluding specific directories and with callbacks for real-time repor
 import os
 import re
 import fnmatch
-import glob
 from typing import Callable, Generator, List, Optional
+
+from qzx.core.file_search_entries import direct_matches, prune_directory_references
 
 
 # Source-analysis commands should inspect authored code, not dependency,
@@ -107,7 +108,11 @@ def find_files(
     exclude_dirs: Optional[List[str]] = None,
     file_type: Optional[str] = None,
     on_file_found: Optional[Callable[[str], None]] = None,
-    on_dir_found: Optional[Callable[[str], None]] = None
+    on_dir_found: Optional[Callable[[str], None]] = None,
+    on_error: Optional[Callable[[OSError], None]] = None,
+    *,
+    recursive_walker=os.walk,
+    direct_matcher=direct_matches,
 ) -> Generator[str, None, None]:
     """
     Find files or directories that match a pattern and return them one by one.
@@ -121,147 +126,131 @@ def find_files(
     Yields:
         str: Paths of matching files or directories
     """
-    exclude_patterns = exclude_patterns or []
-    exclude_dirs = exclude_dirs or []
+    recursion_depth = _recursion_depth(recursive, max_depth)
+    directory, pattern = _search_location(file_path_pattern)
+    options = {
+        "directory": directory,
+        "pattern": pattern,
+        "file_type": file_type,
+        "exclude_patterns": exclude_patterns or [],
+        "exclude_dirs": exclude_dirs or [],
+        "on_file_found": on_file_found,
+        "on_dir_found": on_dir_found,
+        "on_error": on_error,
+    }
+    if recursion_depth is None or recursion_depth > 0:
+        yield from _iter_recursive_matches(
+            recursion_depth=recursion_depth,
+            recursive_walker=recursive_walker,
+            **options,
+        )
+    else:
+        yield from _iter_direct_matches(
+            direct_matcher=direct_matcher,
+            **options,
+        )
 
-    # Add debug output
-    #print(f"DEBUG: find_files called with file_path_pattern={file_path_pattern}, recursive={recursive}, type={type(recursive)}")
-    
-    # Normalize recursion to 0 (none), None (unlimited), or a positive depth.
+
+def _recursion_depth(recursive, max_depth):
+    """Normalize recursion to zero, unlimited, or a positive depth."""
     if isinstance(recursive, str):
-        recursion_depth = parse_recursive_parameter(recursive)
-    elif recursive is True:
-        recursion_depth = None
-    elif recursive is None:
-        recursion_depth = None
+        depth = parse_recursive_parameter(recursive)
+    elif recursive is True or recursive is None:
+        depth = None
     elif isinstance(recursive, int):
-        recursion_depth = max(0, recursive)
+        depth = max(0, recursive)
     else:
-        recursion_depth = 0
+        depth = 0
+    if max_depth is None:
+        return depth
+    maximum = max(0, int(max_depth))
+    if depth is None:
+        return maximum
+    return min(depth, maximum) if depth > 0 else depth
 
-    if max_depth is not None:
-        max_depth = max(0, int(max_depth))
-        if recursion_depth is None:
-            recursion_depth = max_depth
-        elif recursion_depth > 0:
-            recursion_depth = min(recursion_depth, max_depth)
-    
-    #print(f"DEBUG: After parse_recursive_parameter, max_depth={max_depth}")
-    
-    # The pattern can include a directory path and a filename pattern
-    # Split them properly to search in the right place
-    file_path_pattern = file_path_pattern.replace('\\', '/')
-    
-    # Handle special case: if the pattern is just a directory
-    if os.path.isdir(file_path_pattern):
-        directory = file_path_pattern
-        pattern = '*'
-    else:
-        # Normal case: split into directory and pattern
-        directory = os.path.dirname(file_path_pattern)
-        pattern = os.path.basename(file_path_pattern)
-        
-        # If the directory is empty, use the current directory
-        if not directory:
-            directory = '.'
-    
-    #print(f"DEBUG: Extracted directory={directory}, pattern={pattern}")
-            
-    # Convert directory to absolute path
-    directory = os.path.abspath(directory)
-    
-    recursive_enabled = recursion_depth is None or recursion_depth > 0
 
-    # If not recursive, use simple glob.
-    if not recursive_enabled:
-        for file_path in glob.glob(os.path.join(directory, pattern)):
-            filename = os.path.basename(file_path)
-            if any(
-                fnmatch.fnmatch(filename, exclude_pattern)
-                for exclude_pattern in exclude_patterns
-            ):
-                continue
+def _search_location(file_path_pattern):
+    """Split one user pattern into an absolute directory and basename glob."""
+    normalized = file_path_pattern.replace('\\', '/')
+    if os.path.isdir(normalized):
+        return os.path.abspath(normalized), '*'
+    directory = os.path.dirname(normalized) or '.'
+    return os.path.abspath(directory), os.path.basename(normalized)
 
-            if file_type is None or \
-               (file_type == 'f' and os.path.isfile(file_path)) or \
-               (file_type == 'd' and os.path.isdir(file_path)):
-                
-                # Call the appropriate callback if provided
-                if os.path.isfile(file_path) and on_file_found:
-                    on_file_found(file_path)
-                elif os.path.isdir(file_path) and on_dir_found:
-                    on_dir_found(file_path)
-                
-                # Yield the path
-                yield file_path
-    else:
-        # Do a recursive search using os.walk
-        #print(f"DEBUG: Using recursive os.walk with max_depth={max_depth}")
-        
-        for root, dirs, files in os.walk(directory):
-            relative_root = os.path.relpath(root, directory)
-            current_depth = 0 if relative_root == "." else relative_root.count(os.sep) + 1
 
-            excluded_dirs = {
-                dirname
-                for dirname in dirs
-                if any(
-                    fnmatch.fnmatch(dirname, exclude_pattern)
-                    for exclude_pattern in exclude_dirs
-                )
-            }
-            dirs[:] = [dirname for dirname in dirs if dirname not in excluded_dirs]
-            
-            # Check if we've reached the maximum depth
-            if recursion_depth is not None and current_depth >= recursion_depth:
-                #print(f"DEBUG: Reached max depth {max_depth} at {root}, stopping deeper search")
-                # Clear dirs list to prevent further recursion
-                dirs.clear()
-            
-            matched_files = []
-            matched_dirs = []
-            
-            # Filter matches based on the pattern and type
-            if file_type is None or file_type == 'f':
-                matched_files = [
-                    filename
-                    for filename in fnmatch.filter(files, pattern)
-                    if not any(
-                        fnmatch.fnmatch(filename, exclude_pattern)
-                        for exclude_pattern in exclude_patterns
-                    )
-                ]
-            
-            if file_type is None or file_type == 'd':
-                matched_dirs = fnmatch.filter(dirs, pattern)
-            
-            #print(f"DEBUG: Found {len(matched_files)} matching files in {root}")
-            
-            # Yield matching files
-            for filename in matched_files:
-                file_path = os.path.join(root, filename)
-                
-                #print(f"DEBUG: Yielding file {file_path}")
-                
-                # Call the callback if provided
-                if on_file_found:
-                    on_file_found(file_path)
-                
-                yield file_path
-            
-            #print(f"DEBUG: Found {len(matched_dirs)} matching directories in {root}")
-            
-            # Yield matching directories
-            for dirname in matched_dirs:
-                dir_path = os.path.join(root, dirname)
-                
-                #print(f"DEBUG: Yielding directory {dir_path}")
-                
-                # Call the callback if provided
-                if on_dir_found:
-                    on_dir_found(dir_path)
-                
-                yield dir_path
+def _matches_requested_type(path, file_type):
+    return (
+        file_type is None
+        or file_type == 'f' and os.path.isfile(path)
+        or file_type == 'd' and os.path.isdir(path)
+    )
+
+
+def _iter_direct_matches(
+    directory, pattern, file_type, exclude_patterns, exclude_dirs,
+    on_file_found, on_dir_found, on_error, direct_matcher,
+):
+    del exclude_dirs  # Directory pruning applies only to recursive traversal.
+    yield from direct_matcher(
+        directory, pattern, file_type, exclude_patterns,
+        on_file_found, on_dir_found, on_error,
+    )
+
+
+def _prune_directories(directories, exclude_dirs):
+    excluded = {
+        name for name in directories
+        if any(fnmatch.fnmatch(name, pattern) for pattern in exclude_dirs)
+    }
+    directories[:] = [name for name in directories if name not in excluded]
+
+
+def _matching_names(names, pattern, exclusions=()):
+    return [
+        name for name in fnmatch.filter(names, pattern)
+        if not any(fnmatch.fnmatch(name, excluded) for excluded in exclusions)
+    ]
+
+
+def _yield_recursive_paths(root, matched_files, matched_dirs, callbacks):
+    on_file_found, on_dir_found = callbacks
+    for filename in matched_files:
+        path = os.path.join(root, filename)
+        if on_file_found:
+            on_file_found(path)
+        yield path
+    for dirname in matched_dirs:
+        path = os.path.join(root, dirname)
+        if on_dir_found:
+            on_dir_found(path)
+        yield path
+
+
+def _iter_recursive_matches(
+    directory, pattern, file_type, exclude_patterns, exclude_dirs,
+    on_file_found, on_dir_found, recursion_depth, on_error, recursive_walker,
+):
+    for root, directories, files in recursive_walker(
+        directory, onerror=on_error, followlinks=False
+    ):
+        relative_root = os.path.relpath(root, directory)
+        current_depth = 0 if relative_root == "." else relative_root.count(os.sep) + 1
+        _prune_directories(directories, exclude_dirs)
+        if recursion_depth is not None and current_depth >= recursion_depth:
+            directories.clear()
+        matched_files = (
+            _matching_names(files, pattern, exclude_patterns)
+            if file_type is None or file_type == 'f' else []
+        )
+        matched_dirs = (
+            _matching_names(directories, pattern)
+            if file_type is None or file_type == 'd' else []
+        )
+        prune_directory_references(root, directories, on_error)
+        yield from _yield_recursive_paths(
+            root, matched_files, matched_dirs,
+            (on_file_found, on_dir_found),
+        )
             
 
 

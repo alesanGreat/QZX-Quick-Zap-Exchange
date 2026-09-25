@@ -38,6 +38,8 @@ jobs:
         run: python -m ruff check src tests
 
       - name: Install the QZX runtime dependency set in isolation
+        env:
+          QZX_BUILD_NATIVE: portable
         run: python -m pip install --target "$RUNNER_TEMP/qzx-audit" .
 
       - name: Exclude the unreleased QZX package from the dependency audit
@@ -59,7 +61,9 @@ jobs:
           --strict
           --progress-spinner off
 
-      - name: Build release-shaped artifacts on a POSIX filesystem
+      - name: Build release-shaped portable artifacts on a POSIX filesystem
+        env:
+          QZX_BUILD_NATIVE: portable
         run: python -m build --outdir "$RUNNER_TEMP/qzx-dist"
 
       - name: Verify metadata, attribution, hashes, and launcher mode

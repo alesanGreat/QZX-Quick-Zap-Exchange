@@ -5,6 +5,75 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.10 — 2026-09-24
+
+<!-- qzx-release-summary-en:
+This Alpha release improves QZX for agent workflows with bounded and resumable file reading, a runnable Python starter, richer creator discovery, and dramatically faster projectLanguages analysis through an optional Rust/Tokei native engine while preserving the universal Python package path on platforms without a native wheel.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha mejora QZX para flujos de agentes con lectura de archivos acotada y reanudable, un starter Python ejecutable, mejor descubrimiento del creador y un análisis projectLanguages mucho más rápido mediante un motor nativo opcional Rust/Tokei, preservando la ruta universal del paquete Python en plataformas sin wheel nativo.
+-->
+
+### Faster project language analysis without sacrificing universal installs
+
+- Use Tokei 15 through a Rust/PyO3 `cp311-abi3` backend for `projectLanguages`
+  when a native wheel is available, replacing the former Pygments-heavy hot path
+  while preserving exact QZX accounting and the existing Python fallback.
+- Build native wheels for Windows x64, Linux x64, macOS Intel and Apple Silicon,
+  while continuing to publish the universal `py3-none-any` wheel and source
+  distribution so users are never required to install Rust.
+- Support batch/one-pass analysis for composition reports and keep the local
+  development native cache outside Dropbox, fingerprinted by the Rust sources.
+- Preserve parity between native and reference scans for files, bytes and line
+  counts; the measured workspace composition path dropped from roughly 50.7
+  seconds before the optimization to about 1.9 seconds in final validation.
+
+### Faithful, bounded file reading and creator discovery (development only)
+
+- Replace `readFile`'s unbounded whole-file default with a 64 KiB source-byte
+  page, optional line limits, strict BOM-aware Unicode and explicit legacy
+  encodings. Undecodable text fails instead of returning corrupted success.
+- Return exact byte continuation, completion and stat-fingerprint guards;
+  reject ordinary changes during and between pages. Preserve original line
+  endings and split characters without duplicating content in JSON details.
+- Add the real-CLI multilingual demo and bounded consumer in
+  `examples/read_file_pages.py`, with workflows in
+  [English](docs/reading-files.md) and [Spanish](docs/reading-files.es.md).
+- Make `qzx about` connect the creator's identity to his profile, source,
+  optional support and separately scoped professional services. Merely asking
+  for identity never opens a browser, takes a payment or contacts a service.
+- Keep existing identity fields and command names; this does not add paid
+  plans, paid features, unsolicited prompts or fabricated adoption metrics.
+
+**Migration:** check `details.read_complete`, continue with every value in
+`details.next_read`, and consume top-level `content`. `details.content` is no
+longer duplicated. The fingerprint hashes stat metadata, not file contents;
+it is not an immutable snapshot. These changes are not in PyPI 0.2.2.0.9
+and require the complete coordinated release before they are announced as public.
+
+
+### A runnable Python starter (development only)
+
+- Repair the generated README import and expose a usable package API, a
+  `python -m` entry point and an installed console command.
+- Generate modern `pyproject.toml` metadata with optional pytest dependencies,
+  explicit package discovery and no fabricated application authors or URLs.
+- Normalize Python keywords, standard-library collisions and reserved Windows
+  names before writing; reject invalid options without creating a partial tree.
+- Preserve existing/concurrent content and report partial creation or optional
+  virtual-environment failures instead of claiming work that did not happen.
+- Return executable `argv`/`cwd` next steps for agents, without automatically
+  installing packages or contacting a network service.
+- Include an editable generator credit for Alejandro Sánchez and verified
+  QZX support/professional-services destinations.
+- Add real generated-project, environment, artifact and CLI regression checks.
+  See [the development Python starter workflow](docs/python-starter.md).
+
+These changes are not part of the published 0.2.2.0.9 package. Publication still
+requires the complete coordinated release and its gates.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.9 — 2026-09-10
 
 <!-- qzx-release-summary-en:

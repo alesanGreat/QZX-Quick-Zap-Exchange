@@ -304,89 +304,13 @@ def create_safety_backup(command_name, source_path, environ=None, now=None):
     The destination is created if needed. Configuration or archive errors are
     deliberately propagated so callers can stop the dangerous operation.
     """
-    environ = os.environ if environ is None else environ
-    source = _absolute_path(source_path)
-    backup_format = _parse_format(environ)
-    compression_name, compression_level = _parse_compression(environ)
-
-    configured_directory = environ.get(BACKUP_DIRECTORY_ENV)
-    backup_directory = _absolute_path(
-        configured_directory
-        if configured_directory
-        else Path.home() / "QZX-Backups"
-    )
-    directory_was_created = not backup_directory.exists()
-    backup_directory.mkdir(parents=True, exist_ok=True)
-    if directory_was_created and os.name != "nt":
-        backup_directory.chmod(0o700)
-
-    extension = {
-        "ZIP": ".zip",
-        "TAR.GZ": ".tar.gz",
-        "TAR": ".tar",
-    }[backup_format]
-    command_fragment = _sanitize_fragment(command_name, "command")
-    timestamp = now or datetime.now()
-    source_exists = os.path.lexists(source)
-
-    for offset in range(60):
-        candidate_timestamp = timestamp + timedelta(seconds=offset)
-        filename = "QZX-Backup-{}-{}-{}{}".format(
-            candidate_timestamp.strftime("%y%m%d%H%M%S"),
-            _path_fragment(source),
-            command_fragment,
-            extension,
-        )
-        archive_path = backup_directory / filename
+    settings = _backup_settings(command_name, source_path, environ, now)
+    for archive_path in _candidate_archive_paths(settings):
         if archive_path.exists():
             continue
-
-        effective_compression = (
-            "store"
-            if backup_format == "TAR" or compression_level is None
-            else compression_name
-        )
-        manifest = {
-            "schema_version": 1,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "command": str(command_name),
-            "source_path": str(source),
-            "source_exists": source_exists,
-            "archive_format": backup_format,
-            "compression": effective_compression,
-        }
-
         try:
-            if backup_format == "ZIP":
-                _write_zip(
-                    archive_path,
-                    source,
-                    backup_directory,
-                    compression_name,
-                    compression_level,
-                    manifest,
-                )
-            else:
-                _write_tar(
-                    archive_path,
-                    source,
-                    backup_directory,
-                    backup_format,
-                    compression_name,
-                    compression_level,
-                    manifest,
-                )
-            if os.name != "nt":
-                archive_path.chmod(0o600)
-            return {
-                "status": "created",
-                "path": str(archive_path),
-                "source_path": str(source),
-                "source_exists": source_exists,
-                "format": backup_format,
-                "compression": effective_compression,
-                "size_bytes": archive_path.stat().st_size,
-            }
+            _write_configured_archive(archive_path, settings)
+            return _backup_result(archive_path, settings)
         except FileExistsError:
             continue
         except Exception:
@@ -397,3 +321,102 @@ def create_safety_backup(command_name, source_path, environ=None, now=None):
     raise FileExistsError(
         "Could not allocate a unique QZX backup filename after 60 attempts."
     )
+
+
+def _backup_settings(command_name, source_path, environ, now):
+    environ = os.environ if environ is None else environ
+    source = _absolute_path(source_path)
+    backup_format = _parse_format(environ)
+    compression_name, compression_level = _parse_compression(environ)
+    configured_directory = environ.get(BACKUP_DIRECTORY_ENV)
+    backup_directory = _absolute_path(
+        configured_directory if configured_directory else Path.home() / "QZX-Backups"
+    )
+    directory_was_created = not backup_directory.exists()
+    backup_directory.mkdir(parents=True, exist_ok=True)
+    if directory_was_created and os.name != "nt":
+        backup_directory.chmod(0o700)
+    return {
+        "source": source,
+        "source_exists": os.path.lexists(source),
+        "backup_directory": backup_directory,
+        "backup_format": backup_format,
+        "compression_name": compression_name,
+        "compression_level": compression_level,
+        "command": str(command_name),
+        "command_fragment": _sanitize_fragment(command_name, "command"),
+        "timestamp": now or datetime.now(),
+    }
+
+
+def _candidate_archive_paths(settings):
+    extension = {"ZIP": ".zip", "TAR.GZ": ".tar.gz", "TAR": ".tar"}[
+        settings["backup_format"]
+    ]
+    for offset in range(60):
+        timestamp = settings["timestamp"] + timedelta(seconds=offset)
+        filename = "QZX-Backup-{}-{}-{}{}".format(
+            timestamp.strftime("%y%m%d%H%M%S"),
+            _path_fragment(settings["source"]),
+            settings["command_fragment"],
+            extension,
+        )
+        yield settings["backup_directory"] / filename
+
+
+def _effective_compression(settings):
+    if settings["backup_format"] == "TAR" or settings["compression_level"] is None:
+        return "store"
+    return settings["compression_name"]
+
+
+def _archive_manifest(settings):
+    source = settings["source"]
+    return {
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "command": settings["command"],
+        "source_path": str(source),
+        "source_exists": settings["source_exists"],
+        "archive_format": settings["backup_format"],
+        "compression": _effective_compression(settings),
+    }
+
+
+def _write_configured_archive(archive_path, settings):
+    manifest = _archive_manifest(settings)
+    common = (
+        archive_path,
+        settings["source"],
+        settings["backup_directory"],
+    )
+    if settings["backup_format"] == "ZIP":
+        _write_zip(
+            *common,
+            settings["compression_name"],
+            settings["compression_level"],
+            manifest,
+        )
+    else:
+        _write_tar(
+            *common,
+            settings["backup_format"],
+            settings["compression_name"],
+            settings["compression_level"],
+            manifest,
+        )
+    if os.name != "nt":
+        archive_path.chmod(0o600)
+
+
+def _backup_result(archive_path, settings):
+    source = settings["source"]
+    return {
+        "status": "created",
+        "path": str(archive_path),
+        "source_path": str(source),
+        "source_exists": settings["source_exists"],
+        "format": settings["backup_format"],
+        "compression": _effective_compression(settings),
+        "size_bytes": archive_path.stat().st_size,
+    }

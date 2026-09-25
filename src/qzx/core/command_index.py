@@ -19,6 +19,13 @@ COMMAND_INDEX_PATH = (
 )
 _MODULE_PATTERN = re.compile(r"^qzx\.commands(?:\.[A-Za-z_][A-Za-z0-9_]*)+$")
 _CLASS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_INDEX_ENTRY_FIELDS = {
+    "name",
+    "module",
+    "class_name",
+    "description",
+    "category",
+}
 
 
 class CommandIndexError(RuntimeError):
@@ -58,52 +65,12 @@ def validate_command_index_document(document):
             "Command index must contain a non-empty commands list."
         )
 
-    expected_fields = {
-        "name",
-        "module",
-        "class_name",
-        "description",
-        "category",
-    }
     canonical_names = set()
     canonical_order = []
     for index, entry in enumerate(commands):
-        if not isinstance(entry, dict) or set(entry) != expected_fields:
-            raise CommandIndexError(
-                "Command index entry {} must contain exactly: {}.".format(
-                    index,
-                    ", ".join(sorted(expected_fields)),
-                )
-            )
-        for field in ("name", "module", "class_name", "description", "category"):
-            if not isinstance(entry[field], str) or not entry[field].strip():
-                raise CommandIndexError(
-                    "Command index entry {} field '{}' must be non-empty text.".format(
-                        index,
-                        field,
-                    )
-                )
-        if not _MODULE_PATTERN.fullmatch(entry["module"]):
-            raise CommandIndexError(
-                "Command '{}' has invalid module '{}' in the index.".format(
-                    entry["name"],
-                    entry["module"],
-                )
-            )
-        if not _CLASS_PATTERN.fullmatch(entry["class_name"]):
-            raise CommandIndexError(
-                "Command '{}' has invalid class name '{}' in the index.".format(
-                    entry["name"],
-                    entry["class_name"],
-                )
-            )
+        _validate_index_entry(entry, index)
         canonical = entry["name"].lower()
-        if canonical in canonical_names:
-            raise CommandIndexError(
-                "Command index contains duplicate canonical command '{}'.".format(
-                    entry["name"]
-                )
-            )
+        _require_unique_canonical_name(entry["name"], canonical, canonical_names)
         canonical_names.add(canonical)
         canonical_order.append((canonical, entry["name"]))
     if canonical_order != sorted(canonical_order):
@@ -111,6 +78,43 @@ def validate_command_index_document(document):
             "Command index entries must be sorted by canonical command name."
         )
     return document
+
+
+def _validate_index_entry(entry, index):
+    if not isinstance(entry, dict) or set(entry) != _INDEX_ENTRY_FIELDS:
+        raise CommandIndexError(
+            "Command index entry {} must contain exactly: {}.".format(
+                index,
+                ", ".join(sorted(_INDEX_ENTRY_FIELDS)),
+            )
+        )
+    for field in ("name", "module", "class_name", "description", "category"):
+        if not isinstance(entry[field], str) or not entry[field].strip():
+            raise CommandIndexError(
+                "Command index entry {} field '{}' must be non-empty text.".format(
+                    index,
+                    field,
+                )
+            )
+    if not _MODULE_PATTERN.fullmatch(entry["module"]):
+        raise CommandIndexError(
+            "Command '{}' has invalid module '{}' in the index.".format(
+                entry["name"], entry["module"]
+            )
+        )
+    if not _CLASS_PATTERN.fullmatch(entry["class_name"]):
+        raise CommandIndexError(
+            "Command '{}' has invalid class name '{}' in the index.".format(
+                entry["name"], entry["class_name"]
+            )
+        )
+
+
+def _require_unique_canonical_name(name, canonical, existing_names):
+    if canonical in existing_names:
+        raise CommandIndexError(
+            "Command index contains duplicate canonical command '{}'.".format(name)
+        )
 
 
 @lru_cache(maxsize=1)
