@@ -89,20 +89,12 @@ class ScaffoldKotlinCommand(CommandBase):
             self._create_readme(project_path, project_name, result)
             self._create_gitignore(project_path, result)
 
-            tests_msg = "with test scaffolding" if with_tests else "without tests"
-
-            message = (
-                f"Successfully created Kotlin project '{project_name}' at {project_path} "
-                f"{tests_msg}. "
-                f"Created {len(result['files_created'])} files and directories. "
-                f"Use 'cd {project_path} && ./gradlew build' to build the project."
+            result["message"] = self._build_success_message(
+                project_name,
+                project_path,
+                with_tests,
+                result,
             )
-
-            if not self._is_gradle_installed():
-                message += " Note: Gradle doesn't appear to be installed. "
-                message += "The included Gradle wrapper can be used after the first download, or install from https://gradle.org/install/."
-
-            result["message"] = message
             return result
 
         except Exception as e:
@@ -112,6 +104,29 @@ class ScaffoldKotlinCommand(CommandBase):
                 "message": f"Failed to create Kotlin project scaffolding: {str(e)}",
                 "project_name": project_name
             }
+
+    def _build_success_message(
+        self,
+        project_name,
+        project_path,
+        with_tests,
+        result,
+    ):
+        """Build the user-facing success message after project creation."""
+        tests_msg = "with test scaffolding" if with_tests else "without tests"
+        message = (
+            f"Successfully created Kotlin project '{project_name}' at {project_path} "
+            f"{tests_msg}. "
+            f"Created {len(result['files_created'])} files and directories. "
+            f"Use 'cd {project_path} && ./gradlew build' to build the project."
+        )
+        if not self._is_gradle_installed():
+            message += " Note: Gradle doesn't appear to be installed. "
+            message += (
+                "The included Gradle wrapper can be used after the first download, "
+                "or install from https://gradle.org/install/."
+            )
+        return message
 
     def _create_settings_gradle(self, project_path, project_name, result):
         settings_path = os.path.join(project_path, 'settings.gradle.kts')
