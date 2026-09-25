@@ -120,121 +120,130 @@ def _smoke_installed_environment(expected_prefix: Path) -> dict:
 
     with tempfile.TemporaryDirectory(prefix="qzx-installed-cli-") as temporary:
         root = Path(temporary)
-        (root / "image.txt").write_bytes(
-            b"\x89PNG\r\n\x1a\n" + b"\x00" * 512
-        )
-        (root / "utf16.txt").write_bytes(
-            "one\r\ntwo\n".encode("utf-16")
-        )
-        hidden_only = root / "hidden-only"
-        hidden_only.mkdir()
-        (hidden_only / ".secret").write_text("hidden", encoding="utf-8")
-
-        detected = _invoke_qzx_json(
-            ["detectFileType", "image.txt", "true"],
-            cwd=root,
-        )
-        _require(
-            detected.get("success") is True
-            and detected.get("mime_type") == "image/png"
-            and detected.get("suggested_extension") == ".png",
-            "detectFileType installed-wheel smoke failed",
-            detected,
-        )
-
-        binary = _invoke_qzx_json(
-            ["isFileBinary", "utf16.txt", "1024", "10"],
-            cwd=root,
-        )
-        _require(
-            binary.get("success") is True and binary.get("is_binary") is False,
-            "isFileBinary installed-wheel smoke failed",
-            binary,
-        )
-
-        empty_file = _invoke_qzx_json(
-            ["isFileEmpty", "utf16.txt", "true"],
-            cwd=root,
-        )
-        _require(
-            empty_file.get("success") is True
-            and empty_file.get("is_empty") is False,
-            "isFileEmpty installed-wheel smoke failed",
-            empty_file,
-        )
-
-        lines = _invoke_qzx_json(["countLines", "utf16.txt"], cwd=root)
-        _require(
-            lines.get("success") is True
-            and lines.get("line_count") == 2
-            and lines.get("encoding") == "utf-16-le",
-            "countLines installed-wheel smoke failed",
-            lines,
-        )
-
-        empty_directory = _invoke_qzx_json(
-            ["isDirectoryEmpty", "hidden-only"],
-            cwd=root,
-        )
-        _require(
-            empty_directory.get("success") is True
-            and empty_directory.get("is_empty") is True
-            and empty_directory.get("details", {}).get(
-                "ignored_hidden_entries"
-            )
-            == 1,
-            "isDirectoryEmpty installed-wheel smoke failed",
-            empty_directory,
-        )
-
-        created = _invoke_qzx_json(
-            ["createDirectory", "created/a/b"],
-            cwd=root,
-        )
-        _require(
-            created.get("success") is True
-            and (root / "created" / "a" / "b").is_dir(),
-            "createDirectory installed-wheel smoke failed",
-            created,
-        )
-
-        tree = _invoke_qzx_json(
-            ["getProjectTree", "created", "3"],
-            cwd=root,
-        )
-        _require(
-            tree.get("success") is True
-            and tree.get("details", {}).get("entry_count", 0) >= 2
-            and tree.get("details", {}).get("symbolic_links_followed") is False,
-            "getProjectTree installed-wheel smoke failed",
-            tree,
-        )
-
-        cleared = _invoke_qzx_json(["clearScreen"], cwd=root)
-        _require(
-            cleared.get("success") is True
-            and cleared.get("screen_cleared") is False
-            and cleared.get("details", {}).get("reason")
-            == "non_interactive_output",
-            "clearScreen installed-wheel smoke failed",
-            cleared,
-        )
+        _create_installed_smoke_fixtures(root)
+        checks = {}
+        checks.update(_file_analysis_smoke_checks(root))
+        checks.update(_filesystem_smoke_checks(root))
+        checks.update(_terminal_smoke_checks(root))
 
     return {
         "success": True,
         "package_file": str(package_file),
         "python_executable": sys.executable,
-        "checks": {
-            "detect_file_type": detected["mime_type"],
-            "utf16_binary": binary["is_binary"],
-            "utf16_empty": empty_file["is_empty"],
-            "utf16_line_count": lines["line_count"],
-            "hidden_only_directory_empty": empty_directory["is_empty"],
-            "nested_directory_created": True,
-            "project_tree_entry_count": tree["details"]["entry_count"],
-            "redirected_screen_cleared": cleared["screen_cleared"],
-        },
+        "checks": checks,
     }
+
+
+def _create_installed_smoke_fixtures(root: Path) -> None:
+    (root / "image.txt").write_bytes(
+        b"\x89PNG\r\n\x1a\n" + b"\x00" * 512
+    )
+    (root / "utf16.txt").write_bytes(
+        "one\r\ntwo\n".encode("utf-16")
+    )
+    hidden_only = root / "hidden-only"
+    hidden_only.mkdir()
+    (hidden_only / ".secret").write_text("hidden", encoding="utf-8")
+
+
+def _file_analysis_smoke_checks(root: Path) -> dict:
+    detected = _invoke_qzx_json(
+        ["detectFileType", "image.txt", "true"],
+        cwd=root,
+    )
+    _require(
+        detected.get("success") is True
+        and detected.get("mime_type") == "image/png"
+        and detected.get("suggested_extension") == ".png",
+        "detectFileType installed-wheel smoke failed",
+        detected,
+    )
+    binary = _invoke_qzx_json(
+        ["isFileBinary", "utf16.txt", "1024", "10"],
+        cwd=root,
+    )
+    _require(
+        binary.get("success") is True and binary.get("is_binary") is False,
+        "isFileBinary installed-wheel smoke failed",
+        binary,
+    )
+    empty_file = _invoke_qzx_json(
+        ["isFileEmpty", "utf16.txt", "true"],
+        cwd=root,
+    )
+    _require(
+        empty_file.get("success") is True
+        and empty_file.get("is_empty") is False,
+        "isFileEmpty installed-wheel smoke failed",
+        empty_file,
+    )
+    lines = _invoke_qzx_json(["countLines", "utf16.txt"], cwd=root)
+    _require(
+        lines.get("success") is True
+        and lines.get("line_count") == 2
+        and lines.get("encoding") == "utf-16-le",
+        "countLines installed-wheel smoke failed",
+        lines,
+    )
+    return {
+        "detect_file_type": detected["mime_type"],
+        "utf16_binary": binary["is_binary"],
+        "utf16_empty": empty_file["is_empty"],
+        "utf16_line_count": lines["line_count"],
+    }
+
+
+def _filesystem_smoke_checks(root: Path) -> dict:
+    empty_directory = _invoke_qzx_json(
+        ["isDirectoryEmpty", "hidden-only"],
+        cwd=root,
+    )
+    _require(
+        empty_directory.get("success") is True
+        and empty_directory.get("is_empty") is True
+        and empty_directory.get("details", {}).get("ignored_hidden_entries") == 1,
+        "isDirectoryEmpty installed-wheel smoke failed",
+        empty_directory,
+    )
+    created = _invoke_qzx_json(
+        ["createDirectory", "created/a/b"],
+        cwd=root,
+    )
+    _require(
+        created.get("success") is True
+        and (root / "created" / "a" / "b").is_dir(),
+        "createDirectory installed-wheel smoke failed",
+        created,
+    )
+    tree = _invoke_qzx_json(
+        ["getProjectTree", "created", "3"],
+        cwd=root,
+    )
+    _require(
+        tree.get("success") is True
+        and tree.get("details", {}).get("entry_count", 0) >= 2
+        and tree.get("details", {}).get("symbolic_links_followed") is False,
+        "getProjectTree installed-wheel smoke failed",
+        tree,
+    )
+    return {
+        "hidden_only_directory_empty": empty_directory["is_empty"],
+        "nested_directory_created": True,
+        "project_tree_entry_count": tree["details"]["entry_count"],
+    }
+
+
+def _terminal_smoke_checks(root: Path) -> dict:
+    cleared = _invoke_qzx_json(["clearScreen"], cwd=root)
+    _require(
+        cleared.get("success") is True
+        and cleared.get("screen_cleared") is False
+        and cleared.get("details", {}).get("reason")
+        == "non_interactive_output",
+        "clearScreen installed-wheel smoke failed",
+        cleared,
+    )
+    return {"redirected_screen_cleared": cleared["screen_cleared"]}
 
 
 def _find_one_wheel(dist_dir: Path) -> Path:
