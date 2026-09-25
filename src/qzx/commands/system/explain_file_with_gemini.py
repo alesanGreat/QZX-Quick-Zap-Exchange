@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 from pathlib import Path
 
@@ -19,6 +18,10 @@ try:
 except ImportError:
     load_dotenv = None
 
+from qzx.commands.system._gemini_api import call_gemini_api
+from qzx.commands.system._gemini_explain_workflow import execute_gemini_explanation
+from qzx.commands.system._gemini_file_sample import prepare_gemini_sample
+from qzx.commands.system._gemini_request_validation import validate_gemini_request
 from qzx.core.command_base import CommandBase
 
 
@@ -170,9 +173,8 @@ class ExplainFileWithGeminiCommand(CommandBase):
         apply=False,
     ):
         """Preview or perform one bounded, explicit Gemini analysis request."""
-        model = str(model or "")
-        custom_prompt = str(custom_prompt or "")
-        validation = self._validate_request(
+        return execute_gemini_explanation(
+            self,
             file_path,
             sample_size,
             model,
@@ -181,122 +183,6 @@ class ExplainFileWithGeminiCommand(CommandBase):
             dry_run,
             apply,
         )
-        if not validation["success"]:
-            return validation
-
-        details = validation["details"]
-        if details["dry_run"]:
-            return {
-                "success": True,
-                "message": (
-                    "Gemini file-analysis preview is ready. No network request "
-                    "was made and no file content was shared."
-                ),
-                "details": details,
-                "external_service": details["external_service"],
-                "next_step": (
-                    "Review the target, provider, prompt source, and sample "
-                    "limits; then use --dry-run false --apply to send it."
-                ),
-            }
-
-        if self._http_client is None:
-            return self._failure(
-                "missing_dependency",
-                "The optional HTTP dependency is not installed.",
-                "Install the AI extras with 'pip install qzx[ai]'.",
-                details={"missing": ["requests"]},
-            )
-
-        api_key = self._api_key_provider()
-        if not api_key:
-            return self._failure(
-                "gemini_api_key_missing",
-                "No Gemini API key is configured.",
-                (
-                    "Set GEMINI_API_KEY (preferred) or GEMINI_API_TOKEN, then "
-                    "retry the explicitly authorized command."
-                ),
-            )
-
-        prepared = self._prepare_sample(
-            Path(details["resolved_path"]),
-            details["sample_size_characters"],
-            details["max_file_size_bytes"],
-        )
-        if not prepared["success"]:
-            return prepared
-
-        models_result = self._list_gemini_models(api_key)
-        if not models_result["success"]:
-            return models_result
-        selected_model = self._select_model(
-            details["requested_model"],
-            models_result["models"],
-        )
-        if not selected_model:
-            return self._failure(
-                "model_not_available",
-                "No compatible Gemini content-generation model was found.",
-                (
-                    "Choose a model returned for this API key that supports "
-                    "explainFileWithGemini, or retry model auto-selection later."
-                ),
-                details={
-                    "requested_model": details["requested_model"] or None,
-                    "available_models": sorted(
-                        self._available_model_names(models_result["models"])
-                    ),
-                },
-            )
-
-        prompt = custom_prompt.strip() or self.DEFAULT_PROMPT
-        request_text = "{}\n\n{}".format(prompt, prepared["sample"])
-        response = self._call_gemini_api(
-            api_key,
-            selected_model,
-            request_text,
-        )
-        if not response["success"]:
-            return response
-
-        external_service = {
-            "provider": "Google Gemini",
-            "endpoint_host": "generativelanguage.googleapis.com",
-            "content_shared": True,
-            "model": selected_model,
-            "source_characters_shared": prepared[
-                "source_characters_shared"
-            ],
-            "request_characters": len(request_text),
-            "sample_strategy": prepared["sample_strategy"],
-        }
-        return {
-            "success": True,
-            "message": (
-                "Google Gemini explained a bounded sample of '{}'. "
-                "{} source characters were shared with model {}."
-            ).format(
-                details["display_path"],
-                prepared["source_characters_shared"],
-                selected_model,
-            ),
-            "explanation": response["text"],
-            "file_path": details["display_path"],
-            "file_size_bytes": prepared["file_size_bytes"],
-            "file_sha256": prepared["file_sha256"],
-            "sample_size": details["sample_size_characters"],
-            "model_used": selected_model,
-            "encoding": prepared["encoding"],
-            "external_service": external_service,
-            "usage": response.get("usage", {}),
-            "details": {
-                **details,
-                "dry_run": False,
-                "content_shared": True,
-                "external_service": external_service,
-            },
-        }
 
     def _validate_request(
         self,
@@ -308,208 +194,24 @@ class ExplainFileWithGeminiCommand(CommandBase):
         dry_run,
         apply,
     ):
-        try:
-            sample_size = int(sample_size)
-            max_file_size_mb = int(max_file_size_mb)
-        except (TypeError, ValueError):
-            return self._failure(
-                "invalid_limits",
-                "Sample and file-size limits must be integers.",
-                "Use sample_size 10-100000 and max_file_size_mb 1-100.",
-            )
-        if not 10 <= sample_size <= _MAX_SAMPLE_CHARACTERS:
-            return self._failure(
-                "invalid_sample_size",
-                "sample_size must be between 10 and 100000 characters.",
-                "Choose a bounded positive sample size within that range.",
-            )
-        if not 1 <= max_file_size_mb <= 100:
-            return self._failure(
-                "invalid_file_size_limit",
-                "max_file_size_mb must be between 1 and 100.",
-                "Choose a local read limit within that range.",
-            )
-
-        custom_prompt = str(custom_prompt or "")
-        if len(custom_prompt) > _MAX_PROMPT_CHARACTERS:
-            return self._failure(
-                "custom_prompt_too_large",
-                "custom_prompt exceeds 20000 characters.",
-                "Shorten the instruction before sending it to an external API.",
-            )
-
-        target = Path(file_path).expanduser()
-        try:
-            resolved = target.resolve(strict=True)
-            stat = resolved.stat()
-        except (OSError, RuntimeError) as exc:
-            return self._failure(
-                "file_not_found",
-                "The selected file could not be resolved.",
-                "Provide a readable regular text file.",
-                details={"path": str(target), "cause": type(exc).__name__},
-            )
-        if not resolved.is_file():
-            return self._failure(
-                "not_a_regular_file",
-                "The selected path is not a regular file.",
-                "Choose one local text file rather than a directory or device.",
-                details={"path": str(resolved)},
-            )
-
-        max_file_size_bytes = max_file_size_mb * _MEBIBYTE
-        if stat.st_size > max_file_size_bytes:
-            return self._failure(
-                "file_too_large",
-                (
-                    "The selected file is larger than the configured local "
-                    "read limit."
-                ),
-                (
-                    "Choose a smaller file or deliberately raise "
-                    "max_file_size_mb up to 100."
-                ),
-                details={
-                    "path": str(resolved),
-                    "file_size_bytes": stat.st_size,
-                    "max_file_size_bytes": max_file_size_bytes,
-                },
-            )
-
-        is_dry_run = self._as_bool(dry_run)
-        is_apply = self._as_bool(apply)
-        if is_dry_run is None or is_apply is None:
-            return self._failure(
-                "invalid_boolean",
-                "dry_run and apply must be explicit boolean values.",
-                "Use true or false for both options.",
-            )
-        if is_dry_run and is_apply:
-            return self._failure(
-                "conflicting_application_flags",
-                "apply=true conflicts with dry_run=true.",
-                "Use preview defaults, or combine --dry-run false --apply.",
-            )
-        if not is_dry_run and not is_apply:
-            return self._failure(
-                "explicit_application_required",
-                "Sending file content requires apply=true.",
-                "Review the preview, then use --dry-run false --apply.",
-            )
-
-        requested_model = str(model or "").strip()
-        if requested_model.startswith("models/"):
-            requested_model = requested_model.split("/", 1)[1]
-        external_service = {
-            "provider": "Google Gemini",
-            "endpoint_host": "generativelanguage.googleapis.com",
-            "content_shared": False,
-            "planned_source_characters_maximum": sample_size * 3,
-        }
-        return {
-            "success": True,
-            "message": "Gemini request inputs are valid.",
-            "details": {
-                "display_path": str(target),
-                "resolved_path": str(resolved),
-                "file_size_bytes": stat.st_size,
-                "last_modified_ns": stat.st_mtime_ns,
-                "sample_size_characters": sample_size,
-                "planned_source_characters_maximum": sample_size * 3,
-                "sample_strategy": (
-                    "whole decoded file when it fits; otherwise beginning, "
-                    "middle, and end"
-                ),
-                "max_file_size_bytes": max_file_size_bytes,
-                "requested_model": requested_model,
-                "model_selection": (
-                    "explicit" if requested_model else "automatic after apply"
-                ),
-                "prompt_source": (
-                    "custom" if custom_prompt.strip() else "QZX default"
-                ),
-                "custom_prompt_characters": len(custom_prompt),
-                "dry_run": is_dry_run,
-                "apply": is_apply,
-                "content_shared": False,
-                "network_request_made": False,
-                "external_service": external_service,
-            },
-        }
+        return validate_gemini_request(
+            self,
+            file_path,
+            sample_size,
+            model,
+            custom_prompt,
+            max_file_size_mb,
+            dry_run,
+            apply,
+        )
 
     def _prepare_sample(self, path, sample_size, max_file_size_bytes):
-        try:
-            before = path.stat()
-            if before.st_size > max_file_size_bytes:
-                return self._failure(
-                    "file_too_large",
-                    "The file grew beyond the approved local read limit.",
-                    "Preview the current file again before sending content.",
-                )
-            payload = path.read_bytes()
-            after = path.stat()
-        except OSError as exc:
-            return self._failure(
-                "file_read_failed",
-                "The selected file could not be read.",
-                "Check permissions and retry the preview.",
-                details={"cause": type(exc).__name__},
-            )
-        if (
-            before.st_size != after.st_size
-            or before.st_mtime_ns != after.st_mtime_ns
-        ):
-            return self._failure(
-                "file_changed_during_read",
-                "The selected file changed while QZX was reading it.",
-                "Wait for writes to finish, preview again, and then apply.",
-            )
-        if len(payload) > max_file_size_bytes:
-            return self._failure(
-                "file_too_large",
-                "The file exceeded the approved local read limit.",
-                "Preview the current file again before sending content.",
-            )
-
-        try:
-            content = payload.decode("utf-8")
-            encoding = "utf-8"
-        except UnicodeDecodeError:
-            content = payload.decode("latin-1")
-            encoding = "latin-1"
-        if "\x00" in content:
-            return self._failure(
-                "binary_file_not_supported",
-                "The selected file appears to contain binary data.",
-                "Choose a text file or use a command designed for binary data.",
-            )
-
-        if len(content) <= sample_size * 3:
-            sample = content
-            strategy = "whole_file"
-            source_characters = len(content)
-        else:
-            middle_start = max(0, (len(content) - sample_size) // 2)
-            beginning = content[:sample_size]
-            middle = content[middle_start:middle_start + sample_size]
-            end = content[-sample_size:]
-            sample = (
-                "--- BEGINNING OF FILE ---\n{}\n\n"
-                "--- MIDDLE OF FILE ---\n{}\n\n"
-                "--- END OF FILE ---\n{}"
-            ).format(beginning, middle, end)
-            strategy = "beginning_middle_end"
-            source_characters = len(beginning) + len(middle) + len(end)
-
-        return {
-            "success": True,
-            "sample": sample,
-            "sample_strategy": strategy,
-            "source_characters_shared": source_characters,
-            "file_size_bytes": len(payload),
-            "file_sha256": hashlib.sha256(payload).hexdigest(),
-            "encoding": encoding,
-        }
+        return prepare_gemini_sample(
+            self,
+            path,
+            sample_size,
+            max_file_size_bytes,
+        )
 
     def _list_gemini_models(self, api_key):
         headers = self._request_headers(api_key)
@@ -578,63 +280,13 @@ class ExplainFileWithGeminiCommand(CommandBase):
         return names
 
     def _call_gemini_api(self, api_key, model, prompt):
-        url = "{}/{}:generateContent".format(_MODEL_ENDPOINT, model)
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": prompt}],
-                }
-            ],
-            "generationConfig": {
-                "maxOutputTokens": 1024,
-            },
-        }
-        try:
-            response = self._http_client.post(
-                url,
-                headers=self._request_headers(api_key),
-                json=payload,
-                timeout=30,
-            )
-        except Exception as exc:
-            return self._failure(
-                "gemini_request_failed",
-                "The Gemini content-generation request failed.",
-                "Check connectivity and retry the reviewed request.",
-                details={"cause": type(exc).__name__},
-            )
-        if response.status_code != 200:
-            return self._failure(
-                "gemini_api_error",
-                "Gemini rejected the content-generation request.",
-                (
-                    "Check the selected model, API-key permissions, billing, "
-                    "quota, request size, and Gemini service status."
-                ),
-                details={"http_status": response.status_code},
-            )
-        try:
-            document = response.json()
-            text = document["candidates"][0]["content"]["parts"][0]["text"]
-        except (TypeError, ValueError, KeyError, IndexError):
-            return self._failure(
-                "invalid_gemini_response",
-                "Gemini returned no usable text explanation.",
-                "Retry later or inspect the selected model in Google AI Studio.",
-            )
-        if not isinstance(text, str) or not text.strip():
-            return self._failure(
-                "empty_gemini_response",
-                "Gemini returned an empty text explanation.",
-                "Retry later or choose another compatible model.",
-            )
-        usage = document.get("usageMetadata", {})
-        return {
-            "success": True,
-            "text": text.strip(),
-            "usage": usage if isinstance(usage, dict) else {},
-        }
+        return call_gemini_api(
+            self,
+            _MODEL_ENDPOINT,
+            api_key,
+            model,
+            prompt,
+        )
 
     @staticmethod
     def _request_headers(api_key):
