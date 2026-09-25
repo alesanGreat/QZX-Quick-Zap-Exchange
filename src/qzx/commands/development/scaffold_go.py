@@ -101,30 +101,12 @@ class ScaffoldGoCommand(CommandBase):
             )
             if not result["success"]:
                 return result
-            project_path = result["project_path"]
-
-            self._create_go_mod(project_path, module_path, result)
-            self._create_main_go(project_path, project_name, result)
-            if with_tests:
-                self._create_tests(project_path, project_name, result)
-            self._create_readme(project_path, project_name, module_path, result)
-            self._create_gitignore(project_path, result)
-
-            tests_msg = "with test scaffolding" if with_tests else "without tests"
-
-            message = (
-                f"Successfully created Go project '{project_name}' at {project_path} "
-                f"{tests_msg}. "
-                f"Created {len(result['files_created'])} files and directories. "
-                f"Use 'cd {project_path} && go build' to build the project."
+            return self._populate_project(
+                project_name,
+                module_path,
+                with_tests,
+                result,
             )
-
-            if not self._is_go_installed():
-                message += " Note: Go doesn't appear to be installed. "
-                message += "Install from https://go.dev/dl/ to build the project."
-
-            result["message"] = message
-            return result
 
         except Exception as e:
             return {
@@ -133,6 +115,49 @@ class ScaffoldGoCommand(CommandBase):
                 "message": f"Failed to create Go project scaffolding: {str(e)}",
                 "project_name": project_name
             }
+
+    def _populate_project(
+        self,
+        project_name,
+        module_path,
+        with_tests,
+        result,
+    ):
+        """Create project files and finalize the successful result."""
+        project_path = result["project_path"]
+        self._create_go_mod(project_path, module_path, result)
+        self._create_main_go(project_path, project_name, result)
+        if with_tests:
+            self._create_tests(project_path, project_name, result)
+        self._create_readme(project_path, project_name, module_path, result)
+        self._create_gitignore(project_path, result)
+        result["message"] = self._build_success_message(
+            project_name,
+            project_path,
+            with_tests,
+            result,
+        )
+        return result
+
+    def _build_success_message(
+        self,
+        project_name,
+        project_path,
+        with_tests,
+        result,
+    ):
+        """Build the user-facing success message after project creation."""
+        tests_msg = "with test scaffolding" if with_tests else "without tests"
+        message = (
+            f"Successfully created Go project '{project_name}' at {project_path} "
+            f"{tests_msg}. "
+            f"Created {len(result['files_created'])} files and directories. "
+            f"Use 'cd {project_path} && go build' to build the project."
+        )
+        if not self._is_go_installed():
+            message += " Note: Go doesn't appear to be installed. "
+            message += "Install from https://go.dev/dl/ to build the project."
+        return message
 
     def _create_go_mod(self, project_path, module_path, result):
         go_mod_path = os.path.join(project_path, 'go.mod')
