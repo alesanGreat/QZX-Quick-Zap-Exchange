@@ -258,15 +258,17 @@ def _execute_requested_command(command, args):
     return QZX().execute(command, args)
 
 
-def _schedule_optional_telemetry():
-    """Schedule telemetry after user-visible command output is available."""
+def _schedule_optional_telemetry(result):
+    """Schedule privacy-bounded telemetry after user-visible output is available."""
     try:
         from qzx import __version__
         from qzx.telemetry import TELEMETRY_NOTICE, schedule_version_telemetry
+        from qzx.usage_telemetry import record_command_usage_and_schedule
 
         telemetry_status = schedule_version_telemetry(__version__)
         if telemetry_status.get("details", {}).get("notice"):
             print(TELEMETRY_NOTICE, file=sys.stderr)
+        record_command_usage_and_schedule(__version__, result)
     except Exception:
         pass
 
@@ -305,7 +307,7 @@ def main():
     result = ensure_result_contract(result)
     _emit_result(result, json_output, captured_stdout)
     exit_code = _exit_code(result)
-    _schedule_optional_telemetry()
+    _schedule_optional_telemetry(result)
     return exit_code
 
 
