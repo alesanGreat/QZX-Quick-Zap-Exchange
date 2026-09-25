@@ -7,16 +7,16 @@ from __future__ import annotations
 
 import os
 import shutil
-import stat
-import uuid
-from pathlib import Path
 
+from qzx.commands.file._move_path_transfer import (
+    perform_move,
+    recover_failed_replacement,
+)
 from qzx.commands.file._move_path_workflow import (
     execute_move,
     preflight_move,
 )
 from qzx.core.command_base import CommandBase
-from qzx.core.path_operation_utils import file_sha256
 
 
 class MovePathCommand(CommandBase):
@@ -110,58 +110,7 @@ class MovePathCommand(CommandBase):
         )
 
     def _perform_move(self, source, destination, same_filesystem):
-        if same_filesystem:
-            try:
-                os.rename(source, destination)
-            except OSError as exc:
-                return {
-                    "success": False,
-                    "error": f"{type(exc).__name__}: {exc}",
-                    "verification": "not_completed",
-                }
-            return {
-                "success": True,
-                "verification": "same-filesystem rename committed",
-            }
-
-        temporary = destination.with_name(
-            f".{destination.name}.qzx-move-stage-{uuid.uuid4().hex}"
-        )
-        try:
-            source_mode = os.lstat(source).st_mode
-            if stat.S_ISLNK(source_mode):
-                link_target = os.readlink(source)
-                os.symlink(
-                    link_target,
-                    temporary,
-                    target_is_directory=os.path.isdir(source),
-                )
-                if os.readlink(temporary) != link_target:
-                    raise OSError("staged symbolic-link target did not match")
-                verification = "symbolic-link target matched"
-            else:
-                source_size = os.path.getsize(source)
-                source_digest = file_sha256(source)
-                shutil.copy2(source, temporary)
-                if (
-                    os.path.getsize(temporary) != source_size
-                    or file_sha256(temporary) != source_digest
-                ):
-                    raise OSError("staged file failed size or SHA-256 verification")
-                verification = "size and SHA-256 matched"
-            os.replace(temporary, destination)
-            os.unlink(source)
-            return {
-                "success": True,
-                "verification": verification,
-            }
-        except OSError as exc:
-            return {
-                "success": False,
-                "error": f"{type(exc).__name__}: {exc}",
-                "verification": "failed",
-                "temporary_path": str(temporary),
-            }
+        return perform_move(source, destination, same_filesystem)
 
     def _recover_failed_replacement(
         self,
@@ -170,55 +119,13 @@ class MovePathCommand(CommandBase):
         previous,
         temporary,
     ):
-        errors = []
-        temporary_path = Path(temporary) if temporary else None
-        if temporary_path is not None and os.path.lexists(temporary_path):
-            try:
-                self._remove_existing_destination(temporary_path)
-            except OSError as exc:
-                errors.append(
-                    f"could not remove temporary entry '{temporary_path}': {exc}"
-                )
-
-        if os.path.lexists(destination) and os.path.lexists(source):
-            try:
-                self._remove_existing_destination(destination)
-            except OSError as exc:
-                errors.append(
-                    f"could not remove uncommitted destination: {exc}"
-                )
-
-        restored = previous is None
-        if previous is not None:
-            if not os.path.lexists(destination):
-                try:
-                    os.rename(previous, destination)
-                    restored = True
-                except OSError as exc:
-                    errors.append(
-                        f"could not restore previous destination: {exc}"
-                    )
-            else:
-                errors.append(
-                    (
-                        f"previous destination remains staged at '{previous}' "
-                        "because the destination path is occupied"
-                    )
-                )
-
-        source_preserved = os.path.lexists(source)
-        success = restored and source_preserved and not errors
-        return {
-            "success": success,
-            "source_preserved": source_preserved,
-            "previous_destination_restored": restored,
-            "errors": errors,
-            "message": (
-                "The source and previous destination were preserved."
-                if success
-                else "Manual recovery may be required; inspect recovery details."
-            ),
-        }
+        return recover_failed_replacement(
+            self,
+            source,
+            destination,
+            previous,
+            temporary,
+        )
 
     @staticmethod
     def _remove_existing_destination(destination):

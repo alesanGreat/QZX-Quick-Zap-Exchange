@@ -155,6 +155,50 @@ def test_filesystem_root_is_protected(command_class, tmp_path):
     assert not destination.exists()
 
 
+def test_cross_filesystem_file_move_is_staged_and_verified(tmp_path):
+    source = tmp_path / "source.bin"
+    destination = tmp_path / "destination.bin"
+    payload = bytes(range(256)) * 8
+    source.write_bytes(payload)
+
+    result = MovePathCommand()._perform_move(
+        source,
+        destination,
+        same_filesystem=False,
+    )
+
+    assert result["success"] is True
+    assert result["verification"] == "size and SHA-256 matched"
+    assert not source.exists()
+    assert destination.read_bytes() == payload
+
+
+def test_failed_replacement_recovery_restores_previous_and_source(tmp_path):
+    source = tmp_path / "source.txt"
+    destination = tmp_path / "destination.txt"
+    previous = tmp_path / ".destination.txt.qzx-previous-test"
+    temporary = tmp_path / ".destination.txt.qzx-move-stage-test"
+    source.write_text("new", encoding="utf-8")
+    previous.write_text("old", encoding="utf-8")
+    temporary.write_text("partial", encoding="utf-8")
+
+    result = MovePathCommand()._recover_failed_replacement(
+        source,
+        destination,
+        previous,
+        str(temporary),
+    )
+
+    assert result["success"] is True
+    assert result["source_preserved"] is True
+    assert result["previous_destination_restored"] is True
+    assert result["errors"] == []
+    assert source.read_text(encoding="utf-8") == "new"
+    assert destination.read_text(encoding="utf-8") == "old"
+    assert not previous.exists()
+    assert not temporary.exists()
+
+
 def test_move_rejects_invalid_force_boolean_without_mutation(tmp_path):
     source = tmp_path / "source.txt"
     destination = tmp_path / "destination.txt"
