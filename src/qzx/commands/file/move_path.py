@@ -11,13 +11,12 @@ import stat
 import uuid
 from pathlib import Path
 
-from qzx.core.command_base import CommandBase
-from qzx.core.path_operation_utils import (
-    destination_device,
-    file_sha256,
-    is_filesystem_root,
-    same_or_nested_path_relationship,
+from qzx.commands.file._move_path_workflow import (
+    execute_move,
+    preflight_move,
 )
+from qzx.core.command_base import CommandBase
+from qzx.core.path_operation_utils import file_sha256
 
 
 class MovePathCommand(CommandBase):
@@ -93,121 +92,7 @@ class MovePathCommand(CommandBase):
 
     def execute(self, source, destination, force=False):
         """Move a complete filesystem entry and report its committed state."""
-        force_value = self._parse_bool(force)
-        if force_value is None:
-            return self._failure(
-                "invalid_boolean",
-                f"force must be true or false; got {force!r}.",
-                source=source,
-                destination=destination,
-            )
-
-        validation = self._preflight(
-            source,
-            destination,
-            force_value,
-            require_existing_destination=False,
-        )
-        if not validation["success"]:
-            return validation
-        plan = validation["details"]
-        source_path = Path(plan["source"])
-        destination_path = Path(plan["destination"])
-        destination_existed = plan["destination_existed"]
-
-        try:
-            destination_path.parent.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            return self._failure(
-                "destination_parent_failed",
-                (
-                    f"Destination parent '{destination_path.parent}' could "
-                    f"not be created: {type(exc).__name__}: {exc}"
-                ),
-                **plan,
-            )
-
-        previous_path = None
-        if destination_existed:
-            previous_path = destination_path.with_name(
-                f".{destination_path.name}.qzx-previous-{uuid.uuid4().hex}"
-            )
-            try:
-                os.rename(destination_path, previous_path)
-            except OSError as exc:
-                return self._failure(
-                    "destination_stage_failed",
-                    (
-                        "The backed-up destination could not be staged for "
-                        f"replacement: {type(exc).__name__}: {exc}"
-                    ),
-                    **plan,
-                )
-
-        operation = self._perform_move(
-            source_path,
-            destination_path,
-            plan["same_filesystem"],
-        )
-        if not operation["success"]:
-            recovery = self._recover_failed_replacement(
-                source_path,
-                destination_path,
-                previous_path,
-                operation.get("temporary_path"),
-            )
-            return self._failure(
-                "move_failed",
-                (
-                    f"Move from '{source_path}' to '{destination_path}' "
-                    f"failed: {operation['error']}. {recovery['message']}"
-                ),
-                **plan,
-                recovery=recovery,
-            )
-
-        cleanup = "not_needed"
-        warnings = []
-        if previous_path is not None:
-            try:
-                self._remove_existing_destination(previous_path)
-                cleanup = "previous destination removed"
-            except OSError as exc:
-                cleanup = "previous destination retained"
-                warnings.append(
-                    (
-                        f"Replacement succeeded, but the previous destination "
-                        f"remains at '{previous_path}': "
-                        f"{type(exc).__name__}: {exc}"
-                    )
-                )
-
-        entry_type = plan["source_type"]
-        message = (
-            f"{entry_type.capitalize()} '{source_path}' moved to "
-            f"'{destination_path}'."
-        )
-        result = {
-            "success": True,
-            "message": message,
-            "details": {
-                **plan,
-                "status": "moved",
-                "source_exists_after": os.path.lexists(source_path),
-                "destination_exists_after": os.path.lexists(destination_path),
-                "verification": operation["verification"],
-                "replacement_cleanup": cleanup,
-                "retained_previous_path": (
-                    str(previous_path)
-                    if previous_path is not None
-                    and os.path.lexists(previous_path)
-                    else None
-                ),
-            },
-        }
-        if warnings:
-            result["warnings"] = warnings
-        return result
+        return execute_move(self, source, destination, force)
 
     def _preflight(
         self,
@@ -216,127 +101,13 @@ class MovePathCommand(CommandBase):
         force,
         require_existing_destination,
     ):
-        source_path = Path(os.path.abspath(os.fspath(source)))
-        destination_path = Path(os.path.abspath(os.fspath(destination)))
-        details = {
-            "source": str(source_path),
-            "destination": str(destination_path),
-            "force": bool(force),
-        }
-        if not os.path.lexists(source_path):
-            return self._failure(
-                "source_missing",
-                f"Source '{source_path}' does not exist, so nothing was moved.",
-                **details,
-            )
-        if is_filesystem_root(source_path) or is_filesystem_root(
-            destination_path
-        ):
-            return self._failure(
-                "filesystem_root_protected",
-                (
-                    "Filesystem roots cannot be used as a move source or "
-                    "destination."
-                ),
-                **details,
-            )
-
-        relationship = same_or_nested_path_relationship(
-            source_path,
-            destination_path,
+        return preflight_move(
+            self,
+            source,
+            destination,
+            force,
+            require_existing_destination,
         )
-        details["path_relationship"] = relationship
-        if relationship == "same":
-            return self._failure(
-                "source_equals_destination",
-                (
-                    "Source and destination identify the same filesystem "
-                    "object. Choose a different destination."
-                ),
-                **details,
-            )
-        if relationship == "destination_within_source":
-            return self._failure(
-                "destination_within_source",
-                (
-                    "Destination is inside the source. Moving a directory into "
-                    "itself is not a valid complete move."
-                ),
-                **details,
-            )
-        if relationship == "source_within_destination":
-            return self._failure(
-                "source_within_destination",
-                (
-                    "Source is inside the destination. Replacing that "
-                    "destination could delete the source before the move."
-                ),
-                **details,
-            )
-
-        mode = os.lstat(source_path).st_mode
-        if stat.S_ISLNK(mode):
-            source_type = "symbolic link"
-        elif stat.S_ISDIR(mode):
-            source_type = "directory"
-        elif stat.S_ISREG(mode):
-            source_type = "file"
-        else:
-            return self._failure(
-                "unsupported_source_type",
-                (
-                    "Move accepts only regular files, symbolic links, and "
-                    "directories; special filesystem entries are rejected."
-                ),
-                **details,
-            )
-        details["source_type"] = source_type
-
-        destination_existed = os.path.lexists(destination_path)
-        details["destination_existed"] = destination_existed
-        if require_existing_destination and not destination_existed:
-            return self._failure(
-                "overwrite_target_missing",
-                (
-                    f"Destination '{destination_path}' does not exist. Omit "
-                    "--force to create it without an unnecessary safety backup."
-                ),
-                **details,
-            )
-        if destination_existed and not force:
-            return self._failure(
-                "destination_exists",
-                (
-                    f"Destination '{destination_path}' already exists. Use "
-                    "--force to replace it after a safety backup."
-                ),
-                **details,
-            )
-
-        source_device = os.lstat(source_path).st_dev
-        try:
-            target_device = destination_device(destination_path)
-        except OSError as exc:
-            return self._failure(
-                "destination_device_unknown",
-                str(exc),
-                **details,
-            )
-        same_filesystem = source_device == target_device
-        details["same_filesystem"] = same_filesystem
-        if source_type == "directory" and not same_filesystem:
-            return self._failure(
-                "cross_filesystem_directory_move_unsupported",
-                (
-                    "QZX refuses cross-filesystem directory moves because "
-                    "they can leave a partially copied and partially deleted "
-                    "tree. Copy and verify the directory first, then delete "
-                    "the source as a separate approved operation."
-                ),
-                **details,
-            )
-
-        return {"success": True, "details": details}
 
     def _perform_move(self, source, destination, same_filesystem):
         if same_filesystem:
