@@ -6,11 +6,8 @@ Terminal Command - Interactive prompt for executing QZX commands
 """
 
 import os
-import sys
 import cmd
-import contextlib
 import platform
-import shlex
 
 # Use appropriate readline implementation based on platform
 try:
@@ -26,6 +23,9 @@ except ImportError:
     readline = None
 
 
+from qzx.commands.system._terminal_dispatch import dispatch_terminal_line
+from qzx.commands.system._terminal_help import render_terminal_help
+from qzx.commands.system._terminal_session import launch_terminal
 from qzx.core.command_base import CommandBase
 from qzx.core.command_loader import CommandLoader
 
@@ -93,81 +93,13 @@ class TerminalCommand(CommandBase):
         show_path=True,
     ):
         """Launch an interactive terminal with metadata-backed arguments."""
-        if not isinstance(prompt, str):
-            return {
-                "success": False,
-                "error_code": "invalid_prompt",
-                "error": "prompt must be a string.",
-                "message": "Provide a text prompt for the QZX terminal.",
-            }
-        if history_file is not None and not isinstance(
+        return launch_terminal(
+            self,
+            QZXTerminal,
+            prompt,
             history_file,
-            (str, os.PathLike),
-        ):
-            return {
-                "success": False,
-                "error_code": "invalid_history_file",
-                "error": "history_file must be a filesystem path or null.",
-                "message": (
-                    "Provide a history path, or omit history_file to keep "
-                    "the interactive session ephemeral."
-                ),
-            }
-        if isinstance(show_path, str):
-            parsed_show_path = self._parse_bool(show_path)
-            if parsed_show_path is None:
-                return {
-                    "success": False,
-                    "error_code": "invalid_show_path",
-                    "error": (
-                        "show_path must be true or false; received "
-                        f"'{show_path}'."
-                    ),
-                    "message": "Choose whether the terminal prompt shows the path.",
-                }
-            show_path = parsed_show_path
-        elif not isinstance(show_path, bool):
-            return {
-                "success": False,
-                "error_code": "invalid_show_path",
-                "error": "show_path must be a boolean.",
-                "message": "Choose whether the terminal prompt shows the path.",
-            }
-
-        normalized_history = (
-            os.fspath(history_file)
-            if history_file is not None
-            else None
+            show_path,
         )
-        terminal_factory = self._terminal_factory or QZXTerminal
-        try:
-            terminal = terminal_factory(
-                prompt,
-                normalized_history,
-                show_path,
-            )
-            terminal.start()
-            return {
-                "success": True,
-                "message": "QZX terminal session ended.",
-                "details": {
-                    "prompt": prompt,
-                    "history_enabled": normalized_history is not None,
-                    "history_file": normalized_history,
-                    "show_path": show_path,
-                },
-            }
-        except Exception as exc:
-            return {
-                "success": False,
-                "error_code": "terminal_start_failed",
-                "error": f"{type(exc).__name__}: {exc}",
-                "message": "The interactive QZX terminal could not be started.",
-                "details": {
-                    "history_enabled": normalized_history is not None,
-                    "show_path": show_path,
-                },
-            }
 
 
 
@@ -271,87 +203,8 @@ class QZXTerminal(cmd.Cmd):
         return True
     
     def default(self, line):
-        """Execute QZX command"""
-        try:
-            parts = shlex.split(line, posix=(os.name != "nt"))
-        except ValueError as exc:
-            print(f"Invalid command line: {exc}")
-            return
-        if not parts:
-            return
-        
-        command = parts[0]
-        args = parts[1:] if len(parts) > 1 else []
-        
-        # Handle special case for help command
-        if command == "help":
-            if args:
-                self.do_help(args[0])
-            else:
-                self.do_help("")
-            return
-        
-        # Handle special case for cd command (change directory)
-        if command.lower() == "cd":
-            if not args:
-                # No arguments, go to home directory
-                os.chdir(os.path.expanduser("~"))
-                print(f"Changed to home directory: {os.getcwd()}")
-            else:
-                # Change to specified directory
-                try:
-                    os.chdir(args[0])
-                    print(f"Changed to directory: {os.getcwd()}")
-                except Exception as e:
-                    print(f"Error changing directory: {str(e)}")
-            
-            # Update the prompt to reflect the new directory
-            self._update_prompt()
-            return
-        
-        # Execute the command using QZX command system
-        try:
-            cmd_instance = self._command_instance(command)
-            if cmd_instance:
-                from qzx.cli import (
-                    _capture_process_stdout,
-                    _parse_cli_request,
-                    _print_json,
-                    _render_human,
-                )
-
-                json_output, _command_name, args = _parse_cli_request(
-                    [command, *args]
-                )
-
-                # Use the same parser, approval gates, and result contract as
-                # the regular CLI.
-                stdout_context = (
-                    _capture_process_stdout()
-                    if json_output
-                    else contextlib.nullcontext()
-                )
-                with stdout_context as captured_stdout:
-                    result = cmd_instance.invoke(args)
-
-                if json_output:
-                    progress_output = (
-                        captured_stdout.getvalue()
-                        if captured_stdout
-                        else ""
-                    )
-                    if progress_output:
-                        print(progress_output, file=sys.stderr, end="")
-                    _print_json(result)
-                else:
-                    print(_render_human(result))
-                
-                # Update prompt in case directory changed
-                self._update_prompt()
-            else:
-                print(f"Unknown command: {command}")
-        except Exception as e:
-            print(f"Error executing command '{command}': {str(e)}")
+        """Execute one interactive QZX terminal line."""
+        return dispatch_terminal_line(self, line)
 
     def _command_instance(self, command_name):
         """Resolve one interactive command without importing the full catalog."""
@@ -364,82 +217,5 @@ class QZXTerminal(cmd.Cmd):
         return command_loader.get_command(command_name)
     
     def do_help(self, arg):
-        """Show help for commands"""
-        if not arg:
-            # Show general help
-            print("\nAvailable QZX commands:")
-            print("=" * 70)
-            
-            # Group indexed canonical commands by category without importing
-            # every implementation module.
-            commands_by_category = {}
-            for entry in self.command_loader.get_indexed_commands():
-                category = entry["category"]
-                if category not in commands_by_category:
-                    commands_by_category[category] = []
-
-                commands_by_category[category].append(
-                    (entry["name"], entry["description"])
-                )
-            
-            # Print commands by category
-            for category, cmds in sorted(commands_by_category.items()):
-                print(f"\n{category.upper()}:")
-                
-                # Print sorted commands
-                for cmd_name, desc in sorted(cmds):
-                    print(f"  {cmd_name.ljust(20)} - {desc}")
-            
-            # Show terminal-specific commands
-            print("\nTERMINAL COMMANDS:")
-            print(f"  {'cd'.ljust(20)} - Change current working directory")
-            print(f"  {'exit/quit'.ljust(20)} - Exit the QZX Terminal")
-            
-            print("\nFor detailed help on a specific command, type: help <command>")
-            print("=" * 70)
-        else:
-            # Show help for specific command
-            cmd_name = arg.lower()
-            
-            # Special case for cd command
-            if cmd_name == "cd":
-                print("\nCommand: cd")
-                print("Description: Change the current working directory")
-                print("\nUsage: cd [directory]")
-                print("  - Without arguments: changes to the user's home directory")
-                print("  - With argument: changes to the specified directory (absolute or relative)")
-                print("\nExamples:")
-                print("  cd")
-                print("    Changes to the user's home directory")
-                print("  cd ..")
-                print("    Goes up one level in the directory structure")
-                print("  cd /path/to/directory")
-                print("    Changes to a specific path")
-                return
-            
-            # Regular command help
-            cmd_instance = self._command_instance(cmd_name)
-
-            if cmd_instance:
-                print(f"\nCommand: {cmd_name}")
-                print(f"Description: {cmd_instance.description}")
-                
-                print("\nParameters:")
-                
-                if cmd_instance.parameters:
-                    for param in cmd_instance.parameters:
-                        required = "Required" if param.get('required', False) else "Optional"
-                        default = f" (Default: {param.get('default')})" if 'default' in param else ""
-                        print(f"  {param['name'].ljust(15)} - {param['description']} [{required}{default}]")
-                else:
-                    print("  This command accepts no parameters")
-                
-                if cmd_instance.examples:
-                    print("\nExamples:")
-                    for example in cmd_instance.examples:
-                        print(f"  {example['command']}")
-                        print(f"    {example['description']}")
-                
-                print()
-            else:
-                print(f"No help available for unknown command: {arg}")
+        """Show help for terminal and QZX commands."""
+        return render_terminal_help(self, arg)
