@@ -1,9 +1,12 @@
 """Regression tests for the starters' explicit, implementation-backed contracts."""
 
+from contextlib import contextmanager
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
+import uuid
 
 from qzx.commands.development._scaffold_result_schema import starter_result_schema
 from qzx.commands.development.scaffold_javascript import ScaffoldJavaScriptCommand
@@ -11,6 +14,17 @@ from qzx.commands.development.scaffold_python import ScaffoldPythonCommand
 from qzx.commands.development.scaffold_typescript import ScaffoldTypeScriptCommand
 
 _COMMANDS = (ScaffoldPythonCommand, ScaffoldJavaScriptCommand, ScaffoldTypeScriptCommand)
+
+
+@contextmanager
+def _inheritable_temp_parent():
+    path = Path(tempfile.gettempdir()) / f"qzx-schema-{uuid.uuid4().hex}"
+    path.mkdir(mode=0o777)
+    try:
+        yield str(path)
+    finally:
+        if path.exists():
+            shutil.rmtree(path)
 
 
 class StarterResultContractTests(unittest.TestCase):
@@ -24,7 +38,7 @@ class StarterResultContractTests(unittest.TestCase):
 
     def test_success_fields_and_executable_step_shapes_are_declared(self):
         for factory in _COMMANDS:
-            with self.subTest(command=factory.name), tempfile.TemporaryDirectory() as parent:
+            with self.subTest(command=factory.name), _inheritable_temp_parent() as parent:
                 result = factory().execute("Starter Demo", parent, with_tests=False)
                 self.assertTrue(result["success"], result)
                 self.assert_declared_fields(factory, result)
@@ -38,7 +52,7 @@ class StarterResultContractTests(unittest.TestCase):
 
     def test_invalid_options_and_existing_targets_fit_the_failure_contract(self):
         for factory in _COMMANDS:
-            with self.subTest(command=factory.name), tempfile.TemporaryDirectory() as parent:
+            with self.subTest(command=factory.name), _inheritable_temp_parent() as parent:
                 failed = factory().execute("starter", parent, with_tests="invalid")
                 self.assertFalse(failed["success"])
                 self.assert_declared_fields(factory, failed)

@@ -5,6 +5,39 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.12 — 2026-09-25
+
+<!-- qzx-release-summary-en:
+This Alpha release completes a broad internal command refactor without changing QZX's 89-command public inventory, strengthens filesystem permission safety, and makes the Windows test harness deterministic without restrictive ACL fixtures.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha completa una amplia refactorización interna de comandos sin cambiar el inventario público de 89 comandos de QZX, refuerza la seguridad de permisos del sistema de archivos y vuelve determinista el entorno de pruebas de Windows sin fixtures con ACL restrictivos.
+-->
+
+### Smaller command units with the same public surface
+
+- Split large file, network, and system command implementations into focused
+  internal workflow modules while preserving their documented command names and
+  result contracts.
+- Complete the content-first `detectFileType` extraction and keep its bounded
+  sampling, optional libmagic refinement, and extension evidence covered by the
+  existing regression suite.
+- Regenerate the canonical command reference from runtime metadata so source and
+  documentation describe the same 89-command inventory.
+
+### Safer permission and Windows test boundaries
+
+- Refuse `changePermissions` modes that would remove the owner's required
+  read/write access or directory traversal instead of allowing QZX to lock its
+  own caller out.
+- Replace permission-denial fixtures that mutate real ACLs or revoke runner
+  access with injected failure boundaries.
+- Use inherited Windows temporary-directory permissions, normalize the long
+  temporary path, and clear Git-created read-only file attributes only during
+  teardown so temporary repositories clean up reliably without restrictive ACLs.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.11 — 2026-09-25
 
 <!-- qzx-release-summary-en:

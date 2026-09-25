@@ -8,9 +8,11 @@ from __future__ import annotations
 import codecs
 import os
 from pathlib import Path
+import shutil
 import socket
 import tempfile
 import unittest
+import uuid
 
 from qzx.commands.file import _read_file_page as page_io
 from qzx.commands.file.read_file import ReadFileCommand
@@ -33,11 +35,12 @@ def _command_with_page_boundaries(*, validator=None, opener=None):
 if os.name == "posix":
     class ReadFilePosixTests(unittest.TestCase):
         def setUp(self):
-            self.temporary = tempfile.TemporaryDirectory(
-                prefix="qzx-readfile-posix-"
+            self.root = (
+                Path(tempfile.gettempdir())
+                / f"qzx-readfile-posix-{uuid.uuid4().hex}"
             )
-            self.addCleanup(self.temporary.cleanup)
-            self.root = Path(self.temporary.name)
+            self.root.mkdir(mode=0o777)
+            self.addCleanup(shutil.rmtree, self.root, True)
             self.command = ReadFileCommand()
 
         def file(self, name="source.txt", data=b"first\nsecond\n"):
@@ -71,17 +74,6 @@ if os.name == "posix":
                 result = self.command.execute(path)
             self.assert_failure(result, "not_a_regular_file")
             self.assertEqual(result["details"]["entry_type"], "socket")
-
-        if hasattr(os, "geteuid") and os.geteuid() != 0:
-            def test_permission_denial_does_not_read_content(self):
-                path = self.file()
-                path.chmod(0)
-                try:
-                    self.assert_failure(
-                        self.command.execute(path), "permission_denied"
-                    )
-                finally:
-                    path.chmod(0o600)
 
         def test_symlink_to_regular_file_is_read_and_disclosed(self):
             target = self.file()

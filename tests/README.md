@@ -23,6 +23,16 @@ only the control flow. Supported behavior still needs a real test in an
 isolated environment; if that is unavailable, the limitation must be reported
 instead of inferred away.
 
+### Filesystem permission safety invariant
+
+Tests must never intentionally revoke the runner's own filesystem access or
+leave cleanup-dependent permission state behind. Do not use `chmod(0)`,
+deny/protected ACLs, inheritance removal, read-only attributes, or equivalent
+permission mutations to manufacture an access-denied condition. Inject
+`PermissionError`/`AccessDenied` through a QZX-owned dependency boundary
+instead. Such a test proves QZX's error handling, not operating-system
+permission enforcement, and must be described accordingly.
+
 ## What mocks must never certify
 
 Do not use mocks, monkeypatches, artificial fixtures, platform substitutions,

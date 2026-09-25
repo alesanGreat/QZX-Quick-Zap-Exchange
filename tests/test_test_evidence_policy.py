@@ -2,6 +2,7 @@
 
 import ast
 from pathlib import Path
+import re
 
 
 TEST_ROOT = Path(__file__).resolve().parent
@@ -17,6 +18,53 @@ def _dotted_name(node):
     if isinstance(node, ast.Name):
         parts.append(node.id)
     return ".".join(reversed(parts))
+
+
+def test_suite_never_revokes_runner_filesystem_access():
+    """Permission-failure tests inject errors; they never poison the real disk."""
+
+    forbidden = (
+        (r"\.chmod\(\s*0\s*\)", "chmod(0)"),
+        (r"os\.chmod\([^\n,]+,\s*0\s*\)", "os.chmod(..., 0)"),
+        (r"(?i)icacls[^\n]*/deny", "icacls /deny"),
+        (r"(?i)icacls[^\n]*/inheritance:r", "icacls inheritance removal"),
+        (r"(?i)\bSet-Acl\b", "Set-Acl"),
+        (r"\bSetNamedSecurityInfo\b", "protected DACL mutation"),
+        (r"\bFILE_ATTRIBUTE_READONLY\b", "read-only file attribute"),
+        (r"(?i)\battrib\s+\+r\b", "attrib +R"),
+        (r"\bTemporaryDirectory\s*\(", "TemporaryDirectory private ACL"),
+        (r"\bmkdtemp\s*\(", "mkdtemp private ACL"),
+    )
+    violations = []
+    this_file = Path(__file__).resolve()
+
+    for test_file in sorted(TEST_ROOT.rglob("*.py")):
+        if test_file.resolve() == this_file:
+            continue
+        source = test_file.read_text(encoding="utf-8")
+        for pattern, label in forbidden:
+            for match in re.finditer(pattern, source):
+                line = source.count("\n", 0, match.start()) + 1
+                violations.append(
+                    f"{test_file}:{line}: forbidden real permission mutation ({label})"
+                )
+
+    assert violations == [], (
+        "Tests must inject PermissionError/AccessDenied through a QZX-owned "
+        "boundary instead of revoking access on the runner filesystem:\n"
+        + "\n".join(violations)
+    )
+
+
+def test_qzx_owns_an_inheritable_tmp_path_fixture():
+    """The suite must never fall back to pytest\'s mode=0o700 tmp_path root."""
+
+    conftest = TEST_ROOT.parent / "conftest.py"
+    source = conftest.read_text(encoding="utf-8")
+    assert "QZX_INHERITABLE_TMP_V1" in source
+    assert "def tmp_path(" in source
+    assert "path.mkdir(mode=0o777)" in source
+    assert "tmp_path_factory" not in source
 
 
 def test_suite_does_not_runtime_patch_dependencies_or_skip_evidence():

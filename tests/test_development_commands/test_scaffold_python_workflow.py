@@ -4,12 +4,14 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 import tomllib
 import unittest
+import uuid
 import zipfile
 
 from qzx.commands.development.scaffold_python import ScaffoldPythonCommand
@@ -23,9 +25,12 @@ from qzx.commands.development._python_scaffold_project import (
 
 class PythonStarterCase(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix="qzx-python-starter-")
-        self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        self.root = (
+            Path(tempfile.gettempdir())
+            / f"qzx-python-starter-{uuid.uuid4().hex}"
+        )
+        self.root.mkdir(mode=0o777)
+        self.addCleanup(shutil.rmtree, self.root, True)
 
     def create(self, name="starter_demo", **options):
         result = ScaffoldPythonCommand().execute(name, str(self.root), **options)

@@ -45,6 +45,11 @@ class ChangePermissionsCommand(CommandBase):
         }
     ]
     
+    def __init__(self, *, chmod=os.chmod, finder=find_files):
+        """Expose mutation and traversal boundaries for safe deterministic tests."""
+        self._chmod = chmod
+        self._finder = finder
+
     examples = [
         {
             'command': 'qzx changePermissions myfile.txt 644',
@@ -106,6 +111,21 @@ class ChangePermissionsCommand(CommandBase):
                         "error": f"Symbolic mode '{mode}' is not supported yet. Use numeric octal mode (e.g., 755)."
                     }
             
+            required_owner_bits = stat.S_IRUSR | stat.S_IWUSR
+            if os.path.isdir(path):
+                required_owner_bits |= stat.S_IXUSR
+            if mode & required_owner_bits != required_owner_bits:
+                return {
+                    "success": False,
+                    "path": os.path.abspath(path),
+                    "mode": oct(mode)[2:],
+                    "error_code": "restrictive_permissions_blocked",
+                    "error": (
+                        "QZX refuses permission modes that can remove the "
+                        "owner\'s required read/write access or directory traversal."
+                    ),
+                }
+
             # Prepare the result
             result = {
                 "path": os.path.abspath(path),
@@ -117,7 +137,7 @@ class ChangePermissionsCommand(CommandBase):
             
             # Apply permissions to a single file
             if os.path.isfile(path):
-                os.chmod(path, mode)
+                self._chmod(path, mode)
                 result["message"] = f"Changed permissions of '{path}' to {result['mode']}"
                 return result
                 
@@ -125,7 +145,7 @@ class ChangePermissionsCommand(CommandBase):
             elif os.path.isdir(path):
                 # For non-recursive operation, just change the directory itself
                 if recursive is False or recursive == 0:
-                    os.chmod(path, mode)
+                    self._chmod(path, mode)
                     result["message"] = f"Changed permissions of '{path}' to {result['mode']}"
                     return result
                     
@@ -133,14 +153,14 @@ class ChangePermissionsCommand(CommandBase):
                 count = 0
                 
                 # Apply permissions to the main directory
-                os.chmod(path, mode)
+                self._chmod(path, mode)
                 count += 1
                 
                 # Define callbacks for files and directories
                 def file_callback(file_path):
                     nonlocal count
                     try:
-                        os.chmod(file_path, mode)
+                        self._chmod(file_path, mode)
                         count += 1
                         return True
                     except Exception as e:
@@ -153,7 +173,7 @@ class ChangePermissionsCommand(CommandBase):
                 def dir_callback(dir_path):
                     nonlocal count
                     try:
-                        os.chmod(dir_path, mode)
+                        self._chmod(dir_path, mode)
                         count += 1
                         return True
                     except Exception as e:
@@ -163,7 +183,7 @@ class ChangePermissionsCommand(CommandBase):
                         result["warnings"].append(f"Failed to change permissions for '{dir_path}': {str(e)}")
                         return True
                 
-                for _ in find_files(
+                for _ in self._finder(
                     file_path_pattern=path,
                     recursive=recursive,
                     file_type=None,

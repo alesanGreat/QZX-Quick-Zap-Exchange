@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import uuid
 
 from qzx.commands.development.scaffold_javascript import ScaffoldJavaScriptCommand
 from qzx.commands.development.scaffold_typescript import ScaffoldTypeScriptCommand
@@ -20,9 +21,12 @@ from qzx.commands.development.scaffold_typescript import ScaffoldTypeScriptComma
 
 class NodeStarterIntegrationTests(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix="qzx-node-starter-")
-        self.addCleanup(self.temporary.cleanup)
-        self.parent = Path(self.temporary.name).resolve()
+        self.parent = (
+            Path(tempfile.gettempdir())
+            / f"qzx-node-starter-{uuid.uuid4().hex}"
+        ).resolve()
+        self.parent.mkdir(mode=0o777)
+        self.addCleanup(shutil.rmtree, self.parent, True)
         checkout = Path(__file__).resolve().parents[2]
         self.assertFalse(self.parent.is_relative_to(checkout))
         self.node = shutil.which("node")

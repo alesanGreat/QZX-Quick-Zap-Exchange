@@ -1,7 +1,6 @@
 """A requested scan must not traverse directory aliases or mistake cloud tags for links."""
 
 import os
-import stat
 import subprocess
 from types import SimpleNamespace
 
@@ -87,34 +86,32 @@ def test_native_directory_alias_is_listable_but_never_traversed(tmp_path):
     assert (outside / "external.bin").read_bytes() == b"external"
 
 
-if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
-    def test_native_denied_directory_keeps_partial_filename_evidence(
-        tmp_path,
-    ):
-        (tmp_path / "readable.bin").write_bytes(b"readable")
-        locked = tmp_path / "locked"
-        locked.mkdir()
-        (locked / "hidden.bin").write_bytes(b"hidden")
-        locked.chmod(0)
-        try:
-            result = FindFilesCommand().execute(tmp_path, recursive=1)
-            denied_root = FindFilesCommand().execute(
-                locked, recursive=False
-            )
-        finally:
-            locked.chmod(stat.S_IRWXU)
+def test_denied_directory_keeps_partial_filename_evidence_without_acl_mutation(
+    tmp_path,
+):
+    readable = tmp_path / "readable.bin"
+    readable.write_bytes(b"readable")
+    denied = tmp_path / "synthetic-denied"
+    denied.mkdir()
 
-        assert result["success"] and result["partial"]
-        assert result["count"] == 1
-        assert result["skipped_search_paths"] == 1
-        assert not denied_root["success"]
-else:
-    def test_denied_directory_fixture_scope_is_explicit():
-        assert (
-            os.name == "nt"
-            or not hasattr(os, "geteuid")
-            or os.geteuid() == 0
+    def finder(*, file_path_pattern, on_error, **_options):
+        root = os.path.dirname(file_path_pattern)
+        if os.path.normcase(root) == os.path.normcase(str(denied)):
+            on_error(PermissionError(13, "synthetic root denial", root))
+            return
+        yield str(readable)
+        on_error(
+            PermissionError(13, "synthetic child denial", str(denied))
         )
+
+    command = FindFilesCommand(finder=finder)
+    result = command.execute(tmp_path, recursive=1)
+    denied_root = command.execute(denied, recursive=False)
+
+    assert result["success"] and result["partial"]
+    assert result["count"] == 1
+    assert result["skipped_search_paths"] == 1
+    assert not denied_root["success"]
 
 
 if hasattr(os, "mkfifo"):

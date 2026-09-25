@@ -69,6 +69,12 @@ safety barrier around a destructive operation, but it proves neither the real
 operation nor the platform integration. See the
 [test evidence policy](tests/README.md) before adding or reviewing tests.
 
+Tests must also never make the runner filesystem inaccessible as a fixture.
+Do not use `chmod(0)`, deny/protected ACLs, ACL inheritance removal, or
+read-only attributes to manufacture permission failures. Inject the failure at
+a QZX-owned boundary and label the assertion as control-flow/error-handling
+evidence rather than platform permission evidence.
+
 Keep changes focused. Preserve unrelated comments, documentation, and local
 work, and do not include generated or machine-local artifacts.
 

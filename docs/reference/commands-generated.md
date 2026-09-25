@@ -899,14 +899,7 @@ Command to calculate cryptographic hash values of files
   Calculate MD5 hash for file.txt
 
 **Details:**
-Calculates the hash of a file
-
-Args:
-    file_path (str): Path to the file
-    algorithm (str, optional): Cryptographic algorithm (sha256, sha1, md5)
-
-Returns:
-    Dictionary with hash results and metadata
+Calculate a supported cryptographic digest for one file.
 
 ---
 
@@ -1197,14 +1190,7 @@ Command to identify symbolic links and junctions pointing to nonexistent targets
   Search for broken symlinks in C:/some/path
 
 **Details:**
-Scans for broken symlinks
-
-Args:
-    folder_path (str): Starting folder
-    max_depth (str/int): Folder depth limit
-
-Returns:
-    Dictionary with list of broken symlinks
+Scan for broken symbolic links within the requested depth.
 
 ---
 
@@ -1309,23 +1295,7 @@ This version uses the centralized recursive file finder utility.
   Find all occurrences of "function" in multiple specific files
 
 **Details:**
-Searches for text patterns in files with advanced options
-
-Args:
-    pattern (str): Text pattern to search for
-    target (str): File or directory to search in (space-separated for multiple)
-    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels
-    regex (bool): Whether to use regular expressions for pattern matching
-    case_sensitive (bool): Whether the search should be case-sensitive
-    file_pattern (str): Only search in files matching this pattern (e.g., "*.py")
-    context_lines (int): Number of lines to show before and after each match
-    invert_match (bool): Show lines that do NOT match the pattern
-    count_only (bool): Only show count of matches per file
-    max_matches (int): Maximum number of matches to display (0 for unlimited)
-    colored (bool): Whether to colorize the output
-
-Returns:
-    Dictionary with search results
+Search text while preserving the public findText contract.
 
 ---
 
@@ -1400,13 +1370,7 @@ Command to inspect image metadata (format, width, height, size) using native hea
   Inspect dimensions and format of image.png
 
 **Details:**
-Inspects an image file
-
-Args:
-    image_path (str): File path
-
-Returns:
-    Dictionary containing image metadata
+Inspect one image using native binary headers.
 
 ---
 
@@ -1459,7 +1423,7 @@ Inspect one regular file with bounded, distributed sampling.
   Analyze the resolved target of an explicitly reviewed link
 
 **Details:**
-Execute the command and return its structured result.
+Inspect one regular file with bounded, distributed sampling.
 
 ---
 
@@ -1523,15 +1487,7 @@ This version uses the centralized recursive file finder utility.
   List all JavaScript files in the src directory and up to 2 levels of subdirectories
 
 **Details:**
-Lists files in a directory with support for wildcards and recursive searching
-
-Args:
-    directory_path (str): Path to the directory to list files from
-    pattern (str): File pattern to filter by (e.g., "*.txt", "doc*.pdf")
-    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels
-
-Returns:
-    Dictionary with the list of files and metadata
+List matching files and directories using the centralized finder.
 
 ---
 
@@ -1644,15 +1600,7 @@ Command to create an empty file or update the timestamp of an existing file
   Create a file with content or update an existing file
 
 **Details:**
-Creates an empty file or updates the timestamp of an existing file
-
-Args:
-    path (str): Path to the file to create or update
-    create_dirs (bool, optional): Whether to create parent directories if they do not exist
-    content (str, optional): Content to write to the file
-
-Returns:
-    Operation result
+Create a file or update its timestamp/content.
 
 ---
 
@@ -1768,13 +1716,7 @@ Command to retrieve detailed network status including active interfaces, gateway
   Get local network info only, skipping public IP resolution
 
 **Details:**
-Gathers network configuration info
-
-Args:
-    check_public (str/bool): Query public IP APIs
-
-Returns:
-    Dictionary with network configuration details
+Gather local network diagnostics and optional public network data.
 
 ---
 
@@ -1796,7 +1738,7 @@ Measure a real HTTP stream without printing progress into command output.
   Run the download measurement for up to 5 seconds
 
 **Details:**
-Run three latency samples and one bounded streaming download.
+Run the bounded HTTP speed-test workflow.
 
 ---
 
@@ -1965,14 +1907,7 @@ Command to get CPU load information
   Get CPU usage information with 0.5-second interval
 
 **Details:**
-Gets CPU load information
-
-Args:
-    interval (float, optional): Time interval (in seconds) to calculate CPU usage.
-                               Defaults to 1 second.
-
-Returns:
-    Dictionary with CPU load information
+Return one normalized CPU load snapshot.
 
 ---
 
@@ -2036,16 +1971,6 @@ avoiding scans outside the current directory.
 **Details:**
 Show the current directory and a token-saving filesystem summary.
 
-Args:
-    full (bool): Display the full path instead of only its final name.
-    size (bool): Recursively calculate logical size and descendant totals.
-    details (bool): Add rich previews and recursive aggregate analysis.
-    limit (int): Maximum entries in each details list, from 1 through 100.
-
-Returns:
-    A structured path and immediate inventory. Recursive fields are
-    included only when ``size`` or ``details`` is requested.
-
 ---
 
 ### getCurrentUser
@@ -2064,10 +1989,7 @@ None
   Get detailed information about the currently logged in user
 
 **Details:**
-Gets information about the currently logged in user
-
-Returns:
-    Dictionary with user information and operation status
+Return a structured snapshot of the currently logged-in user.
 
 ---
 
@@ -2156,10 +2078,7 @@ None
   Get detailed information about system memory usage
 
 **Details:**
-Gets information about system RAM
-
-Returns:
-    Dictionary with RAM information
+Return normalized RAM and swap information.
 
 ---
 
@@ -2209,13 +2128,7 @@ Proporciona información detallada sobre el uso, parámetros y ejemplos de coman
   Shows the same command help with the conventional flag
 
 **Details:**
-Muestra la ayuda para un comando específico o la ayuda general del sistema.
-
-Args:
-    command (str, optional): Nombre del comando para el que se quiere obtener ayuda
-
-Returns:
-    dict: Diccionario con la información de ayuda solicitada
+Show general help or detailed help for one command.
 
 ---
 
@@ -2338,14 +2251,7 @@ Command to get disk name/model information
   Get information about the /dev/sda disk (Linux)
 
 **Details:**
-Gets disk name/model information
-
-Args:
-    disk_path (str, optional): Path to the disk to get information for.
-                              If not provided, shows information for all disks.
-
-Returns:
-    Dictionary with disk information
+Get disk information for one path or all mounted disks.
 
 ---
 
@@ -2371,15 +2277,7 @@ Command to list running processes
   List the top 10 processes by memory usage
 
 **Details:**
-Lists running processes
-
-Args:
-    filter_str (str, optional): Optional string to filter process names
-    sort_by (str, optional): Field to sort results by (pid, cpu, memory, name)
-    limit (int, optional): Maximum number of processes to display
-
-Returns:
-    Dictionary with the process list and operation status
+List running processes using the normalized process inventory.
 
 ---
 
@@ -2399,10 +2297,7 @@ None
   List all startup programs and registry triggers
 
 **Details:**
-Lists startup programs
-
-Returns:
-    Dictionary with startup applications details
+List startup programs from the current platform's real sources.
 
 ---
 
@@ -2424,7 +2319,7 @@ Inspect active and stopped services through the native manager.
   List only active running system services
 
 **Details:**
-Execute the command and return its structured result.
+List services through the current operating system's native manager.
 
 ---
 

@@ -214,15 +214,42 @@ def test_analyze_complexity_rejects_unknown_detail_level(tmp_path):
     assert result["error_code"] == "invalid_detail_level"
 
 
-def test_change_permissions_processes_directory_recursively(tmp_path):
+def test_change_permissions_processes_directory_recursively_without_real_acl_mutation(
+    tmp_path,
+):
     nested = tmp_path / "nested"
     nested.mkdir()
     source = nested / "sample.txt"
     source.write_text("content", encoding="utf-8")
+    mutations = []
 
-    result = ChangePermissionsCommand().execute(str(tmp_path), "700", "-r")
+    def record_chmod(path, mode):
+        mutations.append((os.path.abspath(path), mode))
+
+    result = ChangePermissionsCommand(chmod=record_chmod).execute(
+        str(tmp_path), "700", "-r"
+    )
 
     assert result["success"] is True
     assert result["items_modified"] == 3
-    if os.name != "nt":
-        assert source.stat().st_mode & 0o777 == 0o700
+    assert len(mutations) == 3
+    assert {mode for _, mode in mutations} == {0o700}
+    paths = {path for path, _ in mutations}
+    assert os.path.abspath(str(tmp_path)) in paths
+    assert os.path.abspath(str(nested)) in paths
+    assert os.path.abspath(str(source)) in paths
+
+
+def test_change_permissions_rejects_owner_lockout_without_mutation(tmp_path):
+    source = tmp_path / "sample.txt"
+    source.write_text("content", encoding="utf-8")
+
+    def forbidden_chmod(_path, _mode):
+        raise AssertionError("restrictive mode reached the filesystem")
+
+    result = ChangePermissionsCommand(chmod=forbidden_chmod).execute(
+        str(source), "000"
+    )
+
+    assert result["success"] is False
+    assert result["error_code"] == "restrictive_permissions_blocked"
