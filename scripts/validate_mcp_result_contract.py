@@ -196,60 +196,58 @@ def _error_code_schema(schema):
 
 
 def _structural_output_schema_violations(output_schema):
-    """Check the portable object-schema surface needed for QZX MCP adoption.
-
-    Some maintained MCP SDK 1.x high-level APIs accept only object-shaped output
-    schemas. They cannot portably publish an allOf wrapper around an existing
-    domain schema. This structural mode therefore checks that the advertised
-    output schema makes the stable QZX core fields discoverable and constrained,
-    while actual success/failure evidence is still validated against the full
-    canonical QZX Result Contract v1 schema.
-    """
-    violations = []
+    """Check the portable object-schema surface needed for QZX MCP adoption."""
     if not isinstance(output_schema, dict):
         return ["The MCP tool definition must declare object-valued outputSchema."]
 
+    violations = []
     if output_schema.get("type") != "object":
         violations.append(
             "A structural QZX MCP outputSchema must declare type 'object'."
         )
-
-    required = output_schema.get("required")
-    if not isinstance(required, list):
-        required = []
-    for field in ("success", "message"):
-        if field not in required:
-            violations.append(
-                f"A structural QZX MCP outputSchema must require '{field}'."
-            )
+    violations.extend(
+        _structural_required_violations(output_schema.get("required"))
+    )
 
     properties = output_schema.get("properties")
     if not isinstance(properties, dict):
         return violations + [
             "A structural QZX MCP outputSchema must declare object properties."
         ]
+    violations.extend(_structural_property_violations(properties))
+    return violations
 
+
+def _structural_required_violations(required):
+    if not isinstance(required, list):
+        required = []
+    return [
+        f"A structural QZX MCP outputSchema must require '{field}'."
+        for field in ("success", "message")
+        if field not in required
+    ]
+
+
+def _structural_property_violations(properties):
+    violations = []
     if not _declares_exact_json_type(properties.get("success"), "boolean"):
         violations.append(
             "A structural QZX MCP outputSchema must declare success as exactly boolean."
         )
-
     if not _nonblank_string_schema(properties.get("message")):
         violations.append(
             "A structural QZX MCP outputSchema must constrain message to a "
             "non-empty, non-whitespace string (minLength >= 1 and a \\S pattern)."
         )
-
-    declares_failure_evidence = _nonblank_string_schema(
+    failure_evidence = _nonblank_string_schema(
         properties.get("error")
     ) or _error_code_schema(properties.get("error_code"))
-    if not declares_failure_evidence:
+    if not failure_evidence:
         violations.append(
             "A structural QZX MCP outputSchema must declare at least one QZX "
             "failure-evidence field: nonblank string 'error' or canonical "
             "string 'error_code'."
         )
-
     return violations
 
 
@@ -291,20 +289,59 @@ def validate_mcp_profile(
 ):
     """Return deterministic QZX MCP profile violations, warnings, and facts."""
     if specification_version not in MCP_TOOLS_SPEC_URLS:
-        raise ValueError(f"Unsupported MCP specification revision: {specification_version}")
-
-    result, violations = _extract_tool_result(document)
-    warnings = []
-
-    schema_violations = []
-    schema_warnings = []
-    output_schema_mode = None
-    if tool_definition is not None:
-        schema_violations, schema_warnings, output_schema_mode = _assess_output_schema(
-            tool_definition
+        raise ValueError(
+            f"Unsupported MCP specification revision: {specification_version}"
         )
 
-    details = {
+    result, violations = _extract_tool_result(document)
+    schema_violations, schema_warnings, output_schema_mode = (
+        _schema_evidence(tool_definition)
+    )
+    details = _profile_details(
+        specification_version,
+        tool_definition,
+        output_schema_mode,
+    )
+    if result is None:
+        return (
+            violations + schema_violations,
+            list(schema_warnings),
+            details,
+        )
+
+    violations.extend(_result_type_violations(result, specification_version))
+    content, structured_content, content_violations = _content_evidence(result)
+    violations.extend(content_violations)
+
+    is_error_violations, is_error_details = _is_error_evidence(
+        result,
+        structured_content,
+    )
+    violations.extend(is_error_violations)
+    details.update(is_error_details)
+
+    backcompat_warnings, backcompat_matches = _backcompat_evidence(
+        content,
+        structured_content,
+    )
+    warnings = [*backcompat_warnings, *schema_warnings]
+    details["backcompat_text_matches"] = backcompat_matches
+    violations.extend(schema_violations)
+    return violations, warnings, details
+
+
+def _schema_evidence(tool_definition):
+    if tool_definition is None:
+        return [], [], None
+    return _assess_output_schema(tool_definition)
+
+
+def _profile_details(
+    specification_version,
+    tool_definition,
+    output_schema_mode,
+):
+    return {
         "mcp_specification": specification_version,
         "mcp_tools_spec": MCP_TOOLS_SPEC_URLS[specification_version],
         "contract": RESULT_CONTRACT_SCHEMA_URL,
@@ -313,126 +350,144 @@ def validate_mcp_profile(
         "backcompat_text_matches": False,
     }
 
-    if result is None:
-        violations.extend(schema_violations)
-        warnings.extend(schema_warnings)
-        return violations, warnings, details
 
+def _result_type_violations(result, specification_version):
     result_type = result.get("resultType")
     if specification_version == MCP_RESULT_TYPE_VERSION:
         if result_type != "complete":
-            violations.append(
+            return [
                 "The MCP 2026-07-28 profile applies only to resultType 'complete'."
-            )
-    elif result_type is not None and result_type != "complete":
-        violations.append(
+            ]
+        return []
+    if result_type is not None and result_type != "complete":
+        return [
             f"The MCP {specification_version} profile applies only to completed "
             "tool results."
-        )
+        ]
+    return []
 
+
+def _content_evidence(result):
+    violations = []
     content = result.get("content")
     if not isinstance(content, list):
-        violations.append("A completed MCP tool result must contain a content array.")
+        violations.append(
+            "A completed MCP tool result must contain a content array."
+        )
 
     if "structuredContent" not in result:
-        structured_content = None
         violations.append(
             "A QZX MCP profile result must contain structuredContent."
         )
-    else:
-        structured_content = result["structuredContent"]
-        core_violations = result_contract_violations(structured_content)
-        violations.extend(
-            f"structuredContent: {violation}" for violation in core_violations
-        )
+        return content, None, violations
 
-    is_error_explicit = "isError" in result
-    is_error_value = result.get("isError")
-    is_error_valid = not is_error_explicit or isinstance(is_error_value, bool)
-    if not is_error_valid:
+    structured_content = result["structuredContent"]
+    violations.extend(
+        f"structuredContent: {violation}"
+        for violation in result_contract_violations(structured_content)
+    )
+    return content, structured_content, violations
+
+
+def _is_error_evidence(result, structured_content):
+    violations = []
+    explicit = "isError" in result
+    value = result.get("isError")
+    valid = not explicit or isinstance(value, bool)
+    if not valid:
         violations.append("MCP isError must be a boolean when present.")
-    effective_is_error = is_error_value if isinstance(is_error_value, bool) else False
-    details["mcp_is_error_explicit"] = is_error_explicit
-    details["mcp_is_error_effective"] = effective_is_error
+    effective = value if isinstance(value, bool) else False
 
     if isinstance(structured_content, dict):
         success = structured_content.get("success")
-        if isinstance(success, bool) and is_error_valid:
-            if effective_is_error != (not success):
-                violations.append(
-                    "Effective MCP isError must equal !structuredContent.success "
-                    "for a completed QZX MCP profile result. MCP treats omitted "
-                    "isError as false."
-                )
-
-        backcompat_matches = _backcompat_text_matches(content, structured_content)
-        details["backcompat_text_matches"] = backcompat_matches
-        if not backcompat_matches:
-            warnings.append(
-                "No TextContent block serializes the complete structuredContent "
-                "object. MCP recommends this for backwards compatibility."
+        if isinstance(success, bool) and valid and effective != (not success):
+            violations.append(
+                "Effective MCP isError must equal !structuredContent.success "
+                "for a completed QZX MCP profile result. MCP treats omitted "
+                "isError as false."
             )
+    return violations, {
+        "mcp_is_error_explicit": explicit,
+        "mcp_is_error_effective": effective,
+    }
 
-    violations.extend(schema_violations)
-    warnings.extend(schema_warnings)
 
-    return violations, warnings, details
+def _backcompat_evidence(content, structured_content):
+    if not isinstance(structured_content, dict):
+        return [], False
+    matches = _backcompat_text_matches(content, structured_content)
+    if matches:
+        return [], True
+    return [
+        "No TextContent block serializes the complete structuredContent "
+        "object. MCP recommends this for backwards compatibility."
+    ], False
+
+
+def _validated_profile_report(args):
+    specification_version = args.spec_version
+    document = load_json_path_or_stdin(args.path, sys.stdin)
+    tool_definition = (
+        load_json_path_or_stdin(args.tool_definition, sys.stdin)
+        if args.tool_definition
+        else None
+    )
+    violations, warnings, profile_details = validate_mcp_profile(
+        document,
+        tool_definition,
+        specification_version,
+    )
+    success = not violations
+    state = "conforms to" if success else "violates"
+    return {
+        "success": success,
+        "message": (
+            "The MCP result "
+            f"{state} the QZX Result Contract v1 MCP "
+            f"{specification_version} interoperability profile."
+        ),
+        "warnings": warnings,
+        "details": {
+            **profile_details,
+            "violations": violations,
+        },
+    }
+
+
+def _invalid_json_report(specification_version, exception):
+    return {
+        "success": False,
+        "message": "The MCP profile input could not be read as JSON.",
+        "error": str(exception),
+        "error_code": "invalid_json_input",
+        "details": {
+            "mcp_specification": specification_version,
+            "mcp_tools_spec": MCP_TOOLS_SPEC_URLS[specification_version],
+            "contract": RESULT_CONTRACT_SCHEMA_URL,
+            "violations": [],
+        },
+    }
+
+
+def _render_profile_report(result, json_output):
+    if json_output:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return
+    prefix = "[OK]" if result["success"] else "[FAIL]"
+    print(f"{prefix} {result['message']}")
+    for violation in result["details"].get("violations", []):
+        print(f"  - {violation}")
+    for warning in result.get("warnings", []):
+        print(f"  [WARN] {warning}")
 
 
 def main() -> int:
     args = parse_args()
-    specification_version = args.spec_version
-    tools_spec_url = MCP_TOOLS_SPEC_URLS[specification_version]
     try:
-        document = load_json_path_or_stdin(args.path, sys.stdin)
-        tool_definition = (
-            load_json_path_or_stdin(args.tool_definition, sys.stdin)
-            if args.tool_definition
-            else None
-        )
-        violations, warnings, profile_details = validate_mcp_profile(
-            document,
-            tool_definition,
-            specification_version,
-        )
-        result = {
-            "success": not violations,
-            "message": (
-                "The MCP result conforms to the QZX Result Contract v1 "
-                f"MCP {specification_version} interoperability profile."
-                if not violations
-                else "The MCP result violates the QZX Result Contract v1 "
-                f"MCP {specification_version} interoperability profile."
-            ),
-            "warnings": warnings,
-            "details": {
-                **profile_details,
-                "violations": violations,
-            },
-        }
+        result = _validated_profile_report(args)
     except (OSError, json.JSONDecodeError, StrictJsonError) as exception:
-        result = {
-            "success": False,
-            "message": "The MCP profile input could not be read as JSON.",
-            "error": str(exception),
-            "error_code": "invalid_json_input",
-            "details": {
-                "mcp_specification": specification_version,
-                "mcp_tools_spec": tools_spec_url,
-                "contract": RESULT_CONTRACT_SCHEMA_URL,
-                "violations": [],
-            },
-        }
-
-    if args.json:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-    else:
-        prefix = "[OK]" if result["success"] else "[FAIL]"
-        print(f"{prefix} {result['message']}")
-        for violation in result["details"].get("violations", []):
-            print(f"  - {violation}")
-        for warning in result.get("warnings", []):
-            print(f"  [WARN] {warning}")
+        result = _invalid_json_report(args.spec_version, exception)
+    _render_profile_report(result, args.json)
     return 0 if result["success"] else 1
 
 
