@@ -109,60 +109,32 @@ def test_network_and_mutating_utilities_are_not_allowlisted():
         assert "dedicated QZX command" in result["message"]
 
 
-def test_argument_grammars_reject_known_mutating_forms():
-    assert RunDiagnosticCommand._validate_windows_arguments(
-        "ipconfig",
-        ["/flushdns"],
-    )
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "ss",
-        ["-K"],
-    )
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "ss",
-        ["--kill"],
-    )
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "ss",
-        ["-p"],
-    )
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "ss",
-        [],
-    )
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "ss",
-        ["-x"],
-    )
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "netstat",
-        ["-np"],
-    )
-    assert RunDiagnosticCommand._validate_windows_arguments(
-        "netstat",
-        ["-ano"],
-    )
-    assert RunDiagnosticCommand._validate_windows_arguments(
-        "netstat",
-        [],
-    )
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "netstat",
-        ["-a"],
-    )
-    assert RunDiagnosticCommand._validate_windows_arguments(
-        "netstat",
-        ["-an"],
-    ) is None
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "netstat",
-        ["-lnt"],
-    ) is None
-    assert RunDiagnosticCommand._validate_unix_arguments(
-        "ss",
-        ["-lnt"],
-    ) is None
+_REJECTED_ARGUMENT_CASES = (
+    (RunDiagnosticCommand._validate_windows_arguments, "ipconfig", ["/flushdns"]),
+    (RunDiagnosticCommand._validate_unix_arguments, "ss", ["-K"]),
+    (RunDiagnosticCommand._validate_unix_arguments, "ss", ["--kill"]),
+    (RunDiagnosticCommand._validate_unix_arguments, "ss", ["-p"]),
+    (RunDiagnosticCommand._validate_unix_arguments, "ss", []),
+    (RunDiagnosticCommand._validate_unix_arguments, "ss", ["-x"]),
+    (RunDiagnosticCommand._validate_unix_arguments, "netstat", ["-np"]),
+    (RunDiagnosticCommand._validate_windows_arguments, "netstat", ["-ano"]),
+    (RunDiagnosticCommand._validate_windows_arguments, "netstat", []),
+    (RunDiagnosticCommand._validate_unix_arguments, "netstat", ["-a"]),
+)
 
+_ALLOWED_ARGUMENT_CASES = (
+    (RunDiagnosticCommand._validate_windows_arguments, "netstat", ["-an"]),
+    (RunDiagnosticCommand._validate_unix_arguments, "netstat", ["-lnt"]),
+    (RunDiagnosticCommand._validate_unix_arguments, "ss", ["-lnt"]),
+)
+
+
+def test_argument_grammars_reject_known_mutating_forms():
+    for validator, command, arguments in _REJECTED_ARGUMENT_CASES:
+        assert validator(command, arguments)
+
+    for validator, command, arguments in _ALLOWED_ARGUMENT_CASES:
+        assert validator(command, arguments) is None
 
 def test_diagnostic_environment_does_not_inherit_process_secrets(
     monkeypatch,
