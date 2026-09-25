@@ -60,8 +60,27 @@ def _type_matches(expected: str, instance: Any) -> bool:
 
 
 def _matches(schema: dict[str, Any], instance: Any, root: dict[str, Any]) -> bool:
-    if "$ref" in schema:
-        return _matches(_resolve_ref(root, schema["$ref"]), instance, root)
+    referenced = _reference_match(schema, instance, root)
+    if referenced is not None:
+        return referenced
+    if not _combinators_match(schema, instance, root):
+        return False
+    if not _scalar_constraints_match(schema, instance):
+        return False
+    if isinstance(instance, dict):
+        return _object_constraints_match(schema, instance, root)
+    if isinstance(instance, list):
+        return _array_constraints_match(schema, instance, root)
+    return True
+
+
+def _reference_match(schema, instance, root):
+    if "$ref" not in schema:
+        return None
+    return _matches(_resolve_ref(root, schema["$ref"]), instance, root)
+
+
+def _combinators_match(schema, instance, root):
     if "allOf" in schema and not all(
         _matches(item, instance, root) for item in schema["allOf"]
     ):
@@ -70,71 +89,105 @@ def _matches(schema: dict[str, Any], instance: Any, root: dict[str, Any]) -> boo
         _matches(item, instance, root) for item in schema["anyOf"]
     ):
         return False
-    if "if" in schema:
-        condition_matches = _matches(schema["if"], instance, root)
-        if condition_matches and "then" in schema:
-            if not _matches(schema["then"], instance, root):
-                return False
-        if not condition_matches and "else" in schema:
-            if not _matches(schema["else"], instance, root):
-                return False
+    return _conditional_match(schema, instance, root)
+
+
+def _conditional_match(schema, instance, root):
+    if "if" not in schema:
+        return True
+    condition = _matches(schema["if"], instance, root)
+    if condition and "then" in schema:
+        return _matches(schema["then"], instance, root)
+    if not condition and "else" in schema:
+        return _matches(schema["else"], instance, root)
+    return True
+
+
+def _scalar_constraints_match(schema, instance):
     if "const" in schema and instance != schema["const"]:
         return False
     if "enum" in schema and instance not in schema["enum"]:
         return False
-
     expected_type = schema.get("type")
-    if isinstance(expected_type, str) and not _type_matches(expected_type, instance):
-        return False
-    if isinstance(expected_type, list) and not any(
-        _type_matches(item, instance) for item in expected_type
-    ):
-        return False
-
+    if isinstance(expected_type, str):
+        if not _type_matches(expected_type, instance):
+            return False
+    elif isinstance(expected_type, list):
+        if not any(
+            _type_matches(item, instance) for item in expected_type
+        ):
+            return False
     if isinstance(instance, str):
-        if len(instance) < schema.get("minLength", 0):
-            return False
-        pattern = schema.get("pattern")
-        if isinstance(pattern, str) and re.search(pattern, instance) is None:
-            return False
-
-    if isinstance(instance, dict):
-        required = schema.get("required", [])
-        if any(name not in instance for name in required):
-            return False
-        properties = schema.get("properties", {})
-        if isinstance(properties, dict):
-            for name, subschema in properties.items():
-                if name in instance and not _matches(subschema, instance[name], root):
-                    return False
-            if schema.get("additionalProperties") is False:
-                if set(instance) - set(properties):
-                    return False
-
-    if isinstance(instance, list):
-        if len(instance) < schema.get("minItems", 0):
-            return False
-        max_items = schema.get("maxItems")
-        if isinstance(max_items, int) and len(instance) > max_items:
-            return False
-        prefix_items = schema.get("prefixItems", [])
-        if isinstance(prefix_items, list):
-            for index, subschema in enumerate(prefix_items):
-                if index < len(instance) and not _matches(
-                    subschema,
-                    instance[index],
-                    root,
-                ):
-                    return False
-        items = schema.get("items")
-        if items is False and len(instance) > len(prefix_items):
-            return False
-        if isinstance(items, dict):
-            for item in instance[len(prefix_items):]:
-                if not _matches(items, item, root):
-                    return False
-
+        return _string_constraints_match(schema, instance)
     return True
+
+
+def _string_constraints_match(schema, instance):
+    if len(instance) < schema.get("minLength", 0):
+        return False
+    pattern = schema.get("pattern")
+    return not (
+        isinstance(pattern, str)
+        and re.search(pattern, instance) is None
+    )
+
+
+def _object_constraints_match(schema, instance, root):
+    required = schema.get("required", [])
+    if any(name not in instance for name in required):
+        return False
+    properties = schema.get("properties", {})
+    if not isinstance(properties, dict):
+        return True
+    for name, subschema in properties.items():
+        if name in instance and not _matches(
+            subschema,
+            instance[name],
+            root,
+        ):
+            return False
+    if schema.get("additionalProperties") is False:
+        return not bool(set(instance) - set(properties))
+    return True
+
+
+def _array_constraints_match(schema, instance, root):
+    if len(instance) < schema.get("minItems", 0):
+        return False
+    max_items = schema.get("maxItems")
+    if isinstance(max_items, int) and len(instance) > max_items:
+        return False
+    prefix_items = schema.get("prefixItems", [])
+    if not _prefix_items_match(prefix_items, instance, root):
+        return False
+    return _remaining_items_match(
+        schema.get("items"),
+        prefix_items,
+        instance,
+        root,
+    )
+
+
+def _prefix_items_match(prefix_items, instance, root):
+    if not isinstance(prefix_items, list):
+        return True
+    return all(
+        index >= len(instance)
+        or _matches(subschema, instance[index], root)
+        for index, subschema in enumerate(prefix_items)
+    )
+
+
+def _remaining_items_match(items, prefix_items, instance, root):
+    prefix_count = len(prefix_items) if isinstance(prefix_items, list) else 0
+    if items is False and len(instance) > prefix_count:
+        return False
+    if not isinstance(items, dict):
+        return True
+    return all(
+        _matches(items, item, root)
+        for item in instance[prefix_count:]
+    )
 
 
 def _receipt(*, profile: str, with_tool_definition: bool = False) -> dict[str, Any]:
