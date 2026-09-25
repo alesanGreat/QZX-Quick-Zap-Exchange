@@ -108,6 +108,32 @@ def test_workflow_branch_pushes_do_not_duplicate_pull_request_ci():
     )
 
 
+def _scorecard_job_permissions(text: str) -> set[tuple[str, str]]:
+    """Return the explicit job-level Scorecard permissions."""
+    job_permissions = re.search(
+        r"(?ms)^    permissions:\n(?P<body>.*?)(?=^    steps:\n)",
+        text,
+    )
+    assert job_permissions is not None
+    return set(
+        re.findall(
+            r"^      ([a-z-]+):\s*(read|write|none)\s*$",
+            job_permissions.group("body"),
+            flags=re.MULTILINE,
+        )
+    )
+
+
+def _external_actions_in_text(text: str) -> list[str]:
+    """Return external GitHub Action names in declaration order."""
+    actions = []
+    for line in text.splitlines():
+        parsed = _external_action_reference(line)
+        if parsed is not None:
+            actions.append(parsed[0])
+    return actions
+
+
 def test_scorecard_workflow_is_publishable_and_least_privilege():
     """Keep the public Scorecard evidence authenticated and tightly scoped."""
 
@@ -126,18 +152,7 @@ def test_scorecard_workflow_is_publishable_and_least_privilege():
     assert "  pull_request:\n" not in text
     assert "  workflow_dispatch:\n" not in text
     assert "\npermissions: read-all\n" in text
-    job_permissions = re.search(
-        r"(?ms)^    permissions:\n(?P<body>.*?)(?=^    steps:\n)", text
-    )
-    assert job_permissions is not None
-    declared_permissions = set(
-        re.findall(
-            r"^      ([a-z-]+):\s*(read|write|none)\s*$",
-            job_permissions.group("body"),
-            flags=re.MULTILINE,
-        )
-    )
-    assert declared_permissions == {
+    assert _scorecard_job_permissions(text) == {
         ("actions", "read"),
         ("contents", "read"),
         ("security-events", "write"),
@@ -150,19 +165,12 @@ def test_scorecard_workflow_is_publishable_and_least_privilege():
     assert "          results_format: sarif\n" in text
     assert "          publish_results: true\n" in text
     assert "          retention-days: 5\n" in text
-
-    external_actions = []
-    for line in text.splitlines():
-        parsed = _external_action_reference(line)
-        if parsed is not None:
-            external_actions.append(parsed[0])
-    assert external_actions == [
+    assert _external_actions_in_text(text) == [
         "actions/checkout",
         "ossf/scorecard-action",
         "actions/upload-artifact",
         "github/codeql-action/upload-sarif",
     ]
-
 
 def test_root_action_matches_nested_compatibility_entrypoint():
     """Keep the new root Action and the historical nested entrypoint equivalent."""
