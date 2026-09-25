@@ -6,11 +6,8 @@ ListFiles Command - Lists files in a directory with support for wildcards and re
 Using the centralized recursive file finder utility
 """
 
-import os
-import time
-
+from qzx.commands.file._list_files_workflow import execute_list_files
 from qzx.core.command_base import CommandBase
-from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
 
 class ListFilesCommand(CommandBase):
     """
@@ -76,167 +73,9 @@ class ListFilesCommand(CommandBase):
     ]
     
     def execute(self, directory_path=".", pattern="*", recursive=None):
-        """
-        Lists files in a directory with support for wildcards and recursive searching
-        
-        Args:
-            directory_path (str): Path to the directory to list files from
-            pattern (str): File pattern to filter by (e.g., "*.txt", "doc*.pdf")
-            recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels
-            
-        Returns:
-            Dictionary with the list of files and metadata
-        """
-        try:
-            recursion_depth = parse_recursive_parameter(recursive)
-            recursive_enabled = (
-                recursion_depth is None or recursion_depth > 0
-            )
+        """List matching files and directories using the centralized finder."""
+        return execute_list_files(self, directory_path, pattern, recursive)
 
-            # Ensure directory exists
-            if not os.path.exists(directory_path):
-                message = f"Directory '{directory_path}' not found."
-                return {
-                    "success": False,
-                    "error": message,
-                    "error_code": "path_not_found",
-                    "message": message,
-                    "details": {
-                        "directory": directory_path,
-                        "pattern": pattern,
-                    },
-                }
-            
-            # If directory_path is a file (not a directory), list just that file if it matches the pattern
-            if os.path.isfile(directory_path):
-                # If file exists, add it to the result if it matches pattern
-                filename = os.path.basename(directory_path)
-                from fnmatch import fnmatch
-                if fnmatch(filename, pattern):
-                    file_stat = os.stat(directory_path)
-                    return {
-                        "success": True,
-                        "directory": os.path.dirname(directory_path) or ".",
-                        "pattern": pattern,
-                        "recursive": recursive_enabled,
-                        "recursion_depth": recursion_depth,
-                        "files": [
-                            {
-                                "name": filename,
-                                "path": directory_path,
-                                "size": file_stat.st_size,
-                                "size_formatted": self._format_size(file_stat.st_size),
-                                "modified": file_stat.st_mtime,
-                                "modified_formatted": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(file_stat.st_mtime)),
-                                "is_directory": False
-                            }
-                        ],
-                        "message": f"Found 1 file matching '{pattern}' in '{os.path.dirname(directory_path) or '.'}'"
-                    }
-                else:
-                    return {
-                        "success": True,
-                        "directory": os.path.dirname(directory_path) or ".",
-                        "pattern": pattern,
-                        "recursive": recursive_enabled,
-                        "recursion_depth": recursion_depth,
-                        "files": [],
-                        "message": f"No files found matching '{pattern}' in '{os.path.dirname(directory_path) or '.'}'"
-                    }
-            
-            # Create the full path pattern for search
-            if directory_path.endswith('/') or directory_path.endswith('\\'):
-                # If the directory path ends with a separator, just append the pattern
-                search_pattern = os.path.join(directory_path, pattern)
-            else:
-                # Otherwise, add a separator in between
-                search_pattern = os.path.join(directory_path, pattern)
-            
-            # Use the centralized file finder to get all matching files and directories
-            files_info = []
-            
-            def on_file_found(file_path):
-                file_stat = os.stat(file_path)
-                files_info.append({
-                    "name": os.path.basename(file_path),
-                    "path": file_path,
-                    "size": file_stat.st_size,
-                    "size_formatted": self._format_size(file_stat.st_size),
-                    "modified": file_stat.st_mtime,
-                    "modified_formatted": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(file_stat.st_mtime)),
-                    "is_directory": False
-                })
-            
-            def on_dir_found(dir_path):
-                # Add directory with 0 size but show it as a directory
-                dir_stat = os.stat(dir_path)
-                files_info.append({
-                    "name": os.path.basename(dir_path),
-                    "path": dir_path,
-                    "size": 0,  # Directories show as 0 size
-                    "size_formatted": "-",
-                    "modified": dir_stat.st_mtime,
-                    "modified_formatted": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(dir_stat.st_mtime)),
-                    "is_directory": True
-                })
-            
-            # Find all files and directories using the centralized finder
-            for _ in find_files(
-                file_path_pattern=search_pattern,
-                recursive=recursion_depth,
-                file_type=None,  # Get both files and directories
-                on_file_found=on_file_found,
-                on_dir_found=on_dir_found
-            ):
-                pass  # The callbacks track the files
-            
-            # Sort results by name
-            files_info.sort(key=lambda x: x["name"].lower())
-            
-            # Create readable message about the results
-            if len(files_info) == 0:
-                message = f"No files found matching '{pattern}' in '{directory_path}'"
-                if recursive_enabled:
-                    message += " (including subdirectories)"
-            else:
-                # Count files and directories separately
-                file_count = sum(1 for f in files_info if not f["is_directory"])
-                dir_count = sum(1 for f in files_info if f["is_directory"])
-                
-                if file_count == 0 and dir_count > 0:
-                    message = f"Found {dir_count} director{'ies' if dir_count != 1 else 'y'} matching '{pattern}' in '{directory_path}'"
-                elif file_count > 0 and dir_count == 0:
-                    message = f"Found {file_count} file{'s' if file_count != 1 else ''} matching '{pattern}' in '{directory_path}'"
-                else:
-                    message = f"Found {file_count} file{'s' if file_count != 1 else ''} and {dir_count} director{'ies' if dir_count != 1 else 'y'} matching '{pattern}' in '{directory_path}'"
-                    
-                if recursive_enabled:
-                    message += " (including subdirectories)"
-                    
-            # Return the result
-            return {
-                "success": True,
-                "directory": directory_path,
-                "pattern": pattern,
-                "recursive": recursive_enabled,
-                "recursion_depth": recursion_depth,
-                "files": files_info,
-                "message": message,
-            }
-
-        except Exception as exception:
-            message = f"Error listing files: {exception}"
-            return {
-                "success": False,
-                "error": message,
-                "error_code": "list_files_failed",
-                "message": message,
-                "details": {
-                    "directory": directory_path,
-                    "pattern": pattern,
-                },
-            }
-    
     def _format_size(self, size_bytes):
         """
         Format a size in bytes to a human-readable string
