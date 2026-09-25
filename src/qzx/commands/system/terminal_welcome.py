@@ -6,8 +6,11 @@ TerminalWelcome Module - Manages the welcome screen for QZX Terminal
 """
 
 import importlib
-import platform
 
+from qzx.commands.system._terminal_welcome_details import (
+    collect_system_info,
+    format_gpu_result,
+)
 from qzx.welcome_text import WELCOME_BORDER, basic_welcome_message
 
 _PSUTIL_UNSET = object()
@@ -113,66 +116,9 @@ class TerminalWelcome:
         )
     
     def _get_system_info(self):
-        """
-        Get system information
-        
-        Returns:
-            dict: System information
-        """
-        info = {
-            "system": platform.system(),
-            "release": platform.release(),
-            "version": platform.version(),
-            "architecture": platform.machine(),
-            "processor": platform.processor(),
-            "python_version": platform.python_version(),
-            "python_implementation": platform.python_implementation()
-        }
-        
-        # Disk probes can block on sleeping or disconnected mount points, so
-        # even importing the optional dependency belongs to the detailed path.
-        psutil_module = self._optional_psutil()
-        if psutil_module is not None:
-            # RAM
-            try:
-                virtual_memory = psutil_module.virtual_memory()
-                info["ram_total"] = virtual_memory.total
-                info["ram_available"] = virtual_memory.available
-                info["ram_used"] = virtual_memory.used
-                info["ram_percent"] = virtual_memory.percent
-            except Exception:
-                pass
-            
-            # Disk
-            try:
-                disk_info = []
-                for partition in psutil_module.disk_partitions(all=False):
-                    try:
-                        usage = psutil_module.disk_usage(partition.mountpoint)
-                        disk_info.append({
-                            "device": partition.device,
-                            "mountpoint": partition.mountpoint,
-                            "fstype": partition.fstype,
-                            "total": usage.total,
-                            "used": usage.used,
-                            "free": usage.free,
-                            "percent": usage.percent
-                        })
-                    except Exception:
-                        pass
-                info["disk_info"] = disk_info
-            except Exception:
-                pass
-            
-            # CPU
-            try:
-                info["cpu_count_physical"] = psutil_module.cpu_count(logical=False)
-                info["cpu_count_logical"] = psutil_module.cpu_count(logical=True)
-            except Exception:
-                pass
-        
-        return info
-    
+        """Collect the detailed system snapshot on explicit demand."""
+        return collect_system_info(self._optional_psutil())
+
     def _format_system_info(self):
         """
         Format system information for display
@@ -258,73 +204,15 @@ class TerminalWelcome:
         return result
     
     def _format_gpu_info(self):
-        """
-        Get and format information about GPUs
-        
-        Returns:
-            str: Formatted GPU information, or None if not available
-        """
-        # Keep GPU probing optional because it may invoke platform utilities.
+        """Get and format GPU information when explicitly requested."""
         try:
             from qzx.commands.system.get_gpu_info import GetGpuInfoCommand
-            
+
             gpu_result = GetGpuInfoCommand().execute(detailed=True)
-            
-            if not gpu_result or not isinstance(gpu_result, dict) or not gpu_result.get("success", False):
-                return None
-            
-            gpus = gpu_result.get("gpus", [])
-            if not gpus:
-                return None
-            
-            # Format output
-            result = ""
-            for i, gpu in enumerate(gpus):
-                name = gpu.get("name", "Unknown GPU")
-                vendor = gpu.get("vendor", "")
-                
-                # Base line
-                gpu_line = f"{i+1}. {name}"
-                if vendor:
-                    gpu_line += f" [{vendor}]"
-                
-                # Memory information if available
-                memory = gpu.get("memory", {})
-                if memory:
-                    if "total_mib" in memory:
-                        total = memory["total_mib"]
-                        used = memory.get("used_mib")
-                        gpu_line += (
-                            f" | Memory: {used}/{total} MiB"
-                            if used is not None
-                            else f" | Memory: {total} MiB"
-                        )
-                    elif "total_readable" in memory:
-                        gpu_line += (
-                            f" | Memory: {memory['total_readable']}"
-                        )
-                    elif "reported" in memory:
-                        gpu_line += f" | Memory: {memory['reported']}"
-                
-                # Temperature and utilization if available
-                if "temperature_celsius" in gpu:
-                    gpu_line += (
-                        f" | Temp: {gpu['temperature_celsius']} °C"
-                    )
-                
-                if "utilization_percent" in gpu:
-                    gpu_line += (
-                        f" | Usage: {gpu['utilization_percent']}%"
-                    )
-                
-                if result:
-                    result += "\n"
-                result += gpu_line
-            
-            return result
+            return format_gpu_result(gpu_result)
         except Exception:
             return None
-    
+
     def _format_bytes(self, bytes_val):
         """
         Format a byte value to a readable string
