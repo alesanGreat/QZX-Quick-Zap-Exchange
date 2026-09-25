@@ -56,21 +56,40 @@ def _validate_result_neutral(value, path="root"):
 
 
 def validate_manifest(manifest, validate_workflows=True):
+    _validate_manifest_root(manifest)
+    _validate_runtime(manifest.get("runtime"))
+    _validate_localized_collections(manifest)
+    _validate_summary_templates(manifest["summary_templates"])
+    referenced = _validate_environments(
+        manifest.get("environments"),
+        validate_workflows,
+    )
+    if validate_workflows:
+        _validate_workflow_inventory(referenced)
+
+
+def _validate_manifest_root(manifest):
     if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
         raise ValueError("test-environments.json must use schema_version 1.")
     _validate_result_neutral(manifest)
 
-    runtime = manifest.get("runtime")
+
+def _validate_runtime(runtime):
     if not isinstance(runtime, dict):
         raise ValueError("test-environments.json is missing runtime.")
     for key in ("implementation", "version", "build"):
-        _require_non_empty_string(runtime.get(key), "runtime.{}".format(key))
+        _require_non_empty_string(
+            runtime.get(key),
+            "runtime.{}".format(key),
+        )
     for locale in PUBLISHED_LOCALES:
         _require_non_empty_string(
             runtime.get("display", {}).get(locale),
             "runtime.display.{}".format(locale),
         )
 
+
+def _validate_localized_collections(manifest):
     for collection_name in ("summary_templates", "scope_notes"):
         collection = manifest.get(collection_name)
         if not isinstance(collection, dict):
@@ -80,8 +99,11 @@ def validate_manifest(manifest, validate_workflows=True):
                 collection.get(locale),
                 "{}.{}".format(collection_name, locale),
             )
+
+
+def _validate_summary_templates(templates):
     expected_fields = {"platforms", "python"}
-    for locale, template in manifest["summary_templates"].items():
+    for locale, template in templates.items():
         fields = {
             field_name
             for _, field_name, _, _ in Formatter().parse(template)
@@ -95,73 +117,132 @@ def validate_manifest(manifest, validate_workflows=True):
                 )
             )
 
-    environments = manifest.get("environments")
+
+def _validate_environments(environments, validate_workflows):
     if not isinstance(environments, list) or not environments:
         raise ValueError("test-environments.json must list environments.")
-
     environment_ids = set()
     referenced_workflows = set()
     for index, environment in enumerate(environments):
-        label = "environments[{}]".format(index)
-        if not isinstance(environment, dict):
-            raise ValueError("{} must be an object.".format(label))
-        environment_id = environment.get("id")
-        _require_non_empty_string(environment_id, "{}.id".format(label))
-        if environment_id in environment_ids:
-            raise ValueError("Duplicate test environment id: {}".format(environment_id))
-        environment_ids.add(environment_id)
-        for locale in PUBLISHED_LOCALES:
-            _require_non_empty_string(
-                environment.get("name", {}).get(locale),
-                "{}.name.{}".format(label, locale),
-            )
-        for key in ("version", "architecture"):
-            _require_non_empty_string(
-                environment.get(key),
-                "{}.{}".format(label, key),
-            )
+        _validate_environment(
+            environment,
+            index,
+            environment_ids,
+            referenced_workflows,
+            validate_workflows,
+        )
+    return referenced_workflows
 
-        references = environment.get("workflow_references")
-        if not isinstance(references, list) or not references:
-            raise ValueError("{} must reference a workflow.".format(label))
-        for reference in references:
-            if not isinstance(reference, dict):
-                raise ValueError("{} has an invalid workflow reference.".format(label))
-            relative_path = reference.get("path")
-            target = reference.get("target")
-            _require_non_empty_string(relative_path, "{} workflow path".format(label))
-            _require_non_empty_string(target, "{} workflow target".format(label))
-            if not relative_path.startswith(".github/workflows/"):
-                raise ValueError(
-                    "{} references a workflow outside .github/workflows.".format(label)
-                )
-            referenced_workflows.add(relative_path)
-            if validate_workflows:
-                workflow_path = PROJECT_ROOT / relative_path
-                if not workflow_path.is_file():
-                    raise ValueError("Missing workflow: {}".format(relative_path))
-                workflow = workflow_path.read_text(encoding="utf-8")
-                if target not in workflow:
-                    raise ValueError(
-                        "{} does not contain configured target {!r}.".format(
-                            relative_path,
-                            target,
-                        )
-                    )
 
+def _validate_environment(
+    environment,
+    index,
+    environment_ids,
+    referenced_workflows,
+    validate_workflows,
+):
+    label = "environments[{}]".format(index)
+    if not isinstance(environment, dict):
+        raise ValueError("{} must be an object.".format(label))
+    environment_id = environment.get("id")
+    _require_non_empty_string(environment_id, "{}.id".format(label))
+    if environment_id in environment_ids:
+        raise ValueError(
+            "Duplicate test environment id: {}".format(environment_id)
+        )
+    environment_ids.add(environment_id)
+    _validate_environment_identity(environment, label)
+    _validate_workflow_references(
+        environment.get("workflow_references"),
+        label,
+        referenced_workflows,
+        validate_workflows,
+    )
+
+
+def _validate_environment_identity(environment, label):
+    for locale in PUBLISHED_LOCALES:
+        _require_non_empty_string(
+            environment.get("name", {}).get(locale),
+            "{}.name.{}".format(label, locale),
+        )
+    for key in ("version", "architecture"):
+        _require_non_empty_string(
+            environment.get(key),
+            "{}.{}".format(label, key),
+        )
+
+
+def _validate_workflow_references(
+    references,
+    label,
+    referenced_workflows,
+    validate_workflows,
+):
+    if not isinstance(references, list) or not references:
+        raise ValueError("{} must reference a workflow.".format(label))
+    for reference in references:
+        _validate_workflow_reference(
+            reference,
+            label,
+            referenced_workflows,
+            validate_workflows,
+        )
+
+
+def _validate_workflow_reference(
+    reference,
+    label,
+    referenced_workflows,
+    validate_workflows,
+):
+    if not isinstance(reference, dict):
+        raise ValueError(
+            "{} has an invalid workflow reference.".format(label)
+        )
+    relative_path = reference.get("path")
+    target = reference.get("target")
+    _require_non_empty_string(
+        relative_path,
+        "{} workflow path".format(label),
+    )
+    _require_non_empty_string(target, "{} workflow target".format(label))
+    if not relative_path.startswith(".github/workflows/"):
+        raise ValueError(
+            "{} references a workflow outside .github/workflows.".format(label)
+        )
+    referenced_workflows.add(relative_path)
     if validate_workflows:
-        actual_workflows = {
-            path.relative_to(PROJECT_ROOT).as_posix()
-            for path in (PROJECT_ROOT / ".github" / "workflows").glob("test*.yml")
-        }
-        if referenced_workflows != actual_workflows:
-            raise ValueError(
-                "Workflow inventory differs from test-environments.json: "
-                "missing={}, extra={}".format(
-                    sorted(actual_workflows - referenced_workflows),
-                    sorted(referenced_workflows - actual_workflows),
-                )
+        _validate_workflow_target(relative_path, target)
+
+
+def _validate_workflow_target(relative_path, target):
+    workflow_path = PROJECT_ROOT / relative_path
+    if not workflow_path.is_file():
+        raise ValueError("Missing workflow: {}".format(relative_path))
+    workflow = workflow_path.read_text(encoding="utf-8")
+    if target not in workflow:
+        raise ValueError(
+            "{} does not contain configured target {!r}.".format(
+                relative_path,
+                target,
             )
+        )
+
+
+def _validate_workflow_inventory(referenced_workflows):
+    actual_workflows = {
+        path.relative_to(PROJECT_ROOT).as_posix()
+        for path in (PROJECT_ROOT / ".github" / "workflows").glob("test*.yml")
+    }
+    if referenced_workflows != actual_workflows:
+        raise ValueError(
+            "Workflow inventory differs from test-environments.json: "
+            "missing={}, extra={}".format(
+                sorted(actual_workflows - referenced_workflows),
+                sorted(referenced_workflows - actual_workflows),
+            )
+        )
 
 
 def natural_list(values, locale):
