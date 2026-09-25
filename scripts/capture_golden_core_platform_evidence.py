@@ -6,18 +6,9 @@
 from __future__ import annotations
 
 import argparse
-import getpass
-import hashlib
 import json
-import os
-import platform
-import re
-import subprocess
 import sys
-import tempfile
-import time
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
@@ -31,25 +22,49 @@ if str(SOURCE_ROOT) not in sys.path:
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import qzx  # noqa: E402
-from qzx.core.command_loader import CommandLoader  # noqa: E402
-from qzx.core.implementation_digest import (  # noqa: E402
-    command_implementation_digest,
+from scripts.golden_core_platform_assertions import (  # noqa: E402
+    command_assertions,
 )
-from qzx.core.result_contract import (  # noqa: E402
-    RESULT_CONTRACT_SCHEMA_URL,
-    result_contract_violations,
+from scripts.golden_core_platform_capture_flow import (  # noqa: E402
+    capture_platform_evidence,
 )
-from scripts.verify_golden_core import (  # noqa: E402
-    load_golden_core,
-    validate_golden_core,
+from scripts.golden_core_platform_common import (  # noqa: E402
+    canonical_json_bytes,
+    environment_facts,
+    path_variants,
+    replacement_pairs as _replacement_pairs,
+    sanitize_text,
+    sanitize_value,
+    sha256_value,
+    source_revision as _source_revision,
 )
+from scripts.golden_core_platform_execution import run_qzx  # noqa: E402
+from scripts.golden_core_platform_fixtures import (  # noqa: E402
+    create_fixtures,
+    run_git,
+)
+
+
+__all__ = [
+    "canonical_json_bytes",
+    "capture",
+    "command_assertions",
+    "create_fixtures",
+    "environment_facts",
+    "path_variants",
+    "replacement_pairs",
+    "run_git",
+    "run_qzx",
+    "sanitize_text",
+    "sanitize_value",
+    "sha256_value",
+    "source_revision",
+]
 
 
 SCHEMA_VERSION = 2
 EXPECTED_COMMAND_COUNT = 15
 EXPECTED_QZX_COMMAND_COUNT = 87
-_LOOPBACK_URL_PATTERN = re.compile(r"http://127\.0\.0\.1:\d+")
 
 
 class EvidenceHttpHandler(BaseHTTPRequestHandler):
@@ -115,539 +130,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def canonical_json_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-
-
-def sha256_value(value: Any) -> str:
-    return "sha256:" + hashlib.sha256(canonical_json_bytes(value)).hexdigest()
-
-
 def source_revision() -> str:
-    github_sha = os.environ.get("GITHUB_SHA", "").strip()
-    if re.fullmatch(r"[a-f0-9]{40}", github_sha):
-        return github_sha
-    completed = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-        timeout=30,
-    )
-    revision = completed.stdout.strip()
-    if completed.returncode != 0 or re.fullmatch(r"[a-f0-9]{40}", revision) is None:
-        raise RuntimeError("Unable to identify the QZX source revision.")
-    return revision
-
-
-def path_variants(value: str) -> set[str]:
-    normalized = value.rstrip("/\\")
-    if normalized == "":
-        return set()
-    return {
-        normalized,
-        normalized.replace("\\", "/"),
-        normalized.replace("/", "\\"),
-    }
+    return _source_revision(PROJECT_ROOT)
 
 
 def replacement_pairs(fixture_root: Path) -> list[tuple[str, str]]:
-    values: list[tuple[str, str]] = []
-    candidates = [
-        (str(fixture_root.resolve()), "<fixture-root>"),
-        (str(PROJECT_ROOT.resolve()), "<checkout>"),
-        (str(Path.home().resolve()), "<home>"),
-        (os.environ.get("RUNNER_TEMP", ""), "<runner-temp>"),
-        (os.environ.get("RUNNER_TOOL_CACHE", ""), "<runner-tool-cache>"),
-        (os.environ.get("GITHUB_WORKSPACE", ""), "<checkout>"),
-        (platform.node(), "<hostname>"),
-        (getpass.getuser(), "<user>"),
-    ]
-    for raw, replacement in candidates:
-        if not raw:
-            continue
-        for variant in path_variants(str(raw)) or {str(raw)}:
-            values.append((variant, replacement))
-    return sorted(set(values), key=lambda item: len(item[0]), reverse=True)
-
-
-def sanitize_text(value: str, replacements: list[tuple[str, str]]) -> str:
-    # Replace against the original text in one regex pass. Sequential str.replace
-    # calls can accidentally sanitize the placeholders they just inserted; for
-    # example, a Unix CI user named "root" used to turn <fixture-root> into
-    # <fixture-<user>>. Longest sources win at the same position so a home path
-    # such as /root is preferred over the bare username root.
-    replacement_map: dict[str, str] = {}
-    for source, replacement in replacements:
-        for candidate in (source, source.casefold()):
-            if candidate:
-                replacement_map.setdefault(candidate, replacement)
-
-    if replacement_map:
-        sources = sorted(replacement_map, key=lambda item: (-len(item), item))
-        pattern = re.compile("|".join(re.escape(source) for source in sources))
-        sanitized = pattern.sub(
-            lambda match: replacement_map[match.group(0)],
-            value,
-        )
-    else:
-        sanitized = value
-
-    sanitized = _LOOPBACK_URL_PATTERN.sub(
-        "http://127.0.0.1:<ephemeral-port>",
-        sanitized,
-    )
-    return sanitized
-
-
-def sanitize_value(value: Any, replacements: list[tuple[str, str]]) -> Any:
-    if isinstance(value, str):
-        return sanitize_text(value, replacements)
-    if isinstance(value, list):
-        return [sanitize_value(item, replacements) for item in value]
-    if isinstance(value, dict):
-        return {
-            str(key): sanitize_value(item, replacements)
-            for key, item in value.items()
-        }
-    return value
-
-
-def run_git(arguments: list[str], cwd: Path, environment=None) -> None:
-    process_environment = dict(os.environ)
-    if environment:
-        process_environment.update(environment)
-    completed = subprocess.run(
-        ["git", *arguments],
-        cwd=cwd,
-        env=process_environment,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-        timeout=30,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(
-            "Git fixture failed: git {} (exit {}). stderr: {}".format(
-                " ".join(arguments),
-                completed.returncode,
-                completed.stderr.strip(),
-            )
-        )
-
-
-def create_fixtures(root: Path) -> dict[str, Path]:
-    files = root / "files"
-    (files / "nested").mkdir(parents=True)
-    (files / "alpha.txt").write_bytes(
-        b"QZX alpha evidence\nsecond line\n"
-    )
-    (files / "nested" / "beta.txt").write_bytes(
-        b"prefix qzx suffix\n"
-    )
-    (files / "ignored.log").write_text("unrelated\n", encoding="utf-8")
-
-    project = root / "project"
-    (project / "src").mkdir(parents=True)
-    (project / "tests").mkdir()
-    (project / "pyproject.toml").write_text(
-        "[project]\n"
-        'name = "qzx-platform-evidence"\n'
-        'version = "1.0.0"\n'
-        'dependencies = ["httpx>=0.28"]\n\n'
-        "[tool.pytest.ini_options]\n"
-        'testpaths = ["tests"]\n\n'
-        "[tool.ruff]\n"
-        'target-version = "py313"\n',
-        encoding="utf-8",
-    )
-    (project / "src" / "app.py").write_text(
-        "def greet(name: str) -> str:\n    return f'Hello, {name}!'\n",
-        encoding="utf-8",
-    )
-    (project / "tests" / "test_app.py").write_text(
-        "from app import greet\n\n\ndef test_greet():\n"
-        "    assert greet('QZX') == 'Hello, QZX!'\n",
-        encoding="utf-8",
-    )
-
-    repository = root / "repository"
-    repository.mkdir()
-    run_git(["init", "--initial-branch=main"], repository)
-    run_git(["config", "user.name", "QZX Evidence Fixture"], repository)
-    run_git(
-        ["config", "user.email", "qzx-evidence@example.invalid"],
-        repository,
-    )
-    run_git(["config", "core.autocrlf", "false"], repository)
-    run_git(["config", "commit.gpgsign", "false"], repository)
-    (repository / "tracked.txt").write_text(
-        "QZX controlled Git evidence\n",
-        encoding="utf-8",
-    )
-    run_git(["add", "tracked.txt"], repository)
-    fixed_environment = {
-        "GIT_AUTHOR_NAME": "QZX Evidence Fixture",
-        "GIT_AUTHOR_EMAIL": "qzx-evidence@example.invalid",
-        "GIT_COMMITTER_NAME": "QZX Evidence Fixture",
-        "GIT_COMMITTER_EMAIL": "qzx-evidence@example.invalid",
-        "GIT_AUTHOR_DATE": "2026-08-08T00:00:00+00:00",
-        "GIT_COMMITTER_DATE": "2026-08-08T00:00:00+00:00",
-    }
-    run_git(
-        ["commit", "-m", "Create controlled QZX evidence fixture"],
-        repository,
-        environment=fixed_environment,
-    )
-    run_git(
-        [
-            "remote",
-            "add",
-            "origin",
-            "https://example.invalid/qzx-evidence.git",
-        ],
-        repository,
-    )
-    (repository / "tracked.txt").write_text(
-        "QZX controlled Git evidence\nmodified working tree\n",
-        encoding="utf-8",
-    )
-    (repository / "staged.txt").write_text(
-        "staged evidence\n",
-        encoding="utf-8",
-    )
-    run_git(["add", "staged.txt"], repository)
-    (repository / "untracked.txt").write_text(
-        "untracked evidence\n",
-        encoding="utf-8",
-    )
-    return {
-        "files": files,
-        "project": project,
-        "repository": repository,
-    }
-
-
-def command_assertions(name: str, document: dict[str, Any]) -> list[str]:
-    assertions = [
-        "exit_code=0",
-        "result_contract_v1",
-        "success=true",
-        f"meta.command={name}",
-    ]
-    if name == "version":
-        if document.get("version") != qzx.__version__:
-            raise AssertionError("version did not report the installed QZX version.")
-        if "system_info" in document or "qzx_info" in document:
-            raise AssertionError("version duplicated host or capability discovery data.")
-        assertions.append("version_matches_package")
-    elif name == "listCommands":
-        if document.get("summary", {}).get("commands") != EXPECTED_QZX_COMMAND_COUNT:
-            raise AssertionError("listCommands did not report 87 commands.")
-        assertions.append("command_count=87")
-    elif name == "help":
-        if document.get("details", {}).get("name") != "findFiles":
-            raise AssertionError("help did not describe findFiles.")
-        assertions.append("describes=findFiles")
-    elif name == "getCurrentDateTime":
-        if (
-            document.get("output_format") != "iso"
-            or not isinstance(document.get("output"), str)
-            or document.get("output") != document.get("iso_format")
-        ):
-            raise AssertionError("getCurrentDateTime did not expose ISO output.")
-        assertions.append("iso_datetime_present")
-    elif name == "getCurrentDirectory":
-        if document.get("current_dir") != "<fixture-root>":
-            raise AssertionError("getCurrentDirectory did not observe the fixture root.")
-        assertions.append("current_dir=<fixture-root>")
-    elif name == "getSystemInfo":
-        if document.get("system_info", {}).get("os") != platform.system():
-            raise AssertionError("getSystemInfo did not report the real host OS.")
-        assertions.append("os_matches_runner")
-    elif name == "getDiskSpace":
-        if not isinstance(document.get("disk_info", {}).get("total_bytes"), int):
-            raise AssertionError("getDiskSpace did not expose raw capacity.")
-        assertions.append("raw_capacity_present")
-    elif name == "getRamInfo":
-        if not isinstance(
-            document.get("ram_info", {}).get("virtual_memory", {}).get("total"),
-            int,
-        ):
-            raise AssertionError("getRamInfo did not expose raw memory capacity.")
-        assertions.append("raw_memory_present")
-    elif name == "listFiles":
-        names = [item.get("name") for item in document.get("files", [])]
-        if names != ["alpha.txt", "beta.txt"]:
-            raise AssertionError(f"listFiles returned unexpected names: {names}")
-        if document.get("recursive") is not True:
-            raise AssertionError("listFiles did not report recursive=true.")
-        assertions.extend(["recursive=true", "files=alpha.txt,beta.txt"])
-    elif name == "findFiles":
-        names = [item.get("name") for item in document.get("results", [])]
-        if names != ["alpha.txt", "beta.txt"]:
-            raise AssertionError(f"findFiles returned unexpected names: {names}")
-        assertions.append("files=alpha.txt,beta.txt")
-    elif name == "findText":
-        if document.get("total_matches") != 2:
-            raise AssertionError("findText did not report two controlled matches.")
-        assertions.append("matches=2")
-    elif name == "calculateFileHash":
-        expected = hashlib.sha256(
-            b"QZX alpha evidence\nsecond line\n"
-        ).hexdigest()
-        if document.get("hash") != expected:
-            raise AssertionError("calculateFileHash returned an unexpected digest.")
-        assertions.append("sha256_matches_fixture")
-    elif name == "getGitStatus":
-        changes = document.get("changes", {})
-        if (
-            document.get("branch") != "main"
-            or "tracked.txt" not in changes.get("modified", [])
-            or "staged.txt" not in changes.get("staged", [])
-            or "untracked.txt" not in changes.get("untracked", [])
-        ):
-            raise AssertionError("getGitStatus did not report the fixture state.")
-        assertions.append("branch_and_changes_verified")
-    elif name == "diagnoseProject":
-        observed_path = document.get("details", {}).get("path")
-        if observed_path not in {
-            "<fixture-root>/project",
-            "<fixture-root>\\project",
-        }:
-            raise AssertionError("diagnoseProject did not inspect the fixture project.")
-        assertions.append("fixture_project_inspected")
-    elif name == "checkUrlStatus":
-        if document.get("status_code") != 200 or document.get("is_online") is not True:
-            raise AssertionError("checkUrlStatus did not observe the loopback HTTP 200.")
-        assertions.append("authorized_loopback_http_200")
-    return assertions
-
-
-def run_qzx(
-    name: str,
-    arguments: list[str],
-    *,
-    cwd: Path,
-    replacements: list[tuple[str, str]],
-) -> dict[str, Any]:
-    command = [sys.executable, "-B", "-m", "qzx", *arguments, "--json"]
-    environment = dict(os.environ)
-    environment["QZX_TELEMETRY"] = "0"
-    environment["PYTHONDONTWRITEBYTECODE"] = "1"
-    started = time.monotonic()
-    completed = subprocess.run(
-        command,
-        cwd=cwd,
-        env=environment,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-        timeout=90,
-    )
-    elapsed_ms = round((time.monotonic() - started) * 1000, 3)
-    if completed.returncode != 0:
-        raise RuntimeError(
-            f"{name} exited with {completed.returncode}: {completed.stderr.strip()}"
-        )
-    try:
-        document = json.loads(completed.stdout)
-    except json.JSONDecodeError as exception:
-        raise RuntimeError(f"{name} did not print one JSON document.") from exception
-    if not isinstance(document, dict):
-        raise RuntimeError(f"{name} did not print a JSON object.")
-    violations = result_contract_violations(document)
-    if violations:
-        raise RuntimeError(f"{name} violated Result Contract v1: {violations}")
-    if document.get("success") is not True:
-        raise RuntimeError(f"{name} reported failure: {document.get('message')}")
-    meta = document.get("meta")
-    if not isinstance(meta, dict) or meta.get("command") != name:
-        raise RuntimeError(f"{name} returned the wrong meta.command.")
-
-    sanitized = sanitize_value(document, replacements)
-    assertions = command_assertions(name, sanitized)
-    stderr = sanitize_text(completed.stderr.strip(), replacements)
-    return {
-        "arguments": sanitize_value(arguments, replacements),
-        "exit_code": completed.returncode,
-        "elapsed_ms": elapsed_ms,
-        "stderr": stderr,
-        "result_sha256": sha256_value(sanitized),
-        "assertions": assertions,
-        "result": sanitized,
-    }
-
-
-def environment_facts(environment_id: str, environment_name: str) -> dict[str, Any]:
-    return {
-        "id": environment_id,
-        "name": environment_name,
-        "system": platform.system(),
-        "release": platform.release(),
-        "version": platform.version(),
-        "machine": platform.machine(),
-        "processor": platform.processor(),
-        "python": {
-            "implementation": platform.python_implementation(),
-            "version": platform.python_version(),
-            "architecture": platform.architecture()[0],
-        },
-        "github": {
-            "repository": os.environ.get("GITHUB_REPOSITORY"),
-            "workflow": os.environ.get("GITHUB_WORKFLOW"),
-            "run_id": os.environ.get("GITHUB_RUN_ID"),
-            "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
-            "job": os.environ.get("GITHUB_JOB"),
-            "runner_os": os.environ.get("RUNNER_OS"),
-            "runner_arch": os.environ.get("RUNNER_ARCH"),
-        },
-    }
+    return _replacement_pairs(fixture_root, PROJECT_ROOT)
 
 
 def capture(environment_id: str, environment_name: str) -> dict[str, Any]:
-    registry = load_golden_core()
-    registry_errors = validate_golden_core(registry)
-    if registry_errors:
-        raise RuntimeError("Golden Core registry is invalid: " + "; ".join(registry_errors))
-    selected = [item["name"] for item in registry["commands"]]
-    if len(selected) != EXPECTED_COMMAND_COUNT:
-        raise RuntimeError("Golden Core no longer contains exactly 15 commands.")
-    loader = CommandLoader()
-
-    with tempfile.TemporaryDirectory(prefix="qzx-golden-core-") as temporary:
-        fixture_root = Path(temporary).resolve()
-        fixtures = create_fixtures(fixture_root)
-        replacements = replacement_pairs(fixture_root)
-        records: dict[str, dict[str, Any]] = {}
-        with local_http_server() as local_url:
-            commands = {
-                "version": (["version"], fixture_root),
-                "listCommands": (["listCommands"], fixture_root),
-                "help": (["help", "findFiles"], fixture_root),
-                "getCurrentDateTime": (
-                    ["getCurrentDateTime", "--output-format", "iso"],
-                    fixture_root,
-                ),
-                "getCurrentDirectory": (["getCurrentDirectory"], fixture_root),
-                "getSystemInfo": (["getSystemInfo"], fixture_root),
-                "getDiskSpace": (["getDiskSpace", str(fixture_root)], fixture_root),
-                "getRamInfo": (["getRamInfo"], fixture_root),
-                "listFiles": (
-                    ["listFiles", str(fixtures["files"]), "*.txt", "-r"],
-                    fixture_root,
-                ),
-                "findFiles": (
-                    ["findFiles", str(fixtures["files"]), "*.txt", "-r"],
-                    fixture_root,
-                ),
-                "findText": (
-                    [
-                        "findText",
-                        "QZX",
-                        str(fixtures["files"]),
-                        "-r",
-                        "--regex=false",
-                        "--case-sensitive=false",
-                        "--file-pattern=*.txt",
-                        "--context-lines=1",
-                        "--max-matches=10",
-                        "--colored=false",
-                    ],
-                    fixture_root,
-                ),
-                "calculateFileHash": (
-                    [
-                        "calculateFileHash",
-                        str(fixtures["files"] / "alpha.txt"),
-                        "sha256",
-                    ],
-                    fixture_root,
-                ),
-                "getGitStatus": (
-                    ["getGitStatus", str(fixtures["repository"])],
-                    fixture_root,
-                ),
-                "diagnoseProject": (
-                    ["diagnoseProject", str(fixtures["project"])],
-                    fixture_root,
-                ),
-                "checkUrlStatus": (
-                    ["checkUrlStatus", local_url, "5"],
-                    fixture_root,
-                ),
-            }
-            if set(commands) != set(selected):
-                raise RuntimeError(
-                    "Platform evidence command set differs from Golden Core: "
-                    f"expected {selected}, observed {sorted(commands)}."
-                )
-            for name in selected:
-                arguments, cwd = commands[name]
-                record = run_qzx(
-                    name,
-                    arguments,
-                    cwd=cwd,
-                    replacements=replacements,
-                )
-                command = loader.get_command(name)
-                if command is None:
-                    raise RuntimeError(
-                        f"Golden Core command '{name}' could not be loaded."
-                    )
-                record["implementation_digest"] = command_implementation_digest(
-                    type(command)
-                )
-                records[name] = record
-
-    environment = environment_facts(environment_id, environment_name)
-    result = {
-        "schema_version": SCHEMA_VERSION,
-        "evidence_type": "qzx_golden_core_platform_run",
-        "captured_at": datetime.now(timezone.utc).isoformat(),
-        "source_revision": source_revision(),
-        "qzx_version": qzx.__version__,
-        "result_contract": RESULT_CONTRACT_SCHEMA_URL,
-        "golden_core": {
-            "name": registry["name"],
-            "status": registry["status"],
-            "selected_on": registry["selected_on"],
-            "command_count": len(selected),
-            "commands": selected,
-        },
-        "environment": environment,
-        "commands": records,
-        "summary": {
-            "command_count": len(records),
-            "passed": len(records),
-            "failed": 0,
-            "systems_observed": [environment["system"]],
-        },
-        "scope": {
-            "success_only": True,
-            "network": "authorized loopback HTTP only",
-            "repository": "disposable local Git fixture only",
-            "secrets": "environment values and private project data are not requested",
-            "claim": (
-                "This record proves only the observed QZX version, source "
-                "revision, host environment, fixtures, arguments, and results."
-            ),
-        },
-    }
-    result["evidence_sha256"] = sha256_value(result)
-    return result
+    return capture_platform_evidence(
+        environment_id,
+        environment_name,
+        local_http_server=local_http_server,
+    )
 
 
 def main() -> int:
