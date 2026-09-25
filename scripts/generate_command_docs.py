@@ -225,33 +225,46 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _existing_reference() -> str | None:
+    return (
+        OUTPUT_PATH.read_text(encoding="utf-8")
+        if OUTPUT_PATH.is_file()
+        else None
+    )
+
+
+def _check_generated_reference(existing: str | None, generated: str) -> int:
+    if existing != generated:
+        print(
+            "Generated command reference is stale. Run "
+            "`python -B scripts/generate_command_docs.py`.",
+            file=sys.stderr,
+        )
+        return 1
+    print("Generated command reference is up to date.")
+    return 0
+
+
+def _write_generated_reference(generated: str) -> int:
+    changed = write_if_changed(OUTPUT_PATH, generated)
+    print(
+        "Updated generated command reference."
+        if changed
+        else "Generated command reference is already up to date."
+    )
+    return 0
+
+
 def main() -> int:
     arguments = parse_args()
     try:
         generated = generate_reference()
-        existing = (
-            OUTPUT_PATH.read_text(encoding="utf-8")
-            if OUTPUT_PATH.is_file()
-            else None
-        )
         if arguments.check:
-            if existing != generated:
-                print(
-                    "Generated command reference is stale. Run "
-                    "`python -B scripts/generate_command_docs.py`.",
-                    file=sys.stderr,
-                )
-                return 1
-            print("Generated command reference is up to date.")
-            return 0
-
-        changed = write_if_changed(OUTPUT_PATH, generated)
-        print(
-            "Updated generated command reference."
-            if changed
-            else "Generated command reference is already up to date."
-        )
-        return 0
+            return _check_generated_reference(
+                _existing_reference(),
+                generated,
+            )
+        return _write_generated_reference(generated)
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"Could not generate command reference: {exc}", file=sys.stderr)
         return 1
