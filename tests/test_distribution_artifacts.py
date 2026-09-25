@@ -130,6 +130,17 @@ def build_fixture_distributions(
     description_version=VERSION,
     omitted_support_file=None,
 ):
+    wheel = _build_wheel_fixture(dist_dir, description_version)
+    sdist = _build_sdist_fixture(
+        dist_dir,
+        launcher_mode,
+        description_version,
+        omitted_support_file,
+    )
+    return wheel, sdist
+
+
+def _build_wheel_fixture(dist_dir, description_version):
     wheel = dist_dir / f"qzx-{VERSION}-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr(
@@ -148,97 +159,144 @@ def build_fixture_distributions(
             GOLDEN_CORE_WHEEL_PATH,
             GOLDEN_CORE_REGISTRY,
         )
+    return wheel
 
+
+def _build_sdist_fixture(
+    dist_dir,
+    launcher_mode,
+    description_version,
+    omitted_support_file,
+):
     sdist = dist_dir / f"qzx-{VERSION}.tar.gz"
     root = f"qzx-{VERSION}"
     with tarfile.open(sdist, "w:gz") as archive:
+        _add_sdist_base_members(
+            archive,
+            root,
+            launcher_mode,
+            description_version,
+        )
+        _add_sdist_support_files(
+            archive,
+            root,
+            omitted_support_file,
+        )
+        _add_sdist_examples(
+            archive,
+            root,
+            omitted_support_file,
+        )
+    return sdist
+
+
+def _add_sdist_base_members(
+    archive,
+    root,
+    launcher_mode,
+    description_version,
+):
+    add_tar_text(
+        archive,
+        f"{root}/PKG-INFO",
+        metadata_text(description_version),
+    )
+    add_tar_text(
+        archive,
+        f"{root}/README.md",
+        f"{ATTRIBUTION}\n\n{release_readme_marker(description_version)}.\n",
+    )
+    add_tar_text(
+        archive,
+        f"{root}/qzx.sh",
+        "#!/bin/sh\n",
+        mode=launcher_mode,
+    )
+    add_tar_text(
+        archive,
+        f"{root}/src/qzx/resources/schemas/result-contract-v1.schema.json",
+        RESULT_CONTRACT_SCHEMA,
+    )
+    add_tar_text(
+        archive,
+        (
+            f"{root}/src/qzx/resources/schemas/"
+            "result-contract-conformance-receipt-v1.schema.json"
+        ),
+        CONFORMANCE_RECEIPT_SCHEMA,
+    )
+    add_tar_text(
+        archive,
+        f"{root}/src/qzx/resources/golden-core.json",
+        GOLDEN_CORE_REGISTRY,
+    )
+
+
+def _add_sdist_support_files(archive, root, omitted_support_file):
+    for relative_path in _sdist_support_files():
+        if relative_path == omitted_support_file:
+            continue
         add_tar_text(
             archive,
-            f"{root}/PKG-INFO",
-            metadata_text(description_version),
+            f"{root}/{relative_path}",
+            (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8"),
         )
+
+
+def _sdist_support_files():
+    explicit = {
+        "ADOPTERS.md",
+        "CITATION.cff",
+        "action.yml",
+        "codemeta.json",
+        "docs/golden-core.md",
+        "docs/result-contract-v1.md",
+        "docs/result-contract-adoption.md",
+        "docs/result-contract-quickstart.md",
+        "native/project_languages/Cargo.toml",
+        "native/project_languages/Cargo.lock",
+        "native/project_languages/src/lib.rs",
+        "scripts/smoke_native_project_languages.py",
+        "scripts/sync_citation.py",
+        "scripts/sync_codemeta.py",
+        "scripts/validate_result_contract.py",
+        "scripts/validate_mcp_result_contract.py",
+        "scripts/validate_result_contract_evidence.py",
+        "scripts/run_result_contract_conformance.py",
+        "scripts/verify_golden_core.py",
+        "scripts/capture_golden_core_platform_evidence.py",
+        "scripts/merge_golden_core_platform_evidence.py",
+        ".github/actions/result-contract-conformance/action.yml",
+        ".github/actions/result-contract-conformance/run.py",
+        ".github/actions/result-contract-conformance/README.md",
+    }
+    return sorted(set(canonical_readme_relative_files()) | explicit)
+
+
+def _add_sdist_examples(archive, root, omitted_support_file):
+    examples_root = REPOSITORY_ROOT / "examples" / "result_contract"
+    for source in sorted(examples_root.rglob("*")):
+        relative_path = source.relative_to(REPOSITORY_ROOT).as_posix()
+        if not _include_example_file(
+            source,
+            relative_path,
+            omitted_support_file,
+        ):
+            continue
         add_tar_text(
             archive,
-            f"{root}/README.md",
-            f"{ATTRIBUTION}\n\n{release_readme_marker(description_version)}.\n",
+            f"{root}/{relative_path}",
+            source.read_text(encoding="utf-8"),
         )
-        add_tar_text(
-            archive,
-            f"{root}/qzx.sh",
-            "#!/bin/sh\n",
-            mode=launcher_mode,
-        )
-        add_tar_text(
-            archive,
-            f"{root}/src/qzx/resources/schemas/result-contract-v1.schema.json",
-            RESULT_CONTRACT_SCHEMA,
-        )
-        add_tar_text(
-            archive,
-            (
-                f"{root}/src/qzx/resources/schemas/"
-                "result-contract-conformance-receipt-v1.schema.json"
-            ),
-            CONFORMANCE_RECEIPT_SCHEMA,
-        )
-        add_tar_text(
-            archive,
-            f"{root}/src/qzx/resources/golden-core.json",
-            GOLDEN_CORE_REGISTRY,
-        )
-        support_files = sorted(set(canonical_readme_relative_files()) | {
-            "ADOPTERS.md",
-            "CITATION.cff",
-            "action.yml",
-            "codemeta.json",
-            "docs/golden-core.md",
-            "docs/result-contract-v1.md",
-            "docs/result-contract-adoption.md",
-            "docs/result-contract-quickstart.md",
-            "native/project_languages/Cargo.toml",
-            "native/project_languages/Cargo.lock",
-            "native/project_languages/src/lib.rs",
-            "scripts/smoke_native_project_languages.py",
-            "scripts/sync_citation.py",
-            "scripts/sync_codemeta.py",
-            "scripts/validate_result_contract.py",
-            "scripts/validate_mcp_result_contract.py",
-            "scripts/validate_result_contract_evidence.py",
-            "scripts/run_result_contract_conformance.py",
-            "scripts/verify_golden_core.py",
-            "scripts/capture_golden_core_platform_evidence.py",
-            "scripts/merge_golden_core_platform_evidence.py",
-            ".github/actions/result-contract-conformance/action.yml",
-            ".github/actions/result-contract-conformance/run.py",
-            ".github/actions/result-contract-conformance/README.md",
-        })
-        for relative_path in support_files:
-            if relative_path == omitted_support_file:
-                continue
-            add_tar_text(
-                archive,
-                f"{root}/{relative_path}",
-                (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8"),
-            )
-        examples_root = REPOSITORY_ROOT / "examples" / "result_contract"
-        for source in sorted(examples_root.rglob("*")):
-            relative_path = source.relative_to(REPOSITORY_ROOT).as_posix()
-            if (
-                not source.is_file()
-                or (
-                    source.suffix.lower()
-                    not in RESULT_CONTRACT_EXAMPLE_SUFFIXES
-                    and source.name != "mvnw"
-                )
-                or relative_path == omitted_support_file
-            ):
-                continue
-            add_tar_text(
-                archive,
-                f"{root}/{relative_path}",
-                source.read_text(encoding="utf-8"),
-            )
-    return wheel, sdist
+
+
+def _include_example_file(source, relative_path, omitted_support_file):
+    if not source.is_file() or relative_path == omitted_support_file:
+        return False
+    return (
+        source.suffix.lower() in RESULT_CONTRACT_EXAMPLE_SUFFIXES
+        or source.name == "mvnw"
+    )
 
 
 def test_distribution_verifier_accepts_executable_posix_launcher(tmp_path):
