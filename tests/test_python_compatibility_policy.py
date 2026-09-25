@@ -186,80 +186,80 @@ def test_freebsd_15_1_release_amd64_workflow_is_explicit():
     _assert_sha_pinned_action(workflow, "vmactions/freebsd-vm")
 
 
+_ADDITIONAL_DISTRIBUTION_WORKFLOWS = (
+    (
+        "test-alpine-linux-3.24.1-amd64.yml",
+        "Alpine Linux 3.24.1 amd64",
+        "test-alpine-linux-3-24-1-amd64:",
+        (
+            "python:3.13.14-alpine3.24"
+            "@sha256:c25cd44f45df1279a2cba589e67dfcd9db04647ea483b117a7de8b1a99bdfb23"
+        ),
+        None,
+    ),
+    (
+        "test-debian-13.6-amd64.yml",
+        "Debian 13.6 amd64",
+        "test-debian-13-6-amd64:",
+        (
+            "python:3.13.14-slim-trixie"
+            "@sha256:6771159cd4fa5d9bba1258caf0b82e6b73458c694"
+            "d178ad97c5e925c2d0e1a91"
+        ),
+        None,
+    ),
+    (
+        "test-omnios-r151054-lts-x86_64.yml",
+        "OmniOS r151054 LTS x86_64",
+        "test-omnios-r151054-lts-x86-64:",
+        None,
+        "vmactions/omnios-vm",
+    ),
+    (
+        "test-openbsd-7.9-amd64.yml",
+        "OpenBSD 7.9 amd64",
+        "test-openbsd-7-9-amd64:",
+        None,
+        "vmactions/openbsd-vm",
+    ),
+    (
+        "test-oracle-solaris-11.4-cbe-x86_64.yml",
+        "Oracle Solaris 11.4 CBE x86_64",
+        "test-oracle-solaris-11-4-cbe-x86-64:",
+        None,
+        "vmactions/solaris-vm",
+    ),
+)
+
+
 def test_additional_distribution_workflow_names_are_explicit():
-    # Container runtime digests remain exact because they define the environment.
-    # GitHub Action identities remain exact while their full SHA may advance through
-    # reviewed Dependabot PRs; tests/test_github_action_pinning.py independently
-    # requires every executable external Action reference to use a 40-char SHA.
-    workflow_contracts = (
-        (
-            "test-alpine-linux-3.24.1-amd64.yml",
-            "Alpine Linux 3.24.1 amd64",
-            "test-alpine-linux-3-24-1-amd64:",
-            (
-                "python:3.13.14-alpine3.24"
-                "@sha256:c25cd44f45df1279a2cba589e67dfcd9db04647ea483b117a7de8b1a99bdfb23"
-            ),
-            None,
-        ),
-        (
-            "test-debian-13.6-amd64.yml",
-            "Debian 13.6 amd64",
-            "test-debian-13-6-amd64:",
-            (
-                "python:3.13.14-slim-trixie"
-                "@sha256:6771159cd4fa5d9bba1258caf0b82e6b73458c694"
-                "d178ad97c5e925c2d0e1a91"
-            ),
-            None,
-        ),
-        (
-            "test-omnios-r151054-lts-x86_64.yml",
-            "OmniOS r151054 LTS x86_64",
-            "test-omnios-r151054-lts-x86-64:",
-            None,
-            "vmactions/omnios-vm",
-        ),
-        (
-            "test-openbsd-7.9-amd64.yml",
-            "OpenBSD 7.9 amd64",
-            "test-openbsd-7-9-amd64:",
-            None,
-            "vmactions/openbsd-vm",
-        ),
-        (
-            "test-oracle-solaris-11.4-cbe-x86_64.yml",
-            "Oracle Solaris 11.4 CBE x86_64",
-            "test-oracle-solaris-11-4-cbe-x86-64:",
-            None,
-            "vmactions/solaris-vm",
-        ),
+    for contract in _ADDITIONAL_DISTRIBUTION_WORKFLOWS:
+        _assert_distribution_workflow_contract(*contract)
+
+
+def _assert_distribution_workflow_contract(
+    filename,
+    distribution_name,
+    job_id,
+    pinned_runtime,
+    action_name,
+):
+    workflow = (
+        PROJECT_ROOT / ".github" / "workflows" / filename
+    ).read_text(encoding="utf-8")
+    assert workflow.startswith(
+        f"name: QZX tests | {distribution_name} | CPython 3.13\n"
     )
-
-    for (
-        filename,
-        distribution_name,
-        job_id,
-        pinned_runtime,
-        action_name,
-    ) in workflow_contracts:
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / filename
-        ).read_text(encoding="utf-8")
-
-        assert workflow.startswith(
-            f"name: QZX tests | {distribution_name} | CPython 3.13\n"
-        )
-        assert (
-            f"name: QZX test suite | {distribution_name} | CPython 3.13"
-            in workflow
-        )
-        assert job_id in workflow
-        assert (pinned_runtime is None) != (action_name is None)
-        if pinned_runtime is not None:
-            assert pinned_runtime in workflow
-        else:
-            _assert_sha_pinned_action(workflow, action_name)
+    assert (
+        f"name: QZX test suite | {distribution_name} | CPython 3.13"
+        in workflow
+    )
+    assert job_id in workflow
+    assert (pinned_runtime is None) != (action_name is None)
+    if pinned_runtime is not None:
+        assert pinned_runtime in workflow
+    else:
+        _assert_sha_pinned_action(workflow, action_name)
 
 
 def test_oracle_solaris_no_deps_install_covers_package_dependencies():
