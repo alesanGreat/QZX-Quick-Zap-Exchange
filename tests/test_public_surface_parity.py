@@ -141,82 +141,123 @@ def _responses(
     github_wheel=None,
     artifact_manifest=None,
 ):
-    pypi_payloads = {
-        WHEEL: _artifact_bytes(WHEEL, manifest=artifact_manifest),
-        SDIST: _artifact_bytes(SDIST, manifest=artifact_manifest),
-    }
+    pypi_payloads = _distribution_payloads(artifact_manifest)
     github_payloads = dict(pypi_payloads)
     if github_wheel is not None:
         github_payloads[WHEEL] = github_wheel
-
-    github_urls = {
-        filename: f"https://download.invalid/github/{filename}"
-        for filename in (WHEEL, SDIST)
-    }
-    pypi_urls = {
-        filename: f"https://download.invalid/pypi/{filename}"
-        for filename in (WHEEL, SDIST)
-    }
-    downloads = {
-        **{github_urls[name]: payload for name, payload in github_payloads.items()},
-        **{pypi_urls[name]: payload for name, payload in pypi_payloads.items()},
-    }
+    github_urls = _download_urls("github")
+    pypi_urls = _download_urls("pypi")
     return {
         "commits/main": {"sha": COMMIT},
-        f"releases/tags/v{VERSION}": {
-            "tag_name": f"v{VERSION}",
-            "draft": False,
-            "prerelease": True,
-            "assets": [
-                {
-                    "name": filename,
-                    "digest": (
-                        "sha256:" + hashlib.sha256(github_payloads[filename]).hexdigest()
-                    ),
-                    "browser_download_url": github_urls[filename],
-                }
-                for filename in (WHEEL, SDIST)
-            ],
-        },
+        f"releases/tags/v{VERSION}": _github_release(
+            github_payloads,
+            github_urls,
+        ),
         f"git/ref/tags/v{VERSION}": {
             "object": {"type": "commit", "sha": COMMIT}
         },
-        "pypi": {
-            "info": {
-                "version": VERSION,
-                "requires_python": ">=3.13",
-            },
-            "urls": [
-                {
-                    "filename": filename,
-                    "url": pypi_urls[filename],
-                    "digests": {
-                        "sha256": hashlib.sha256(pypi_payloads[filename]).hexdigest()
-                    },
-                }
-                for filename in (WHEEL, SDIST)
-            ],
+        "pypi": _pypi_response(pypi_payloads, pypi_urls),
+        "website": _website_response(website_commit),
+        "downloads": _download_payload_map(
+            github_payloads,
+            github_urls,
+            pypi_payloads,
+            pypi_urls,
+        ),
+    }
+
+
+def _distribution_payloads(artifact_manifest):
+    return {
+        WHEEL: _artifact_bytes(WHEEL, manifest=artifact_manifest),
+        SDIST: _artifact_bytes(SDIST, manifest=artifact_manifest),
+    }
+
+
+def _download_urls(surface):
+    return {
+        filename: f"https://download.invalid/{surface}/{filename}"
+        for filename in (WHEEL, SDIST)
+    }
+
+
+def _github_release(payloads, urls):
+    return {
+        "tag_name": f"v{VERSION}",
+        "draft": False,
+        "prerelease": True,
+        "assets": [
+            {
+                "name": filename,
+                "digest": (
+                    "sha256:"
+                    + hashlib.sha256(payloads[filename]).hexdigest()
+                ),
+                "browser_download_url": urls[filename],
+            }
+            for filename in (WHEEL, SDIST)
+        ],
+    }
+
+
+def _pypi_response(payloads, urls):
+    return {
+        "info": {
+            "version": VERSION,
+            "requires_python": ">=3.13",
         },
-        "website": {
-            "metadata": {
-                "development_version": VERSION,
-                "published_version": VERSION,
-                "documentation_commit": website_commit,
-                "documentation_branch": "main",
-                "documented_command_count": len(COMMANDS),
-                "published_wheel_entry_count": len(COMMANDS),
-                "published_capability_count": len(COMMANDS),
-                "retired_published_entry_count": 0,
-                "retired_published_names": [],
-                "development_only_count": 0,
-                "published_name_to_canonical": {
-                    name: name for name in COMMANDS
+        "urls": [
+            {
+                "filename": filename,
+                "url": urls[filename],
+                "digests": {
+                    "sha256": hashlib.sha256(
+                        payloads[filename]
+                    ).hexdigest()
                 },
-                "onboarding": json.loads(json.dumps(ONBOARDING)),
+            }
+            for filename in (WHEEL, SDIST)
+        ],
+    }
+
+
+def _website_response(website_commit):
+    return {
+        "metadata": {
+            "development_version": VERSION,
+            "published_version": VERSION,
+            "documentation_commit": website_commit,
+            "documentation_branch": "main",
+            "documented_command_count": len(COMMANDS),
+            "published_wheel_entry_count": len(COMMANDS),
+            "published_capability_count": len(COMMANDS),
+            "retired_published_entry_count": 0,
+            "retired_published_names": [],
+            "development_only_count": 0,
+            "published_name_to_canonical": {
+                name: name for name in COMMANDS
             },
-            "commands": {name: {} for name in COMMANDS},
+            "onboarding": json.loads(json.dumps(ONBOARDING)),
         },
-        "downloads": downloads,
+        "commands": {name: {} for name in COMMANDS},
+    }
+
+
+def _download_payload_map(
+    github_payloads,
+    github_urls,
+    pypi_payloads,
+    pypi_urls,
+):
+    return {
+        **{
+            github_urls[name]: payload
+            for name, payload in github_payloads.items()
+        },
+        **{
+            pypi_urls[name]: payload
+            for name, payload in pypi_payloads.items()
+        },
     }
 
 
