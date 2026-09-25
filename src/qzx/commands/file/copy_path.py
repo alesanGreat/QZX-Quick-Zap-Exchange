@@ -11,12 +11,12 @@ import shutil
 import stat
 from pathlib import Path
 
-from qzx.core.command_base import CommandBase
-from qzx.core.path_operation_utils import (
-    file_sha256,
-    is_filesystem_root,
-    same_or_nested_path_relationship,
+from qzx.commands.file._copy_path_workflow import (
+    execute_copy,
+    preflight_copy,
 )
+from qzx.core.command_base import CommandBase
+from qzx.core.path_operation_utils import file_sha256
 
 
 class CopyPathCommand(CommandBase):
@@ -106,62 +106,13 @@ class CopyPathCommand(CommandBase):
 
     def execute(self, source, destination, recursive=None, force=False):
         """Copy one entry after validating its complete path relationship."""
-        force_value = self._parse_bool(force)
-        if force_value is None:
-            return self._failure(
-                "invalid_boolean",
-                f"force must be true or false; got {force!r}.",
-                source=source,
-                destination=destination,
-            )
-        validation = self._preflight(
+        return execute_copy(
+            self,
             source,
             destination,
             recursive,
-            force_value,
-            require_existing_destination=False,
+            force,
         )
-        if not validation["success"]:
-            return validation
-        plan = validation["details"]
-        source_path = Path(plan["source"])
-        destination_path = Path(plan["destination"])
-
-        try:
-            destination_path.parent.mkdir(parents=True, exist_ok=True)
-            if plan["destination_existed"]:
-                self._remove_existing_destination(destination_path)
-            operation = self._copy_entry(
-                source_path,
-                destination_path,
-                plan["source_type"],
-                plan["recursive"],
-            )
-        except OSError as exc:
-            return self._failure(
-                "copy_failed",
-                (
-                    f"Copy from '{source_path}' to '{destination_path}' "
-                    f"failed: {type(exc).__name__}: {exc}"
-                ),
-                **plan,
-                destination_exists_after=os.path.lexists(destination_path),
-            )
-
-        return {
-            "success": True,
-            "message": (
-                f"{plan['source_type'].capitalize()} '{source_path}' copied "
-                f"to '{destination_path}'."
-            ),
-            "details": {
-                **plan,
-                "status": "copied",
-                "source_exists_after": os.path.lexists(source_path),
-                "destination_exists_after": os.path.lexists(destination_path),
-                **operation,
-            },
-        }
 
     def _preflight(
         self,
@@ -171,130 +122,14 @@ class CopyPathCommand(CommandBase):
         force,
         require_existing_destination,
     ):
-        source_path = Path(os.path.abspath(os.fspath(source)))
-        destination_path = Path(os.path.abspath(os.fspath(destination)))
-        details = {
-            "source": str(source_path),
-            "destination": str(destination_path),
-            "force": bool(force),
-        }
-        if not os.path.lexists(source_path):
-            return self._failure(
-                "source_missing",
-                f"Source '{source_path}' does not exist, so nothing was copied.",
-                **details,
-            )
-        if is_filesystem_root(source_path) or is_filesystem_root(
-            destination_path
-        ):
-            return self._failure(
-                "filesystem_root_protected",
-                (
-                    "Filesystem roots cannot be used as a copy source or "
-                    "destination."
-                ),
-                **details,
-            )
-
-        relationship = same_or_nested_path_relationship(
-            source_path,
-            destination_path,
+        return preflight_copy(
+            self,
+            source,
+            destination,
+            recursive,
+            force,
+            require_existing_destination,
         )
-        details["path_relationship"] = relationship
-        relationship_failures = {
-            "same": (
-                "source_equals_destination",
-                (
-                    "Source and destination identify the same filesystem "
-                    "object. Choose a different destination."
-                ),
-            ),
-            "destination_within_source": (
-                "destination_within_source",
-                (
-                    "Destination is inside the source. Copying a directory "
-                    "into itself can recurse indefinitely and is blocked."
-                ),
-            ),
-            "source_within_destination": (
-                "source_within_destination",
-                (
-                    "Source is inside the destination. Replacing that "
-                    "destination could delete the source before copying it."
-                ),
-            ),
-        }
-        if relationship in relationship_failures:
-            error_code, message = relationship_failures[relationship]
-            return self._failure(error_code, message, **details)
-
-        mode = os.lstat(source_path).st_mode
-        if stat.S_ISLNK(mode):
-            source_type = "symbolic link"
-        elif stat.S_ISDIR(mode):
-            source_type = "directory"
-        elif stat.S_ISREG(mode):
-            source_type = "file"
-        else:
-            return self._failure(
-                "unsupported_source_type",
-                (
-                    "Copy accepts only regular files, symbolic links, and "
-                    "directories; special filesystem entries are rejected."
-                ),
-                **details,
-            )
-        details["source_type"] = source_type
-        if source_type == "directory":
-            unsafe_entry = self._first_unsafe_directory_entry(source_path)
-            if unsafe_entry is not None:
-                return self._failure(
-                    "unsupported_source_entry",
-                    (
-                        f"Directory contains unsupported special entry "
-                        f"'{unsafe_entry}'. Copy accepts only directories, "
-                        "regular files, and symbolic links."
-                    ),
-                    **details,
-                    unsupported_entry=str(unsafe_entry),
-                )
-
-        recursion = self._normalize_recursion(recursive)
-        if not recursion["success"]:
-            return self._failure(
-                recursion["error_code"],
-                recursion["message"],
-                **details,
-            )
-        details["recursive"] = recursion["value"]
-        if source_type != "directory" and recursive is not None:
-            return self._failure(
-                "recursive_not_applicable",
-                "recursive applies only to directory sources.",
-                **details,
-            )
-
-        destination_existed = os.path.lexists(destination_path)
-        details["destination_existed"] = destination_existed
-        if require_existing_destination and not destination_existed:
-            return self._failure(
-                "overwrite_target_missing",
-                (
-                    f"Destination '{destination_path}' does not exist. Omit "
-                    "--force to create it without an unnecessary safety backup."
-                ),
-                **details,
-            )
-        if destination_existed and not force:
-            return self._failure(
-                "destination_exists",
-                (
-                    f"Destination '{destination_path}' already exists. Use "
-                    "--force to replace it after a safety backup."
-                ),
-                **details,
-            )
-        return {"success": True, "details": details}
 
     def _copy_entry(self, source, destination, source_type, recursion):
         if source_type == "symbolic link":
