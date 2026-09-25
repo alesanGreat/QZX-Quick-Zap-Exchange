@@ -30,26 +30,23 @@ def _join_usage_workers():
             worker.join(timeout=2)
 
 
-def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path):
-    activation = _prepare_activation_state(tmp_path)
-    interaction_provider = lambda: {
+def _interactive_evidence():
+    return {
         "interactive": True,
         "foreground": True,
         "recent_input": True,
     }
-    requests = []
 
-    def opener(outgoing, timeout):
-        requests.append(json.loads(outgoing.data.decode("utf-8")))
-        return FakeResponse(202)
 
-    def result(command, duration):
-        return {
-            "success": True,
-            "message": "ok",
-            "meta": {"command": command, "duration_ms": duration},
-        }
+def _command_result(command, duration):
+    return {
+        "success": True,
+        "message": "ok",
+        "meta": {"command": command, "duration_ms": duration},
+    }
 
+
+def _record_initial_usage_window(tmp_path, opener):
     env = {"QZX_TELEMETRY": "1"}
     for moment, command, duration in [
         (datetime(2026, 1, 1, 12, tzinfo=timezone.utc), "findFiles", 100.0),
@@ -58,33 +55,18 @@ def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path):
     ]:
         status = usage_telemetry.record_command_usage_and_schedule(
             "0.2.2.0.10",
-            result(command, duration),
+            _command_result(command, duration),
             environ=env,
             state_directory=tmp_path,
             opener=opener,
             now=moment,
-            interaction_provider=interaction_provider,
+            interaction_provider=_interactive_evidence,
         )
         assert status["scheduled"] is False
+    return env
 
-    status = usage_telemetry.record_command_usage_and_schedule(
-        "0.2.2.0.10",
-        result("getSystemInfo", 200.0),
-        environ=env,
-        state_directory=tmp_path,
-        opener=opener,
-        now=datetime(2026, 1, 11, 12, tzinfo=timezone.utc),
-        interaction_provider=interaction_provider,
-    )
-    assert status == {
-        "scheduled": True,
-        "window_start": "2026-01-01",
-        "window_end": "2026-01-10",
-    }
-    _join_usage_workers()
 
-    assert len(requests) == 1
-    event = requests[0]
+def _assert_usage_event(event, activation):
     assert event["event"] == "usage_window"
     assert event["installation_id"] == activation["installation_id"]
     assert event["window_start"] == "2026-01-01"
@@ -116,6 +98,34 @@ def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path):
     for forbidden in ("argv", "path", "cwd", "stdout", "terminal_input", "pointer"):
         assert forbidden not in encoded
 
+
+def test_usage_telemetry_sends_one_closed_aligned_10_day_window(tmp_path):
+    activation = _prepare_activation_state(tmp_path)
+    requests = []
+
+    def opener(outgoing, timeout):
+        requests.append(json.loads(outgoing.data.decode("utf-8")))
+        return FakeResponse(202)
+
+    env = _record_initial_usage_window(tmp_path, opener)
+    status = usage_telemetry.record_command_usage_and_schedule(
+        "0.2.2.0.10",
+        _command_result("getSystemInfo", 200.0),
+        environ=env,
+        state_directory=tmp_path,
+        opener=opener,
+        now=datetime(2026, 1, 11, 12, tzinfo=timezone.utc),
+        interaction_provider=_interactive_evidence,
+    )
+    assert status == {
+        "scheduled": True,
+        "window_start": "2026-01-01",
+        "window_end": "2026-01-10",
+    }
+    _join_usage_workers()
+
+    assert len(requests) == 1
+    _assert_usage_event(requests[0], activation)
     usage_state = json.loads(
         usage_telemetry._usage_state_path(state_directory=tmp_path).read_text(
             encoding="utf-8"
