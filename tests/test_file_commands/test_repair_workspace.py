@@ -110,6 +110,24 @@ def test_audit_refuses_to_save_plan_larger_than_repair_can_read(tmp_path):
     assert not plan_path.exists()
 
 
+def test_audit_command_reports_incomplete_scan_without_mutation(tmp_path):
+    for index in range(3):
+        (tmp_path / "file-{}.tmp".format(index)).write_text(
+            "temporary",
+            encoding="utf-8",
+        )
+
+    result = AuditWorkspaceCommand().execute(tmp_path, max_files=2)
+
+    assert result["success"] is False
+    assert result["status"] == "incomplete"
+    assert result["details"]["workspace_unchanged"] is True
+    assert result["details"]["plan"]["scan_complete"] is False
+    assert all(
+        (tmp_path / "file-{}.tmp".format(index)).exists()
+        for index in range(3)
+    )
+
 def test_incomplete_scan_is_diagnostic_and_cannot_be_repaired(tmp_path):
     for index in range(3):
         (tmp_path / "file-{}.tmp".format(index)).write_text(
