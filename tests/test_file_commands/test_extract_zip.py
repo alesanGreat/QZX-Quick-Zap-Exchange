@@ -122,3 +122,36 @@ def test_declared_limits_block_extraction(tmp_path):
     assert result["success"] is False
     assert result["error_code"] == "archive_file_limit_exceeded"
     assert not target_dir.exists()
+
+
+
+def test_symlink_member_aborts_whole_archive(tmp_path):
+    zip_file = tmp_path / "symlink.zip"
+    target_dir = tmp_path / "extracted"
+    link_info = zipfile.ZipInfo("link")
+    link_info.create_system = 3
+    link_info.external_attr = (0o120777 << 16)
+
+    with zipfile.ZipFile(zip_file, "w") as archive:
+        archive.writestr("safe.txt", "safe")
+        archive.writestr(link_info, "target.txt")
+
+    result = ExtractZipCommand().execute(str(zip_file), str(target_dir))
+
+    assert result["success"] is False
+    assert result["error_code"] == "unsafe_archive_member"
+    assert not target_dir.exists()
+
+
+def test_archived_file_cannot_be_parent_of_another_member(tmp_path):
+    zip_file = tmp_path / "ambiguous.zip"
+    target_dir = tmp_path / "extracted"
+    with zipfile.ZipFile(zip_file, "w") as archive:
+        archive.writestr("node", "file")
+        archive.writestr("node/child.txt", "child")
+
+    result = ExtractZipCommand().execute(str(zip_file), str(target_dir))
+
+    assert result["success"] is False
+    assert result["error_code"] == "unsafe_archive_member"
+    assert not target_dir.exists()
