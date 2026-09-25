@@ -51,3 +51,32 @@ def test_release_projection_rejects_unknown_install_channel():
 
     with pytest.raises(ValueError, match="supported QZX channel command"):
         metadata_sync.synchronized_readme_content(manifest)
+
+
+def test_validated_onboarding_preserves_packaged_contract():
+    manifest = deepcopy(metadata_sync.load_manifest())
+
+    onboarding = metadata_sync.validated_onboarding(manifest)
+
+    assert onboarding == manifest["onboarding"]
+    assert onboarding is not manifest["onboarding"]
+    assert [step["stage"] for step in onboarding["steps"]] == [
+        "first_success",
+        "explore",
+        "understand",
+    ]
+
+
+def test_generated_content_projects_runtime_constants():
+    manifest = deepcopy(metadata_sync.load_manifest())
+
+    rendered = metadata_sync.generated_content(manifest)
+    namespace = {}
+    exec(rendered, namespace)
+
+    assert namespace["VERSION"] == manifest["channels"]["development"]["version"]
+    assert namespace["ATTRIBUTION"] == manifest["product"]["attribution"]
+    assert namespace["ONBOARDING"] == manifest["onboarding"]
+    assert namespace["COMMAND_CATALOG_URL"].startswith("https://")
+    assert namespace["SECURITY_GUIDE_URL"].startswith("https://")
+    assert namespace["WELCOME_MATURITY"]["stage"]
