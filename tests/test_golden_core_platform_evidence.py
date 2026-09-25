@@ -30,33 +30,6 @@ SCRIPT_ROOT = Path(__file__).resolve().parents[1] / "scripts"
 
 def evidence_document(system: str, environment_id: str) -> dict:
     commands = [item["name"] for item in load_golden_core()["commands"]]
-    command_records = {}
-    for command_name in commands:
-        result = {
-            "success": True,
-            "message": f"Observed {command_name} on {system}.",
-            "meta": {
-                "command": command_name,
-                "schema_version": 1,
-            },
-        }
-        command_records[command_name] = {
-            "implementation_digest": "sha256:" + "1" * 64,
-            "arguments": [command_name],
-            "exit_code": 0,
-            "elapsed_ms": 1.0,
-            "stderr": "",
-            "result_sha256": sha256_value(result),
-            "assertions": [
-                "exit_code=0",
-                "result_contract_v1",
-                "success=true",
-                f"meta.command={command_name}",
-                "fixture_assertion",
-            ],
-            "result": result,
-        }
-
     document = {
         "schema_version": 2,
         "evidence_type": "qzx_golden_core_platform_run",
@@ -67,47 +40,97 @@ def evidence_document(system: str, environment_id: str) -> dict:
             "https://qzx.yumbale.com/schemas/"
             "result-contract-v1.schema.json"
         ),
-        "golden_core": {
-            "name": "QZX Golden Core",
-            "status": "candidate",
-            "selected_on": "2026-08-08",
-            "command_count": len(commands),
-            "commands": commands,
-        },
-        "environment": {
-            "id": environment_id,
-            "name": f"{system} test environment",
-            "system": system,
-            "release": "test-release",
-            "version": "test-version",
-            "machine": "test-machine",
-            "processor": "test-processor",
-            "python": {
-                "implementation": "CPython",
-                "version": "3.13.12",
-                "architecture": "64bit",
-            },
-            "github": {},
-        },
-        "commands": command_records,
-        "summary": {
-            "command_count": len(commands),
-            "passed": len(commands),
-            "failed": 0,
-            "systems_observed": [system],
-        },
-        "scope": {
-            "success_only": True,
-            "network": "authorized loopback HTTP only",
-            "repository": "disposable local Git fixture only",
-            "secrets": (
-                "environment values and private project data are not requested"
-            ),
-            "claim": "Observed evidence only.",
-        },
+        "golden_core": _golden_core_fixture(commands),
+        "environment": _environment_fixture(system, environment_id),
+        "commands": _command_records(commands, system),
+        "summary": _summary_fixture(commands, system),
+        "scope": _scope_fixture(),
     }
     document["evidence_sha256"] = sha256_value(document)
     return document
+
+
+def _command_records(commands, system):
+    return {
+        command_name: _command_record(command_name, system)
+        for command_name in commands
+    }
+
+
+def _command_record(command_name, system):
+    result = {
+        "success": True,
+        "message": f"Observed {command_name} on {system}.",
+        "meta": {
+            "command": command_name,
+            "schema_version": 1,
+        },
+    }
+    return {
+        "implementation_digest": "sha256:" + "1" * 64,
+        "arguments": [command_name],
+        "exit_code": 0,
+        "elapsed_ms": 1.0,
+        "stderr": "",
+        "result_sha256": sha256_value(result),
+        "assertions": [
+            "exit_code=0",
+            "result_contract_v1",
+            "success=true",
+            f"meta.command={command_name}",
+            "fixture_assertion",
+        ],
+        "result": result,
+    }
+
+
+def _golden_core_fixture(commands):
+    return {
+        "name": "QZX Golden Core",
+        "status": "candidate",
+        "selected_on": "2026-08-08",
+        "command_count": len(commands),
+        "commands": commands,
+    }
+
+
+def _environment_fixture(system, environment_id):
+    return {
+        "id": environment_id,
+        "name": f"{system} test environment",
+        "system": system,
+        "release": "test-release",
+        "version": "test-version",
+        "machine": "test-machine",
+        "processor": "test-processor",
+        "python": {
+            "implementation": "CPython",
+            "version": "3.13.12",
+            "architecture": "64bit",
+        },
+        "github": {},
+    }
+
+
+def _summary_fixture(commands, system):
+    return {
+        "command_count": len(commands),
+        "passed": len(commands),
+        "failed": 0,
+        "systems_observed": [system],
+    }
+
+
+def _scope_fixture():
+    return {
+        "success_only": True,
+        "network": "authorized loopback HTTP only",
+        "repository": "disposable local Git fixture only",
+        "secrets": (
+            "environment values and private project data are not requested"
+        ),
+        "claim": "Observed evidence only.",
+    }
 
 
 def write_document(path: Path, document: dict) -> Path:
@@ -168,7 +191,20 @@ def test_sanitizer_never_rewrites_inserted_placeholders():
 
 
 def test_merge_accepts_three_declared_systems(tmp_path):
-    files = [
+    files = _platform_evidence_files(tmp_path)
+    renamed_files = _renamed_evidence_files(tmp_path, files)
+
+    summary = merge(files)
+    assert summary == merge(list(reversed(files)))
+    assert summary == merge(renamed_files)
+    _assert_environment_summary(summary)
+    _assert_run_summary(summary)
+    _assert_command_summary(summary)
+    _assert_aggregate_hash(summary)
+
+
+def _platform_evidence_files(tmp_path):
+    return [
         write_document(
             tmp_path / "windows.json",
             evidence_document("Windows", "windows-2025-x64"),
@@ -183,21 +219,20 @@ def test_merge_accepts_three_declared_systems(tmp_path):
         ),
     ]
 
-    renamed_directory = tmp_path / "renamed"
-    renamed_directory.mkdir()
-    renamed_files = [
+
+def _renamed_evidence_files(tmp_path, files):
+    directory = tmp_path / "renamed"
+    directory.mkdir()
+    return [
         write_document(
-            renamed_directory / f"record-{index}.json",
+            directory / f"record-{index}.json",
             json.loads(path.read_text(encoding="utf-8")),
         )
         for index, path in enumerate(reversed(files), start=1)
     ]
 
-    summary = merge(files)
-    summary_reversed = merge(list(reversed(files)))
-    summary_renamed = merge(renamed_files)
 
-    assert summary == summary_reversed == summary_renamed
+def _assert_environment_summary(summary):
     assert [
         environment["source_file"]
         for environment in summary["environments"]
@@ -213,16 +248,23 @@ def test_merge_accepts_three_declared_systems(tmp_path):
     }
     assert summary["evidence_type"] == "qzx_golden_core_platform_summary"
     assert summary["source_revision"] == SOURCE_REVISION
-    assert summary["summary"]["environment_count"] == 3
-    assert summary["summary"]["system_counts"] == {
+
+
+def _assert_run_summary(summary):
+    run = summary["summary"]
+    assert run["environment_count"] == 3
+    assert run["system_counts"] == {
         "Darwin": 1,
         "Linux": 1,
         "Windows": 1,
     }
-    assert summary["summary"]["command_count"] == 15
-    assert summary["summary"]["command_environment_runs"] == 45
-    assert summary["summary"]["failed_command_runs"] == 0
+    assert run["command_count"] == 15
+    assert run["command_environment_runs"] == 45
+    assert run["failed_command_runs"] == 0
     assert summary["requirements"]["declared_systems_observed"] is True
+
+
+def _assert_command_summary(summary):
     assert all(
         command["declared_systems_observed"] is True
         for command in summary["commands"].values()
@@ -231,6 +273,9 @@ def test_merge_accepts_three_declared_systems(tmp_path):
         command["implementation_digest"] == "sha256:" + "1" * 64
         for command in summary["commands"].values()
     )
+
+
+def _assert_aggregate_hash(summary):
     payload = dict(summary)
     observed_hash = payload.pop("aggregate_sha256")
     assert observed_hash == sha256_value(payload)
