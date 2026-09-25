@@ -56,8 +56,20 @@ def _resolve_case_path(manifest_path: Path, relative_name: str) -> Path:
 
 def run_conformance(manifest_path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
     """Execute every fixture and return one structured conformance report."""
-
     manifest_path = manifest_path.resolve()
+    cases = _validated_manifest_cases(manifest_path)
+    seen_ids: set[str] = set()
+    case_results = [
+        _evaluate_case(
+            manifest_path,
+            _validated_case(raw_case, index, seen_ids),
+        )
+        for index, raw_case in enumerate(cases)
+    ]
+    return _conformance_report(manifest_path, case_results)
+
+
+def _validated_manifest_cases(manifest_path: Path) -> list[dict[str, Any]]:
     manifest = load_json(manifest_path, "conformance manifest")
     if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
         raise ValueError("The conformance manifest must use schema_version 1.")
@@ -67,73 +79,87 @@ def run_conformance(manifest_path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
         )
     cases = manifest.get("cases")
     if not isinstance(cases, list) or not cases:
-        raise ValueError("The conformance manifest must contain at least one case.")
-
-    seen_ids: set[str] = set()
-    case_results: list[dict[str, Any]] = []
-    positive_count = 0
-    negative_count = 0
-    for index, raw_case in enumerate(cases):
-        context = f"cases[{index}]"
-        if not isinstance(raw_case, dict):
-            raise ValueError(f"{context} must be an object.")
-        case_id = raw_case.get("id")
-        relative_file = raw_case.get("file")
-        expected_conformant = raw_case.get("expected_conformant")
-        expected_violations = raw_case.get("expected_violations")
-        if not isinstance(case_id, str) or case_id.strip() == "":
-            raise ValueError(f"{context}.id must be non-empty text.")
-        if case_id in seen_ids:
-            raise ValueError(f"Conformance case id is duplicated: {case_id}")
-        seen_ids.add(case_id)
-        if not isinstance(relative_file, str) or relative_file.strip() == "":
-            raise ValueError(f"{context}.file must be non-empty text.")
-        if not isinstance(expected_conformant, bool):
-            raise ValueError(f"{context}.expected_conformant must be boolean.")
-        if (
-            not isinstance(expected_violations, list)
-            or any(not isinstance(item, str) for item in expected_violations)
-        ):
-            raise ValueError(f"{context}.expected_violations must be a string array.")
-        if expected_conformant and expected_violations:
-            raise ValueError(
-                f"{context} cannot expect violations for a conforming document."
-            )
-
-        case_path = _resolve_case_path(manifest_path, relative_file)
-        document = load_json(case_path, f"conformance case {case_id}")
-        actual_violations = result_contract_violations(document)
-        actual_conformant = actual_violations == []
-        passed = (
-            actual_conformant is expected_conformant
-            and actual_violations == expected_violations
+        raise ValueError(
+            "The conformance manifest must contain at least one case."
         )
-        if expected_conformant:
-            positive_count += 1
-        else:
-            negative_count += 1
-        case_results.append({
-            "id": case_id,
-            "file": relative_file,
-            "expected_conformant": expected_conformant,
-            "actual_conformant": actual_conformant,
-            "expected_violations": expected_violations,
-            "actual_violations": actual_violations,
-            "passed": passed,
-        })
+    return cases
 
+
+def _validated_case(raw_case, index, seen_ids):
+    context = f"cases[{index}]"
+    if not isinstance(raw_case, dict):
+        raise ValueError(f"{context} must be an object.")
+    case_id = raw_case.get("id")
+    relative_file = raw_case.get("file")
+    expected_conformant = raw_case.get("expected_conformant")
+    expected_violations = raw_case.get("expected_violations")
+
+    if not isinstance(case_id, str) or case_id.strip() == "":
+        raise ValueError(f"{context}.id must be non-empty text.")
+    if case_id in seen_ids:
+        raise ValueError(f"Conformance case id is duplicated: {case_id}")
+    seen_ids.add(case_id)
+    if not isinstance(relative_file, str) or relative_file.strip() == "":
+        raise ValueError(f"{context}.file must be non-empty text.")
+    if not isinstance(expected_conformant, bool):
+        raise ValueError(f"{context}.expected_conformant must be boolean.")
+    if (
+        not isinstance(expected_violations, list)
+        or any(not isinstance(item, str) for item in expected_violations)
+    ):
+        raise ValueError(
+            f"{context}.expected_violations must be a string array."
+        )
+    if expected_conformant and expected_violations:
+        raise ValueError(
+            f"{context} cannot expect violations for a conforming document."
+        )
+    return {
+        "id": case_id,
+        "file": relative_file,
+        "expected_conformant": expected_conformant,
+        "expected_violations": expected_violations,
+    }
+
+
+def _evaluate_case(manifest_path: Path, case: dict[str, Any]) -> dict[str, Any]:
+    case_path = _resolve_case_path(manifest_path, case["file"])
+    document = load_json(case_path, f"conformance case {case['id']}")
+    actual_violations = result_contract_violations(document)
+    actual_conformant = actual_violations == []
+    passed = (
+        actual_conformant is case["expected_conformant"]
+        and actual_violations == case["expected_violations"]
+    )
+    return {
+        **case,
+        "actual_conformant": actual_conformant,
+        "actual_violations": actual_violations,
+        "passed": passed,
+    }
+
+
+def _conformance_report(
+    manifest_path: Path,
+    case_results: list[dict[str, Any]],
+) -> dict[str, Any]:
     passed_count = sum(1 for case in case_results if case["passed"])
     failed_count = len(case_results) - passed_count
+    positive_count = sum(
+        1 for case in case_results if case["expected_conformant"]
+    )
+    negative_count = len(case_results) - positive_count
+    message = (
+        f"QZX Result Contract v1 conformance passed all {passed_count} cases."
+        if failed_count == 0
+        else (
+            "QZX Result Contract v1 conformance failed "
+            f"{failed_count} of {len(case_results)} cases."
+        )
+    )
     return {
         "success": failed_count == 0,
-        "message": (
-            f"QZX Result Contract v1 conformance passed all {passed_count} cases."
-            if failed_count == 0
-            else (
-                "QZX Result Contract v1 conformance failed "
-                f"{failed_count} of {len(case_results)} cases."
-            )
-        ),
+        "message": message,
         "details": {
             "contract": RESULT_CONTRACT_SCHEMA_URL,
             "manifest": str(manifest_path),
