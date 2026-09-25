@@ -9,6 +9,7 @@ import time
 import urllib.error
 import urllib.request
 
+from qzx.commands.network._internet_speed_workflow import execute_internet_speed
 from qzx.core.command_base import CommandBase
 
 
@@ -53,98 +54,8 @@ class TestInternetSpeedCommand(CommandBase):
     LATENCY_URL = "https://speed.cloudflare.com/cdn-cgi/trace"
 
     def execute(self, max_seconds=3.0):
-        """Run three latency samples and one bounded streaming download."""
-        try:
-            duration_limit = float(max_seconds)
-        except (TypeError, ValueError):
-            duration_limit = 0
-        if not 0 < duration_limit <= 30:
-            return {
-                "success": False,
-                "error_code": "invalid_max_seconds",
-                "error": (
-                    "max_seconds must be greater than 0 and no more than 30."
-                ),
-                "message": (
-                    "Could not run the web speed test because --max-seconds "
-                    "must be greater than 0 and no more than 30."
-                ),
-                "details": {
-                    "received": max_seconds,
-                    "minimum_exclusive": 0,
-                    "maximum": 30,
-                    "unit": "seconds",
-                },
-            }
-
-        clock_floor = time.get_clock_info("perf_counter").resolution
-        latencies, latency_failures = self._measure_latency(clock_floor)
-        download = self._measure_download(duration_limit, clock_floor)
-        if download["bytes"] == 0:
-            error = download["error"] or "No bytes were received."
-            return {
-                "success": False,
-                "error_code": "download_measurement_failed",
-                "error": error,
-                "message": (
-                    "Web speed test could not measure download throughput: "
-                    f"{error}"
-                ),
-                "details": {
-                    "duration_limit_seconds": duration_limit,
-                    "latency_samples_completed": len(latencies),
-                    "latency_samples_failed": latency_failures,
-                },
-            }
-
-        elapsed = download["duration"]
-        speed_mbps = (download["bytes"] * 8) / elapsed / 1_000_000
-        speed_mib = download["bytes"] / (1024 * 1024) / elapsed
-        latency = {
-            "average": (
-                sum(latencies) / len(latencies) if latencies else None
-            ),
-            "minimum": min(latencies) if latencies else None,
-            "maximum": max(latencies) if latencies else None,
-            "samples_completed": len(latencies),
-            "samples_failed": latency_failures,
-            "unit": "milliseconds",
-        }
-        latency_summary = (
-            f"average HTTP latency {latency['average']:.1f} ms and "
-            if latency["average"] is not None
-            else "HTTP latency unavailable; "
-        )
-        result = {
-            "success": True,
-            "message": (
-                f"Web speed test measured {latency_summary}"
-                f"{speed_mbps:.2f} Mbps ({speed_mib:.2f} MiB/s) across "
-                f"{download['bytes']} bytes in {elapsed:.3f} seconds."
-            ),
-            "latency": latency,
-            "download": {
-                "megabits_per_second": round(speed_mbps, 2),
-                "mebibytes_per_second": round(speed_mib, 2),
-                "bytes_downloaded": download["bytes"],
-                "duration_seconds": elapsed,
-                "duration_limit_seconds": duration_limit,
-                "stopped_at_duration_limit": (
-                    elapsed >= duration_limit
-                ),
-            },
-        }
-        if latency_failures:
-            result["warnings"] = [
-                {
-                    "code": "latency_samples_failed",
-                    "message": (
-                        f"{latency_failures} of 3 HTTP latency samples failed; "
-                        "download throughput was still measured."
-                    ),
-                }
-            ]
-        return result
+        """Run the bounded HTTP speed-test workflow."""
+        return execute_internet_speed(self, max_seconds)
 
     def _measure_latency(self, clock_floor):
         latencies = []
