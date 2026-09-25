@@ -10,6 +10,10 @@ import subprocess
 from collections.abc import Callable
 from typing import Any
 
+from qzx.commands.development._csharp_scaffold import (
+    create_test_project,
+    populate_csharp_project,
+)
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
@@ -67,18 +71,18 @@ class ScaffoldCSharpCommand(CommandBase):
     ]
 
     def execute(self, project_name, path='.', with_tests=True, project_type='console'):
-        """
-        Creates a basic scaffolding for a C# program
-        """
+        """Create a basic C# scaffold."""
         try:
             with_tests = parse_scaffold_boolean(with_tests, "with_tests")
-
             project_type = project_type.lower()
-            if project_type not in ('console',):
+            if project_type not in ("console",):
                 return {
                     "success": False,
                     "error": f"Unsupported project type: {project_type}",
-                    "message": "Currently only 'console' is supported as project type for C# scaffolding."
+                    "message": (
+                        "Currently only 'console' is supported as project type "
+                        "for C# scaffolding."
+                    ),
                 }
 
             project_name = normalize_project_name(
@@ -96,38 +100,21 @@ class ScaffoldCSharpCommand(CommandBase):
             )
             if not result["success"]:
                 return result
-            project_path = result["project_path"]
-
-            self._create_solution(project_path, project_name, result)
-            self._create_project_file(project_path, project_name, result)
-            self._create_source_file(project_path, project_name, result)
-            if with_tests:
-                self._create_test_project(project_path, project_name, result)
-            self._create_readme(project_path, project_name, result)
-            self._create_gitignore(project_path, result)
-
-            tests_msg = "with test scaffolding" if with_tests else "without tests"
-
-            message = (
-                f"Successfully created C# {project_type} project '{project_name}' at {project_path} "
-                f"{tests_msg}. "
-                f"Created {len(result['files_created'])} files and directories. "
-                f"Use 'cd {project_path} && dotnet build' to build the project."
+            return populate_csharp_project(
+                self,
+                project_name,
+                project_type,
+                with_tests,
+                result,
             )
-
-            if not self._is_dotnet_installed():
-                message += " Note: .NET SDK doesn't appear to be installed. "
-                message += "Install from https://dotnet.microsoft.com/download to build the project."
-
-            result["message"] = message
-            return result
-
-        except Exception as e:
+        except Exception as exc:
             return {
                 "success": False,
-                "error": f"Error creating C# project: {str(e)}",
-                "message": f"Failed to create C# project scaffolding: {str(e)}",
-                "project_name": project_name
+                "error": f"Error creating C# project: {str(exc)}",
+                "message": (
+                    f"Failed to create C# project scaffolding: {str(exc)}"
+                ),
+                "project_name": project_name,
             }
 
     def _to_class_name(self, project_name):
@@ -204,65 +191,12 @@ public class Program
         result["files_created"].append(src_path)
 
     def _create_test_project(self, project_path, project_name, result):
-        test_dir = os.path.join(project_path, f"{project_name}.Tests")
-        os.makedirs(test_dir)
-        result["files_created"].append(test_dir)
-
-        csproj_path = os.path.join(test_dir, f"{project_name}.Tests.csproj")
-        with open(csproj_path, 'w', encoding='utf-8') as f:
-            f.write(f'''<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="xunit" Version="2.6.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="6.0.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\\{project_name}.csproj" />
-  </ItemGroup>
-
-</Project>
-''')
-        result["files_created"].append(csproj_path)
-
-        test_path = os.path.join(test_dir, 'ProgramTests.cs')
-        class_name = self._to_class_name(project_name)
-        with open(test_path, 'w', encoding='utf-8') as f:
-            f.write(f'''namespace {class_name}.Tests;
-
-using Xunit;
-
-public class ProgramTests
-{{
-    [Fact]
-    public void Hello_ReturnsExpectedMessage()
-    {{
-        Assert.Equal("Hello, world from {project_name}!", Program.Hello());
-    }}
-
-    [Fact]
-    public void Hello_ContainsHello()
-    {{
-        Assert.Contains("Hello", Program.Hello());
-    }}
-}}
-''')
-        result["files_created"].append(test_path)
+        return create_test_project(
+            project_path,
+            project_name,
+            result,
+            self._to_class_name(project_name),
+        )
 
     def _create_readme(self, project_path, project_name, result):
         readme_path = os.path.join(project_path, 'README.md')
