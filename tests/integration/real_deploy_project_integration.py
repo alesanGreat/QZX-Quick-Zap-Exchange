@@ -183,11 +183,7 @@ def _start_http_server(config, port):
     _wait_until_listening(port)
 
 
-def test_real_ssh_deployment_backup_integrity_promotion_and_health_check(
-    tmp_path,
-    deployment_environment,
-):
-    config = deployment_environment
+def _prepare_successful_deployment_case(tmp_path, config):
     dist = tmp_path / "dist"
     dist.mkdir(parents=True)
     (dist / "release.txt").write_text(
@@ -199,13 +195,35 @@ def test_real_ssh_deployment_backup_integrity_promotion_and_health_check(
         config["target"] / "old-release.txt",
         "previous deployment\n",
     )
-
     health_port = _unused_local_port()
     _start_http_server(config, health_port)
     health_url = (
         f"http://127.0.0.1:{health_port}/"
         f"{config['target'].name}/release.txt"
     )
+    return dist, health_url
+
+
+def _assert_remote_backup_contains_previous_release(result, config):
+    remote_backup = result["details"]["remote"]["backup_archive"]
+    member = f"{config['target'].name}/old-release.txt"
+    _run_ssh(config, f"test -f {shlex.quote(remote_backup)}")
+    archived_file = _run_ssh(
+        config,
+        (
+            f"tar -xOzf {shlex.quote(remote_backup)} "
+            f"{shlex.quote(member)}"
+        ),
+    )
+    assert archived_file.stdout == "previous deployment\n"
+
+
+def test_real_ssh_deployment_backup_integrity_promotion_and_health_check(
+    tmp_path,
+    deployment_environment,
+):
+    config = deployment_environment
+    dist, health_url = _prepare_successful_deployment_case(tmp_path, config)
 
     result = DeployProjectCommand().invoke(
         _command_arguments(
@@ -229,18 +247,7 @@ def test_real_ssh_deployment_backup_integrity_promotion_and_health_check(
     ) == "real QZX deployment\n"
     assert not (config["target"] / "old-release.txt").exists()
     assert Path(result["meta"]["safety_backup"]["path"]).exists()
-
-    remote_backup = result["details"]["remote"]["backup_archive"]
-    member = f"{config['target'].name}/old-release.txt"
-    _run_ssh(config, f"test -f {shlex.quote(remote_backup)}")
-    archived_file = _run_ssh(
-        config,
-        (
-            f"tar -xOzf {shlex.quote(remote_backup)} "
-            f"{shlex.quote(member)}"
-        ),
-    )
-    assert archived_file.stdout == "previous deployment\n"
+    _assert_remote_backup_contains_previous_release(result, config)
 
 
 def test_real_failed_health_check_restores_every_previous_remote_file(
