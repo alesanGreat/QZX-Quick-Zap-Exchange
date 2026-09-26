@@ -14,6 +14,7 @@ from scripts.verify_distribution_artifacts import (
     ATTRIBUTION,
     CONFORMANCE_RECEIPT_SCHEMA_ID,
     CONFORMANCE_RECEIPT_WHEEL_PATH,
+    DISTRIBUTION_VERIFIER_SUPPORT_FILES,
     GOLDEN_CORE_WHEEL_PATH,
     RESULT_CONTRACT_EXAMPLE_SUFFIXES,
     RESULT_CONTRACT_SCHEMA_ID,
@@ -97,6 +98,23 @@ def test_manifest_includes_every_readme_linked_document():
     missing = [
         relative_path
         for relative_path in linked_docs
+        if f"include {relative_path}" not in manifest_lines
+    ]
+
+    assert missing == []
+
+
+def test_manifest_includes_distribution_verifier_support_modules():
+    manifest_lines = {
+        line.strip()
+        for line in (REPOSITORY_ROOT / "MANIFEST.in")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+    missing = [
+        relative_path
+        for relative_path in DISTRIBUTION_VERIFIER_SUPPORT_FILES
         if f"include {relative_path}" not in manifest_lines
     ]
 
@@ -245,6 +263,7 @@ def _add_sdist_support_files(archive, root, omitted_support_file):
 
 def _sdist_support_files():
     explicit = {
+        *DISTRIBUTION_VERIFIER_SUPPORT_FILES,
         "ADOPTERS.md",
         "CITATION.cff",
         "action.yml",
