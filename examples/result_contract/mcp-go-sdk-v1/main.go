@@ -82,20 +82,23 @@ func structuredSuccess(result *mcp.CallToolResult) (bool, bool) {
 	return value, ok
 }
 
-func run(outputDirectory string) (map[string]any, error) {
+func loadContractSchema() ([]byte, map[string]any, error) {
 	schemaPath, err := contractSchemaPath()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	schemaBytes, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return nil, fmt.Errorf("read QZX contract schema: %w", err)
+		return nil, nil, fmt.Errorf("read QZX contract schema: %w", err)
 	}
 	var contractSchema map[string]any
 	if err := json.Unmarshal(schemaBytes, &contractSchema); err != nil {
-		return nil, fmt.Errorf("parse QZX contract schema: %w", err)
+		return nil, nil, fmt.Errorf("parse QZX contract schema: %w", err)
 	}
+	return schemaBytes, contractSchema, nil
+}
 
+func newEvidenceServer(schemaBytes []byte) *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{Name: "qzx-result-contract-go-sdk-evidence", Version: "1.0.0"},
 		nil,
@@ -119,75 +122,96 @@ func run(outputDirectory string) (map[string]any, error) {
 			Details: widgetDetails{WidgetID: "widget-1", Status: "ready"},
 		}, nil
 	})
+	return server
+}
 
+func connectEvidenceClient(ctx context.Context, server *mcp.Server) (*mcp.ClientSession, func(), error) {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 	serverSession, err := server.Connect(ctx, serverTransport, nil)
 	if err != nil {
-		return nil, fmt.Errorf("connect official MCP server: %w", err)
+		return nil, nil, fmt.Errorf("connect official MCP server: %w", err)
 	}
-	defer serverSession.Close()
 	client := mcp.NewClient(
 		&mcp.Implementation{Name: "qzx-result-contract-go-sdk-client", Version: "1.0.0"},
 		nil,
 	)
 	clientSession, err := client.Connect(ctx, clientTransport, nil)
 	if err != nil {
-		return nil, fmt.Errorf("connect official MCP client: %w", err)
+		_ = serverSession.Close()
+		return nil, nil, fmt.Errorf("connect official MCP client: %w", err)
 	}
-	defer clientSession.Close()
-	if got := clientSession.InitializeResult().ProtocolVersion; got != protocolVersion {
-		return nil, fmt.Errorf("expected MCP %s, got %s", protocolVersion, got)
+	cleanup := func() {
+		_ = clientSession.Close()
+		_ = serverSession.Close()
 	}
+	return clientSession, cleanup, nil
+}
 
+func verifyProtocol(clientSession *mcp.ClientSession) error {
+	if got := clientSession.InitializeResult().ProtocolVersion; got != protocolVersion {
+		return fmt.Errorf("expected MCP %s, got %s", protocolVersion, got)
+	}
+	return nil
+}
+
+func discoverToolDefinition(ctx context.Context, clientSession *mcp.ClientSession, contractSchema map[string]any) (*mcp.Tool, error) {
 	listedTools, err := clientSession.ListTools(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("list official MCP tools: %w", err)
 	}
-	var toolDefinition *mcp.Tool
 	for _, tool := range listedTools.Tools {
-		if tool.Name == toolName {
-			toolDefinition = tool
-			break
+		if tool.Name != toolName {
+			continue
 		}
+		if !reflect.DeepEqual(tool.OutputSchema, contractSchema) {
+			return nil, errors.New("the official SDK changed the canonical inline output schema")
+		}
+		return tool, nil
 	}
-	if toolDefinition == nil {
-		return nil, errors.New("the official MCP client did not discover lookup_widget")
-	}
-	if !reflect.DeepEqual(toolDefinition.OutputSchema, contractSchema) {
-		return nil, errors.New("the official SDK changed the canonical inline output schema")
-	}
+	return nil, errors.New("the official MCP client did not discover lookup_widget")
+}
 
+func callEvidenceCases(ctx context.Context, clientSession *mcp.ClientSession) (*mcp.CallToolResult, *mcp.CallToolResult, error) {
 	success, err := clientSession.CallTool(ctx, &mcp.CallToolParams{
 		Name:      toolName,
 		Arguments: map[string]any{"fail": false},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("call success case: %w", err)
+		return nil, nil, fmt.Errorf("call success case: %w", err)
 	}
 	failure, err := clientSession.CallTool(ctx, &mcp.CallToolParams{
 		Name:      toolName,
 		Arguments: map[string]any{"fail": true},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("call failure case: %w", err)
+		return nil, nil, fmt.Errorf("call failure case: %w", err)
 	}
+	return success, failure, nil
+}
+
+func verifyEvidenceCases(success, failure *mcp.CallToolResult) error {
 	if value, ok := structuredSuccess(success); !ok || !value || success.IsError {
-		return nil, errors.New("the official MCP client observed an inconsistent success result")
+		return errors.New("the official MCP client observed an inconsistent success result")
 	}
 	if value, ok := structuredSuccess(failure); !ok || value || !failure.IsError {
-		return nil, errors.New("the official MCP client observed an inconsistent failure result")
+		return errors.New("the official MCP client observed an inconsistent failure result")
 	}
+	return nil
+}
 
+func prepareOutputDirectory(outputDirectory string) (string, error) {
 	absOutput, err := filepath.Abs(outputDirectory)
 	if err != nil {
-		return nil, fmt.Errorf("resolve output directory: %w", err)
+		return "", fmt.Errorf("resolve output directory: %w", err)
 	}
 	if err := os.MkdirAll(absOutput, 0o755); err != nil {
-		return nil, fmt.Errorf("create output directory: %w", err)
+		return "", fmt.Errorf("create output directory: %w", err)
 	}
-	metadata := map[string]any{
+	return absOutput, nil
+}
+
+func evidenceMetadata(absOutput string) map[string]any {
+	return map[string]any{
 		"evidence_kind":             "qzx_maintained_reference",
 		"independent_adoption":      false,
 		"protocol":                  protocolVersion,
@@ -212,6 +236,9 @@ func run(outputDirectory string) (map[string]any, error) {
 			"evidence-metadata.json",
 		},
 	}
+}
+
+func writeEvidenceFiles(absOutput string, toolDefinition *mcp.Tool, success, failure *mcp.CallToolResult, metadata map[string]any) error {
 	for name, document := range map[string]any{
 		"tool-definition.json":   toolDefinition,
 		"success.json":           success,
@@ -219,8 +246,46 @@ func run(outputDirectory string) (map[string]any, error) {
 		"evidence-metadata.json": metadata,
 	} {
 		if err := writeJSON(filepath.Join(absOutput, name), document); err != nil {
-			return nil, fmt.Errorf("write %s: %w", name, err)
+			return fmt.Errorf("write %s: %w", name, err)
 		}
+	}
+	return nil
+}
+
+func run(outputDirectory string) (map[string]any, error) {
+	schemaBytes, contractSchema, err := loadContractSchema()
+	if err != nil {
+		return nil, err
+	}
+	server := newEvidenceServer(schemaBytes)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	clientSession, cleanup, err := connectEvidenceClient(ctx, server)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+	if err := verifyProtocol(clientSession); err != nil {
+		return nil, err
+	}
+	toolDefinition, err := discoverToolDefinition(ctx, clientSession, contractSchema)
+	if err != nil {
+		return nil, err
+	}
+	success, failure, err := callEvidenceCases(ctx, clientSession)
+	if err != nil {
+		return nil, err
+	}
+	if err := verifyEvidenceCases(success, failure); err != nil {
+		return nil, err
+	}
+	absOutput, err := prepareOutputDirectory(outputDirectory)
+	if err != nil {
+		return nil, err
+	}
+	metadata := evidenceMetadata(absOutput)
+	if err := writeEvidenceFiles(absOutput, toolDefinition, success, failure, metadata); err != nil {
+		return nil, err
 	}
 	return metadata, nil
 }
