@@ -71,6 +71,40 @@ class TestFindUnusedCodeCommand:
         assert unused_func_details["type"] == "function"
         assert unused_func_details["file"] == "utils.py"
 
+    def test_large_source_reference_is_counted_but_marks_analysis_incomplete(self, tmp_path):
+        """A large source file must not create a false unused-code candidate."""
+        (tmp_path / "lib.py").write_text(
+            "def externally_used():\n    return 1\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "consumer.py").write_text(
+            "#" + ("x" * 1048600) + "\nexternally_used()\n",
+            encoding="utf-8",
+        )
+
+        result = self.command.execute(str(tmp_path))
+
+        assert result["success"] is False
+        assert result["analysis_complete"] is False
+        assert result["error_code"] == "source_scan_incomplete"
+        assert result["candidate_symbols"] == []
+        assert result["scan_issues"][0]["file"] == "consumer.py"
+        assert result["scan_issues"][0]["reason"] == "too_large_for_symbol_extraction"
+        assert "[INCOMPLETE]" in result["message"]
+
+    def test_python_syntax_error_marks_analysis_incomplete(self, tmp_path):
+        """A Python parse failure must be exposed instead of silently ignored."""
+        (tmp_path / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+
+        result = self.command.execute(str(tmp_path))
+
+        assert result["success"] is False
+        assert result["error_code"] == "source_scan_incomplete"
+        issue = result["scan_issues"][0]
+        assert issue["file"] == "broken.py"
+        assert issue["reason"] == "symbol_extraction_failed"
+        assert issue["error_type"] == "SyntaxError"
+
     def test_excludes_generated_and_dependency_directories(self, tmp_path):
         """Generated copies and dependencies must not create false positives."""
         source = tmp_path / "src"

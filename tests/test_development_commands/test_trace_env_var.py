@@ -5,7 +5,17 @@
 Tests for the traceEnvVar command
 """
 
+import qzx.commands.development._environment_trace_support as trace_support
 from qzx.commands.development.trace_env_var import TraceEnvVarCommand
+
+
+class UnreadableSourceTraceEnvVarCommand(TraceEnvVarCommand):
+    """Deterministic fake for source-file read failure."""
+
+    @staticmethod
+    def _open_source_file(_file_path):
+        raise OSError("synthetic read failure")
+
 
 class TestTraceEnvVarCommand:
     """
@@ -28,6 +38,46 @@ class TestTraceEnvVarCommand:
         assert result["success"] is False
         assert "cannot be empty" in result["error"]
         
+    def test_trace_reports_unreadable_source_as_incomplete(self, tmp_path):
+        """Unreadable source must not look like a complete zero-reference scan."""
+        app = tmp_path / "app.py"
+        app.write_text("import os\nport = os.getenv('PORT')\n", encoding="utf-8")
+        result = UnreadableSourceTraceEnvVarCommand().execute("PORT", str(tmp_path))
+
+        assert result["success"] is False
+        assert result["analysis_complete"] is False
+        assert result["error_code"] == "environment_trace_incomplete"
+        assert result["references_count"] == 0
+        assert result["scan_issues"] == [
+            {
+                "operation": "read_source_file",
+                "file": "app.py",
+                "error": "synthetic read failure",
+            }
+        ]
+
+    def test_trace_reports_large_source_as_incomplete(self, tmp_path):
+        """The 1 MiB safety bound must be visible instead of hiding references."""
+        app = tmp_path / "app.py"
+        app.write_text(
+            ("#" * trace_support.REFERENCE_SCAN_LIMIT_BYTES) + "\nPORT\n",
+            encoding="utf-8",
+        )
+
+        result = self.command.execute("PORT", str(tmp_path))
+
+        assert result["success"] is False
+        assert result["analysis_complete"] is False
+        assert result["error_code"] == "environment_trace_incomplete"
+        assert result["references_count"] == 0
+        assert len(result["scan_issues"]) == 1
+        issue = result["scan_issues"][0]
+        assert issue["operation"] == "scan_reference"
+        assert issue["file"] == "app.py"
+        assert issue["reason"] == "file_too_large"
+        assert issue["size_bytes"] > trace_support.REFERENCE_SCAN_LIMIT_BYTES
+        assert issue["limit_bytes"] == trace_support.REFERENCE_SCAN_LIMIT_BYTES
+
     def test_trace_in_env_files(self, tmp_path):
         """Test tracing an environment variable configured in env files"""
         # Create .env and .env.example

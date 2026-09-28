@@ -20,6 +20,7 @@ include scripts/validate_result_contract_evidence.py
 include scripts/verify_golden_core.py
 include scripts/verify_golden_core_release_quality.py
 include scripts/verify_distribution_artifacts.py
+include scripts/sdist_release_archive.py
 include scripts/distribution_artifact_contract.py
 include scripts/distribution_artifact_wheel.py
 include scripts/distribution_artifact_sdist.py

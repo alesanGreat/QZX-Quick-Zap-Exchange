@@ -168,9 +168,17 @@ def _operand_counts(content, language):
     return unique, total
 
 
+def _operator_pattern(operators):
+    parts = []
+    for operator in sorted(operators, key=len, reverse=True):
+        escaped = re.escape(operator)
+        parts.append(rf"\b{escaped}\b" if operator.isidentifier() else escaped)
+    return "|".join(parts)
+
+
 def calculate_halstead_metrics(_command, content, language):
     operators = OPERATORS.get(language, OPERATORS["javascript"])
-    pattern = "|".join(re.escape(operator) for operator in operators)
+    pattern = _operator_pattern(operators)
     unique_operators = len(set(re.findall(pattern, content))) or 1
     total_operators = len(re.findall(pattern, content))
     unique_operands, total_operands = _operand_counts(content, language)

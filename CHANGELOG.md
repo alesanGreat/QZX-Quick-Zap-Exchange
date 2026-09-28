@@ -5,6 +5,31 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.13 — 2026-09-27
+
+<!-- qzx-release-summary-en:
+This Alpha release materializes the accumulated post-0.2.2.0.12 development work into the public package: it decomposes large command, evidence, and release-validation flows into focused modules, strengthens filesystem and project-analysis behavior, and keeps QZX's public command surface coherent while expanding regression coverage.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha materializa en el paquete público el trabajo de desarrollo acumulado después de 0.2.2.0.12: descompone flujos grandes de comandos, evidencia y validación de releases en módulos enfocados, refuerza el comportamiento del sistema de archivos y del análisis de proyectos, y mantiene coherente la superficie pública de comandos de QZX mientras amplía la cobertura de regresión.
+-->
+
+### Materialize the current development line
+
+- Publish the accumulated development line after 0.2.2.0.12, including the
+  focused workflow splits across file, system, development, evidence, packaging,
+  and public-surface validation code.
+- Strengthen path identity, repository auditing, project-language analysis,
+  scaffold/tool probing, administrative-state detection, and related
+  cross-platform filesystem behavior.
+- Consolidate telemetry/runtime handling, native project-language build support,
+  source-distribution packaging, generated documentation, and the tests that
+  verify those contracts.
+- Preserve QZX's canonical public command vocabulary while making the internal
+  implementation and release evidence easier to validate independently.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.12 — 2026-09-25
 
 <!-- qzx-release-summary-en:

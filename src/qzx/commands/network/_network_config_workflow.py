@@ -19,17 +19,26 @@ def invalid_public_choice(value):
     }
 
 
-def _safe_interfaces(command):
+def _collection_issue(stage, error):
+    return {
+        "stage": stage,
+        "error": f"{type(error).__name__}: {error}",
+    }
+
+
+def _safe_interfaces(command, collection_issues):
     try:
         return command._collect_interfaces()
-    except Exception:
+    except Exception as exc:
+        collection_issues.append(_collection_issue("interfaces", exc))
         return {}, []
 
 
-def _safe_dns(command):
+def _safe_dns(command, collection_issues):
     try:
         return command._configured_dns_servers()
-    except Exception:
+    except Exception as exc:
+        collection_issues.append(_collection_issue("dns", exc))
         return []
 
 
@@ -43,7 +52,14 @@ def _unix_fallback(command):
     return {}, []
 
 
-def _native_fallback(command, is_windows, interfaces, vpns, dns_servers):
+def _native_fallback(
+    command,
+    is_windows,
+    interfaces,
+    vpns,
+    dns_servers,
+    collection_issues,
+):
     try:
         if is_windows:
             result = command._run_system_command(["ipconfig", "/all"])
@@ -63,7 +79,8 @@ def _native_fallback(command, is_windows, interfaces, vpns, dns_servers):
             vpns if interfaces else fallback_vpns,
             dns_servers or command._parse_resolv_conf(),
         )
-    except Exception:
+    except Exception as exc:
+        collection_issues.append(_collection_issue("native_fallback", exc))
         return interfaces, vpns, dns_servers
 
 
@@ -85,7 +102,7 @@ def _read_json(command, url, timeout):
         return json.loads(response.read().decode("utf-8"))
 
 
-def _public_info(command):
+def _public_info(command, collection_issues):
     info = _unknown_public_info()
     try:
         data = _read_json(command, "https://ipinfo.io/json", 4)
@@ -99,17 +116,25 @@ def _public_info(command):
             }
         )
         return info
-    except Exception:
-        pass
+    except Exception as exc:
+        collection_issues.append(_collection_issue("public_ipinfo", exc))
     try:
         data = _read_json(command, "https://api.ipify.org?format=json", 3)
         info["ip"] = data.get("ip", "unknown")
-    except Exception:
-        pass
+    except Exception as exc:
+        collection_issues.append(_collection_issue("public_ipify", exc))
     return info
 
 
-def _message(hostname, local_ips, interfaces, dns_servers, public, vpns):
+def _message(
+    hostname,
+    local_ips,
+    interfaces,
+    dns_servers,
+    public,
+    vpns,
+    collection_issues,
+):
     message = f"Network Diagnostics for host '{hostname}':\n"
     if local_ips:
         message += f"- Local IPs: {', '.join(local_ips)}\n"
@@ -127,6 +152,11 @@ def _message(hostname, local_ips, interfaces, dns_servers, public, vpns):
     message += f"- VPN Detected: {'YES' if active else 'NO'}"
     if active:
         message += f" (via: {', '.join(vpns)})"
+    if collection_issues:
+        message += (
+            f"\n- Diagnostics degraded: {len(collection_issues)} "
+            "collection issue(s); see collection_issues."
+        )
     return message
 
 
@@ -135,16 +165,28 @@ def execute_network_config(command, check_public=True):
     resolve_public = command._parse_bool(check_public)
     if resolve_public is None:
         return invalid_public_choice(check_public)
+    collection_issues = []
     is_windows = command._system_name().lower() == "windows"
     hostname, local_ips = command._local_hostname_and_ips()
-    interfaces, vpns = _safe_interfaces(command)
-    dns_servers = _safe_dns(command)
+    interfaces, vpns = _safe_interfaces(command, collection_issues)
+    dns_servers = _safe_dns(command, collection_issues)
     interfaces, vpns, dns_servers = _native_fallback(
-        command, is_windows, interfaces, vpns, dns_servers
+        command,
+        is_windows,
+        interfaces,
+        vpns,
+        dns_servers,
+        collection_issues,
     )
-    public = _public_info(command) if resolve_public else None
+    public = (
+        _public_info(command, collection_issues)
+        if resolve_public
+        else None
+    )
     return {
         "success": True,
+        "diagnostics_degraded": bool(collection_issues),
+        "collection_issues": collection_issues,
         "hostname": hostname,
         "local_ips": local_ips,
         "dns_servers": dns_servers,
@@ -152,6 +194,12 @@ def execute_network_config(command, check_public=True):
         "interfaces": interfaces,
         "public": public,
         "message": _message(
-            hostname, local_ips, interfaces, dns_servers, public, vpns
+            hostname,
+            local_ips,
+            interfaces,
+            dns_servers,
+            public,
+            vpns,
+            collection_issues,
         ),
     }

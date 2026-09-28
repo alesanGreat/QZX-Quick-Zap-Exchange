@@ -6,8 +6,8 @@ ScaffoldJava Command - Creates a basic scaffolding for a Java program
 """
 
 import os
-import subprocess
 
+from qzx.commands.development._scaffold_tool_probe import probe_tool
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
@@ -287,14 +287,6 @@ Thumbs.db
         """Convert snake_case project name to PascalCase class name."""
         return ''.join(word.capitalize() for word in project_name.split('_'))
 
-    def _is_maven_installed(self):
-        try:
-            subprocess.run(
-                ["mvn", "-version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-            return True
-        except FileNotFoundError:
-            return False
+    def _is_maven_installed(self, runner=None):
+        """Return whether Maven answers its version probe within the budget."""
+        return probe_tool(["mvn", "-version"], runner=runner)

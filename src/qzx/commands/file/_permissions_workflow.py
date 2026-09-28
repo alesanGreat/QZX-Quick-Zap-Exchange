@@ -30,7 +30,7 @@ def change_permissions(command, path, mode, recursive=False):
         result = _base_result(path, normalized_mode, recursive)
         if os.path.isfile(path):
             return _apply_single(command, path, normalized_mode, result)
-        if os.path.isdir(path) and recursive in {False, 0}:
+        if os.path.isdir(path) and recursive == 0:
             return _apply_single(command, path, normalized_mode, result)
         if os.path.isdir(path):
             return _apply_recursive(

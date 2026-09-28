@@ -5,6 +5,7 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 
 from cli_contract_support import (
@@ -14,7 +15,12 @@ from cli_contract_support import (
 )
 from qzx.commands.system.list_disk_devices import ListDiskDevicesCommand
 from qzx.commands.system.terminal import QZXTerminal
-from qzx.cli import _json_compatible, _parse_cli_request, _render_human
+from qzx.cli import (
+    _json_compatible,
+    _parse_cli_request,
+    _render_human,
+    _schedule_optional_telemetry,
+)
 from qzx.core.command_loader import CommandLoader
 
 
@@ -187,6 +193,20 @@ def test_usage_error_uses_exit_code_2():
     payload = json.loads(completed.stdout)
     assert completed.returncode == 2
     assert payload["error_code"] == "usage_error"
+
+
+def test_cli_telemetry_opt_out_skips_heavy_telemetry_imports(monkeypatch):
+    monkeypatch.setenv("QZX_TELEMETRY", "0")
+    monkeypatch.setenv("DO_NOT_TRACK", "1")
+    monkeypatch.delitem(sys.modules, "qzx.telemetry", raising=False)
+    monkeypatch.delitem(sys.modules, "qzx.usage_telemetry", raising=False)
+
+    _schedule_optional_telemetry(
+        {"success": True, "meta": {"command": "about"}}
+    )
+
+    assert "qzx.telemetry" not in sys.modules
+    assert "qzx.usage_telemetry" not in sys.modules
 
 
 def test_legacy_error_text_is_normalized_as_failure():

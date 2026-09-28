@@ -4,27 +4,75 @@ import os
 from collections import Counter
 from pathlib import Path
 
-import chardet
-
+# pathspec is required on both native and portable routes because QZX owns
+# ignore/reinclude accounting. Pygments is portable-only and is loaded lazily so
+# a native scan does not pay its import cost on every fresh process.
 try:
     import pathspec
-    import pygments
     from pathspec import GitIgnoreSpec
-    from pygments.lexers import get_lexer_for_filename, guess_lexer
-    from pygments.token import Comment, Text
-    from pygments.util import ClassNotFound
 
     LANGUAGE_DEPENDENCY_ERROR = None
 except ImportError as dependency_error:  # pragma: no cover - import isolation
     pathspec = None
-    pygments = None
     GitIgnoreSpec = None
-    get_lexer_for_filename = None
-    guess_lexer = None
-    Comment = None
-    Text = None
-    ClassNotFound = Exception
     LANGUAGE_DEPENDENCY_ERROR = dependency_error
+
+_PYGMENTS_MODULE = None
+_PYGMENTS_IMPORT_ERROR = None
+get_lexer_for_filename = None
+guess_lexer = None
+Comment = None
+ClassNotFound = Exception
+
+
+def _load_pygments():
+    global _PYGMENTS_MODULE
+    global _PYGMENTS_IMPORT_ERROR
+    global get_lexer_for_filename
+    global guess_lexer
+    global Comment
+    global ClassNotFound
+
+    if _PYGMENTS_MODULE is not None:
+        return _PYGMENTS_MODULE, None
+    if _PYGMENTS_IMPORT_ERROR is not None:
+        return None, _PYGMENTS_IMPORT_ERROR
+    try:
+        import pygments as module
+        from pygments.lexers import (
+            get_lexer_for_filename as filename_lexer,
+            guess_lexer as content_lexer,
+        )
+        from pygments.token import Comment as comment_token
+        from pygments.util import ClassNotFound as lexer_not_found
+    except ImportError as error:  # pragma: no cover - import isolation
+        _PYGMENTS_IMPORT_ERROR = error
+        return None, error
+
+    _PYGMENTS_MODULE = module
+    get_lexer_for_filename = filename_lexer
+    guess_lexer = content_lexer
+    Comment = comment_token
+    ClassNotFound = lexer_not_found
+    return module, None
+
+
+def portable_dependencies():
+    """Load portable-only dependencies on demand."""
+    pygments_module, error = _load_pygments()
+    return (
+        pygments_module,
+        pathspec,
+        LANGUAGE_DEPENDENCY_ERROR or error,
+    )
+
+
+def __getattr__(name):
+    """Preserve the historical portable.pygments internal seam lazily."""
+    if name != "pygments":
+        raise AttributeError(name)
+    module, _error = _load_pygments()
+    return module
 
 
 def initial_ignore_scopes(command, scan_root, ignore_sources, scan_errors):
@@ -115,6 +163,10 @@ def decode_text(content):
     try:
         return content.decode("utf-8-sig")
     except UnicodeDecodeError:
+        # UTF-8 and native scans do not need the encoding detector's import cost.
+        # Non-UTF-8 input still uses exactly the same complete-content detection.
+        import chardet
+
         detection = chardet.detect(content)
         encoding = detection.get("encoding")
         if encoding:
@@ -133,6 +185,9 @@ def is_generated(command, file_name, text):
 
 
 def detect_lexer(file_name, text):
+    _module, error = _load_pygments()
+    if error is not None:
+        raise error
     try:
         return get_lexer_for_filename(file_name, text, stripnl=False, ensurenl=False)
     except ClassNotFound:
@@ -144,31 +199,53 @@ def detect_lexer(file_name, text):
         return None
 
 
+def _mark_multiline_token(states, line_index, token_value, flag):
+    for piece in token_value.splitlines(keepends=True):
+        if line_index >= len(states):
+            break
+        if piece.strip():
+            states[line_index] |= flag
+        if piece.endswith(("\n", "\r")):
+            line_index += 1
+    return line_index
+
+
 def count_lines(text, lexer):
-    physical_lines = text.splitlines()
-    if not physical_lines:
+    """Classify all lexer tokens without allocating a dictionary per line."""
+    _module, error = _load_pygments()
+    if error is not None:
+        raise error
+    total = len(text.splitlines())
+    if not total:
         return {"total_lines": 0, "code_lines": 0, "comment_lines": 0, "blank_lines": 0}
-    states = [{"code": False, "comment": False} for _ in physical_lines]
+    # Bit 1 is code; bit 2 is comment. A mixed line is still a code line.
+    states = bytearray(total)
+    token_flags = {}
     line_index = 0
     for token_type, token_value in lexer.get_tokens(text):
-        for piece in token_value.splitlines(keepends=True):
-            if line_index >= len(states):
-                break
-            content_piece = piece.rstrip("\r\n")
-            if content_piece.strip():
-                if token_type in Comment:
-                    states[line_index]["comment"] = True
-                elif not (token_type in Text and not content_piece.strip()):
-                    states[line_index]["code"] = True
-            if piece.endswith(("\n", "\r")):
-                line_index += 1
-    code = sum(1 for state in states if state["code"])
-    comments = sum(1 for state in states if state["comment"] and not state["code"])
+        if line_index >= total:
+            continue  # Consume the full public token stream, including filters.
+        if token_value == "\n":
+            line_index += 1
+            continue
+        if not token_value.strip():
+            line_index += token_value.count("\n") + token_value.count("\r") - token_value.count("\r\n")
+            continue
+        flag = token_flags.get(token_type)
+        if flag is None:
+            flag = 2 if token_type in Comment else 1
+            token_flags[token_type] = flag
+        if "\n" not in token_value and "\r" not in token_value:
+            states[line_index] |= flag
+        else:
+            line_index = _mark_multiline_token(states, line_index, token_value, flag)
+    code = states.count(1) + states.count(3)
+    comments = states.count(2)
     return {
-        "total_lines": len(physical_lines),
+        "total_lines": total,
         "code_lines": code,
         "comment_lines": comments,
-        "blank_lines": len(physical_lines) - code - comments,
+        "blank_lines": total - code - comments,
     }
 
 

@@ -111,7 +111,9 @@ def _recent_commits(command, path):
     for row in rows:
         parts = row.split("|", 3)
         if len(parts) == 4:
-            commits.append(dict(zip(("hash", "author", "date", "subject"), parts)))
+            commits.append(
+                dict(zip(("hash", "author", "date", "subject"), parts, strict=True))
+            )
     return commits
 
 

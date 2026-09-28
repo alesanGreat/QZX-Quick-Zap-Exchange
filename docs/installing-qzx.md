@@ -116,7 +116,7 @@ run does not prove that the existing launcher works.
 These instructions use standard [Python module execution](https://docs.python.org/3/using/cmdline.html#cmdoption-m)
 and [pip's interpreter selection](https://pip.pypa.io/en/stable/user_guide/#running-pip),
 not a new QZX feature or an unpublished package version. See
-[pipx's installation guidance](https://pipx.pypa.io/stable/installation/) for its
+[pipx's installation guidance](https://pipx.pypa.io/latest/how-to/install-pipx.html) for its
 platform-specific PATH setup.
 
 ## If pip says `externally-managed-environment`
@@ -134,7 +134,7 @@ platform, then install QZX with:
 pipx install qzx
 ```
 
-The official [pipx installation guide](https://pipx.pypa.io/stable/installation/)
+The official [pipx installation guide](https://pipx.pypa.io/latest/how-to/install-pipx.html)
 contains current Windows, macOS, and Linux setup instructions.
 
 ## Verify before delegating work

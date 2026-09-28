@@ -5,10 +5,12 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import tomllib
 import unittest
 import uuid
@@ -23,6 +25,68 @@ from qzx.commands.development._python_scaffold_project import (
 )
 
 
+def _remove_tree_strict(path, attempts=12):
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            last_error = exc
+            if attempt + 1 == attempts:
+                break
+            time.sleep(min(0.05 * (attempt + 1), 0.25))
+        else:
+            return
+    raise last_error
+
+
+def _process_group_options():
+    if os.name == "nt":
+        return {
+            "creationflags": (
+                getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            )
+        }
+    return {"start_new_session": True}
+
+
+def _terminate_process_tree(process):
+    if process.poll() is not None:
+        return
+    if os.name == "nt":
+        taskkill = shutil.which("taskkill.exe") or shutil.which("taskkill")
+        if taskkill:
+            try:
+                subprocess.run(
+                    [taskkill, "/PID", str(process.pid), "/T", "/F"],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                    check=False,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except OSError:
+            pass
+    if process.poll() is None:
+        try:
+            process.kill()
+        except OSError:
+            pass
+    try:
+        process.wait(timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 class PythonStarterCase(unittest.TestCase):
     def setUp(self):
         self.root = (
@@ -30,24 +94,45 @@ class PythonStarterCase(unittest.TestCase):
             / f"qzx-python-starter-{uuid.uuid4().hex}"
         )
         self.root.mkdir(mode=0o777)
-        self.addCleanup(shutil.rmtree, self.root, True)
+        self.addCleanup(_remove_tree_strict, self.root)
 
     def create(self, name="starter_demo", **options):
         result = ScaffoldPythonCommand().execute(name, str(self.root), **options)
         self.assertTrue(result["success"], result)
         return result, Path(result["project_path"])
 
-    def run_process(self, args, cwd, **overrides):
+    def run_process(self, args, cwd, *, timeout=180, **overrides):
         environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
                            PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", DO_NOT_TRACK="1")
         environment.pop("PYTHONPATH", None)
         environment.update(overrides)
-        return subprocess.run(
-            args, cwd=cwd, env=environment, capture_output=True,
-            text=True, encoding="utf-8", errors="replace",
-            creationflags=(getattr(subprocess, "CREATE_NO_WINDOW", 0)
-                           | getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)),
+        process = subprocess.Popen(
+            args,
+            cwd=cwd,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            **_process_group_options(),
         )
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            _terminate_process_tree(process)
+            try:
+                stdout, stderr = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                stdout, stderr = "", ""
+            raise subprocess.TimeoutExpired(
+                args,
+                timeout,
+                output=stdout,
+                stderr=stderr,
+            ) from exc
+        return subprocess.CompletedProcess(args, process.returncode, stdout, stderr)
 
     def run_python(self, arguments, cwd, **overrides):
         completed = self.run_process([sys.executable, "-B", *arguments], cwd, **overrides)
@@ -260,7 +345,9 @@ raise SystemExit(entry.load()())
     def _assert_installed_wheel_launcher(self, wheel):
         """Verify the native launcher from a normal installation, not pip --target."""
         environment = self.root / "wheel-env"
-        self.run_python(["-m", "venv", str(environment)], self.root)
+        self.run_python(
+            ["-m", "venv", str(environment)], self.root, timeout=600
+        )
         binaries = environment / ("Scripts" if os.name == "nt" else "bin")
         interpreter = binaries / ("python.exe" if os.name == "nt" else "python")
         installed = self.run_process(
@@ -299,11 +386,17 @@ raise SystemExit(entry.load()())
     def test_editable_install_works_outside_the_project_directory(self):
         _, project = self.create()
         environment = self.root / "editable-env"
-        self.run_python(["-m", "venv", "--system-site-packages", str(environment)], self.root)
+        self.run_python(
+            ["-m", "venv", "--system-site-packages", str(environment)],
+            self.root,
+            timeout=600,
+        )
         interpreter = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
         completed = self.run_process(
             [str(interpreter), "-m", "pip", "install", "--no-index", "--no-deps",
-             "--no-build-isolation", "-e", str(project)], self.root,
+             "--no-build-isolation", "-e", str(project)],
+            self.root,
+            timeout=600,
         )
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         outside = self.run_process([str(interpreter), "-m", "starter_demo"], self.root)

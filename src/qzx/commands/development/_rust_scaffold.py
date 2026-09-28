@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-import subprocess
+
+from qzx.commands.development._scaffold_tool_probe import probe_tool
 
 
 BINARY_SOURCE = """fn main() {
@@ -155,18 +156,9 @@ def create_readme(project_path, project_name, is_binary, result):
     result["files_created"].append(readme_path)
 
 
-def cargo_installed():
-    """Return whether Cargo can be launched."""
-    try:
-        subprocess.run(
-            ["cargo", "--version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-        return True
-    except FileNotFoundError:
-        return False
+def cargo_installed(runner=None):
+    """Return whether Cargo answers its version probe within the budget."""
+    return probe_tool(["cargo", "--version"], runner=runner)
 
 
 def build_success_message(

@@ -96,9 +96,9 @@ def _state_lock(path):
             try:
                 backend = _acquire_state_lock(handle)
                 break
-            except OSError:
+            except OSError as exc:
                 if time.monotonic() >= deadline:
-                    raise TimeoutError("QZX usage telemetry state is busy.")
+                    raise TimeoutError("QZX usage telemetry state is busy.") from exc
                 time.sleep(_LOCK_RETRY_SECONDS)
         yield
     finally:

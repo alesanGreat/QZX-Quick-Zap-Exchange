@@ -11,7 +11,18 @@ from pathlib import Path
 CHUNK_SIZE = 1024 * 1024
 
 
-def execute_disk_speed(command, test_path=".", size_mib=50):
+def _unlink_path(path):
+    path.unlink()
+
+
+def execute_disk_speed(
+    command,
+    test_path=".",
+    size_mib=50,
+    *,
+    fsync_fn=None,
+    unlink_fn=None,
+):
     """Run the disk benchmark and guarantee fixture cleanup."""
     directory, requested_size, failure = _validated_request(
         command,
@@ -20,7 +31,17 @@ def execute_disk_speed(command, test_path=".", size_mib=50):
     )
     if failure is not None:
         return failure
-    return _benchmark_directory(command, directory, requested_size)
+    if fsync_fn is None:
+        fsync_fn = os.fsync
+    if unlink_fn is None:
+        unlink_fn = _unlink_path
+    return _benchmark_directory(
+        command,
+        directory,
+        requested_size,
+        fsync_fn,
+        unlink_fn,
+    )
 
 
 def _validated_request(command, test_path, size_mib):
@@ -53,7 +74,13 @@ def _validated_request(command, test_path, size_mib):
     )
 
 
-def _benchmark_directory(command, directory, requested_size):
+def _benchmark_directory(
+    command,
+    directory,
+    requested_size,
+    fsync_fn,
+    unlink_fn,
+):
     fixture_path = None
     result = None
     try:
@@ -63,6 +90,7 @@ def _benchmark_directory(command, directory, requested_size):
             directory,
             fixture_path,
             requested_size,
+            fsync_fn,
         )
     except OSError as exc:
         result = command._failure(
@@ -81,6 +109,7 @@ def _benchmark_directory(command, directory, requested_size):
             requested_size,
             fixture_path,
             result,
+            unlink_fn,
         )
     return result
 
@@ -100,6 +129,7 @@ def _run_benchmark(
     directory,
     fixture_path,
     requested_size,
+    fsync_fn,
 ):
     chunk = os.urandom(CHUNK_SIZE)
     clock_floor = time.get_clock_info("perf_counter").resolution
@@ -108,6 +138,7 @@ def _run_benchmark(
         requested_size,
         chunk,
         clock_floor,
+        fsync_fn,
     )
     bytes_read, read_duration = _read_fixture(
         fixture_path,
@@ -139,13 +170,14 @@ def _write_fixture(
     requested_size,
     chunk,
     clock_floor,
+    fsync_fn,
 ):
     started = time.perf_counter()
     with fixture_path.open("wb") as handle:
         for _ in range(requested_size):
             handle.write(chunk)
         handle.flush()
-        os.fsync(handle.fileno())
+        fsync_fn(handle.fileno())
     return max(time.perf_counter() - started, clock_floor)
 
 
@@ -205,11 +237,12 @@ def _cleanup_fixture(
     requested_size,
     fixture_path,
     result,
+    unlink_fn,
 ):
     if fixture_path is None or not fixture_path.exists():
         return result
     try:
-        fixture_path.unlink()
+        unlink_fn(fixture_path)
         return result
     except OSError as exc:
         if result is None:

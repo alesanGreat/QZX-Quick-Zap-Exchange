@@ -169,12 +169,9 @@ def parse_resolv_conf(path="/etc/resolv.conf"):
     servers = []
     if not os.path.exists(path):
         return servers
-    try:
-        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
-            for line in handle:
-                parts = line.strip().split()
-                if len(parts) >= 2 and parts[0] == "nameserver":
-                    servers.append(parts[1])
-    except Exception:
-        pass
+    with open(path, "r", encoding="utf-8", errors="ignore") as handle:
+        for line in handle:
+            parts = line.strip().split()
+            if len(parts) >= 2 and parts[0] == "nameserver":
+                servers.append(parts[1])
     return servers

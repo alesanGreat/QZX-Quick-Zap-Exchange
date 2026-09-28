@@ -5,8 +5,6 @@
 ScaffoldC Command - Creates a basic scaffolding for a C program
 """
 
-import subprocess
-
 from qzx.commands.development._c_scaffold_build import (
     create_cmake_files,
     create_gitignore,
@@ -19,6 +17,7 @@ from qzx.commands.development._c_scaffold_sources import (
     create_src_directory,
     create_tests_directory,
 )
+from qzx.commands.development._scaffold_tool_probe import probe_tool
 from qzx.core.command_base import CommandBase
 
 class ScaffoldCCommand(CommandBase):
@@ -133,20 +132,6 @@ class ScaffoldCCommand(CommandBase):
     def _create_gitignore(self, project_path, result):
         return create_gitignore(project_path, result)
 
-    def _is_gcc_installed(self):
-        """
-        Check if GCC is installed
-        
-        Returns:
-            bool: True if GCC is installed, False otherwise
-        """
-        try:
-            process = subprocess.run(
-                ["gcc", "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-            return process.returncode == 0
-        except FileNotFoundError:
-            return False 
+    def _is_gcc_installed(self, runner=None):
+        """Return whether GCC answers its version probe within the budget."""
+        return probe_tool(["gcc", "--version"], runner=runner)

@@ -66,16 +66,13 @@ class ListStartupProgramsCommand(CommandBase):
         """Extracts Name and Exec from desktop entry files on Unix"""
         name = None
         exec_cmd = None
-        try:
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("Name="):
-                        name = line.split("=", 1)[1].strip()
-                    elif line.startswith("Exec="):
-                        exec_cmd = line.split("=", 1)[1].strip()
-                    if name and exec_cmd:
-                        break
-        except Exception:
-            pass
+        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("Name="):
+                    name = line.split("=", 1)[1].strip()
+                elif line.startswith("Exec="):
+                    exec_cmd = line.split("=", 1)[1].strip()
+                if name and exec_cmd:
+                    break
         return name, exec_cmd

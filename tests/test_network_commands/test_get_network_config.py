@@ -40,6 +40,51 @@ class ProviderBackedNetworkConfigCommand(GetNetworkConfigCommand):
         return FakeResponse()
 
 
+class PublicLookupFailureNetworkConfigCommand(GetNetworkConfigCommand):
+    """Keep local probes deterministic while both public providers fail."""
+
+    @staticmethod
+    def _system_name():
+        return "Linux"
+
+    @staticmethod
+    def _local_hostname_and_ips():
+        return "qzx-test", ["192.0.2.10"]
+
+    @staticmethod
+    def _collect_interfaces():
+        return (
+            {
+                "eth0": {
+                    "ipv4": ["192.0.2.10"],
+                    "ipv6": [],
+                    "description": "eth0",
+                    "mac": "",
+                    "is_up": True,
+                    "speed_mbps": 1000,
+                    "mtu": 1500,
+                }
+            },
+            [],
+        )
+
+    @staticmethod
+    def _configured_dns_servers():
+        return ["192.0.2.53"]
+
+    @staticmethod
+    def _run_system_command(_command):
+        return SimpleNamespace(returncode=1, stdout="", stderr="")
+
+    @staticmethod
+    def _parse_resolv_conf():
+        return ["192.0.2.53"]
+
+    @staticmethod
+    def _open_url(_request, timeout):
+        raise OSError(f"synthetic provider outage after {timeout}s")
+
+
 class ResolverFallbackNetworkConfigCommand(GetNetworkConfigCommand):
     """Exercise the Unix resolver fallback through explicit fake boundaries."""
 
@@ -77,6 +122,16 @@ class ResolverFallbackNetworkConfigCommand(GetNetworkConfigCommand):
         return ["192.0.2.53"]
 
 
+class UnreadableResolverFallbackNetworkConfigCommand(
+    ResolverFallbackNetworkConfigCommand
+):
+    """Expose resolver-file read failures instead of returning empty DNS silently."""
+
+    @staticmethod
+    def _parse_resolv_conf():
+        raise PermissionError("synthetic resolv.conf access denied")
+
+
 def test_local_network_config_comes_from_the_real_host():
     result = GetNetworkConfigCommand().execute(check_public=False)
 
@@ -105,6 +160,8 @@ def test_public_network_lookup_returns_structured_provider_data():
     result = ProviderBackedNetworkConfigCommand().execute(check_public=True)
 
     assert result["success"] is True
+    assert result["diagnostics_degraded"] is False
+    assert result["collection_issues"] == []
     assert result["public"] == {
         "ip": "203.0.113.10",
         "country": "CO",
@@ -114,12 +171,50 @@ def test_public_network_lookup_returns_structured_provider_data():
     }
 
 
+def test_public_provider_failures_remain_visible_without_losing_local_data():
+    result = PublicLookupFailureNetworkConfigCommand().execute(check_public=True)
+
+    assert result["success"] is True
+    assert result["diagnostics_degraded"] is True
+    assert [issue["stage"] for issue in result["collection_issues"]] == [
+        "public_ipinfo",
+        "public_ipify",
+    ]
+    assert result["public"]["ip"] == "unknown"
+    assert result["interfaces"]["eth0"]["ipv4"] == ["192.0.2.10"]
+    assert "Diagnostics degraded: 2" in result["message"]
+
+
 def test_resolver_backend_failure_degrades_to_resolv_conf():
     result = ResolverFallbackNetworkConfigCommand().execute(check_public=False)
 
     assert result["success"] is True
+    assert result["diagnostics_degraded"] is True
     assert result["interfaces"]["eth0"]["ipv4"] == ["192.0.2.10"]
     assert result["dns_servers"] == ["192.0.2.53"]
+    assert result["collection_issues"] == [
+        {
+            "stage": "dns",
+            "error": "ImportError: resolver unavailable",
+        }
+    ]
+
+
+def test_resolver_file_read_failure_is_reported_as_degraded():
+    result = UnreadableResolverFallbackNetworkConfigCommand().execute(
+        check_public=False
+    )
+
+    assert result["success"] is True
+    assert result["diagnostics_degraded"] is True
+    assert result["dns_servers"] == []
+    assert [issue["stage"] for issue in result["collection_issues"]] == [
+        "dns",
+        "native_fallback",
+    ]
+    assert "PermissionError: synthetic resolv.conf access denied" in (
+        result["collection_issues"][1]["error"]
+    )
 
 
 def test_native_network_output_decodes_problematic_bytes_without_crashing():

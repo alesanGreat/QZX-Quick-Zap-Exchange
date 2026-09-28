@@ -204,6 +204,16 @@ def test_analyze_complexity_processes_directories(tmp_path):
     assert result["details"]["files_analyzed"] == 1
 
 
+def test_analyze_complexity_halstead_counts_complete_operator_tokens():
+    metrics = AnalyzeComplexityCommand()._calculate_halstead_metrics(
+        "print(this == value)\nvalue += other ** 2\n",
+        "python",
+    )
+
+    assert metrics["total_operators"] == 3
+    assert metrics["unique_operators"] == 3
+
+
 def test_analyze_complexity_rejects_unknown_detail_level(tmp_path):
     result = AnalyzeComplexityCommand().execute(
         str(tmp_path),
@@ -212,6 +222,56 @@ def test_analyze_complexity_rejects_unknown_detail_level(tmp_path):
 
     assert result["success"] is False
     assert result["error_code"] == "invalid_detail_level"
+
+
+class _FailingAnalyzeComplexityCommand(AnalyzeComplexityCommand):
+    def _analyze_file(self, file_path):
+        if os.path.basename(file_path) == "broken.py":
+            return {
+                "file_path": file_path,
+                "language": "python",
+                "error": "synthetic read failure",
+            }
+        return super()._analyze_file(file_path)
+
+
+def test_analyze_complexity_reports_partial_analysis_as_failure(tmp_path):
+    (tmp_path / "good.py").write_text(
+        "def sample():\n    return 1\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "broken.py").write_text("ignored\n", encoding="utf-8")
+
+    result = _FailingAnalyzeComplexityCommand().execute(
+        str(tmp_path),
+        recursive=False,
+        detail_level="summary",
+    )
+
+    assert result["success"] is False
+    assert result["analysis_complete"] is False
+    assert result["error_code"] == "complexity_analysis_incomplete"
+    assert result["details"]["files_seen"] == 2
+    assert result["details"]["files_analyzed"] == 1
+    assert result["details"]["failed_files"] == 1
+    assert result["details"]["scan_issues"][0]["error"] == "synthetic read failure"
+    assert "good.py" in result["report"]
+
+
+def test_analyze_complexity_all_failed_files_returns_structured_failure(tmp_path):
+    (tmp_path / "broken.py").write_text("ignored\n", encoding="utf-8")
+
+    result = _FailingAnalyzeComplexityCommand().execute(
+        str(tmp_path),
+        recursive=False,
+        detail_level="detailed",
+    )
+
+    assert result["success"] is False
+    assert result["analysis_complete"] is False
+    assert result["details"]["files_analyzed"] == 0
+    assert result["details"]["failed_files"] == 1
+    assert "report" not in result
 
 
 def test_change_permissions_processes_directory_recursively_without_real_acl_mutation(

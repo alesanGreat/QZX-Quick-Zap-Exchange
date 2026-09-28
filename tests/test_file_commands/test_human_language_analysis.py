@@ -78,6 +78,38 @@ def test_mixed_language_fixture_sections_are_preserved(tmp_path):
     assert stats["word_count_by_language"]["spanish"] > 0
 
 
+def test_invalid_comment_pattern_fails_closed_instead_of_skipping_filter(
+    tmp_path,
+):
+    target = tmp_path / "sample.py"
+    target.write_text("# comentario\nvalue = 1\n", encoding="utf-8")
+    command = _command_with_words()
+    command.COMMENT_PATTERNS = {"python": ["("]}
+
+    result = command.execute(
+        str(target),
+        ignore_comments=True,
+        min_word_length=2,
+    )
+
+    assert result["success"] is False
+    assert result["error_code"] == "partial_analysis_failure"
+    assert "unterminated subpattern" in result["file_stats"][str(target)]["error"]
+
+
+def test_invalid_code_pattern_fails_closed_instead_of_skipping_filter(tmp_path):
+    target = tmp_path / "sample.py"
+    target.write_text("value = 1\n", encoding="utf-8")
+    command = _command_with_words()
+    command.CODE_PATTERNS = {"python": ["("]}
+
+    result = command.execute(str(target), min_word_length=2)
+
+    assert result["success"] is False
+    assert result["error_code"] == "partial_analysis_failure"
+    assert "unterminated subpattern" in result["file_stats"][str(target)]["error"]
+
+
 def test_detect_word_language_recognizes_major_non_latin_scripts():
     command = _command_with_words()
 

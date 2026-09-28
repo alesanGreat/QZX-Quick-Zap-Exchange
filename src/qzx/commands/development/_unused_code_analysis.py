@@ -28,20 +28,43 @@ def _source_files(command, path):
     ]
 
 
-def _read_sources(paths):
-    counts, contents = {}, {}
-    word_pattern = re.compile(r"\b[A-Za-z0-9_]+\b")
+_MAX_SYMBOL_CONTENT_BYTES = 1024 * 1024
+_WORD_PATTERN = re.compile(r"\b[A-Za-z0-9_]+\b")
+
+
+def _scan_issue(path, root, reason, **details):
+    issue = {
+        "file": os.path.relpath(path, root).replace(os.path.sep, "/"),
+        "reason": reason,
+    }
+    issue.update(details)
+    return issue
+
+
+def _read_sources(paths, root):
+    counts, contents, issues = {}, {}, []
     for path in paths:
         try:
-            if os.path.getsize(path) > 1024 * 1024:
-                continue
+            size_bytes = os.path.getsize(path)
             with open(path, "r", encoding="utf-8", errors="replace") as handle:
+                if size_bytes > _MAX_SYMBOL_CONTENT_BYTES:
+                    counts[path] = Counter()
+                    for line in handle:
+                        counts[path].update(_WORD_PATTERN.findall(line))
+                    issues.append(_scan_issue(
+                        path, root, "too_large_for_symbol_extraction",
+                        size_bytes=size_bytes, limit_bytes=_MAX_SYMBOL_CONTENT_BYTES,
+                    ))
+                    continue
                 content = handle.read()
             contents[path] = content
-            counts[path] = Counter(word_pattern.findall(content))
-        except Exception:
-            pass
-    return counts, contents
+            counts[path] = Counter(_WORD_PATTERN.findall(content))
+        except OSError as exc:
+            issues.append(_scan_issue(
+                path, root, "source_read_failed",
+                error_type=type(exc).__name__, message=str(exc),
+            ))
+    return counts, contents, issues
 
 
 def _extract_symbols(command, paths, root, contents):
@@ -56,13 +79,21 @@ def _extract_symbols(command, paths, root, contents):
         ".java": command._extract_java_symbols, ".kt": command._extract_kotlin_symbols,
         ".cs": command._extract_csharp_symbols,
     }
-    symbols = []
+    symbols, issues = [], []
     for path in paths:
         if path not in contents:
             continue
         relative = os.path.relpath(path, root).replace(os.path.sep, "/")
-        extractors[os.path.splitext(path)[1].lower()](contents[path], path, relative, symbols)
-    return symbols
+        try:
+            extractors[os.path.splitext(path)[1].lower()](
+                contents[path], path, relative, symbols
+            )
+        except (SyntaxError, ValueError) as exc:
+            issues.append(_scan_issue(
+                path, root, "symbol_extraction_failed",
+                error_type=type(exc).__name__, message=str(exc),
+            ))
+    return symbols, issues
 
 
 def _candidates(symbols, token_counts):
@@ -81,15 +112,24 @@ def _candidates(symbols, token_counts):
     return candidates
 
 
-def _message(file_count, symbols, candidates):
+def _message(file_count, symbols, candidates, issues):
     message = (
         "Unused Code Candidate Report:\n"
         f"- Total files scanned: {file_count}\n"
+        f"- Files with incomplete symbol analysis: {len(issues)}\n"
         f"- Total symbols analyzed: {len(symbols)}\n"
         f"- Candidates requiring review: {len(candidates)}\n"
     )
+    if issues:
+        message += (
+            "\n[INCOMPLETE] Some source files could not be fully analyzed; "
+            "candidate findings below are partial.\n"
+        )
+        for issue in issues[:10]:
+            message += f"  - {issue['file']}: {issue['reason']}\n"
     if not candidates:
-        return message + "\nNo unused-code candidates were detected.\n"
+        suffix = " in successfully analyzed files" if issues else ""
+        return message + f"\nNo unused-code candidates were detected{suffix}.\n"
     message += "\nPotentially unused definitions (review dynamic or reflective uses before removal):\n"
     for index, symbol in enumerate(candidates[:15], 1):
         message += f"  {index}. [{symbol['type'].upper()}] '{symbol['name']}' at {symbol['file']}:{symbol['line_number']}\n"
@@ -107,13 +147,23 @@ def execute_unused_code_analysis(command, scan_path="."):
     paths = _source_files(command, root)
     if not paths:
         return {"success": True, "candidate_symbols_count": 0, "candidate_symbols": [], "message": "No supported source files found to analyze."}
-    token_counts, contents = _read_sources(paths)
-    symbols = _extract_symbols(command, paths, root, contents)
+    token_counts, contents, read_issues = _read_sources(paths, root)
+    symbols, extraction_issues = _extract_symbols(command, paths, root, contents)
+    issues = read_issues + extraction_issues
     candidates = _candidates(symbols, token_counts)
-    return {
-        "success": True, "scan_path": root,
+    result = {
+        "success": not issues, "scan_path": root,
+        "analysis_complete": not issues,
+        "files_scanned": len(paths),
         "analyzed_symbols_count": len(symbols),
         "candidate_symbols_count": len(candidates),
         "candidate_symbols": candidates,
-        "message": _message(len(paths), symbols, candidates),
+        "message": _message(len(paths), symbols, candidates, issues),
     }
+    if issues:
+        result.update({
+            "error": "Unused-code analysis was incomplete.",
+            "error_code": "source_scan_incomplete",
+            "scan_issues": issues,
+        })
+    return result

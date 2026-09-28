@@ -5,6 +5,7 @@
 
 import platform
 
+from qzx.commands.system import _startup_program_inventory
 from qzx.commands.system.list_startup_programs import ListStartupProgramsCommand
 
 
@@ -23,6 +24,8 @@ def test_execute_reads_the_real_platform_startup_sources():
         for item in result["startup_programs"]
     )
     assert isinstance(result["errors"], list)
+    assert result["analysis_complete"] is (not result["errors"])
+    assert result["diagnostics_degraded"] is bool(result["errors"])
     for item in result["startup_programs"]:
         assert item["name"]
         assert item["source"]
@@ -33,6 +36,30 @@ def test_execute_reads_the_real_platform_startup_sources():
         else:
             assert item["actionable"] is False
             assert any("empty command" in issue for issue in item["issues"])
+
+
+def test_windows_startup_folder_ignores_shell_metadata(tmp_path):
+    startup = tmp_path / "Startup"
+    startup.mkdir()
+    (startup / "desktop.ini").write_text(
+        "[.ShellClassInfo]\n",
+        encoding="utf-8",
+    )
+    (startup / "Launch QZX.lnk").write_text(
+        "synthetic shortcut",
+        encoding="utf-8",
+    )
+
+    items, errors = [], []
+    _startup_program_inventory._windows_folders(
+        ListStartupProgramsCommand(),
+        items,
+        errors,
+        folders=[(str(startup), "Test Startup Folder")],
+    )
+
+    assert errors == []
+    assert [item["name"] for item in items] == ["Launch QZX.lnk"]
 
 
 def test_desktop_entry_parser_reads_a_real_file(tmp_path):
@@ -48,6 +75,39 @@ def test_desktop_entry_parser_reads_a_real_file(tmp_path):
 
     assert name == "QZX Test App"
     assert command == "qzx version"
+
+
+def test_unreadable_desktop_entry_is_reported_without_hiding_other_entries(
+    tmp_path,
+):
+    autostart = tmp_path / "autostart"
+    autostart.mkdir()
+    unreadable = autostart / "broken.desktop"
+    unreadable.write_text("[Desktop Entry]\nName=Broken\n", encoding="utf-8")
+    valid = autostart / "valid.desktop"
+    valid.write_text(
+        "[Desktop Entry]\nName=Valid\nExec=qzx version\n",
+        encoding="utf-8",
+    )
+
+    class SelectiveParserCommand(ListStartupProgramsCommand):
+        def _parse_desktop_file(self, filepath):
+            if str(filepath) == str(unreadable):
+                raise PermissionError("synthetic access denied")
+            return super()._parse_desktop_file(filepath)
+
+    items, errors = [], []
+    _startup_program_inventory._unix_items(
+        SelectiveParserCommand(),
+        items,
+        errors,
+        paths=[(str(autostart), "Test Autostart")],
+    )
+
+    assert [item["name"] for item in items] == ["Valid"]
+    assert len(errors) == 1
+    assert str(unreadable) in errors[0]
+    assert "PermissionError: synthetic access denied" in errors[0]
 
 
 def test_desktop_entry_without_exec_is_reported_not_invented(tmp_path):

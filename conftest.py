@@ -53,13 +53,21 @@ def _make_inheritable_directory(parent: Path, prefix: str) -> Path:
 
 
 @pytest.fixture(scope="session")
-def qzx_test_temp_root():
-    """Session root with normal inherited permissions and strict cleanup."""
+def qzx_test_temp_root(pytestconfig):
+    """Session root with inherited ACLs, preferably inside pytest basetemp."""
 
-    root = _make_inheritable_directory(
-        Path(tempfile.gettempdir()).resolve(),
-        f"qzx-pytest-{os.getpid()}-",
-    )
+    configured_basetemp = getattr(pytestconfig.option, "basetemp", None)
+    if configured_basetemp:
+        parent = Path(configured_basetemp).resolve()
+        parent.mkdir(mode=0o777, parents=True, exist_ok=True)
+        root = parent / "q"
+        root.mkdir(mode=0o777)
+    else:
+        parent = Path(tempfile.gettempdir()).resolve()
+        root = _make_inheritable_directory(
+            parent,
+            f"qzx-pytest-{os.getpid()}-",
+        )
     try:
         yield root
     finally:

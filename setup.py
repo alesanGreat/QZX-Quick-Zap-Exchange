@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from setuptools import find_packages, setup
+from setuptools.command.sdist import sdist as SetuptoolsSdist
 from setuptools_rust import Binding, RustExtension
 
 
@@ -41,6 +42,26 @@ if distribution_helpers_spec is None or distribution_helpers_spec.loader is None
     raise RuntimeError("Unable to load the QZX distribution helpers.")
 distribution_helpers = importlib.util.module_from_spec(distribution_helpers_spec)
 distribution_helpers_spec.loader.exec_module(distribution_helpers)
+
+SDIST_ARCHIVE_HELPERS_PATH = PROJECT_ROOT / "scripts" / "sdist_release_archive.py"
+sdist_archive_helpers_spec = importlib.util.spec_from_file_location(
+    "qzx_sdist_archive_helpers",
+    SDIST_ARCHIVE_HELPERS_PATH,
+)
+if sdist_archive_helpers_spec is None or sdist_archive_helpers_spec.loader is None:
+    raise RuntimeError("Unable to load the QZX sdist archive helpers.")
+sdist_archive_helpers = importlib.util.module_from_spec(sdist_archive_helpers_spec)
+sdist_archive_helpers_spec.loader.exec_module(sdist_archive_helpers)
+
+
+class QzxSdist(SetuptoolsSdist):
+    """Normalize release metadata after setuptools creates the sdist."""
+
+    def make_distribution(self):
+        super().make_distribution()
+        for archive_file in self.archive_files or ():
+            sdist_archive_helpers.normalize_sdist_launcher_mode(Path(archive_file))
+
 
 test_environment_manifest = test_environment_sync.load_manifest()
 test_environment_sync.validate_manifest(
@@ -172,6 +193,7 @@ setup(
     rust_extensions=rust_extensions,
     options={"bdist_wheel": {"py_limited_api": "cp311"}},
     zip_safe=False,
+    cmdclass={"sdist": QzxSdist},
     entry_points={
         "console_scripts": [
             "qzx=qzx:main",

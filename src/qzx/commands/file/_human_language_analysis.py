@@ -206,25 +206,19 @@ def remove_comments(command, content, file_type):
     if file_type not in command.COMMENT_PATTERNS:
         return content
     for pattern in command.COMMENT_PATTERNS[file_type]:
-        try:
-            content = re.sub(
-                pattern,
-                " ",
-                content,
-                flags=re.MULTILINE | re.DOTALL,
-            )
-        except Exception:
-            continue
+        content = re.sub(
+            pattern,
+            " ",
+            content,
+            flags=re.MULTILINE | re.DOTALL,
+        )
     return content
 
 
 def filter_code(command, content):
     for patterns in command.CODE_PATTERNS.values():
         for pattern in patterns:
-            try:
-                content = re.sub(pattern, " ", content, flags=re.MULTILINE)
-            except Exception:
-                continue
+            content = re.sub(pattern, " ", content, flags=re.MULTILINE)
     return content
 
 

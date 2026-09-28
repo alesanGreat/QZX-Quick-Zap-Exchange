@@ -32,8 +32,13 @@ def _windows_registry(command, items, errors):
                     )
         except PermissionError:
             errors.append(f"Permission denied reading registry subkey: {label}")
-        except OSError:
+        except FileNotFoundError:
             pass
+        except OSError as exc:
+            errors.append(
+                f"Error reading registry subkey '{label}': "
+                f"{type(exc).__name__}: {exc}"
+            )
 
 
 def _startup_folders():
@@ -63,12 +68,14 @@ def _startup_folders():
     return folders
 
 
-def _windows_folders(command, items, errors):
-    for folder_path, label in _startup_folders():
+def _windows_folders(command, items, errors, folders=None):
+    for folder_path, label in (_startup_folders() if folders is None else folders):
         if not os.path.isdir(folder_path):
             continue
         try:
             for name in os.listdir(folder_path):
+                if name.casefold() == "desktop.ini":
+                    continue
                 full_path = os.path.join(folder_path, name)
                 if os.path.isfile(full_path):
                     items.append(
@@ -93,8 +100,8 @@ def _unix_paths():
     return paths
 
 
-def _unix_items(command, items, errors):
-    for folder_path, label in _unix_paths():
+def _unix_items(command, items, errors, paths=None):
+    for folder_path, label in (_unix_paths() if paths is None else paths):
         if not os.path.isdir(folder_path):
             continue
         try:
@@ -102,7 +109,14 @@ def _unix_items(command, items, errors):
                 if not name.endswith(".desktop"):
                     continue
                 full_path = os.path.join(folder_path, name)
-                display_name, launch = command._parse_desktop_file(full_path)
+                try:
+                    display_name, launch = command._parse_desktop_file(full_path)
+                except OSError as exc:
+                    errors.append(
+                        f"Error reading autostart file '{full_path}': "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                    continue
                 items.append(
                     command._startup_item(
                         name=display_name or name,
@@ -116,11 +130,12 @@ def _unix_items(command, items, errors):
             errors.append(f"Error reading autostart folder '{folder_path}': {str(exc)}")
 
 
-def _summary_message(items, actionable, issues):
+def _summary_message(items, actionable, issues, errors):
     message = "Startup Programs Audit Summary:\n"
     message += f"- Total startup items: {len(items)}\n"
     message += f"- Actionable entries: {actionable}\n"
     message += f"- Entries requiring attention: {issues}\n"
+    message += f"- Collection errors: {len(errors)}\n"
     if not items:
         return message + "- No startup entries identified."
     message += "\nDetected Startup Applications:\n"
@@ -144,11 +159,13 @@ def execute_startup_programs(command):
     issues = sum(bool(item["issues"]) for item in items)
     return {
         "success": True,
+        "analysis_complete": not errors,
+        "diagnostics_degraded": bool(errors),
         "os": platform.system(),
         "total_startup_programs": len(items),
         "actionable_startup_programs": actionable,
         "entries_with_issues": issues,
         "startup_programs": items,
         "errors": errors,
-        "message": _summary_message(items, actionable, issues),
+        "message": _summary_message(items, actionable, issues, errors),
     }

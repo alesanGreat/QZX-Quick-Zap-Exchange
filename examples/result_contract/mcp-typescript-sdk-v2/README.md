@@ -38,8 +38,8 @@ returning a public `CallToolResult`. Because QZX's 2026 profile validates the
 real wire contract, this example captures the JSON-RPC response at the HTTP
 transport boundary instead of manufacturing `resultType` after the call.
 
-See the official, version-pinned
-[`Supporting protocol revision 2026-07-28`](https://github.com/modelcontextprotocol/typescript-sdk/blob/v2.0.0/docs/migration/support-2026-07-28.md)
+See the official
+[`Supporting protocol revision 2026-07-28`](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/migration/support-2026-07-28.md)
 guide for those SDK behaviors.
 
 ## Reproduce locally

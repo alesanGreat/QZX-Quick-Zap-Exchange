@@ -5,8 +5,15 @@ import os
 import re
 import shutil
 import subprocess
-import urllib.parse
-import urllib.request
+
+from ._repository_audit_links import (
+    audit_markdown_links as _audit_markdown_links,
+    flush_markdown_links as _flush_markdown_links,
+)
+from ._repository_audit_results import (
+    record_finding as _finding,
+    record_scan_issue as _scan_issue,
+)
 
 IGNORED_DIRECTORIES = {
     ".git", "node_modules", "dist", "build", ".pytest_cache", "__pycache__",
@@ -18,10 +25,11 @@ TEXT_EXTENSIONS = {
     ".md", ".html", ".css", ".sh", ".bat",
 }
 BINARY_EXTENSIONS = {
-    ".exe", ".dll", ".so", ".dylib", ".o", ".obj", ".class", ".pyc",
+    ".exe", ".dll", ".so", ".dylib", ".o", ".obj", ".class", ".jar", ".pyc",
     ".zip", ".tar", ".gz", ".rar",
 }
 LOCKFILES = {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "composer.lock", "Cargo.lock"}
+MAX_AUDIT_FILES = 10_000
 SECRET_PATTERNS = (
     (re.compile(r"(?i)(api_key|apikey|secret|password|passwd|private_key|token)\s*[:=]\s*['\"]([a-zA-Z0-9_\-.=+/]{8,})['\"]"), "Potential hardcoded credentials/key"),
     (re.compile(r"AIzaSy[a-zA-Z0-9_-]{33}"), "Google API Key"),
@@ -34,15 +42,9 @@ def _new_results():
     return {
         "secrets": [], "large_files": [], "duplicates": [], "broken_links": [],
         "binaries": [], "gitignore_issues": [], "license": "missing",
-        "dependency_vulnerabilities": [],
+        "dependency_vulnerabilities": [], "scan_issues": [],
         "summary": {"risk_level": "low", "total_findings": 0, "findings": []},
     }
-
-
-def _finding(results, severity, category, message):
-    results["summary"]["findings"].append(
-        {"severity": severity, "category": category, "message": message}
-    )
 
 
 def _git_repository(path):
@@ -81,22 +83,22 @@ def _hash_file(path):
     return digest.hexdigest()
 
 
-def _audit_size_and_duplicate(path, relative, size, hashes, results):
+def _audit_size_and_duplicate(command, path, relative, size, hashes, results):
     if size > 500 * 1024:
         results["large_files"].append({"path": relative, "size_bytes": size})
         _finding(results, "low", "large_files", f"Large file in repository ({size // 1024} KB): {relative}")
     if size >= 5 * 1024 * 1024:
         return
     try:
-        digest = _hash_file(path)
+        digest = command._hash_file(path)
         original = hashes.get(digest)
         if original is None:
             hashes[digest] = relative
             return
         results["duplicates"].append({"file": relative, "duplicate_of": original, "size_bytes": size})
         _finding(results, "low", "duplicates", f"Duplicate file content: {relative} is identical to {original}")
-    except Exception:
-        pass
+    except Exception as exc:
+        _scan_issue(results, relative, "hash_file", exc)
 
 
 def _redacted_context(line, match):
@@ -121,89 +123,134 @@ def _audit_secrets(path, relative, size, results):
                         continue
                     results["secrets"].append({"file": relative, "line": line_number, "type": description, "context": _redacted_context(line, match)})
                     _finding(results, "critical", "secrets", f"Hardcoded secret ({description}) found in {relative} at line {line_number}")
-    except Exception:
-        pass
-
-
-def _local_link_path(link, root, repository):
-    clean = link.split("#")[0].split("?")[0]
-    if not clean:
-        return None
-    return os.path.join(repository, clean.lstrip("/")) if clean.startswith("/") else os.path.join(root, clean)
-
-
-def _inspect_http_link(command, link, parsed):
-    if command._is_documentation_placeholder_url(parsed):
-        return False, ""
-    if parsed.username is not None or parsed.password is not None:
-        return True, "Embedded URL credentials are unsafe; network check skipped"
-    if parsed.hostname is None:
-        return True, "HTTP URL has no hostname"
-    try:
-        request = urllib.request.Request(link, headers={"User-Agent": "QZX-Link-Checker"})
-        with command._open_url(request, timeout=2.0) as response:
-            return (True, f"HTTP {response.status}") if response.status >= 400 else (False, "")
     except Exception as exc:
-        return True, str(exc)
+        _scan_issue(results, relative, "scan_secrets", exc)
 
 
-def _inspect_link(command, link, root, repository):
-    if link.startswith("#"):
-        return False, ""
-    try:
-        parsed = urllib.parse.urlsplit(link)
-    except ValueError as exc:
-        return True, f"Invalid URL: {exc}"
-    scheme = parsed.scheme.casefold()
-    if scheme in {"irc", "ircs", "mailto", "sms", "tel", "xmpp"}:
-        return False, ""
-    if scheme in {"http", "https"}:
-        return _inspect_http_link(command, link, parsed)
-    target = _local_link_path(link, root, repository)
-    return (True, "Local file not found") if target and not os.path.exists(target) else (False, "")
-
-
-def _audit_markdown_links(command, path, root, relative, repository, results):
-    try:
-        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
-            links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", handle.read())
-        for text, link in links:
-            broken, reason = _inspect_link(command, link, root, repository)
-            if broken:
-                results["broken_links"].append({"file": relative, "link": link, "text": text, "reason": reason})
-                _finding(results, "low", "broken_links", f"Broken documentation link in {relative}: {link} ({reason})")
-    except Exception:
-        pass
-
-
-def _audit_file(command, path, root, repository, hashes, results):
+def _audit_file(
+    command,
+    path,
+    root,
+    repository,
+    hashes,
+    results,
+    link_cache=None,
+    pending_links=None,
+):
     relative = os.path.relpath(path, repository)
     if os.path.islink(path):
-        _audit_symlink(path, root, relative, results)
+        try:
+            _audit_symlink(path, root, relative, results)
+        except Exception as exc:
+            _scan_issue(results, relative, "inspect_symlink", exc)
         return
     try:
         size = os.path.getsize(path)
-    except Exception:
+    except Exception as exc:
+        _scan_issue(results, relative, "stat_file", exc)
         return
-    _audit_size_and_duplicate(path, relative, size, hashes, results)
+    _audit_size_and_duplicate(command, path, relative, size, hashes, results)
     extension = os.path.splitext(path)[1].lower()
     if extension in TEXT_EXTENSIONS:
         _audit_secrets(path, relative, size, results)
     if extension == ".md" and size < 500 * 1024:
-        _audit_markdown_links(command, path, root, relative, repository, results)
+        _audit_markdown_links(
+            command,
+            path,
+            root,
+            relative,
+            repository,
+            results,
+            link_cache,
+            pending_links,
+        )
 
 
-def _audit_files(command, repository, results):
-    scanned, hashes = 0, {}
+def _git_visible_files(repository, results):
+    """Return tracked and unignored untracked worktree files for a Git repository."""
+    try:
+        process = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+            cwd=repository,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    except Exception as exc:
+        _scan_issue(results, None, "list_audit_files", exc)
+        return None
+    if process.returncode != 0:
+        error = process.stderr.decode("utf-8", errors="replace").strip()
+        _scan_issue(
+            results,
+            None,
+            "list_audit_files",
+            error or f"git ls-files exited with {process.returncode}",
+        )
+        return None
+    paths = []
+    for encoded in process.stdout.split(b"\0"):
+        if not encoded:
+            continue
+        path = os.path.join(repository, os.fsdecode(encoded))
+        if os.path.lexists(path):
+            paths.append(path)
+    return paths
+
+
+def _iter_audit_files(repository, is_git, results):
+    if is_git:
+        git_files = _git_visible_files(repository, results)
+        if git_files is not None:
+            for path in git_files:
+                yield path, os.path.dirname(path)
+            return
+
     for root, directories, files in os.walk(repository):
-        directories[:] = [name for name in directories if name not in IGNORED_DIRECTORIES]
+        directories[:] = [
+            name
+            for name in directories
+            if name not in IGNORED_DIRECTORIES
+        ]
         for filename in files:
-            scanned += 1
-            if scanned > 10_000:
-                break
-            _audit_file(command, os.path.join(root, filename), root, repository, hashes, results)
-        if scanned > 10_000:
+            yield os.path.join(root, filename), root
+
+
+def _audit_files(command, repository, results, is_git=False):
+    scanned = 0
+    hashes = {}
+    link_cache = {}
+    pending_links = []
+    max_files = command.max_audit_files
+    for path, root in _iter_audit_files(repository, is_git, results):
+        if scanned >= max_files:
+            _scan_issue(
+                results,
+                None,
+                "scan_limit",
+                f"Repository scan stopped after {max_files} files.",
+                limit=max_files,
+            )
             break
+        _audit_file(
+            command,
+            path,
+            root,
+            repository,
+            hashes,
+            results,
+            link_cache,
+            pending_links,
+        )
+        scanned += 1
+    _flush_markdown_links(
+        command,
+        pending_links,
+        repository,
+        results,
+        link_cache,
+    )
+    return scanned
 
 
 def _audit_gitignore(repository, is_git, results):
@@ -218,8 +265,8 @@ def _audit_gitignore(repository, is_git, results):
             if missing:
                 results["gitignore_issues"].append({"issue": "missing_common_ignores", "missing": missing})
                 _finding(results, "medium", "gitignore", f"Missing recommended ignores in .gitignore: {', '.join(missing)}")
-        except Exception:
-            pass
+        except Exception as exc:
+            _scan_issue(results, ".gitignore", "read_gitignore", exc)
     _audit_tracked_env(repository, is_git, results)
 
 
@@ -231,8 +278,8 @@ def _audit_tracked_env(repository, is_git, results):
         if result.stdout.strip() == ".env":
             results["gitignore_issues"].append({"issue": "env_file_tracked", "message": ".env file is tracked in git!"})
             _finding(results, "critical", "gitignore", "Security Risk: .env file is tracked and committed in Git!")
-    except Exception:
-        pass
+    except Exception as exc:
+        _scan_issue(results, ".env", "inspect_tracked_env", exc)
 
 
 def _audit_binaries(repository, is_git, results):
@@ -241,13 +288,25 @@ def _audit_binaries(repository, is_git, results):
     try:
         tracked = subprocess.run(["git", "ls-files"], cwd=repository, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
         if tracked.returncode != 0:
+            _scan_issue(
+                results, None, "list_tracked_files",
+                tracked.stderr.strip() or f"git ls-files exited with {tracked.returncode}",
+            )
             return
         for path in tracked.stdout.splitlines():
+            absolute = os.path.join(repository, path)
+            if not os.path.lexists(absolute):
+                continue
             if os.path.splitext(path)[1].lower() in BINARY_EXTENSIONS:
                 results["binaries"].append(path)
-                _finding(results, "medium", "binaries", f"Binary/compiled file committed in Git: {path}")
-    except Exception:
-        pass
+                _finding(
+                    results,
+                    "medium",
+                    "binaries",
+                    f"Binary/compiled file committed in Git: {path}",
+                )
+    except Exception as exc:
+        _scan_issue(results, None, "list_tracked_files", exc)
 
 
 def _dependency_result(results, filename, command, process):
@@ -305,12 +364,32 @@ def execute_repository_audit(command, path="."):
     if not os.path.exists(repository):
         message = f"Path '{path}' does not exist."
         return {"success": False, "error": message, "message": message}
+    if not os.path.isdir(repository):
+        message = f"Path '{path}' is not a directory."
+        return {"success": False, "error": message, "message": message}
     is_git = _git_repository(repository)
     results = _new_results()
     _audit_license(repository, results)
-    _audit_files(command, repository, results)
+    files_scanned = _audit_files(command, repository, results, is_git=is_git)
     _audit_gitignore(repository, is_git, results)
     _audit_binaries(repository, is_git, results)
     _audit_dependencies(repository, results)
     _finalize(results)
-    return {"success": True, "message": "Repository audit completed.", "details": results}
+    complete = not results["scan_issues"]
+    result = {
+        "success": complete,
+        "analysis_complete": complete,
+        "files_scanned": files_scanned,
+        "message": (
+            "Repository audit completed."
+            if complete else "Repository audit completed with incomplete local file coverage."
+        ),
+        "details": results,
+    }
+    if not complete:
+        result.update({
+            "error": "Repository audit was incomplete.",
+            "error_code": "repository_scan_incomplete",
+            "scan_issues": results["scan_issues"],
+        })
+    return result

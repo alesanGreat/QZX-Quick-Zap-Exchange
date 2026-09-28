@@ -5,8 +5,6 @@
 ScaffoldCpp Command - Creates a basic scaffolding for a C++ program
 """
 
-import subprocess
-
 from qzx.commands.development._cpp_scaffold_build import (
     create_cmake_files,
     create_gitignore,
@@ -19,6 +17,7 @@ from qzx.commands.development._cpp_scaffold_sources import (
     create_src_directory,
     create_tests_directory,
 )
+from qzx.commands.development._scaffold_tool_probe import probe_tool
 from qzx.core.command_base import CommandBase
 
 class ScaffoldCppCommand(CommandBase):
@@ -159,51 +158,14 @@ class ScaffoldCppCommand(CommandBase):
     def _create_gitignore(self, project_path, result):
         return create_gitignore(project_path, result)
 
-    def _is_cpp_compiler_installed(self):
-        """
-        Check if a C++ compiler is installed
-        
-        Returns:
-            bool: True if a C++ compiler is installed, False otherwise
-        """
-        # Try g++ first
-        try:
-            process = subprocess.run(
-                ["g++", "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-            if process.returncode == 0:
-                return True
-        except FileNotFoundError:
-            pass
-        
-        # Try clang++ next
-        try:
-            process = subprocess.run(
-                ["clang++", "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-            if process.returncode == 0:
-                return True
-        except FileNotFoundError:
-            pass
-        
-        # Try cl.exe for Windows
-        try:
-            process = subprocess.run(
-                ["cl"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-            # cl.exe returns an error code even on help, but it should output something
-            if process.stderr or process.stdout:
-                return True
-        except FileNotFoundError:
-            pass
-        
-        return False 
+    def _is_cpp_compiler_installed(self, runner=None):
+        """Return whether a supported C++ compiler answers promptly."""
+        if probe_tool(["g++", "--version"], runner=runner):
+            return True
+        if probe_tool(["clang++", "--version"], runner=runner):
+            return True
+        return probe_tool(
+            ["cl"],
+            runner=runner,
+            accept_nonzero_output=True,
+        )

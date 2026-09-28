@@ -28,7 +28,7 @@ def _failure(path, detail_level):
 def _collect(command, path, recursive):
     if os.path.isfile(path):
         analysis = command._analyze_file(path)
-        return [analysis] if analysis else [], 1, int(bool(analysis))
+        return [analysis] if analysis else [], 1
     results = []
     total = 0
     for found_path in find_files(
@@ -42,7 +42,36 @@ def _collect(command, path, recursive):
         analysis = command._analyze_file(found_path)
         if analysis:
             results.append(analysis)
-    return results, total, len(results)
+    return results, total
+
+
+def _partition_analyses(results):
+    analyses = [item for item in results if "error" not in item]
+    issues = [item for item in results if "error" in item]
+    return analyses, issues
+
+
+def _incomplete_result(command, analyses, issues, total, level, details):
+    details.update(
+        failed_files=len(issues),
+        scan_issues=issues,
+    )
+    result = {
+        "success": False,
+        "analysis_complete": False,
+        "error_code": "complexity_analysis_incomplete",
+        "error": "One or more supported source files could not be analyzed completely.",
+        "message": (
+            f"Analyzed {len(analyses)} of {total} supported source file(s); "
+            f"{len(issues)} file(s) could not be analyzed."
+        ),
+        "details": details,
+    }
+    if analyses:
+        result["report"] = command._format_results(
+            analyses, total, len(analyses), level
+        )
+    return result
 
 
 def execute_complexity(command, file_path, recursive=False, detail_level="detailed"):
@@ -50,28 +79,32 @@ def execute_complexity(command, file_path, recursive=False, detail_level="detail
     if failure:
         return failure
     level = str(detail_level or "").strip().lower()
-    results, total, analyzed = _collect(command, file_path, recursive)
-    if not results:
+    results, total = _collect(command, file_path, recursive)
+    analyses, issues = _partition_analyses(results)
+    analyzed = len(analyses)
+    details = {
+        "path": os.path.abspath(file_path),
+        "files_seen": total,
+        "files_analyzed": analyzed,
+        "detail_level": level,
+        "analyses": analyses,
+    }
+    if issues:
+        return _incomplete_result(
+            command, analyses, issues, total, level, details
+        )
+    if not analyses:
+        details["supported_extensions"] = sorted(command.SUPPORTED_EXTENSIONS)
         return {
             "success": True,
+            "analysis_complete": True,
             "message": f"No supported source files were found in '{file_path}'.",
-            "details": {
-                "path": os.path.abspath(file_path),
-                "files_seen": total,
-                "files_analyzed": 0,
-                "supported_extensions": sorted(command.SUPPORTED_EXTENSIONS),
-            },
+            "details": details,
         }
-    report = command._format_results(results, total, analyzed, level)
     return {
         "success": True,
+        "analysis_complete": True,
         "message": f"Analyzed {analyzed} of {total} supported source file(s).",
-        "report": report,
-        "details": {
-            "path": os.path.abspath(file_path),
-            "files_seen": total,
-            "files_analyzed": analyzed,
-            "detail_level": level,
-            "analyses": results,
-        },
+        "report": command._format_results(analyses, total, analyzed, level),
+        "details": details,
     }

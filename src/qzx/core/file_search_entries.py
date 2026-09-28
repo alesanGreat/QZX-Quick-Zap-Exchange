@@ -66,3 +66,30 @@ def prune_directory_references(root, directories, on_error):
         if not is_path_reference(info):
             retained.append(name)
     directories[:] = retained
+
+
+def walk_directory_entries(directory, on_error=None):
+    """Yield top-down DirEntry batches without discarding enumeration metadata.
+
+    Callers can prune the yielded directory list in place, as with os.walk.
+    Keeping DirEntry objects avoids a second stat for every symlink/type check,
+    especially on Windows. Entries are never retained across separate scans.
+    Directory links are checked again before descending, including links that
+    a caller replaced while the generator was suspended.
+    """
+    pending = [os.fspath(directory)]
+    while pending:
+        root = pending.pop()
+        directories, files = [], []
+        for entry in _directory_entries(root, on_error):
+            try:
+                destination = directories if entry.is_dir() else files
+            except OSError as error:
+                if on_error:
+                    on_error(error)
+                continue
+            destination.append(entry)
+        yield root, directories, files
+        for entry in reversed(directories):
+            if not os.path.islink(entry.path):
+                pending.append(entry.path)

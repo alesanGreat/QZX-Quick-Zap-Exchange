@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyList};
 use serde::Serialize;
 use std::fs::{self, File};
 use std::io::Read;
@@ -29,20 +30,11 @@ struct NativeScanPayload {
     inaccurate_languages: Vec<String>,
 }
 
-fn looks_binary(path: &Path) -> bool {
-    let mut file = match File::open(path) {
-        Ok(file) => file,
-        Err(_) => return false,
-    };
-    let mut sample = [0_u8; 8192];
-    let read = match file.read(&mut sample) {
-        Ok(read) => read,
-        Err(_) => return false,
-    };
-    if read == 0 {
+fn looks_binary(bytes: &[u8]) -> bool {
+    let sample = &bytes[..bytes.len().min(8192)];
+    if sample.is_empty() {
         return false;
     }
-    let sample = &sample[..read];
     if sample.contains(&0) {
         return true;
     }
@@ -66,20 +58,8 @@ fn generated_name(path: &Path) -> bool {
         || name.ends_with(".min.cjs")
 }
 
-fn generated_header(path: &Path) -> bool {
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(_) => return false,
-    };
-    let mut bytes = Vec::new();
-    if file
-        .take(HEADER_LIMIT_BYTES)
-        .read_to_end(&mut bytes)
-        .is_err()
-    {
-        return false;
-    }
-    let text = String::from_utf8_lossy(&bytes);
+fn generated_header(bytes: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(bytes);
     let header = text
         .lines()
         .take(20)
@@ -97,17 +77,27 @@ fn generated_header(path: &Path) -> bool {
         })
 }
 
-fn exclusion_reason(path: &Path, size: u64, max_file_size_bytes: u64) -> Option<&'static str> {
+fn exclusion_reason(
+    path: &Path,
+    size: u64,
+    max_file_size_bytes: u64,
+) -> std::io::Result<Option<&'static str>> {
     if size > max_file_size_bytes {
-        return Some("oversized");
+        return Ok(Some("oversized"));
     }
-    if looks_binary(path) {
-        return Some("binary");
+    // Share one bounded read between both probes. Tokei still parses the
+    // complete source; this buffer is only for QZX's exclusion policy.
+    // Propagate I/O failure instead of reporting a false clean scan.
+    let file = File::open(path)?;
+    let mut bytes = Vec::with_capacity(size.min(HEADER_LIMIT_BYTES) as usize);
+    file.take(HEADER_LIMIT_BYTES).read_to_end(&mut bytes)?;
+    if looks_binary(&bytes) {
+        return Ok(Some("binary"));
     }
-    if generated_name(path) || generated_header(path) {
-        return Some("generated");
+    if generated_name(path) || generated_header(&bytes) {
+        return Ok(Some("generated"));
     }
-    None
+    Ok(None)
 }
 
 fn absolute_path(path: &Path) -> PathBuf {
@@ -146,27 +136,26 @@ fn collect_languages(scan_paths: Vec<String>, excluded_directory_names: Vec<Stri
     languages
 }
 
-fn serialize_payload(
+fn build_payload(
     mut files: Vec<NativeFileReport>,
     mut inaccurate_languages: Vec<String>,
-) -> PyResult<String> {
+) -> NativeScanPayload {
     files.sort_by(|left, right| left.path.cmp(&right.path));
     inaccurate_languages.sort();
     inaccurate_languages.dedup();
-    serde_json::to_string(&NativeScanPayload {
+    NativeScanPayload {
         engine: "Tokei",
         engine_version: TOKEI_VERSION,
         files,
         inaccurate_languages,
-    })
-    .map_err(|error| pyo3::exceptions::PyRuntimeError::new_err(error.to_string()))
+    }
 }
 
-fn scan_paths_json_impl(
+fn scan_paths_payload_impl(
     scan_paths: Vec<String>,
     excluded_directory_names: Vec<String>,
     max_file_size_bytes: u64,
-) -> PyResult<String> {
+) -> PyResult<NativeScanPayload> {
     let languages = collect_languages(scan_paths, excluded_directory_names);
     let mut files = Vec::new();
     let mut inaccurate_languages = Vec::new();
@@ -177,9 +166,7 @@ fn scan_paths_json_impl(
         }
         for report in &language.reports {
             let path = absolute_path(&report.name);
-            let size = fs::metadata(&path)
-                .map(|metadata| metadata.len())
-                .unwrap_or(0);
+            let size = fs::metadata(&path)?.len();
             let stats = report.stats.summarise();
             files.push(NativeFileReport {
                 path: path.to_string_lossy().into_owned(),
@@ -190,11 +177,76 @@ fn scan_paths_json_impl(
                 comment_lines: stats.comments,
                 blank_lines: stats.blanks,
                 inaccurate: language.inaccurate,
-                excluded_reason: exclusion_reason(&path, size, max_file_size_bytes),
+                excluded_reason: exclusion_reason(&path, size, max_file_size_bytes)?,
             });
         }
     }
-    serialize_payload(files, inaccurate_languages)
+    Ok(build_payload(files, inaccurate_languages))
+}
+
+fn scan_paths_json_impl(
+    scan_paths: Vec<String>,
+    excluded_directory_names: Vec<String>,
+    max_file_size_bytes: u64,
+) -> PyResult<String> {
+    let payload =
+        scan_paths_payload_impl(scan_paths, excluded_directory_names, max_file_size_bytes)?;
+    serde_json::to_string(&payload)
+        .map_err(|error| pyo3::exceptions::PyRuntimeError::new_err(error.to_string()))
+}
+
+fn payload_to_python(py: Python<'_>, payload: NativeScanPayload) -> PyResult<Py<PyAny>> {
+    let result = PyDict::new(py);
+    result.set_item("engine", payload.engine)?;
+    result.set_item("engine_version", payload.engine_version)?;
+
+    let files = PyList::empty(py);
+    for file in payload.files {
+        let item = PyDict::new(py);
+        item.set_item("path", file.path)?;
+        item.set_item("language", file.language)?;
+        item.set_item("bytes", file.bytes)?;
+        item.set_item("total_lines", file.total_lines)?;
+        item.set_item("code_lines", file.code_lines)?;
+        item.set_item("comment_lines", file.comment_lines)?;
+        item.set_item("blank_lines", file.blank_lines)?;
+        item.set_item("inaccurate", file.inaccurate)?;
+        match file.excluded_reason {
+            Some(reason) => item.set_item("excluded_reason", reason)?,
+            None => item.set_item("excluded_reason", py.None())?,
+        }
+        files.append(item)?;
+    }
+    result.set_item("files", files)?;
+    result.set_item("inaccurate_languages", payload.inaccurate_languages)?;
+    Ok(result.into_any().unbind())
+}
+
+#[pyfunction]
+fn scan_project(
+    py: Python<'_>,
+    scan_path: String,
+    excluded_directory_names: Vec<String>,
+    max_file_size_bytes: u64,
+) -> PyResult<Py<PyAny>> {
+    let payload = scan_paths_payload_impl(
+        vec![scan_path],
+        excluded_directory_names,
+        max_file_size_bytes,
+    )?;
+    payload_to_python(py, payload)
+}
+
+#[pyfunction]
+fn scan_projects(
+    py: Python<'_>,
+    scan_paths: Vec<String>,
+    excluded_directory_names: Vec<String>,
+    max_file_size_bytes: u64,
+) -> PyResult<Py<PyAny>> {
+    let payload =
+        scan_paths_payload_impl(scan_paths, excluded_directory_names, max_file_size_bytes)?;
+    payload_to_python(py, payload)
 }
 
 #[pyfunction]
@@ -221,6 +273,8 @@ fn scan_projects_json(
 
 #[pymodule]
 fn _project_languages_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_function(wrap_pyfunction!(scan_project, module)?)?;
+    module.add_function(wrap_pyfunction!(scan_projects, module)?)?;
     module.add_function(wrap_pyfunction!(scan_project_json, module)?)?;
     module.add_function(wrap_pyfunction!(scan_projects_json, module)?)?;
     Ok(())

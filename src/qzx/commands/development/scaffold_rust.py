@@ -166,6 +166,6 @@ class ScaffoldRustCommand(CommandBase):
             self._is_cargo_installed,
         )
 
-    def _is_cargo_installed(self):
+    def _is_cargo_installed(self, runner=None):
         """Preserve the Cargo availability hook."""
-        return cargo_installed()
+        return cargo_installed(runner=runner)

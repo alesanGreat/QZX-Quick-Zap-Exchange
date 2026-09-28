@@ -2,7 +2,8 @@
 
 import os
 import sys
-import time
+
+import psutil
 
 from qzx.commands.system.run_script import RunScriptCommand
 
@@ -127,34 +128,41 @@ def test_timeout_is_structured_and_retains_partial_output(tmp_path):
 
 
 def test_timeout_terminates_a_spawned_child_process(tmp_path):
-    marker = tmp_path / "child-survived.txt"
     child = tmp_path / "child.py"
     child.write_text(
-        "import pathlib, sys, time\n"
-        "time.sleep(4)\n"
-        "pathlib.Path(sys.argv[1]).write_text('survived', encoding='utf-8')\n",
+        "import time\n"
+        "time.sleep(60)\n",
         encoding="utf-8",
     )
     parent = tmp_path / "parent.py"
     parent.write_text(
         "import subprocess, sys, time\n"
-        "subprocess.Popen([sys.executable, sys.argv[1], sys.argv[2]])\n"
-        "print('spawned', flush=True)\n"
-        "time.sleep(20)\n",
+        "child = subprocess.Popen([sys.executable, sys.argv[1]])\n"
+        "print(child.pid, flush=True)\n"
+        "time.sleep(60)\n",
         encoding="utf-8",
     )
     command = RunScriptCommand()
-    command.timeout_seconds = 2
+    command.timeout_seconds = 5
 
-    result = command.execute(str(parent), str(child), str(marker))
+    result = command.execute(str(parent), str(child))
 
     assert result["success"] is False
     assert result["error_code"] == "script_timeout"
-    assert result["stdout"]["text"].splitlines() == ["spawned"]
+    output_lines = result["stdout"]["text"].splitlines()
+    assert len(output_lines) == 1
+    child_pid = int(output_lines[0])
     assert result["execution"]["termination"]["process_tree_confirmed"] is True
     assert result["execution"]["termination"]["root_process_stopped"] is True
-    time.sleep(4.5)
-    assert not marker.exists()
+    try:
+        assert not psutil.pid_exists(child_pid)
+    finally:
+        try:
+            leaked_child = psutil.Process(child_pid)
+            leaked_child.kill()
+            leaked_child.wait(timeout=5)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
+            pass
 
 
 def test_unsupported_and_missing_scripts_fail_without_execution(tmp_path):

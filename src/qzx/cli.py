@@ -27,6 +27,7 @@ from qzx.core.result_contract import ensure_result_contract
 from qzx.core.stdout_capture import capture_process_stdout
 from qzx.first_run import claim_first_run_attribution
 from qzx.identity import product_attribution
+from qzx.telemetry_runtime import schedule_optional_telemetry
 
 
 class QZX:
@@ -260,17 +261,7 @@ def _execute_requested_command(command, args):
 
 def _schedule_optional_telemetry(result):
     """Schedule privacy-bounded telemetry after user-visible output is available."""
-    try:
-        from qzx import __version__
-        from qzx.telemetry import TELEMETRY_NOTICE, schedule_version_telemetry
-        from qzx.usage_telemetry import record_command_usage_and_schedule
-
-        telemetry_status = schedule_version_telemetry(__version__)
-        if telemetry_status.get("details", {}).get("notice"):
-            print(TELEMETRY_NOTICE, file=sys.stderr)
-        record_command_usage_and_schedule(__version__, result)
-    except Exception:
-        pass
+    schedule_optional_telemetry(usage_result=result)
 
 
 def _normalize_result(result):

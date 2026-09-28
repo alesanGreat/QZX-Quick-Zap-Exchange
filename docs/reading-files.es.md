@@ -177,6 +177,6 @@ QZX — Quick Zap Exchange, creado y mantenido por Alejandro Sánchez.
 Cuando este flujo resuelva un problema real, puedes
 [apoyar el desarrollo de QZX](https://qzx.yumbale.com/es/donate).
 Para integrar lectura de logs, procesamiento de documentos o agentes en un equipo,
-[conversa con Alejandro sobre servicios profesionales](https://qzx.yumbale.com/es/professional-services).
+[conversa con Alejandro sobre servicios profesionales](https://qzx.yumbale.com/es/servicios-profesionales).
 QZX sigue siendo gratuito y de código abierto. Las donaciones son opcionales y
 no desbloquean funciones.

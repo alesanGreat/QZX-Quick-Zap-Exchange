@@ -6,8 +6,8 @@ ScaffoldGo Command - Creates a basic scaffolding for a Go program
 """
 
 import os
-import subprocess
 
+from qzx.commands.development._scaffold_tool_probe import probe_tool
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
@@ -260,14 +260,6 @@ go.work
 ''')
         result["files_created"].append(gitignore_path)
 
-    def _is_go_installed(self):
-        try:
-            subprocess.run(
-                ["go", "version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-            return True
-        except FileNotFoundError:
-            return False
+    def _is_go_installed(self, runner=None):
+        """Return whether Go answers its version probe within the budget."""
+        return probe_tool(["go", "version"], runner=runner)

@@ -13,14 +13,16 @@ multi_line_output = 3
 
 [tool.ruff]
 target-version = "py311"
+cache-dir = "~/.cache/ruff/qzx"
 
 [tool.ruff.lint]
 # Start with correctness checks that cannot be deferred as style debt.
-select = ["E9", "E722", "F401", "F63", "F7", "F82"]
+select = ["B", "E9", "E722", "F401", "F63", "F7", "F82"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
 
 [tool.cibuildwheel]
 build = "cp313-*"

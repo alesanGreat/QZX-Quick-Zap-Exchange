@@ -6,6 +6,7 @@ import re
 from qzx.core.recursive_findfiles_utils import find_files, parse_recursive_parameter
 
 ENV_NAMES = (".env", ".env.example", ".env.template", ".env.local", ".env.development")
+REFERENCE_SCAN_LIMIT_BYTES = 1024 * 1024
 SENSITIVE_PATTERN = re.compile(
     r"(?:secret|token|password|passwd|api[_-]?key|private[_-]?key)", re.I
 )
@@ -29,32 +30,56 @@ def _validate(var_name, project_path, recursive):
 
 
 def _environment_files(command, path, name):
-    return {
-        filename: command._parse_env_file_for_var(candidate, name)
-        for filename in ENV_NAMES
-        if os.path.isfile(candidate := os.path.join(path, filename))
-    }
+    diagnostics, issues = {}, []
+    for filename in ENV_NAMES:
+        candidate = os.path.join(path, filename)
+        if not os.path.isfile(candidate):
+            continue
+        info = command._parse_env_file_for_var(candidate, name)
+        diagnostics[filename] = info
+        if info.get("scan_error"):
+            issues.append({
+                "operation": "read_env_file",
+                "file": filename,
+                "error": info["scan_error"],
+            })
+    return diagnostics, issues
 
 
 def _reference(command, file_path, root, name, pattern, sensitive):
     references = []
+    relative = os.path.relpath(file_path, root).replace(os.path.sep, "/")
     try:
-        if os.path.getsize(file_path) > 1024 * 1024:
-            return references
-        with open(file_path, "r", encoding="utf-8", errors="replace") as handle:
+        size = os.path.getsize(file_path)
+    except Exception as exc:
+        return references, [{
+            "operation": "stat_source_file", "file": relative, "error": str(exc)
+        }]
+    if size > REFERENCE_SCAN_LIMIT_BYTES:
+        return references, [{
+            "operation": "scan_reference",
+            "file": relative,
+            "reason": "file_too_large",
+            "size_bytes": size,
+            "limit_bytes": REFERENCE_SCAN_LIMIT_BYTES,
+        }]
+    try:
+        with command._open_source_file(file_path) as handle:
             for line_number, line in enumerate(handle, 1):
                 if not pattern.search(line):
                     continue
                 fallback = command._detect_fallback_in_line(line, name)
                 references.append({
-                    "file": os.path.relpath(file_path, root).replace(os.path.sep, "/"),
+                    "file": relative,
                     "line_number": line_number,
                     "line_content": f"<reference to {name} redacted>" if sensitive else line.strip(),
                     "fallback_detected": "<redacted>" if sensitive and fallback is not None else fallback,
                 })
-    except Exception:
-        pass
-    return references
+    except Exception as exc:
+        return references, [{
+            "operation": "read_source_file", "file": relative, "error": str(exc)
+        }]
+    return references, []
 
 
 def _code_references(command, path, name, recursive):
@@ -64,15 +89,19 @@ def _code_references(command, path, name, recursive):
         candidates = [path]
     else:
         candidates = find_files(path, recursive=recursive, file_type="f")
-    references = []
+    references, issues = [], []
     for file_path in candidates:
         extension = os.path.splitext(file_path)[1].lower()
         if extension in command.SUPPORTED_EXTENSIONS:
-            references.extend(_reference(command, file_path, path, name, pattern, sensitive))
-    return references
+            file_references, file_issues = _reference(
+                command, file_path, path, name, pattern, sensitive
+            )
+            references.extend(file_references)
+            issues.extend(file_issues)
+    return references, issues
 
 
-def _message(name, path, env_files, references):
+def _message(name, path, env_files, references, issues):
     message = f"Environment Variable Trace completed for '{name}':\n- Project directory: {path}\n\nEnv File Status:\n"
     for filename, info in env_files.items():
         status = "DEFINED" if info["defined"] else "NOT DEFINED"
@@ -85,6 +114,8 @@ def _message(name, path, env_files, references):
         message += f"  - {reference['file']}:{reference['line_number']}: '{reference['line_content']}'{suffix}\n"
     if len(references) > 10:
         message += f"  ... and {len(references) - 10} more usage references.\n"
+    if issues:
+        message += f"\nAnalysis incomplete: {len(issues)} source/env file(s) could not be fully analyzed.\n"
     return message
 
 
@@ -94,22 +125,33 @@ def execute_environment_trace(command, var_name, project_path=".", recursive=Tru
     if error:
         return error
     name, path, recursion = request
-    env_files = _environment_files(command, path, name)
-    references = _code_references(command, path, name, recursion)
-    return {
-        "success": True,
+    env_files, env_issues = _environment_files(command, path, name)
+    references, reference_issues = _code_references(command, path, name, recursion)
+    issues = env_issues + reference_issues
+    complete = not issues
+    result = {
+        "success": complete,
+        "analysis_complete": complete,
         "var_name": name,
         "project_path": path,
         "env_files_diagnostics": env_files,
         "references_count": len(references),
         "references": references,
-        "message": _message(name, path, env_files, references),
+        "scan_issues": issues,
+        "message": _message(name, path, env_files, references, issues),
     }
+    if not complete:
+        result.update({
+            "error": "Environment variable trace was incomplete.",
+            "error_code": "environment_trace_incomplete",
+        })
+    return result
 
 
 def parse_env_file_for_var(_command, filepath, var_name):
     """Return masked definition state for one variable in one env file."""
     raw_value = None
+    scan_error = None
     try:
         with open(filepath, "r", encoding="utf-8", errors="replace") as handle:
             for source_line in handle:
@@ -122,8 +164,8 @@ def parse_env_file_for_var(_command, filepath, var_name):
                     if len(raw_value) >= 2 and raw_value[0] == raw_value[-1] and raw_value[0] in "\"'":
                         raw_value = raw_value[1:-1].strip()
                     break
-    except Exception:
-        pass
+    except Exception as exc:
+        scan_error = str(exc)
     if raw_value is None:
         masked = None
     elif not raw_value:
@@ -134,7 +176,14 @@ def parse_env_file_for_var(_command, filepath, var_name):
         masked = "<redacted>"
     else:
         masked = f"{raw_value[:2]}...{raw_value[-2:]}"
-    return {"defined": raw_value is not None, "value_found": raw_value is not None, "masked_value": masked}
+    result = {
+        "defined": raw_value is not None,
+        "value_found": raw_value is not None,
+        "masked_value": masked,
+    }
+    if scan_error is not None:
+        result["scan_error"] = scan_error
+    return result
 
 
 def detect_fallback_in_line(_command, line, var_name):

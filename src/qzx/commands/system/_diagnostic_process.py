@@ -169,7 +169,7 @@ def _finish_readers(
 
 
 def _mark_stuck_readers(readers, captures):
-    for reader, capture in zip(readers, captures):
+    for reader, capture in zip(readers, captures, strict=True):
         if reader.is_alive() and capture.read_error is None:
             capture.read_error = (
                 "{} did not terminate after its pipe was closed.".format(

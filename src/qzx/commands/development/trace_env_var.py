@@ -35,6 +35,11 @@ class TraceEnvVarCommand(CommandBase):
     _parse_env_file_for_var = parse_env_file_for_var
     _detect_fallback_in_line = detect_fallback_in_line
 
+    @staticmethod
+    def _open_source_file(file_path):
+        """Open one source file through an injectable deterministic seam."""
+        return open(file_path, "r", encoding="utf-8", errors="replace")
+
     def execute(self, var_name, project_path=".", recursive=True):
         """Return masked definitions and bounded source references."""
         return execute_environment_trace(self, var_name, project_path, recursive)

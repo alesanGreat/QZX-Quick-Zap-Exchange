@@ -41,7 +41,7 @@ from ._project_language_scan import (
     load_ignore_files,
     looks_binary,
     pathspec,
-    pygments,
+    portable_dependencies,
     record_error,
     relative_display,
 )
@@ -107,5 +107,10 @@ class ProjectLanguagesCommand(CommandBase):
 
     def execute(self, scan_path="."):
         return execute_project_languages(
-            self, scan_path, LANGUAGE_DEPENDENCY_ERROR, pygments, pathspec
+            self,
+            scan_path,
+            LANGUAGE_DEPENDENCY_ERROR,
+            None,
+            pathspec,
+            portable_dependency_loader=portable_dependencies,
         )

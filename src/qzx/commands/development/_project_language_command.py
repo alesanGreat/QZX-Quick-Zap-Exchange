@@ -178,21 +178,68 @@ def _assemble_result(target, complete, basis, summary, languages, supporting, ex
     }
 
 
-def execute_project_languages(command, scan_path, dependency_error, pygments_module, pathspec_module):
+def _prepare_portable_dependencies(
+    pygments_module,
+    pathspec_module,
+    portable_dependency_loader,
+):
+    if portable_dependency_loader is not None:
+        pygments_module, pathspec_module, error = portable_dependency_loader()
+        if error is not None:
+            return pygments_module, pathspec_module, missing_dependency_result(error)
+    if pygments_module is None or pathspec_module is None:
+        error = ImportError("Portable projectLanguages dependencies are unavailable")
+        return pygments_module, pathspec_module, missing_dependency_result(error)
+    return pygments_module, pathspec_module, None
+
+
+def _try_native_backend(
+    command,
+    target,
+    state,
+    native_available_func,
+    scan_native_func,
+):
+    is_available = native_available if native_available_func is None else native_available_func
+    native_scan = scan_native if scan_native_func is None else scan_native_func
+    if not is_available():
+        return state, None, False
+
+    # Backend-selection invariant: never race native and portable scans. Native is
+    # the fast path; a failed native attempt discards partial accounting before the
+    # portable fallback so the two engines can never contaminate one another.
+    try:
+        return state, native_scan(command, target, state), True
+    except Exception:
+        return _state(), None, False
+
+
+def execute_project_languages(
+    command, scan_path, dependency_error, pygments_module, pathspec_module, *,
+    native_available_func=None, scan_native_func=None, portable_dependency_loader=None,
+):
     if dependency_error is not None:
         return missing_dependency_result(dependency_error)
     target, failure = _target(scan_path)
     if failure:
         return failure
-    state = _state()
-    engine = None
-    if native_available():
-        try:
-            engine = scan_native(command, target, state)
-        except Exception:
-            state = _state()
-            _scan(command, target, state)
-    else:
+    state, engine, used_native = _try_native_backend(
+        command,
+        target,
+        _state(),
+        native_available_func,
+        scan_native_func,
+    )
+    if not used_native:
+        pygments_module, pathspec_module, dependency_failure = (
+            _prepare_portable_dependencies(
+                pygments_module,
+                pathspec_module,
+                portable_dependency_loader,
+            )
+        )
+        if dependency_failure is not None:
+            return dependency_failure
         _scan(command, target, state)
     return _result(
         command,

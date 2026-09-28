@@ -9,7 +9,11 @@ import urllib.request
 
 from qzx.core.command_base import CommandBase
 
-from ._repository_audit_support import execute_repository_audit
+from ._repository_audit_support import (
+    MAX_AUDIT_FILES,
+    _hash_file as hash_repository_file,
+    execute_repository_audit,
+)
 
 
 class AuditRepositoryCommand(CommandBase):
@@ -21,6 +25,7 @@ class AuditRepositoryCommand(CommandBase):
         "(secrets, large files, duplicates, .gitignore compliance, licenses)"
     )
     category = "development"
+    max_audit_files = MAX_AUDIT_FILES
 
     parameters = [
         {
@@ -86,6 +91,11 @@ class AuditRepositoryCommand(CommandBase):
     def _open_url(request, timeout):
         """Open one external documentation URL through an injectable seam."""
         return urllib.request.urlopen(request, timeout=timeout)
+
+    @staticmethod
+    def _hash_file(path):
+        """Hash one audited file through an injectable deterministic seam."""
+        return hash_repository_file(path)
 
     def execute(self, path="."):
         """Execute the repository audit."""

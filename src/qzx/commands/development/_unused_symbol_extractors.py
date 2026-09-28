@@ -10,19 +10,24 @@ def _append(symbols, name, kind, file_path, relative, line):
 
 
 def extract_python_symbols(_command, content, file_path, relative, symbols):
-    try:
-        tree = ast.parse(content, filename=file_path)
-        for node in tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if not node.name.startswith(("_", "test_")):
-                    _append(symbols, node.name, "function", file_path, relative, node.lineno)
-            elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
-                bases = {base.id if isinstance(base, ast.Name) else base.attr if isinstance(base, ast.Attribute) else "" for base in node.bases}
-                is_test = node.name.startswith("Test") and (relative.startswith("tests/") or os.path.basename(relative).startswith("test_"))
-                if "CommandBase" not in bases and not is_test:
-                    _append(symbols, node.name, "class", file_path, relative, node.lineno)
-    except Exception:
-        pass
+    tree = ast.parse(content, filename=file_path)
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if not node.name.startswith(("_", "test_")):
+                _append(symbols, node.name, "function", file_path, relative, node.lineno)
+        elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+            bases = {
+                base.id if isinstance(base, ast.Name)
+                else base.attr if isinstance(base, ast.Attribute)
+                else ""
+                for base in node.bases
+            }
+            is_test = node.name.startswith("Test") and (
+                relative.startswith("tests/")
+                or os.path.basename(relative).startswith("test_")
+            )
+            if "CommandBase" not in bases and not is_test:
+                _append(symbols, node.name, "class", file_path, relative, node.lineno)
 
 
 def extract_js_ts_symbols(_command, content, file_path, relative, symbols):

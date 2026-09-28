@@ -1,4 +1,15 @@
-"""Native Tokei adapter for projectLanguages."""
+"""Native Tokei adapter for projectLanguages.
+
+Performance contract: the default/``auto`` route must prefer a compatible native
+backend without running both backends just to decide which is faster. Python is
+the portability/recovery path when native code is unavailable, explicitly
+disabled, or rejects/fails a scan. Never choose a stale native binary merely to
+avoid Python; source-checkout cache entries must match the Rust source fingerprint.
+
+Remaining general optimizations are recorded next to the expensive boundaries
+below. They must preserve ignore rules, exclusions, symlink/error accounting,
+unclassified files, fresh filesystem state, and backend-specific result parity.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +19,9 @@ import json
 import os
 from collections import Counter
 from pathlib import Path
+
+from qzx.core.file_search_entries import walk_directory_entries
+from qzx.core.path_identity import canonical_path_key
 
 
 def _load_extension(path):
@@ -47,7 +61,8 @@ def _source_native_fingerprint():
     return digest.hexdigest()[:24]
 
 
-def _native_cache_candidates():
+def _native_cache_directory():
+    """Return the shared native cache root used by discovery and provisioning."""
     explicit_cache = os.environ.get("QZX_NATIVE_CACHE")
     if explicit_cache:
         cache_root = Path(explicit_cache).expanduser()
@@ -58,7 +73,11 @@ def _native_cache_candidates():
             os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")
         ) / "qzx" / "native"
 
-    project_cache = cache_root / "project_languages"
+    return cache_root / "project_languages"
+
+
+def _native_cache_candidates():
+    project_cache = _native_cache_directory()
     fingerprint = _source_native_fingerprint()
     if fingerprint:
         project_cache = project_cache / fingerprint
@@ -75,6 +94,14 @@ def _native_cache_candidates():
 
 
 def _load_native_module():
+    """Load the fastest compatible backend known without per-run benchmarking.
+
+    Order is deliberate: an installed/bundled native extension is cheapest to
+    discover; source checkouts may then use an explicit native path or a
+    source-fingerprint-matched cache. If none loads, callers retain Python.
+    A future build-time embedded fingerprint could reduce source-checkout hashing,
+    but must not be replaced by an mtime/size-only cache that can accept stale code.
+    """
     if os.environ.get("QZX_PROJECT_LANGUAGES_BACKEND", "auto").casefold() == "python":
         return None, "disabled by QZX_PROJECT_LANGUAGES_BACKEND=python"
     try:
@@ -104,7 +131,7 @@ def native_available():
 
 
 def _path_key(path):
-    return os.path.normcase(str(Path(path).resolve()))
+    return canonical_path_key(path)
 
 
 def _new_language(command, language):
@@ -126,7 +153,9 @@ def _new_language(command, language):
 
 def _record_native(command, record, scan_root, language_stats):
     language = str(record["language"])
-    stats = language_stats.setdefault(language, _new_language(command, language))
+    stats = language_stats.get(language)
+    if stats is None:
+        stats = language_stats[language] = _new_language(command, language)
     stats["file_count"] += 1
     stats["bytes"] += int(record["bytes"])
     stats["total_lines"] += int(record["total_lines"])
@@ -136,10 +165,12 @@ def _record_native(command, record, scan_root, language_stats):
     path = Path(record["path"])
     stats["extensions"][path.suffix.casefold() or "(no extension)"] += 1
     stats["detected_variants"][language] += 1
-    command._append_example(
-        stats["example_files"],
-        command._relative_display(path, scan_root),
-    )
+    # Resolve display paths only for examples that will actually be retained.
+    if len(stats["example_files"]) < command.MAX_EXAMPLES_PER_GROUP:
+        command._append_example(
+            stats["example_files"],
+            command._relative_display(path, scan_root),
+        )
 
 
 def _append_exclusion(command, state, reason, path, scan_root):
@@ -186,9 +217,10 @@ def _handle_metadata_file(
     state,
     native_status,
     included,
+    entry=None,
 ):
     state["counters"]["visited_files"] += 1
-    if path.is_symlink():
+    if entry.is_symlink() if entry is not None else path.is_symlink():
         state["counters"]["symlinks_skipped"] += 1
         return
     if scopes and command._is_ignored(path, False, scopes):
@@ -206,19 +238,26 @@ def _handle_metadata_file(
 
 def _retained_directories(command, root, directory_names, scopes, state):
     retained = []
-    for name in directory_names:
+    for item in directory_names:
+        entry = item if isinstance(item, os.DirEntry) else None
+        name = entry.name if entry is not None else item
         path = root / name
-        if path.is_symlink():
+        if entry.is_symlink() if entry is not None else path.is_symlink():
             state["counters"]["symlinks_skipped"] += 1
         elif name.casefold() in command.DEFAULT_EXCLUDED_DIRECTORIES:
             state["counters"]["ignored_directories"] += 1
         elif command._is_ignored(path, True, scopes):
             state["counters"]["ignored_directories"] += 1
         else:
-            retained.append(name)
+            retained.append(item)
     return retained
 
 
+# PERFORMANCE ROADMAP: Tokei already traversed these targets. This second pass
+# is intentional because QZX still owns ignore/reinclude semantics, symlink
+# counts, unknown files, exclusions and read-error accounting. The largest
+# remaining native-path win is moving that complete metadata contract into Rust;
+# remove this traversal only after exact parity tests.
 def _metadata_scan(command, target, state, native_status):
     scan_root = target if target.is_dir() else target.parent
     included = set()
@@ -238,11 +277,8 @@ def _metadata_scan(command, target, state, native_status):
         path = Path(getattr(error, "filename", scan_root))
         command._record_error(state["errors"], scan_root, path, error)
 
-    for root_text, directory_names, file_names in os.walk(
-        scan_root,
-        topdown=True,
-        followlinks=False,
-        onerror=record_walk_error,
+    for root_text, directory_names, file_entries in walk_directory_entries(
+        scan_root, on_error=record_walk_error,
     ):
         root = Path(root_text)
         if root != scan_root:
@@ -256,39 +292,54 @@ def _metadata_scan(command, target, state, native_status):
         directory_names[:] = _retained_directories(
             command, root, directory_names, scopes, state
         )
-        for name in file_names:
+        for entry in file_entries:
             _handle_metadata_file(
                 command,
-                root / name,
+                root / entry.name,
                 scopes,
                 scan_root,
                 state,
                 native_status,
                 included,
+                entry=entry,
             )
     return scan_root, included
 
 
-def _native_payload(command, targets):
-    if _NATIVE is None:
+def _native_payload(command, targets, *, native_module=None):
+    """Prefer zero-copy PyO3 objects while retaining the legacy JSON ABI."""
+    backend = _NATIVE if native_module is None else native_module
+    if backend is None:
         raise RuntimeError(NATIVE_IMPORT_ERROR or "native backend unavailable")
     paths = [str(Path(target).resolve()) for target in targets]
+    excluded = sorted(command.DEFAULT_EXCLUDED_DIRECTORIES)
+    max_bytes = int(command.MAX_FILE_SIZE_BYTES)
+
     if len(paths) == 1:
-        raw = _NATIVE.scan_project_json(
-            paths[0],
-            sorted(command.DEFAULT_EXCLUDED_DIRECTORIES),
-            int(command.MAX_FILE_SIZE_BYTES),
-        )
+        scanner = getattr(backend, "scan_project", None)
+        if scanner is not None:
+            payload = scanner(paths[0], excluded, max_bytes)
+        else:
+            payload = json.loads(
+                backend.scan_project_json(paths[0], excluded, max_bytes)
+            )
     else:
-        scanner = getattr(_NATIVE, "scan_projects_json", None)
-        if scanner is None:
-            raise RuntimeError("native backend does not support batch scanning")
-        raw = scanner(
-            paths,
-            sorted(command.DEFAULT_EXCLUDED_DIRECTORIES),
-            int(command.MAX_FILE_SIZE_BYTES),
+        scanner = getattr(backend, "scan_projects", None)
+        if scanner is not None:
+            payload = scanner(paths, excluded, max_bytes)
+        else:
+            json_scanner = getattr(backend, "scan_projects_json", None)
+            if json_scanner is None:
+                raise RuntimeError(
+                    "native backend does not support batch scanning"
+                )
+            payload = json.loads(json_scanner(paths, excluded, max_bytes))
+
+    if not isinstance(payload, dict):
+        raise RuntimeError(
+            "native projectLanguages backend returned a non-object payload"
         )
-    return json.loads(raw)
+    return payload
 
 
 def scan_native_records(command, targets):
@@ -296,6 +347,10 @@ def scan_native_records(command, targets):
 
 
 def _native_maps(payload):
+    if payload.get("inaccurate_languages"):
+        raise RuntimeError(
+            "Native parser reported incomplete language statistics; retry with the portable backend"
+        )
     native_status = {}
     records_by_key = {}
     for record in payload.get("files", []):
@@ -318,9 +373,7 @@ def _native_engine(payload):
     }
 
 
-def scan_native_many(command, targets, state):
-    payload = _native_payload(command, targets)
-    native_status, records_by_key = _native_maps(payload)
+def _populate_native_state(command, targets, state, native_status, records_by_key):
     included_roots = {}
 
     for target in targets:
@@ -340,7 +393,42 @@ def scan_native_many(command, targets, state):
         _record_native(command, record, scan_root, state["languages"])
         state["counters"]["recognized_files"] += 1
 
+
+
+def scan_native_many(command, targets, state):
+    payload = _native_payload(command, targets)
+    native_status, records_by_key = _native_maps(payload)
+    _populate_native_state(command, targets, state, native_status, records_by_key)
     return _native_engine(payload)
+
+
+def scan_native_groups(command, groups, *, payload_loader=None):
+    """Parse once for multiple projects, retaining full accounting per group."""
+    from ._project_language_command import _state, _target
+
+    resolved = []
+    for group in groups:
+        targets = []
+        for path in group:
+            target, failure = _target(path)
+            if failure:
+                raise ValueError(failure["message"])
+            targets.append(target)
+        if not targets:
+            raise ValueError("Every project group must contain at least one target")
+        resolved.append(targets)
+    if not resolved:
+        return []
+    loader = _native_payload if payload_loader is None else payload_loader
+    payload = loader(command, [path for group in resolved for path in group])
+    native_status, records_by_key = _native_maps(payload)
+    engine = _native_engine(payload)
+    results = []
+    for group in resolved:
+        state = _state()
+        _populate_native_state(command, group, state, native_status, records_by_key)
+        results.append(_build_batch_result(command, group, state, engine))
+    return results
 
 
 def scan_native(command, target, state):
@@ -353,6 +441,10 @@ def scan_native_batch_result(command, targets):
     resolved_targets = [Path(target).resolve() for target in targets]
     state = _state()
     engine = scan_native_many(command, resolved_targets, state)
+    return _build_batch_result(command, resolved_targets, state, engine)
+
+
+def _build_batch_result(command, resolved_targets, state, engine):
     languages, supporting, totals, basis = command._finalize_languages(state["languages"])
     error_count = state["errors"]["total"]
     summary = command._make_summary(

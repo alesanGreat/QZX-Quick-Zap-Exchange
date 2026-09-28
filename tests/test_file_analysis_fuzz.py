@@ -253,7 +253,9 @@ def test_distributed_sampling_obeys_one_budget_and_stays_inside_every_file(
             )
             assert all(
                 left.offset + left.requested_bytes <= right.offset
-                for left, right in zip(sample.segments, sample.segments[1:])
+                for left, right in zip(
+                    sample.segments, sample.segments[1:], strict=False
+                )
             )
         elif file_size:
             assert sample.strategy == "whole_file"

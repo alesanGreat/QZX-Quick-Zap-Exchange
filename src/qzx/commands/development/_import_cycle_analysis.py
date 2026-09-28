@@ -2,6 +2,7 @@
 
 import ast
 import os
+import tokenize
 
 from qzx.core.recursive_findfiles_utils import (
     SOURCE_ANALYSIS_EXCLUDED_DIRECTORIES,
@@ -54,34 +55,65 @@ def _resolve_import(import_name, module_to_file):
     return None
 
 
-def _import_graph(command, paths, module_to_file):
+def _source_parse_error(file_path, scan_path, exc):
+    error = {
+        "file": os.path.relpath(file_path, scan_path).replace(os.path.sep, "/"),
+        "error_type": type(exc).__name__,
+        "message": str(exc),
+    }
+    if isinstance(exc, SyntaxError):
+        error["line_number"] = exc.lineno
+        error["column"] = exc.offset
+    return error
+
+
+def _import_graph(command, paths, module_to_file, scan_path):
     graph = {}
+    parse_errors = []
     for file_path in paths:
+        try:
+            imports = command._parse_file_imports(file_path)
+        except (OSError, SyntaxError, UnicodeError, ValueError) as exc:
+            graph[file_path] = []
+            parse_errors.append(_source_parse_error(file_path, scan_path, exc))
+            continue
         resolved = {
             match
-            for imported in command._parse_file_imports(file_path)
+            for imported in imports
             if (match := _resolve_import(imported, module_to_file)) is not None
         }
         resolved.discard(file_path)
         graph[file_path] = list(resolved)
-    return graph
+    return graph, parse_errors
 
 
-def _format_message(paths, cycles, file_to_modules):
+def _format_message(paths, cycles, file_to_modules, parse_errors):
     message = (
         "Circular Import Dependency Diagnostics:\n"
         f"- Total Python files scanned: {len(paths)}\n"
+        f"- Python files not parsed: {len(parse_errors)}\n"
         f"- Detected circular import loops: {len(cycles)}\n"
     )
-    if not cycles:
+    if not cycles and not parse_errors:
         return message + "\n[OK] No circular import dependencies detected in the scanned files.\n"
-    message += "\n[WARNING] Circular import loops identified:\n"
-    for index, cycle in enumerate(cycles, 1):
-        modules = [
-            next(iter(file_to_modules.get(path, {os.path.basename(path)})))
-            for path in cycle
-        ]
-        message += f"  Loop #{index}:\n    " + " -> ".join(modules) + "\n"
+    if parse_errors:
+        message += (
+            "\n[INCOMPLETE] Some Python files could not be parsed; "
+            "the no-cycle conclusion is unavailable.\n"
+        )
+        for error in parse_errors[:10]:
+            message += (
+                f"  - {error['file']}: {error['error_type']}: "
+                f"{error['message']}\n"
+            )
+    if cycles:
+        message += "\n[WARNING] Circular import loops identified:\n"
+        for index, cycle in enumerate(cycles, 1):
+            modules = [
+                next(iter(file_to_modules.get(path, {os.path.basename(path)})))
+                for path in cycle
+            ]
+            message += f"  Loop #{index}:\n    " + " -> ".join(modules) + "\n"
     return message
 
 
@@ -95,33 +127,43 @@ def execute_import_cycle_trace(command, scan_path="."):
     if not paths:
         return {"success": True, "cycles_count": 0, "cycles": [], "message": "No Python files found to analyze."}
     module_to_file, file_to_modules = _module_index(paths, absolute)
-    cycles = command._find_cycles(_import_graph(command, paths, module_to_file))
+    graph, parse_errors = _import_graph(command, paths, module_to_file, absolute)
+    cycles = command._find_cycles(graph)
     serialized = [
         [os.path.relpath(path, absolute).replace(os.path.sep, "/") for path in cycle]
         for cycle in cycles
     ]
-    return {
-        "success": True,
+    result = {
+        "success": not parse_errors,
         "scan_path": absolute,
+        "analysis_complete": not parse_errors,
+        "files_scanned": len(paths),
+        "files_parsed": len(paths) - len(parse_errors),
         "cycles_count": len(cycles),
         "cycles": serialized,
-        "message": _format_message(paths, cycles, file_to_modules),
+        "message": _format_message(paths, cycles, file_to_modules, parse_errors),
     }
+    if parse_errors:
+        result.update(
+            {
+                "error": "Circular import analysis was incomplete.",
+                "error_code": "source_parse_failed",
+                "parse_errors": parse_errors,
+            }
+        )
+    return result
 
 
 def parse_file_imports(_command, file_path):
-    """Extract import targets from one Python file."""
+    """Extract import targets from one Python file or expose parse failures."""
     imports = []
-    try:
-        with open(file_path, "r", encoding="utf-8", errors="replace") as handle:
-            tree = ast.parse(handle.read(), filename=file_path)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                imports.extend(name.name for name in node.names)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                imports.append(node.module)
-    except Exception:
-        pass
+    with tokenize.open(file_path) as handle:
+        tree = ast.parse(handle.read(), filename=file_path)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.extend(name.name for name in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.append(node.module)
     return imports
 
 

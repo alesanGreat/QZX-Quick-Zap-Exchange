@@ -6,8 +6,8 @@ ScaffoldKotlin Command - Creates a basic scaffolding for a Kotlin program
 """
 
 import os
-import subprocess
 
+from qzx.commands.development._scaffold_tool_probe import probe_tool
 from qzx.core.command_base import CommandBase
 from qzx.commands.development._scaffold_utils import (
     normalize_project_name,
@@ -118,14 +118,11 @@ class ScaffoldKotlinCommand(CommandBase):
             f"Successfully created Kotlin project '{project_name}' at {project_path} "
             f"{tests_msg}. "
             f"Created {len(result['files_created'])} files and directories. "
-            f"Use 'cd {project_path} && ./gradlew build' to build the project."
+            f"Use 'cd {project_path} && gradle build' to build the project."
         )
         if not self._is_gradle_installed():
             message += " Note: Gradle doesn't appear to be installed. "
-            message += (
-                "The included Gradle wrapper can be used after the first download, "
-                "or install from https://gradle.org/install/."
-            )
+            message += "Install from https://gradle.org/install/ to build the project."
         return message
 
     def _create_settings_gradle(self, project_path, project_name, result):
@@ -225,19 +222,19 @@ A Kotlin project created with QZX scaffolding tool.
 ## Build
 
 ```bash
-./gradlew build
+gradle build
 ```
 
 ## Run
 
 ```bash
-./gradlew run
+gradle run
 ```
 
 ## Test
 
 ```bash
-./gradlew test
+gradle test
 ```
 ''')
         result["files_created"].append(readme_path)
@@ -264,14 +261,6 @@ Thumbs.db
 ''')
         result["files_created"].append(gitignore_path)
 
-    def _is_gradle_installed(self):
-        try:
-            subprocess.run(
-                ["gradle", "-v"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-            return True
-        except FileNotFoundError:
-            return False
+    def _is_gradle_installed(self, runner=None):
+        """Return whether Gradle answers its version probe within the budget."""
+        return probe_tool(["gradle", "-v"], runner=runner)

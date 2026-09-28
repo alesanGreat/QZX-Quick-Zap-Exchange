@@ -129,6 +129,13 @@ class TestScaffoldCommands:
         assert os.path.isfile(tmp_path / "my_kotlin_app" / "settings.gradle.kts")
         assert os.path.isfile(tmp_path / "my_kotlin_app" / "src" / "main" / "kotlin" / "com" / "example" / "my_kotlin_app" / "App.kt")
         assert os.path.isfile(tmp_path / "my_kotlin_app" / "src" / "test" / "kotlin" / "com" / "example" / "my_kotlin_app" / "AppTest.kt")
+        readme = (tmp_path / "my_kotlin_app" / "README.md").read_text(encoding="utf-8")
+        assert "gradle build" in readme
+        assert "gradle run" in readme
+        assert "gradle test" in readme
+        assert "./gradlew" not in readme
+        assert "gradle build" in result["message"]
+        assert "included Gradle wrapper" not in result["message"]
 
     def test_scaffold_csharp(self, tmp_path):
         cmd = ScaffoldCSharpCommand()
@@ -159,3 +166,57 @@ class TestScaffoldCommands:
 
         cmd = ScaffoldCSharpCommand()
         assert cmd._is_dotnet_installed(failed_runner) is False
+
+    def test_scaffold_tool_probes_time_out_fail_closed(self):
+        calls = []
+
+        def timed_out_runner(args, **kwargs):
+            calls.append((args, kwargs))
+            raise subprocess.TimeoutExpired(args, kwargs["timeout"])
+
+        probes = [
+            ScaffoldCCommand()._is_gcc_installed,
+            ScaffoldCppCommand()._is_cpp_compiler_installed,
+            ScaffoldGoCommand()._is_go_installed,
+            ScaffoldJavaCommand()._is_maven_installed,
+            ScaffoldKotlinCommand()._is_gradle_installed,
+            ScaffoldRustCommand()._is_cargo_installed,
+        ]
+        for probe in probes:
+            assert probe(timed_out_runner) is False
+
+        assert calls
+        assert all(kwargs["timeout"] == 5.0 for _, kwargs in calls)
+
+    def test_scaffold_tool_probes_reject_nonzero_exit(self):
+        def failed_runner(args, **kwargs):
+            return subprocess.CompletedProcess(
+                args=args,
+                returncode=1,
+                stdout=b"",
+                stderr=b"",
+            )
+
+        probes = [
+            ScaffoldCCommand()._is_gcc_installed,
+            ScaffoldCppCommand()._is_cpp_compiler_installed,
+            ScaffoldGoCommand()._is_go_installed,
+            ScaffoldJavaCommand()._is_maven_installed,
+            ScaffoldKotlinCommand()._is_gradle_installed,
+            ScaffoldRustCommand()._is_cargo_installed,
+        ]
+        for probe in probes:
+            assert probe(failed_runner) is False
+
+    def test_scaffold_cpp_accepts_msvc_banner_on_nonzero_exit(self):
+        def msvc_runner(args, **kwargs):
+            if args[0] != "cl":
+                raise FileNotFoundError(args[0])
+            return subprocess.CompletedProcess(
+                args=args,
+                returncode=2,
+                stdout=b"",
+                stderr=b"Microsoft C/C++ Optimizing Compiler",
+            )
+
+        assert ScaffoldCppCommand()._is_cpp_compiler_installed(msvc_runner) is True

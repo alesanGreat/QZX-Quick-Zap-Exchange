@@ -77,6 +77,36 @@ class TestTraceCircularImportsCommand:
         assert len(cycle) == 4
         assert cycle[0] == cycle[-1]
 
+    def test_syntax_error_makes_analysis_incomplete(self, tmp_path):
+        """Broken Python must not produce a false no-cycle success."""
+        (tmp_path / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+
+        result = self.command.execute(str(tmp_path))
+
+        assert result["success"] is False
+        assert result["analysis_complete"] is False
+        assert result["error_code"] == "source_parse_failed"
+        assert result["files_scanned"] == 1
+        assert result["files_parsed"] == 0
+        assert result["cycles_count"] == 0
+        assert result["parse_errors"][0]["file"] == "broken.py"
+        assert result["parse_errors"][0]["error_type"] == "SyntaxError"
+        assert "[OK]" not in result["message"]
+
+    def test_parse_failure_preserves_cycles_found_in_valid_files(self, tmp_path):
+        """Partial analysis keeps valid findings while remaining a failure."""
+        (tmp_path / "a.py").write_text("import b\n", encoding="utf-8")
+        (tmp_path / "b.py").write_text("import a\n", encoding="utf-8")
+        (tmp_path / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+
+        result = self.command.execute(str(tmp_path))
+
+        assert result["success"] is False
+        assert result["error_code"] == "source_parse_failed"
+        assert result["cycles_count"] == 1
+        assert set(result["cycles"][0][:-1]) == {"a.py", "b.py"}
+        assert "broken.py" == result["parse_errors"][0]["file"]
+
     def test_excludes_generated_directory_cycles(self, tmp_path):
         """A stale build copy must not become a project-level cycle."""
         build = tmp_path / "build"

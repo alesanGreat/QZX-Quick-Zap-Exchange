@@ -492,16 +492,7 @@ Creates a new C project with standard directory structure and basic files.
   Creates a C project without tests or build system in the current directory
 
 **Details:**
-Creates a basic scaffolding for a C program
-
-Args:
-    project_name (str): Name of the C project to create
-    path (str): Path where to create the project
-    with_tests (str): Whether to include testing scaffolding
-    build_system (str): Build system to use (make, cmake, or none)
-
-Returns:
-    Dictionary with the operation results and status
+Create a C scaffold through semantic generation helpers.
 
 ---
 
@@ -530,17 +521,7 @@ Creates a new C++ project with standard directory structure and basic files.
   Creates a C++ project without tests or build system in the current directory using C++17
 
 **Details:**
-Creates a basic scaffolding for a C++ program
-
-Args:
-    project_name (str): Name of the C++ project to create
-    path (str): Path where to create the project
-    with_tests (str): Whether to include testing scaffolding
-    build_system (str): Build system to use (make, cmake, or none)
-    cpp_standard (str): C++ standard to use (11, 14, 17, 20)
-
-Returns:
-    Dictionary with the operation results and status
+Create a C++ scaffold through semantic generation helpers.
 
 ---
 
@@ -566,7 +547,7 @@ Creates a new C# console project with .NET SDK and xUnit tests.
   Creates a new C# project with xUnit tests in the specified directory
 
 **Details:**
-Creates a basic scaffolding for a C# program
+Create a basic C# scaffold.
 
 ---
 
@@ -768,16 +749,7 @@ Creates a new Rust project with standard directory structure and basic files.
   Creates a new Rust binary project without tests in the specified directory
 
 **Details:**
-Creates a basic scaffolding for a Rust program
-
-Args:
-    project_name (str): Name of the Rust project to create
-    path (str): Path where to create the project
-    binary (str): Whether to create a binary application (true) or a library (false)
-    with_tests (str): Whether to include test scaffolding
-
-Returns:
-    Dictionary with the operation results and status
+Create a basic Rust scaffold.
 
 ---
 
@@ -929,15 +901,7 @@ This version uses the centralized recursive file finder utility.
   Change directory permissions up to 2 levels deep
 
 **Details:**
-Changes permissions of a file or directory
-
-Args:
-    path (str): Path to the file or directory
-    mode (str/int): Permission mode in octal (e.g., 755) or string format (e.g., "a+x")
-    recursive: Recursion level: none by default, -r/--recursive for unlimited, -rN/--recursiveN for N levels
-
-Returns:
-    Operation result
+Change permissions through the semantic permissions workflow.
 
 ---
 
@@ -1129,17 +1093,7 @@ Command to download a file from the Internet
   Replace an existing file after creating a safety backup
 
 **Details:**
-Downloads a file from the Internet
-
-Args:
-    url (str): URL of the file to download
-    destination_path (str): Path where to save the downloaded file
-    show_progress (bool, optional): Whether to show download progress
-    timeout (int, optional): Maximum wait time in seconds
-    overwrite (bool, optional): Whether to replace an existing file
-
-Returns:
-    Operation result
+Download one HTTP(S) resource using an atomic destination replace.
 
 ---
 
@@ -1339,18 +1293,7 @@ This version uses the centralized recursive file finder utility.
   Analyze all Python files recursively and show the list of files found
 
 **Details:**
-Execute the command to analyze language statistics in files
-
-Args:
-    file_path (str): Path to the file(s) to analyze, supporting wildcards
-    ignore_comments (bool): Whether to ignore code comments when analyzing
-    min_word_length (int): Minimum length for words to be considered
-    languages (str): Comma-separated list of languages to detect
-    recursive (bool): Whether to search recursively in directories
-    show_files_match (bool): Whether to show the list of files found
-
-Returns:
-    dict: Command result with language statistics
+Execute the command and return its structured result.
 
 ---
 
@@ -2156,7 +2099,7 @@ Inspect a local port and report stable, structured ownership data.
 
 ### isAdmin
 
-Command to check if the current user has administrative privileges
+Command to check if the current user has administrative privileges.
 
 **Category:** system
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
@@ -2170,10 +2113,7 @@ None
   Check if the current user has administrative privileges
 
 **Details:**
-Checks if the current user has administrative privileges
-
-Returns:
-    Dictionary with administrative privilege information and status
+Check current administrative privileges using platform evidence.
 
 ---
 
@@ -2221,13 +2161,7 @@ Permite filtrar comandos por nombre o descripción.
   Lists all commands containing 'file' in their name or description
 
 **Details:**
-Lists all available commands organized by category.
-
-Args:
-    filter_text (str, optional): Text to filter commands by name or description
-
-Returns:
-    dict: Dictionary containing list of commands organized by category
+List the available commands, optionally filtered by text.
 
 ---
 

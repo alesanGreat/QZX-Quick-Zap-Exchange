@@ -123,7 +123,7 @@ class DetectFileTypeCommand(CommandBase):
                 mime_type = from_buffer(sample.head, mime=True)
                 description = from_buffer(sample.head, mime=False)
             else:
-                from_file = getattr(provider, "from_file")
+                from_file = provider.from_file
                 mime_type = from_file(str(target.analyzed_path), mime=True)
                 description = from_file(str(target.analyzed_path), mime=False)
             return mime_type, description, None
