@@ -30,9 +30,12 @@ def test_official_mcp_java_sdk_example_locks_sdk_maven_and_dependencies():
     for required_fragment in (
         "<maven.compiler.release>17</maven.compiler.release>",
         "<artifactId>mcp</artifactId>",
-        "<version>2.0.0</version>",
+        "<version>2.0.1</version>",
+        "<artifactId>jackson-databind</artifactId>",
+        "<artifactId>jackson-dataformat-yaml</artifactId>",
+        "<version>3.1.7</version>",
         "<artifactId>slf4j-nop</artifactId>",
-        "<version>2.0.16</version>",
+        "<version>2.0.20</version>",
         "<directory>${qzx.build.directory}</directory>",
         "<artifactId>spring-javaformat-maven-plugin</artifactId>",
         "<goal>validate</goal>",
@@ -53,9 +56,9 @@ def test_official_mcp_java_sdk_example_locks_sdk_maven_and_dependencies():
     assert WINDOWS_MAVEN_WRAPPER.is_file()
 
     dependency_tree = DEPENDENCY_TREE.read_text(encoding="utf-8")
-    assert "io.modelcontextprotocol.sdk:mcp:jar:2.0.0:compile" in dependency_tree
-    assert "tools.jackson.core:jackson-databind:jar:3.0.3:compile" in dependency_tree
-    assert "org.slf4j:slf4j-nop:jar:2.0.16:runtime" in dependency_tree
+    assert "io.modelcontextprotocol.sdk:mcp:jar:2.0.1:compile" in dependency_tree
+    assert "tools.jackson.core:jackson-databind:jar:3.1.7:compile" in dependency_tree
+    assert "org.slf4j:slf4j-nop:jar:2.0.20:runtime" in dependency_tree
 
 
 def test_official_mcp_java_sdk_example_uses_real_subprocess_stdio_transport():
@@ -72,8 +75,8 @@ def test_official_mcp_java_sdk_example_uses_real_subprocess_stdio_transport():
         "client.listTools()",
         "client.callTool(",
         '"1207f0fcd064467801f5c7791d73a0d41266ec4158547abe595ef6e10b11f869"',
-        '"2b96692e5b4edbfa63fa687050ba697f9070b9d1c49f3e054473c6b2da6c03ed"',
-        '"e224c9ebea46fbbf75d32194fbb4897dd65859b0ca4deb4cbcf2383dc3a9289a"',
+        '"64dccaa67d3666930c6afe02f665166f0cfa6a7cb68edc442c68ac984b00ac76"',
+        '"5a5b396b9203eea4d2ea9638b149180cbaeeecd4ed929921f8d99a3fedae16ba"',
         'metadata.put("contract_evidence_sha256", evidenceSha256)',
         'metadata.put("jsonrpc_framing_exercised", true)',
         'metadata.put("wire_capture_retained", false)',
@@ -114,9 +117,9 @@ def test_ci_executes_validates_and_preserves_the_java_sdk_evidence():
         "actual != expected",
         "qzx.evidence.Main",
         "profile: mcp-2025-11-25",
-        "success: qzx-mcp-java-sdk-v2.0.0-evidence/success.json",
-        "qzx-mcp-java-sdk-v2.0.0-conformance.json",
-        "name: qzx-mcp-java-sdk-v2.0.0-evidence",
+        "success: qzx-mcp-java-sdk-v2.0.1-evidence/success.json",
+        "qzx-mcp-java-sdk-v2.0.1-conformance.json",
+        "name: qzx-mcp-java-sdk-v2.0.1-evidence",
         "examples/result_contract/mcp-java-sdk-v2/src/main/java/qzx/evidence/Main.java",
         "include-hidden-files: true",
         "retention-days: 14",

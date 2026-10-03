@@ -27,7 +27,7 @@ public final class Main {
 
 	private static final String PROTOCOL_VERSION = "2025-11-25";
 
-	private static final String SDK_VERSION = "2.0.0";
+	private static final String SDK_VERSION = "2.0.1";
 
 	private static final String TOOL_NAME = "qzx_reference_lookup";
 
@@ -35,8 +35,8 @@ public final class Main {
 
 	private static final Map<String, String> EXPECTED_EVIDENCE_SHA256 = Map.of("tool-definition.json",
 			"1207f0fcd064467801f5c7791d73a0d41266ec4158547abe595ef6e10b11f869", "success.json",
-			"2b96692e5b4edbfa63fa687050ba697f9070b9d1c49f3e054473c6b2da6c03ed", "failure.json",
-			"e224c9ebea46fbbf75d32194fbb4897dd65859b0ca4deb4cbcf2383dc3a9289a");
+			"64dccaa67d3666930c6afe02f665166f0cfa6a7cb68edc442c68ac984b00ac76", "failure.json",
+			"5a5b396b9203eea4d2ea9638b149180cbaeeecd4ed929921f8d99a3fedae16ba");
 
 	private Main() {
 	}
@@ -179,7 +179,7 @@ public final class Main {
 		if (!fail) {
 			details.put("value", 42);
 		}
-		details.put("source", "java-sdk-v2.0.0");
+		details.put("source", "java-sdk-v2.0.1");
 		structured.put("details", details);
 
 		try {

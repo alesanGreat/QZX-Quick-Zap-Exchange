@@ -12,19 +12,33 @@
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.build.outputTimestamp>2026-08-18T00:00:00Z</project.build.outputTimestamp>
-    <qzx.build.directory>${java.io.tmpdir}/ValisIdealis/QZX/cache/maven/mcp-java-sdk-v2.0.0</qzx.build.directory>
+    <qzx.build.directory>${java.io.tmpdir}/ValisIdealis/QZX/cache/maven/mcp-java-sdk-v2.0.1</qzx.build.directory>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>io.modelcontextprotocol.sdk</groupId>
       <artifactId>mcp</artifactId>
-      <version>2.0.0</version>
+      <version>2.0.1</version>
+    </dependency>
+    <!--
+      MCP 2.0.1 resolves Jackson 3.1.4. Keep the compatible 3.1 line but
+      raise the security floor to 3.1.7, which contains the current fixes.
+    -->
+    <dependency>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>3.1.7</version>
+    </dependency>
+    <dependency>
+      <groupId>tools.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <version>3.1.7</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-nop</artifactId>
-      <version>2.0.16</version>
+      <version>2.0.20</version>
       <scope>runtime</scope>
     </dependency>
   </dependencies>
@@ -49,7 +63,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.1</version>
+        <version>3.16.0</version>
         <configuration>
           <compilerArgs>
             <arg>-Xlint:all</arg>
@@ -60,7 +74,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>3.11.0</version>
       </plugin>
     </plugins>
   </build>

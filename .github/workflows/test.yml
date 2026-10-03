@@ -379,7 +379,7 @@ jobs:
           artifacts="$RUNNER_TEMP/qzx-mcp-java-sdk-v2-artifacts"
           repository="$RUNNER_TEMP/qzx-maven/repository"
           schema="$GITHUB_WORKSPACE/src/qzx/resources/schemas/result-contract-v1.schema.json"
-          evidence="$GITHUB_WORKSPACE/qzx-mcp-java-sdk-v2.0.0-evidence"
+          evidence="$GITHUB_WORKSPACE/qzx-mcp-java-sdk-v2.0.1-evidence"
           ./mvnw \
             "-Dqzx.build.directory=$artifacts" \
             "-Dmaven.repo.local=$repository" \
@@ -402,23 +402,23 @@ jobs:
           classpath="$artifacts/classes:$(cat "$artifacts/classpath.txt")"
           java -cp "$classpath" qzx.evidence.Main "$schema" "$evidence"
 
-      - name: Validate official MCP Java SDK 2.0.0 evidence
+      - name: Validate official MCP Java SDK 2.0.1 evidence
         uses: ./
         with:
           profile: mcp-2025-11-25
-          success: qzx-mcp-java-sdk-v2.0.0-evidence/success.json
-          failure: qzx-mcp-java-sdk-v2.0.0-evidence/failure.json
-          tool-definition: qzx-mcp-java-sdk-v2.0.0-evidence/tool-definition.json
-          report: qzx-mcp-java-sdk-v2.0.0-conformance.json
+          success: qzx-mcp-java-sdk-v2.0.1-evidence/success.json
+          failure: qzx-mcp-java-sdk-v2.0.1-evidence/failure.json
+          tool-definition: qzx-mcp-java-sdk-v2.0.1-evidence/tool-definition.json
+          report: qzx-mcp-java-sdk-v2.0.1-conformance.json
 
-      - name: Preserve the official MCP Java SDK 2.0.0 evidence
+      - name: Preserve the official MCP Java SDK 2.0.1 evidence
         if: always() && steps.generate-mcp-java-sdk-evidence.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: qzx-mcp-java-sdk-v2.0.0-evidence
+          name: qzx-mcp-java-sdk-v2.0.1-evidence
           path: |
-            qzx-mcp-java-sdk-v2.0.0-evidence/*.json
-            qzx-mcp-java-sdk-v2.0.0-conformance.json
+            qzx-mcp-java-sdk-v2.0.1-evidence/*.json
+            qzx-mcp-java-sdk-v2.0.1-conformance.json
             examples/result_contract/mcp-java-sdk-v2/README.md
             examples/result_contract/mcp-java-sdk-v2/pom.xml
             examples/result_contract/mcp-java-sdk-v2/dependency-tree.txt
@@ -498,7 +498,7 @@ jobs:
                   "mcp-2026-07-28",
                   "canonical_inline",
               ),
-              "qzx-mcp-java-sdk-v2.0.0-conformance.json": (
+              "qzx-mcp-java-sdk-v2.0.1-conformance.json": (
                   "mcp-2025-11-25",
                   "canonical_inline",
               ),

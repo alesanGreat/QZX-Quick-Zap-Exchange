@@ -25,6 +25,7 @@ def test_official_mcp_go_sdk_example_locks_the_stable_sdk():
     go_mod = GO_MOD.read_text(encoding="utf-8")
     assert "go 1.25.0" in go_mod
     assert "github.com/modelcontextprotocol/go-sdk v1.6.1" in go_mod
+    assert "golang.org/x/sys v0.44.0" in go_mod
 
     go_sum = GO_SUM.read_text(encoding="utf-8")
     assert (
