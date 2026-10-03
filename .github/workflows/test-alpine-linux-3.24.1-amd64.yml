@@ -51,7 +51,7 @@ jobs:
           assert sysconfig.get_config_var(\"Py_GIL_DISABLED\") != 1
           "
               apk add --no-cache bind-tools build-base git linux-headers openrc
-              python -m pip install pytest "PyYAML>=6,<7" -e .
+              python -m pip install pytest "PyYAML>=6,<7" "setuptools>=77.0.3" -e .
               python -m pytest -q \
                 tests/integration/test_real_system_dependencies.py
               python -m pytest -q \
