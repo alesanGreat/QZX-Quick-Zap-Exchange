@@ -69,9 +69,10 @@ if os.name == "posix":
             # AF_UNIX has a small sockaddr path limit on macOS. GitHub-hosted
             # macOS runners expose a long TMPDIR, so keep this fixture under
             # the conventional short POSIX /tmp path instead of self.root.
-            socket_root = Path(
-                tempfile.mkdtemp(prefix="qzx-rf-", dir="/tmp")
+            socket_root = (
+                Path("/tmp") / f"qzx-rf-{uuid.uuid4().hex[:12]}"
             )
+            socket_root.mkdir(mode=0o777)
             self.addCleanup(shutil.rmtree, socket_root, True)
             path = socket_root / "s"
             with socket.socket(
