@@ -327,7 +327,7 @@ fourth QZX-maintained evidence bundle.
 
 The locked stable
 [`mcp-java-sdk-v2`](../examples/result_contract/mcp-java-sdk-v2/README.md)
-example adds the official Java SDK 2.0.0 on Java 21 LTS. Its client launches the
+example adds the official Java SDK 2.0.1 on Java 21 LTS. Its client launches the
 official server as a subprocess and negotiates MCP 2025-11-25 through the SDK's
 newline-delimited JSON-RPC `stdio` transports. It publishes the exact inline QZX
 schema and preserves explicit `isError` with matching structured and text

@@ -1,8 +1,8 @@
-# Official MCP Java SDK 2.0.0 interoperability evidence
+# Official MCP Java SDK 2.0.1 interoperability evidence
 
 This QZX-maintained reference executes one successful and one failed tool call
 through the [official MCP Java SDK](https://github.com/modelcontextprotocol/java-sdk)
-stable release `2.0.0` on Java 21 LTS. The official client launches the official
+stable release `2.0.1` on Java 21 LTS. The official client launches the official
 server as a child process, negotiates MCP `2025-11-25`, and communicates through
 the SDK's `stdio` transports. This exercises newline-delimited JSON-RPC across a
 real process boundary. The client-observed SDK models are serialized with the
@@ -20,7 +20,7 @@ created and maintained by the QZX project.
 - the official client observes structured content, backwards-compatible text,
   a successful result, and an `isError: true` failed result that pass the
   public QZX evidence validator;
-- `io.modelcontextprotocol.sdk:mcp` is pinned exactly to `2.0.0`, and CI rejects
+- `io.modelcontextprotocol.sdk:mcp` is pinned exactly to `2.0.1`, and CI rejects
   any change to the committed resolved runtime dependency coordinates;
 - the Maven Wrapper pins Maven `3.9.9` and authenticates its distribution with
   SHA-256; the project compiles for the SDK's Java 17 minimum while CI and the
@@ -56,8 +56,8 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 $mavenHome = Join-Path $env:LOCALAPPDATA "ValisIdealis\QZX\dependencies\maven"
 $repository = Join-Path $mavenHome "repository"
-$artifacts = Join-Path $env:LOCALAPPDATA "ValisIdealis\QZX\cache\maven\mcp-java-sdk-v2.0.0"
-$evidence = Join-Path $env:TEMP "ValisIdealis\QZX\runs\mcp-java-sdk-v2.0.0-evidence"
+$artifacts = Join-Path $env:LOCALAPPDATA "ValisIdealis\QZX\cache\maven\mcp-java-sdk-v2.0.1"
+$evidence = Join-Path $env:TEMP "ValisIdealis\QZX\runs\mcp-java-sdk-v2.0.1-evidence"
 $schema = Resolve-Path "../../../src/qzx/resources/schemas/result-contract-v1.schema.json"
 $env:MAVEN_USER_HOME = $mavenHome
 ./mvnw.cmd "-Dqzx.build.directory=$artifacts" "-Dmaven.repo.local=$repository" `
@@ -79,8 +79,8 @@ python -B ../../../scripts/validate_result_contract_evidence.py `
 export JAVA_HOME="${JAVA_HOME:?Set JAVA_HOME to a Java 21 LTS installation}"
 export MAVEN_USER_HOME="${XDG_CACHE_HOME:-$HOME/.cache}/ValisIdealis/QZX/dependencies/maven"
 repository="$MAVEN_USER_HOME/repository"
-artifacts="${XDG_CACHE_HOME:-$HOME/.cache}/ValisIdealis/QZX/cache/maven/mcp-java-sdk-v2.0.0"
-evidence="${TMPDIR:-/tmp}/ValisIdealis/QZX/runs/mcp-java-sdk-v2.0.0-evidence"
+artifacts="${XDG_CACHE_HOME:-$HOME/.cache}/ValisIdealis/QZX/cache/maven/mcp-java-sdk-v2.0.1"
+evidence="${TMPDIR:-/tmp}/ValisIdealis/QZX/runs/mcp-java-sdk-v2.0.1-evidence"
 schema="../../../src/qzx/resources/schemas/result-contract-v1.schema.json"
 ./mvnw "-Dqzx.build.directory=$artifacts" "-Dmaven.repo.local=$repository" \
   "-Dmdep.outputFile=$artifacts/classpath.txt" -B -ntp clean compile dependency:build-classpath

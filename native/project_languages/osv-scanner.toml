@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "RUSTSEC-2020-0163"
+ignoreUntil = 2027-01-31
+reason = "term_size 0.3.2 is flagged as unmaintained rather than for an exploitable defect. QZX receives it transitively from the current Tokei 15.0.0 release, which has no replacement version available. QZX uses Tokei only for local read-only project-language analysis with default features disabled. Revisit this exception when Tokei removes term_size."
