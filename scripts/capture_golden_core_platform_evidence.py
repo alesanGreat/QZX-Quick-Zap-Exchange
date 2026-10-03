@@ -64,7 +64,6 @@ __all__ = [
 
 SCHEMA_VERSION = 2
 EXPECTED_COMMAND_COUNT = 15
-EXPECTED_QZX_COMMAND_COUNT = 87
 
 
 class EvidenceHttpHandler(BaseHTTPRequestHandler):

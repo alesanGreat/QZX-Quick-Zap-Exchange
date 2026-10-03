@@ -78,6 +78,9 @@ jobs:
             --break-system-packages \
             --ignore-installed \
             chardet colorama \
+            'PyYAML>=6,<7' \
+            'setuptools>=77.0.3' \
+            'wheel>=0.45' \
             'Pygments>=2.20,<3' \
             'pathspec>=1.1,<2' \
             'packaging>=24,<27' \

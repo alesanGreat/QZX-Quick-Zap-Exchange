@@ -63,7 +63,7 @@ jobs:
                 iproute2 \
                 libmagic1 \
                 procps
-              python -m pip install pytest -e .
+              python -m pip install pytest "PyYAML>=6,<7" "setuptools>=77.0.3" "wheel>=0.45" -e .
               python -m pytest -q \
                 tests/integration/test_real_system_dependencies.py
               python -m pytest -q \

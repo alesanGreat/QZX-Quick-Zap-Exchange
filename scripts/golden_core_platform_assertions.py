@@ -6,15 +6,18 @@ import hashlib
 import platform
 
 import qzx
+from qzx.core.command_index import indexed_command_names
 
 
 def command_assertions(
     name,
     document,
     *,
-    expected_qzx_command_count=87,
+    expected_qzx_command_count=None,
 ):
     """Return invariant labels after validating one sanitized command result."""
+    if expected_qzx_command_count is None:
+        expected_qzx_command_count = len(indexed_command_names())
     assertions = [
         "exit_code=0",
         "result_contract_v1",

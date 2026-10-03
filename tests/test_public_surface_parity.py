@@ -7,6 +7,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+from urllib.parse import urlparse
 import tarfile
 import zipfile
 
@@ -263,9 +264,10 @@ def _download_payload_map(
 
 def _json_fetcher(responses):
     def get_json(url):
-        if "pypi.org" in url:
+        hostname = urlparse(url).hostname
+        if hostname == "pypi.org":
             return responses["pypi"]
-        if "qzx.yumbale.com" in url:
+        if hostname == "qzx.yumbale.com":
             return responses["website"]
         for suffix, payload in responses.items():
             if suffix in {"pypi", "website", "downloads"}:

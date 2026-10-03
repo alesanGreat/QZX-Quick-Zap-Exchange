@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from qzx.core.command_loader import CommandLoader
+from scripts.golden_core_platform_assertions import command_assertions
 from scripts.capture_golden_core_platform_evidence import (
     replacement_pairs,
     sanitize_value,
@@ -26,6 +28,21 @@ from scripts.verify_golden_core import load_golden_core
 
 SOURCE_REVISION = "a" * 40
 SCRIPT_ROOT = Path(__file__).resolve().parents[1] / "scripts"
+
+
+def test_list_commands_assertion_tracks_current_command_index():
+    count = len(CommandLoader().get_indexed_commands())
+    assertions = command_assertions(
+        "listCommands",
+        {"summary": {"commands": count}},
+    )
+    assert f"command_count={count}" in assertions
+
+    with pytest.raises(AssertionError, match=str(count)):
+        command_assertions(
+            "listCommands",
+            {"summary": {"commands": count - 1}},
+        )
 
 
 def evidence_document(system: str, environment_id: str) -> dict:

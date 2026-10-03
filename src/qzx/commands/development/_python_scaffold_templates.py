@@ -62,7 +62,7 @@ def test_add():
 '''
 
 _PYPROJECT = '''[build-system]
-requires = ["setuptools>=77.0.3"]
+requires = ["setuptools>=77.0.3", "wheel>=0.45"]
 build-backend = "setuptools.build_meta"
 
 [project]

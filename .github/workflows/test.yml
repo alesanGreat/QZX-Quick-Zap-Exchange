@@ -667,7 +667,7 @@ jobs:
           assert sysconfig.get_config_var("Py_GIL_DISABLED") != 1
 
       - name: Install QZX and tests
-        run: python -m pip install --upgrade pip pytest -e .
+        run: python -m pip install --upgrade pip pytest "PyYAML>=6,<7" "setuptools>=77.0.3" "wheel>=0.45" -e .
 
       - name: Smoke test QZX in PowerShell
         if: runner.os == 'Windows'
@@ -787,7 +787,7 @@ jobs:
           assert sysconfig.get_config_var("Py_GIL_DISABLED") not in (1, True)
 
       - name: Install QZX and tests
-        run: python -m pip install --upgrade pip pytest -e .
+        run: python -m pip install --upgrade pip pytest "PyYAML>=6,<7" "setuptools>=77.0.3" "wheel>=0.45" -e .
 
       - name: Run Python-range regression suite
         run: >-

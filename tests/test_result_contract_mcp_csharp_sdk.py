@@ -31,6 +31,8 @@ def test_official_mcp_csharp_sdk_example_locks_sdk_and_runtime():
         '<PackageReference Include="ModelContextProtocol.Core" '
         'Version="[2.2.0]" />'
     ) in project
+    assert "IsOSPlatform('Windows')" in project
+    assert "Exists('$(MSBuildProjectDirectory)\\..\\..\\..\\..\\god-code-gate.cmd')" in project
 
     global_json = json.loads(GLOBAL_JSON.read_text(encoding="utf-8"))
     assert global_json["sdk"] == {
