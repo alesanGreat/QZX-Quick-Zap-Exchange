@@ -204,12 +204,12 @@ jobs:
         run: |
           corepack enable
           corepack prepare pnpm@10.29.2 --activate
-          pnpm install --frozen-lockfile --ignore-scripts
+          corepack pnpm install --ignore-workspace --frozen-lockfile --ignore-scripts
 
       - id: generate-mcp-typescript-sdk-evidence
         name: Generate real MCP 2026-07-28 SDK wire evidence
         working-directory: examples/result_contract/mcp-typescript-sdk-v2
-        run: pnpm run evidence "$GITHUB_WORKSPACE/qzx-mcp-typescript-sdk-v2-evidence"
+        run: corepack pnpm --ignore-workspace run evidence "$GITHUB_WORKSPACE/qzx-mcp-typescript-sdk-v2-evidence"
 
       - name: Validate core evidence through the public Composite Action
         uses: ./

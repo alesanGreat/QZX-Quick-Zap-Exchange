@@ -27,9 +27,9 @@ def test_official_mcp_sdk_example_has_locked_maintained_dependencies():
     assert package["packageManager"] == "pnpm@10.29.2"
     assert package["engines"] == {"node": ">=20"}
     assert package["dependencies"] == {
-        "@modelcontextprotocol/client": "2.0.0",
-        "@modelcontextprotocol/server": "2.0.0",
-        "zod": "4.4.3",
+        "@modelcontextprotocol/client": "2.2.0",
+        "@modelcontextprotocol/server": "2.2.0",
+        "zod": "4.6.5",
     }
     lockfile = LOCKFILE.read_text(encoding="utf-8")
     for dependency, version in package["dependencies"].items():
@@ -50,6 +50,8 @@ def test_official_mcp_sdk_example_captures_modern_wire_evidence():
         '.filter((argument) => argument !== "--")',
         "outputArguments.length !== 1",
         'rawSuccess?.resultType !== "complete"',
+        "installedPackageVersion(packageName)",
+        "packages: packageVersions",
         '["tool-definition.json", toolDefinition]',
         '["success.json", rawSuccess]',
         '["failure.json", rawFailure]',
@@ -73,8 +75,8 @@ def test_ci_executes_validates_and_preserves_the_sdk_evidence():
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     for required_fragment in (
-        "pnpm install --frozen-lockfile --ignore-scripts",
-        'pnpm run evidence "$GITHUB_WORKSPACE/qzx-mcp-typescript-sdk-v2-evidence"',
+        "corepack pnpm install --ignore-workspace --frozen-lockfile --ignore-scripts",
+        'corepack pnpm --ignore-workspace run evidence "$GITHUB_WORKSPACE/qzx-mcp-typescript-sdk-v2-evidence"',
         "success: qzx-mcp-typescript-sdk-v2-evidence/success.json",
         "if: always() && steps.generate-mcp-typescript-sdk-evidence.outcome == 'success'",
         "steps.qzx-nonconforming.outputs.failure_kind == 'conformance'",
