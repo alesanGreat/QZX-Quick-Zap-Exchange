@@ -64,8 +64,12 @@ python scripts/validate_result_contract.py path/to/your-result.json
 ```
 
 Exit status `0` means the document passes the QZX Result Contract v1 core
-validator. A passing schema does not certify domain correctness, authorization,
-security, or platform compatibility.
+validator. The reference validator also treats the JSON transport as evidence:
+it rejects duplicate object member names, non-finite numbers, invalid UTF-8,
+unpaired UTF-16 surrogates, and excessive nesting. One leading UTF-8 BOM is
+accepted for interoperability, although producers should emit plain UTF-8.
+A passing schema does not certify domain correctness, authorization, security,
+or platform compatibility.
 
 ## 3. Validate the pair and produce a reviewable receipt
 

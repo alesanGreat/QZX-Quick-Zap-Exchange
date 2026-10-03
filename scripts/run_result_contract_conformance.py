@@ -32,7 +32,7 @@ def load_json(path: Path, label: str) -> Any:
     """Load one JSON document with a useful source label."""
 
     try:
-        with path.open("r", encoding="utf-8") as handle:
+        with path.open("rb") as handle:
             return load_json_document(handle)
     except (json.JSONDecodeError, StrictJsonError) as exception:
         raise ValueError(f"{label} contains invalid JSON: {exception}") from exception

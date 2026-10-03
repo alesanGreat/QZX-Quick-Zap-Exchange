@@ -9,12 +9,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from qzx.core.result_contract import (
     RESULT_CONTRACT_SCHEMA_URL,
     ensure_result_contract,
     load_result_contract_schema,
     result_contract_violations,
 )
+from qzx.core.strict_json import StrictJsonError, loads_json_document
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -246,3 +249,73 @@ def test_standalone_validator_rejects_non_interoperable_json():
         report = json.loads(process.stdout)
         assert report["error_code"] == "invalid_json_input"
         assert expected_error in report["error"]
+
+
+def _run_standalone_validator_bytes(payload: bytes):
+    return subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), "-", "--json"],
+        cwd=REPOSITORY_ROOT,
+        input=payload,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+
+def test_standalone_validator_accepts_utf8_bom_from_standard_input():
+    payload = (
+        b"\xef\xbb\xbf"
+        b'{"success":true,"message":"BOM interoperability fixture."}'
+    )
+    process = _run_standalone_validator_bytes(payload)
+
+    assert process.returncode == 0, process.stderr
+    report = json.loads(process.stdout.decode("utf-8"))
+    assert report["success"] is True
+    assert process.stderr == b""
+
+
+def test_standalone_validator_rejects_invalid_utf8_from_standard_input():
+    payload = b'{"success":true,"message":"bad:\xff"}'
+    process = _run_standalone_validator_bytes(payload)
+
+    assert process.returncode == 1
+    report = json.loads(process.stdout.decode("utf-8"))
+    assert report["error_code"] == "invalid_json_input"
+    assert "not valid UTF-8 at byte offset" in report["error"]
+    assert process.stderr == b""
+
+
+@pytest.mark.parametrize(
+    "document",
+    (
+        r'{"success":true,"message":"bad \ud800"}',
+        r'{"success":true,"message":"bad \udc00"}',
+        r'{"\ud800":"bad key","success":true,"message":"bad"}',
+    ),
+)
+def test_strict_json_reader_rejects_unpaired_utf16_surrogates(document):
+    with pytest.raises(StrictJsonError, match="unpaired UTF-16 surrogate"):
+        loads_json_document(document)
+
+
+def test_strict_json_reader_accepts_complete_surrogate_pair():
+    document = loads_json_document(
+        r'{"success":true,"message":"Clef: \ud834\udd1e"}'
+    )
+
+    assert document["message"] == "Clef: \U0001d11e"
+
+
+def test_standalone_validator_reports_excessive_json_nesting():
+    # Stay below CPython's parser recursion limit so this proves QZX's own
+    # deterministic nesting policy, including on CPython 3.14.
+    depth = 600
+    payload = ("[" * depth + "null" + "]" * depth).encode("ascii")
+    process = _run_standalone_validator_bytes(payload)
+
+    assert process.returncode == 1
+    report = json.loads(process.stdout.decode("utf-8"))
+    assert report["error_code"] == "invalid_json_input"
+    assert report["error"] == "JSON document exceeds the supported nesting depth."
+    assert process.stderr == b""
