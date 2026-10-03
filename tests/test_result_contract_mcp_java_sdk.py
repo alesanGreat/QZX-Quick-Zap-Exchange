@@ -109,7 +109,7 @@ def test_ci_executes_validates_and_preserves_the_java_sdk_evidence():
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     for required_fragment in (
-        "actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961",
+        "actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6",
         'java-version: "21"',
         "mcp-java-sdk-v2/dependency-tree.txt",
         '"-Dqzx.build.directory=$artifacts"',
