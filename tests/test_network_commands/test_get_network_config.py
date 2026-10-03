@@ -32,7 +32,44 @@ class FakeResponse:
 
 
 class ProviderBackedNetworkConfigCommand(GetNetworkConfigCommand):
-    """Use a deterministic public-network provider response."""
+    """Use deterministic local probes and a public-network provider response."""
+
+    @staticmethod
+    def _system_name():
+        return "Linux"
+
+    @staticmethod
+    def _local_hostname_and_ips():
+        return "qzx-test", ["192.0.2.10"]
+
+    @staticmethod
+    def _collect_interfaces():
+        return (
+            {
+                "eth0": {
+                    "ipv4": ["192.0.2.10"],
+                    "ipv6": [],
+                    "description": "eth0",
+                    "mac": "",
+                    "is_up": True,
+                    "speed_mbps": 1000,
+                    "mtu": 1500,
+                }
+            },
+            [],
+        )
+
+    @staticmethod
+    def _configured_dns_servers():
+        return ["192.0.2.53"]
+
+    @staticmethod
+    def _run_system_command(_command):
+        return SimpleNamespace(returncode=1, stdout="", stderr="")
+
+    @staticmethod
+    def _parse_resolv_conf():
+        return ["192.0.2.53"]
 
     @staticmethod
     def _open_url(_request, timeout):
