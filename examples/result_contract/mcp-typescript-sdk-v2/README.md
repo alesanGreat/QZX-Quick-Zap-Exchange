@@ -1,7 +1,7 @@
 # Official MCP TypeScript SDK v2 interoperability evidence
 
 This example runs one success and one tool-execution failure through the
-official MCP TypeScript SDK 2.0.0, captures the actual MCP 2026-07-28 wire
+official MCP TypeScript SDK 2.2.0, captures the actual MCP 2026-07-28 wire
 results, and produces inputs for the QZX Result Contract evidence validator.
 
 It is maintained QZX reference evidence, **not independent adoption**, an MCP
@@ -27,11 +27,10 @@ No socket, credentials, external service, or user data are involved.
 
 ## Why it does not use the in-memory transport
 
-The official SDK 2.0.0 keeps 2025 behavior by default. Its own 2026 migration
-guide states that `InMemoryTransport.createLinkedPair()` exercises 2025-era
-instances only; modern in-process tests should drive `createMcpHandler` through
-`StreamableHTTPClientTransport`. The client must also opt in with an explicit
-2026-07-28 version pin.
+This example does not rely on the SDK's default protocol selection. It pins
+MCP 2026-07-28 explicitly and drives `createMcpHandler` through
+`StreamableHTTPClientTransport`; the in-memory transport is intentionally not
+used for this wire-evidence run.
 
 The SDK intentionally removes the wire-only `resultType` discriminator before
 returning a public `CallToolResult`. Because QZX's 2026 profile validates the
@@ -52,8 +51,8 @@ $evidence = Join-Path $env:TEMP "qzx-mcp-typescript-sdk-v2-evidence"
 Push-Location examples/result_contract/mcp-typescript-sdk-v2
 corepack enable
 corepack prepare pnpm@10.29.2 --activate
-pnpm install --frozen-lockfile --ignore-scripts
-pnpm run evidence $evidence
+corepack pnpm install --ignore-workspace --frozen-lockfile --ignore-scripts
+corepack pnpm --ignore-workspace run evidence $evidence
 Pop-Location
 
 python scripts/validate_result_contract_evidence.py `

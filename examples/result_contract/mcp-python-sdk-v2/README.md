@@ -1,7 +1,7 @@
 # Official MCP Python SDK v2 interoperability evidence
 
 This QZX-maintained reference executes one successful and one failed tool call
-through the official MCP Python SDK 2.0.0. The official high-level `Client`
+through the official MCP Python SDK 2.2.0. The official high-level `Client`
 connects to the official low-level `Server` with its MCP 2026-07-28 in-process
 direct dispatcher. The resulting SDK models are serialized with their MCP wire
 aliases and validated against QZX Result Contract v1.

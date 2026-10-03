@@ -30,6 +30,33 @@ const schemaPath = resolve(
 const outputDirectory = resolve(outputArgument);
 const contractSchema = JSON.parse(await readFile(schemaPath, "utf8"));
 
+async function installedPackageVersion(packageName) {
+  const manifestPath = resolve(
+    exampleDirectory,
+    "node_modules",
+    ...packageName.split("/"),
+    "package.json",
+  );
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  if (typeof manifest.version !== "string" || manifest.version.length === 0) {
+    throw new Error(`Installed package ${packageName} has no usable version.`);
+  }
+  return manifest.version;
+}
+
+const packageVersions = Object.fromEntries(
+  await Promise.all(
+    [
+      "@modelcontextprotocol/client",
+      "@modelcontextprotocol/server",
+      "zod",
+    ].map(async (packageName) => [
+      packageName,
+      await installedPackageVersion(packageName),
+    ]),
+  ),
+);
+
 function buildServer() {
   const server = new McpServer({
     name: "qzx-result-contract-sdk-evidence",
@@ -184,11 +211,7 @@ try {
       protocol: "2026-07-28",
       protocol_era: client.getProtocolEra(),
       transport: "in_process_streamable_http_fetch",
-      packages: {
-        "@modelcontextprotocol/client": "2.0.0",
-        "@modelcontextprotocol/server": "2.0.0",
-        zod: "4.4.3",
-      },
+      packages: packageVersions,
       runtime: {
         node: process.version,
         platform: process.platform,

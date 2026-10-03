@@ -351,7 +351,7 @@ validators.
 
 For a maintained end-to-end producer example, see the locked
 [`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
-integration. It drives the official MCP TypeScript SDK 2.0.0 over its modern
+integration. It drives the official MCP TypeScript SDK 2.2.0 over its modern
 in-process HTTP entry, captures actual MCP 2026-07-28 wire results, and validates
 them as `canonical_inline`. The public SDK client intentionally consumes the
 wire-only `resultType` field before returning `CallToolResult`, so reviewable
@@ -361,7 +361,7 @@ not listed as independent adoption.
 
 The locked
 [`mcp-python-sdk-v2`](../examples/result_contract/mcp-python-sdk-v2/README.md)
-example provides the complementary official Python SDK 2.0.0 path. It uses the
+example provides the complementary official Python SDK 2.2.0 path. It uses the
 SDK's modern in-process direct dispatcher and its own aliased model
 serialization, retains the MCP 2026-07-28 completion and error fields, and
 validates the exact inline QZX schema. A hash-checked dependency lock makes the
