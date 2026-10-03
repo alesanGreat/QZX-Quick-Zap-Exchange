@@ -331,7 +331,11 @@ receipt itself remains a valid QZX Result Contract v1 object; failed receipts
 carry a stable `error_code`. A schema-valid receipt may still record a failed
 conformance result; receipt structure and implementation conformance are
 separate claims. Older receipt-v1 documents that predate these optional
-validation-material fingerprints remain schema-valid. An adopter may instead
+validation-material fingerprints remain schema-valid. QZX's reference evidence
+reader also rejects ambiguous or non-portable JSON representations: duplicate
+object member names, non-finite numbers, invalid UTF-8, unpaired UTF-16
+surrogates, and excessive nesting. A single leading UTF-8 BOM is tolerated for
+interoperability but should not be emitted by producers. An adopter may instead
 use an independent JSON Schema or profile validator; QZX tooling is not a
 dependency of the Result Contract itself.
 
