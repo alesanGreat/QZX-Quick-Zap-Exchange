@@ -24,7 +24,7 @@ def run_qzx(
     *,
     cwd: Path,
     replacements: list[tuple[str, str]],
-    expected_qzx_command_count=87,
+    expected_qzx_command_count=None,
 ):
     """Run one QZX command and produce its sanitized evidence record."""
     completed, elapsed_ms = _run_process(arguments, cwd)

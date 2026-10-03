@@ -11,7 +11,8 @@
     <PackageReference Include="ModelContextProtocol.Core" Version="[2.2.0]" />
   </ItemGroup>
   <!-- GOD_CODE_GUARD_HOOK -->
-  <Target Name="GodCodeGuard" BeforeTargets="BeforeBuild">
+  <Target Name="GodCodeGuard" BeforeTargets="BeforeBuild"
+          Condition="$([MSBuild]::IsOSPlatform('Windows')) And Exists('$(MSBuildProjectDirectory)\..\..\..\..\god-code-gate.cmd')">
     <Exec Command="call &quot;$(MSBuildProjectDirectory)\..\..\..\..\god-code-gate.cmd&quot;" />
   </Target>
 </Project>

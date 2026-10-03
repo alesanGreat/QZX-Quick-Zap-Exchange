@@ -161,6 +161,10 @@ class PythonStarterWorkflowTests(PythonStarterCase):
                 _, project = self.create(f"options_{int(with_tests)}", with_tests=with_tests)
                 data = tomllib.loads((project / "pyproject.toml").read_text())
                 self.assertEqual(data["project"]["requires-python"], ">=3.11")
+                self.assertEqual(
+                    data["build-system"]["requires"],
+                    ["setuptools>=77.0.3", "wheel>=0.45"],
+                )
                 self.assertEqual(data["project"]["dependencies"], [])
                 self.assertEqual("optional-dependencies" in data["project"], with_tests)
                 self.assertEqual((project / "tests").exists(), with_tests)

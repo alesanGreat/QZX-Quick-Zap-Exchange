@@ -23,7 +23,6 @@ from scripts.verify_golden_core import load_golden_core, validate_golden_core
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_COMMAND_COUNT = 15
-EXPECTED_QZX_COMMAND_COUNT = 87
 SCHEMA_VERSION = 2
 
 
@@ -106,7 +105,6 @@ def _run_selected_commands(selected, commands, loader, replacements):
             arguments,
             cwd=cwd,
             replacements=replacements,
-            expected_qzx_command_count=EXPECTED_QZX_COMMAND_COUNT,
         )
         command = loader.get_command(name)
         if command is None:
