@@ -66,6 +66,12 @@ DISTRIBUTION_VERIFIER_SUPPORT_FILES = (
     "scripts/distribution_artifact_wheel.py",
     "scripts/distribution_artifact_sdist.py",
 )
+SDIST_FORBIDDEN_PRIVATE_FILES = (
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "Handoff.md",
+    "PROJECT_RULES.md",
+)
 SDIST_REQUIRED_RELEASE_FILES = (
     "codemeta.json",
     "CITATION.cff",

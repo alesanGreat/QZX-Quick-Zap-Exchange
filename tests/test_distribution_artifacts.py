@@ -19,6 +19,7 @@ from scripts.verify_distribution_artifacts import (
     RESULT_CONTRACT_EXAMPLE_SUFFIXES,
     RESULT_CONTRACT_SCHEMA_ID,
     RESULT_CONTRACT_WHEEL_PATH,
+    SDIST_FORBIDDEN_PRIVATE_FILES,
     canonical_readme_relative_files,
     release_readme_marker,
     verify_distributions,
@@ -104,6 +105,21 @@ def test_manifest_includes_every_readme_linked_document():
     assert missing == []
 
 
+def test_manifest_excludes_private_internal_markdown():
+    manifest_lines = {
+        line.strip()
+        for line in (REPOSITORY_ROOT / "MANIFEST.in")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+    assert {
+        f"exclude {relative_path}"
+        for relative_path in SDIST_FORBIDDEN_PRIVATE_FILES
+    } <= manifest_lines
+
+
 def test_manifest_includes_distribution_verifier_support_modules():
     manifest_lines = {
         line.strip()
@@ -147,6 +163,7 @@ def build_fixture_distributions(
     launcher_mode=0o755,
     description_version=VERSION,
     omitted_support_file=None,
+    private_internal_file=None,
 ):
     wheel = _build_wheel_fixture(dist_dir, description_version)
     sdist = _build_sdist_fixture(
@@ -154,6 +171,7 @@ def build_fixture_distributions(
         launcher_mode,
         description_version,
         omitted_support_file,
+        private_internal_file,
     )
     return wheel, sdist
 
@@ -185,6 +203,7 @@ def _build_sdist_fixture(
     launcher_mode,
     description_version,
     omitted_support_file,
+    private_internal_file,
 ):
     sdist = dist_dir / f"qzx-{VERSION}.tar.gz"
     root = f"qzx-{VERSION}"
@@ -205,6 +224,12 @@ def _build_sdist_fixture(
             root,
             omitted_support_file,
         )
+        if private_internal_file is not None:
+            add_tar_text(
+                archive,
+                f"{root}/{private_internal_file}",
+                "private internal fixture\n",
+            )
     return sdist
 
 
@@ -316,6 +341,27 @@ def _include_example_file(source, relative_path, omitted_support_file):
         source.suffix.lower() in RESULT_CONTRACT_EXAMPLE_SUFFIXES
         or source.name == "mvnw"
     )
+
+
+@pytest.mark.parametrize(
+    "private_internal_file",
+    SDIST_FORBIDDEN_PRIVATE_FILES,
+)
+def test_distribution_verifier_rejects_private_internal_files(
+    tmp_path,
+    private_internal_file,
+):
+    build_fixture_distributions(
+        tmp_path,
+        private_internal_file=private_internal_file,
+    )
+
+    with pytest.raises(ValueError, match=r"contains private internal files"):
+        verify_distributions(
+            tmp_path,
+            expected_version=VERSION,
+            expected_python=REQUIRES_PYTHON,
+        )
 
 
 def test_distribution_verifier_accepts_executable_posix_launcher(tmp_path):

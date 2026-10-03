@@ -1,4 +1,8 @@
 include *.md
+exclude AGENTS.md
+exclude ARCHITECTURE.md
+exclude Handoff.md
+exclude PROJECT_RULES.md
 include CITATION.cff
 include codemeta.json
 include LICENSE

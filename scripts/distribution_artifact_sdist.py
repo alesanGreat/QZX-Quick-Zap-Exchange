@@ -18,6 +18,7 @@ try:
         RESULT_CONTRACT_EXAMPLE_SUFFIXES,
         RESULT_CONTRACT_EXAMPLES_ROOT,
         RESULT_CONTRACT_SCHEMA_ID,
+        SDIST_FORBIDDEN_PRIVATE_FILES,
         SDIST_REQUIRED_RELEASE_FILES,
         canonical_readme_relative_files,
         verify_conformance_manifest,
@@ -42,6 +43,7 @@ except ModuleNotFoundError:
         RESULT_CONTRACT_EXAMPLE_SUFFIXES,
         RESULT_CONTRACT_EXAMPLES_ROOT,
         RESULT_CONTRACT_SCHEMA_ID,
+        SDIST_FORBIDDEN_PRIVATE_FILES,
         SDIST_REQUIRED_RELEASE_FILES,
         canonical_readme_relative_files,
         verify_conformance_manifest,
@@ -102,6 +104,24 @@ def _required_sdist_names(root: str) -> set[str]:
         for relative_path in canonical_readme_relative_files()
     )
     return names
+
+
+def _reject_forbidden_private_members(
+    members: dict[str, tarfile.TarInfo],
+    root: str,
+    sdist_name: str,
+) -> None:
+    forbidden = [
+        f"{root}/{relative_path}"
+        for relative_path in SDIST_FORBIDDEN_PRIVATE_FILES
+        if f"{root}/{relative_path}" in members
+    ]
+    if forbidden:
+        raise ValueError(
+            f"{sdist_name} contains private internal files: "
+            + ", ".join(sorted(forbidden))
+            + "."
+        )
 
 
 def _require_regular_members(
@@ -239,6 +259,7 @@ def verify_sdist(
     root = f"qzx-{expected_version}"
     with tarfile.open(sdist_path, "r:gz") as archive:
         members = {member.name: member for member in archive.getmembers()}
+        _reject_forbidden_private_members(members, root, sdist_path.name)
         launcher_mode = _launcher_mode(members, root, sdist_path.name)
         payloads, names = _sdist_payloads(
             archive,
