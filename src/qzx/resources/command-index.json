@@ -411,7 +411,7 @@
       "name": "listProcesses",
       "module": "qzx.commands.system.list_processes",
       "class_name": "ListProcessesCommand",
-      "description": "Lists running processes (similar to 'ps' in Unix)",
+      "description": "Lists running processes with real CPU usage sampled over 0.5 s (similar to 'ps'/'top')",
       "category": "system"
     },
     {

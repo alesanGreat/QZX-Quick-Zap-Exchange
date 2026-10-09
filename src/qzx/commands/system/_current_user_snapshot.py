@@ -40,6 +40,13 @@ def _environment():
     return {key: value for key, value in values.items() if value is not None}
 
 
+def _process_rss(process):
+    try:
+        return process.memory_info().rss
+    except psutil.Error:
+        return 0
+
+
 def _user_processes(command, result):
     try:
         current_process = psutil.Process()
@@ -50,18 +57,16 @@ def _user_processes(command, result):
             _normalized_username(result.get("user_id")),
         }
         usernames.discard("")
+        # Filter by owner first: reading memory_info for every process is
+        # slow on Windows because protected processes fall back to a full
+        # system snapshot per call. The user's own processes are cheap.
         processes = [
             process
-            for process in psutil.process_iter(["username", "memory_info"])
+            for process in psutil.process_iter(["username"])
             if hasattr(process, "info")
             and _normalized_username(process.info.get("username")) in usernames
         ]
-        total_memory = sum(
-            process.info.get("memory_info").rss
-            if process.info.get("memory_info")
-            else 0
-            for process in processes
-        )
+        total_memory = sum(_process_rss(process) for process in processes)
         result["processes"] = {
             "count": len(processes),
             "total_memory_usage": total_memory,

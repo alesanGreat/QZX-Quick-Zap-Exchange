@@ -5,6 +5,47 @@ checkout. Changing this file does not publish a package or create a release.
 
 ## Unreleased
 
+## 0.2.2.0.15 — 2026-10-08
+
+<!-- qzx-release-summary-en:
+This Alpha release makes QZX faster and cheaper for agents and its adoption telemetry more trustworthy: listProcesses drops from about a minute to about a second on Windows by reading one native system snapshot, now reports real sampled CPU usage and returns the 25 busiest processes by default; getCurrentUser is several times faster; piped --json output is compact (15–30% fewer bytes) while terminals and --json-pretty stay indented; file commands pointed at a directory suggest the right directory command; and CI detection plus activation schema 2 keep scanners, sandboxes and release watchers from being counted as people. The 89-command public surface is unchanged.
+-->
+<!-- qzx-release-summary-es:
+Esta versión Alpha hace a QZX más rápido y barato para agentes, y más confiable su telemetría de adopción: listProcesses pasa de cerca de un minuto a cerca de un segundo en Windows al leer una sola instantánea nativa del sistema, ahora informa CPU real muestreada y devuelve por defecto los 25 procesos más activos; getCurrentUser es varias veces más rápido; la salida --json por pipe es compacta (15–30 % menos bytes) mientras la terminal y --json-pretty siguen indentadas; los comandos de archivo que reciben un directorio sugieren el comando de directorio adecuado; y la detección de CI más el esquema 2 de activación evitan contar escáneres, sandboxes y vigilantes de releases como personas. La superficie pública de 89 comandos no cambia.
+-->
+
+### Faster, agent-friendly output
+
+- `listProcesses` on Windows reads one native `NtQuerySystemInformation` process
+  snapshot instead of letting psutil take a full system snapshot per field and per
+  protected process; a 624-process listing went from about 55 s to about 1.3 s.
+  Other platforms and any native failure keep the psutil path.
+- `listProcesses` CPU is now real: two readings 0.5 s apart replace psutil's
+  always-zero first reading, Windows' "System Idle Process" no longer tops the
+  ranking, and the result declares `cpu_sample_seconds`, `cpu_percent_scale` and
+  `collection_method`. The default `limit` is 25 (`0` lists every process).
+- `getCurrentUser` filters processes by owner before measuring memory
+  (about 5 s to under 1 s on Windows).
+- `--json` output written to a pipe or file is compact single-line JSON; a terminal
+  still gets indented JSON, and `--json-pretty` always indents. Parsed results are
+  identical.
+- File-content commands that receive a directory now suggest `projectLanguages`,
+  `findFiles` or `listFiles` in their remediation.
+
+### Telemetry reliability
+
+- Detect CI providers that publish a URL, version or build number (for example
+  `JENKINS_URL`, `TEAMCITY_VERSION`, `BITBUCKET_BUILD_NUMBER`) by presence; their
+  values are never sent. Add Travis, AppVeyor, Drone, Semaphore, Bitrise and
+  CodeBuild boolean markers.
+- Version-activation schema 2 adds `interactive` (stdin plus stdout or stderr on
+  a TTY) and `container` (well-known container markers) as single booleans. No
+  arguments, paths, environment values or terminal content are collected.
+- Document the server-side automation evidence that separates ephemeral cohorts
+  and release followers from external adoption counts.
+
+QZX — Quick Zap Exchange, created and maintained by Alejandro Sánchez.
+
 ## 0.2.2.0.14 — 2026-10-03
 
 <!-- qzx-release-summary-en:

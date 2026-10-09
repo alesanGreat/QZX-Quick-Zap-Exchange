@@ -5,7 +5,15 @@
 ListProcesses Command - Lists running processes
 """
 
-from qzx.commands.system._process_inventory import execute_processes
+import platform
+
+from qzx.commands.system._process_inventory import (
+    CPU_SAMPLE_SECONDS,
+    DEFAULT_LIMIT,
+    execute_processes,
+    wait_for_cpu_sample,
+)
+from qzx.commands.system._windows_process_snapshot import windows_process_snapshot
 from qzx.core.command_base import CommandBase
 
 class ListProcessesCommand(CommandBase):
@@ -14,7 +22,10 @@ class ListProcessesCommand(CommandBase):
     """
     
     name = "listProcesses"
-    description = "Lists running processes (similar to 'ps' in Unix)"
+    description = (
+        "Lists running processes with real CPU usage sampled over "
+        f"{CPU_SAMPLE_SECONDS:g} s (similar to 'ps'/'top')"
+    )
     category = "system"
     
     parameters = [
@@ -32,16 +43,19 @@ class ListProcessesCommand(CommandBase):
         },
         {
             'name': 'limit',
-            'description': 'Maximum number of processes to display',
+            'description': (
+                f'Maximum number of processes to return (default {DEFAULT_LIMIT}; '
+                '0 or null returns every process)'
+            ),
             'required': False,
-            'default': 0  # 0 means no limit
+            'default': DEFAULT_LIMIT
         }
     ]
     
     examples = [
         {
             'command': 'qzx listProcesses',
-            'description': 'List all processes'
+            'description': f'List the {DEFAULT_LIMIT} processes using the most CPU right now'
         },
         {
             'command': 'qzx listProcesses python',
@@ -50,6 +64,10 @@ class ListProcessesCommand(CommandBase):
         {
             'command': 'qzx listProcesses null memory 10',
             'description': 'List the top 10 processes by memory usage'
+        },
+        {
+            'command': 'qzx listProcesses null pid 0',
+            'description': 'List every running process ordered by PID'
         }
     ]
     
@@ -60,6 +78,21 @@ class ListProcessesCommand(CommandBase):
 
         return psutil
 
-    def execute(self, filter_str=None, sort_by='cpu', limit=0):
+    @staticmethod
+    def _platform_system():
+        """Operating-system name; tests inject a fixed platform."""
+        return platform.system()
+
+    @staticmethod
+    def _process_snapshot():
+        """One native Windows process snapshot, or None to use psutil."""
+        return windows_process_snapshot()
+
+    @staticmethod
+    def _wait_for_cpu_sample(seconds):
+        """Wait between the two CPU readings; tests override it."""
+        wait_for_cpu_sample(seconds)
+
+    def execute(self, filter_str=None, sort_by='cpu', limit=None):
         """List running processes using the normalized process inventory."""
         return execute_processes(self, filter_str, sort_by, limit)

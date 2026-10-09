@@ -46,7 +46,14 @@ The allow-listed activation payload contains:
 - operating-system family, release, and kernel description;
 - CPU architecture;
 - whether QZX is running inside a virtual environment;
-- whether a known CI marker is active.
+- whether a known CI marker is active (boolean markers such as `CI=true`, or
+  the mere presence of provider variables such as `JENKINS_URL`);
+- since activation schema 2: whether that run had an interactive terminal
+  (stdin plus stdout or stderr attached to a TTY), as one boolean;
+- since activation schema 2: whether a well-known container marker is
+  detectable (`/.dockerenv`, `/run/.containerenv`, a Kubernetes service
+  variable, the `container` variable or a container cgroup), as one boolean.
+  Marker values are never sent.
 
 ### Ten-day usage payload
 
@@ -107,6 +114,16 @@ verification dimension. Recurrence alone cannot promote an installation to a
 human tier, and no installation is called “verified” without an independent
 verification signal. The dashboard exposes the dimension weights and aggregate
 tier counts so the score remains auditable instead of becoming a black box.
+
+### Automation evidence
+
+Package mirrors, security scanners and sandboxes install new releases
+automatically. The private dashboard separates an identifier as *probable
+automation* only on repeated behaviour — many fresh single-run identifiers
+with an identical environment from one network prefix, or fresh identifiers
+that each appear within hours of a different PyPI release. A network
+provider, ASN or country alone never triggers it, and a repeated activation,
+a usage window or an interactive first run exempts the identifier.
 
 The implementation is public at
 [`src/qzx/telemetry.py`](../src/qzx/telemetry.py) and

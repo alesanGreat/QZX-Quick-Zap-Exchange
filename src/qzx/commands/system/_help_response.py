@@ -9,7 +9,8 @@ Usage: qzx <command> [arguments] [--json]
 
 Output:
 - Without --json: a clear terminal presentation with the summary and useful data.
-- With --json: one complete structured object on stdout.
+- With --json: one complete structured object on stdout (compact when piped,
+  indented in a terminal; --json-pretty always indents).
 - Every public result contains boolean success and descriptive message fields.
 
 Discovery:

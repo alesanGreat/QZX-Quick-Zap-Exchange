@@ -275,6 +275,16 @@ def _blocked_link_failure(raw_path, absolute, links, kind):
     )
 
 
+def _not_a_file_remediation(entry_type):
+    if entry_type == "directory":
+        return (
+            "File-content analysis accepts only regular files. For a directory, "
+            "pass a file inside it, or use projectLanguages (line counts by "
+            "language), findFiles or listFiles."
+        )
+    return "File-content analysis accepts only regular files."
+
+
 def validate_regular_file(file_path, *, follow_symlinks=False):
     """Resolve one bounded regular-file target or return a QZX failure."""
     raw_path, error = _validated_path_text(file_path, "file")
@@ -289,7 +299,7 @@ def validate_regular_file(file_path, *, follow_symlinks=False):
         return None, _path_failure(
             "not_a_regular_file",
             f"'{analyzed}' is {entry_type}, not a regular file.",
-            "File-content analysis accepts only regular files.",
+            _not_a_file_remediation(entry_type),
             requested_path=raw_path,
             file_path=str(absolute),
             analyzed_path=str(analyzed),

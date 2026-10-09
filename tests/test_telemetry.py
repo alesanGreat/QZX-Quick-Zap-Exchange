@@ -45,6 +45,7 @@ def test_payload_contains_only_the_documented_real_environment_allow_list():
         "9c148b7f-93fb-45d2-ae22-34e017d27e39",
         "98412369-135d-4dce-9440-605139e5296e",
         environ={"CI": "true"},
+        signals={"interactive": True, "container": False},
     )
 
     assert set(event) == {
@@ -61,9 +62,11 @@ def test_payload_contains_only_the_documented_real_environment_allow_list():
         "architecture",
         "virtual_environment",
         "ci",
+        "interactive",
+        "container",
     }
     assert event == {
-        "schema_version": 1,
+        "schema_version": 2,
         "event": "version_first_run",
         "event_id": "98412369-135d-4dce-9440-605139e5296e",
         "installation_id": "9c148b7f-93fb-45d2-ae22-34e017d27e39",
@@ -76,6 +79,8 @@ def test_payload_contains_only_the_documented_real_environment_allow_list():
         "architecture": platform.machine() or "unknown",
         "virtual_environment": telemetry._is_virtual_environment(),
         "ci": True,
+        "interactive": True,
+        "container": False,
     }
     assert "username" not in event
     assert "hostname" not in event
@@ -149,3 +154,60 @@ def test_failed_delivery_reuses_event_and_installation_ids(tmp_path):
     assert reloaded["installation_id"] == state["installation_id"]
     assert reloaded["pending_versions"]["0.2.3"] == event_id
     assert "0.2.3" not in reloaded["sent_versions"]
+
+
+def test_ci_detection_handles_boolean_and_presence_markers():
+    assert telemetry._is_ci({"GITHUB_ACTIONS": "true"}) is True
+    # Jenkins/TeamCity expose a URL or version, never a boolean.
+    assert telemetry._is_ci({"JENKINS_URL": "https://ci.example.test/"}) is True
+    assert telemetry._is_ci({"TEAMCITY_VERSION": "2024.12"}) is True
+    assert telemetry._is_ci({"CI": "false"}) is False
+    assert telemetry._is_ci({"JENKINS_URL": "   "}) is False
+    assert telemetry._is_ci({}) is False
+
+
+class FakeStream:
+    def __init__(self, tty):
+        self.tty = tty
+
+    def isatty(self):
+        return self.tty
+
+
+class BrokenStream:
+    def isatty(self):
+        raise ValueError("closed")
+
+
+def test_interactive_terminal_requires_stdin_and_an_output_tty():
+    tty, pipe = FakeStream(True), FakeStream(False)
+    assert telemetry._is_interactive_terminal((tty, tty, pipe)) is True
+    assert telemetry._is_interactive_terminal((tty, pipe, tty)) is True
+    assert telemetry._is_interactive_terminal((pipe, tty, tty)) is False
+    assert telemetry._is_interactive_terminal((tty, pipe, pipe)) is False
+    assert telemetry._is_interactive_terminal((BrokenStream(), tty, tty)) is False
+
+
+def test_container_detection_uses_markers_and_never_reports_windows():
+    assert telemetry._is_container({"KUBERNETES_SERVICE_HOST": "10.0.0.1"}, "posix") is True
+    assert telemetry._is_container({"container": "podman"}, "posix") is True
+    assert telemetry._is_container({"KUBERNETES_SERVICE_HOST": "10.0.0.1"}, "nt") is False
+    assert telemetry._is_container({}, "nt") is False
+
+
+def test_activation_payload_keeps_new_signals_boolean():
+    event = telemetry.build_event(
+        "0.2.3",
+        "9c148b7f-93fb-45d2-ae22-34e017d27e39",
+        "98412369-135d-4dce-9440-605139e5296e",
+        environ={"JENKINS_URL": "https://ci.example.test/"},
+        signals={"interactive": 0, "container": 1},
+    )
+    assert event["schema_version"] == 2
+    assert event["ci"] is True
+    assert event["container"] is True
+    assert event["interactive"] is False
+    computed = telemetry.build_event("0.2.3", event["installation_id"], event["event_id"], environ={})
+    assert isinstance(computed["interactive"], bool)
+    assert isinstance(computed["container"], bool)
+    assert "https://ci.example.test/" not in json.dumps(event)

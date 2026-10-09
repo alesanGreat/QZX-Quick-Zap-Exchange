@@ -2195,20 +2195,22 @@ Command to list running processes
 
 **Category:** system
 **Maturity:** Alpha — Available for real use and feedback while its interface and behavior can still evolve.
-**Description:** Lists running processes (similar to 'ps' in Unix)
+**Description:** Lists running processes with real CPU usage sampled over 0.5 s (similar to 'ps'/'top')
 
 **Parameters:**
 - `filter_str`: Optional string to filter process names - Optional
 - `sort_by`: Field to sort results by (pid, cpu, memory, name) - Optional (default: `cpu`)
-- `limit`: Maximum number of processes to display - Optional (default: `0`)
+- `limit`: Maximum number of processes to return (default 25; 0 or null returns every process) - Optional (default: `25`)
 
 **Examples:**
 - `qzx listProcesses`
-  List all processes
+  List the 25 processes using the most CPU right now
 - `qzx listProcesses python`
   List processes containing "python" in their name
 - `qzx listProcesses null memory 10`
   List the top 10 processes by memory usage
+- `qzx listProcesses null pid 0`
+  List every running process ordered by PID
 
 **Details:**
 List running processes using the normalized process inventory.

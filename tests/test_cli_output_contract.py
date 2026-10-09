@@ -392,3 +392,41 @@ def test_interactive_terminal_accepts_a_bom_prefixed_piped_command():
 
     assert normalized == "exit"
     assert terminal.onecmd(normalized) is True
+
+
+def test_piped_json_is_compact_and_json_pretty_indents(tmp_path):
+    environment = {"QZX_STATE_DIR": str(tmp_path)}
+    compact = _run_cli("about", "--json", environment_overrides=environment)
+    pretty = _run_cli("about", "--json-pretty", environment_overrides=environment)
+
+    assert compact.returncode == 0
+    assert pretty.returncode == 0
+    # Agents read piped stdout: one line, no indentation whitespace.
+    assert compact.stdout.count("\n") == 1
+    assert '": ' not in compact.stdout
+    assert "\n  \"" in pretty.stdout
+    compact_payload = json.loads(compact.stdout)
+    pretty_payload = json.loads(pretty.stdout)
+    # Only timing metadata may differ between two real invocations.
+    compact_payload.pop("meta")
+    pretty_payload.pop("meta")
+    assert compact_payload == pretty_payload
+
+
+def test_json_pretty_is_a_global_json_flag_not_a_command_argument():
+    json_output, command, arguments = _parse_cli_request(
+        ["readFile", "notes.txt", "--json-pretty"]
+    )
+
+    assert json_output is True
+    assert command == "readFile"
+    assert arguments == ["notes.txt"]
+
+
+def test_directory_passed_to_a_file_command_suggests_directory_commands(tmp_path):
+    completed = _run_cli("countLines", str(tmp_path), "--json")
+
+    payload = json.loads(completed.stdout)
+    assert completed.returncode == 1
+    assert payload["error_code"] == "not_a_regular_file"
+    assert "projectLanguages" in json.dumps(payload)

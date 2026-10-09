@@ -41,6 +41,9 @@ TELEMETRY_NOTICE = (
 ).format(policy_url=TELEMETRY_POLICY_URL)
 
 _SCHEMA_VERSION = 1
+# Local state keeps _SCHEMA_VERSION; the activation payload evolves on its
+# own. Schema 2 adds the interactive and container booleans.
+_EVENT_SCHEMA_VERSION = 2
 _FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 _TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
 _STATE_FILENAME = "telemetry.json"
@@ -219,25 +222,93 @@ def _is_virtual_environment():
     return bool(real_prefix or sys.prefix != base_prefix)
 
 
+_CI_BOOLEAN_MARKERS = (
+    "CI",
+    "GITHUB_ACTIONS",
+    "GITLAB_CI",
+    "CIRCLECI",
+    "TF_BUILD",
+    "BUILDKITE",
+    "TRAVIS",
+    "APPVEYOR",
+    "DRONE",
+    "SEMAPHORE",
+    "BITRISE_IO",
+    "CODEBUILD_CI",
+)
+# These providers expose a URL, build number or name instead of a boolean, so
+# they are detected by presence (non-empty value). The value is never sent.
+_CI_PRESENCE_MARKERS = (
+    "JENKINS_URL",
+    "TEAMCITY_VERSION",
+    "BITBUCKET_BUILD_NUMBER",
+    "CODEBUILD_BUILD_ID",
+    "BUILD_BUILDID",
+    "HEROKU_TEST_RUN_ID",
+    "CI_NAME",
+)
+_CONTAINER_FILES = ("/.dockerenv", "/run/.containerenv")
+_CONTAINER_CGROUP_MARKERS = ("docker", "kubepods", "containerd", "libpod", "lxc")
+
+
 def _is_ci(environ=None):
     environ = os.environ if environ is None else environ
-    known_markers = (
-        "CI",
-        "GITHUB_ACTIONS",
-        "GITLAB_CI",
-        "JENKINS_URL",
-        "CIRCLECI",
-        "TF_BUILD",
-        "BUILDKITE",
+    if any(_normalise_bool(environ.get(name)) is True for name in _CI_BOOLEAN_MARKERS):
+        return True
+    return any(str(environ.get(name) or "").strip() for name in _CI_PRESENCE_MARKERS)
+
+
+def _stream_is_tty(stream):
+    try:
+        return bool(stream.isatty())
+    except (AttributeError, OSError, ValueError):
+        return False
+
+
+def _is_interactive_terminal(streams=None):
+    """Return True when stdin and stdout/stderr are attached to a terminal."""
+    stdin, stdout, stderr = (
+        (sys.stdin, sys.stdout, sys.stderr) if streams is None else streams
     )
-    return any(_normalise_bool(environ.get(name)) is True for name in known_markers)
+    return _stream_is_tty(stdin) and (_stream_is_tty(stdout) or _stream_is_tty(stderr))
 
 
-def build_event(qzx_version, installation_id, event_id, environ=None):
-    """Build the complete allow-listed payload sent to the QZX endpoint."""
-    os_name, os_release, os_kernel = _os_details()
+def _is_container(environ=None, platform_name=None):
+    """Return a coarse boolean for a detectable container runtime.
+
+    Only well-known markers are checked; their values are never transmitted.
+    """
+    environ = os.environ if environ is None else environ
+    if (os.name if platform_name is None else platform_name) == "nt":
+        return False
+    if environ.get("KUBERNETES_SERVICE_HOST") or environ.get("container"):
+        return True
+    try:
+        if any(os.path.exists(path) for path in _CONTAINER_FILES):
+            return True
+        with open("/proc/1/cgroup", "r", encoding="utf-8", errors="replace") as handle:
+            cgroup = handle.read(4096)
+    except (OSError, ValueError):
+        return False
+    return any(marker in cgroup for marker in _CONTAINER_CGROUP_MARKERS)
+
+
+def _activation_signals(environ=None):
     return {
-        "schema_version": _SCHEMA_VERSION,
+        "interactive": _is_interactive_terminal(),
+        "container": _is_container(environ),
+    }
+
+
+def build_event(qzx_version, installation_id, event_id, environ=None, signals=None):
+    """Build the complete allow-listed payload sent to the QZX endpoint.
+
+    ``signals`` lets callers inject the interactive/container booleans.
+    """
+    os_name, os_release, os_kernel = _os_details()
+    signals = _activation_signals(environ) if signals is None else signals
+    return {
+        "schema_version": _EVENT_SCHEMA_VERSION,
         "event": "version_first_run",
         "event_id": str(event_id),
         "installation_id": str(installation_id),
@@ -250,6 +321,8 @@ def build_event(qzx_version, installation_id, event_id, environ=None):
         "architecture": platform.machine()[:32] or "unknown",
         "virtual_environment": _is_virtual_environment(),
         "ci": _is_ci(environ),
+        "interactive": bool(signals["interactive"]),
+        "container": bool(signals["container"]),
     }
 
 

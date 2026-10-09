@@ -119,10 +119,31 @@ def _json_compatible(value):
     return json_compatible(value)
 
 
-def _print_json(result):
-    """Write one UTF-8 JSON document regardless of the text code page."""
+JSON_FLAGS = {"--json", "-json"}
+PRETTY_JSON_FLAG = "--json-pretty"
+
+
+def _stdout_is_terminal():
+    try:
+        return bool(sys.stdout.isatty())
+    except (AttributeError, OSError, ValueError):
+        return False
+
+
+def _print_json(result, pretty=None):
+    """Write one UTF-8 JSON document regardless of the text code page.
+
+    Piped output (agents, scripts) is compact to save tokens; a terminal or
+    an explicit --json-pretty gets indented JSON. Both parse identically.
+    """
+    if pretty is None:
+        pretty = _stdout_is_terminal()
     serialized = json.dumps(
-        _json_compatible(result), indent=2, ensure_ascii=False, allow_nan=False
+        _json_compatible(result),
+        indent=2 if pretty else None,
+        separators=None if pretty else (",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
     )
     binary_stdout = getattr(sys.stdout, "buffer", None)
     if binary_stdout is None:
@@ -238,7 +259,7 @@ def _parse_cli_request(arguments):
     json_output = False
     filtered_args = []
     for argument in arguments:
-        if argument in {"--json", "-json"}:
+        if argument in JSON_FLAGS or argument == PRETTY_JSON_FLAG:
             json_output = True
         else:
             filtered_args.append(argument)
@@ -276,12 +297,12 @@ def _normalize_result(result):
     }
 
 
-def _emit_result(result, json_output, captured_stdout):
+def _emit_result(result, json_output, captured_stdout, pretty_json=False):
     if json_output:
         progress_output = captured_stdout.getvalue() if captured_stdout else ""
         if progress_output:
             print(progress_output, file=sys.stderr, end="")
-        _print_json(result)
+        _print_json(result, pretty=True if pretty_json else None)
     else:
         _print_human(result)
 
@@ -296,7 +317,9 @@ def main():
     result = _normalize_result(result)
     result = _add_first_run_attribution(result, json_output, first_run)
     result = ensure_result_contract(result)
-    _emit_result(result, json_output, captured_stdout)
+    _emit_result(
+        result, json_output, captured_stdout, PRETTY_JSON_FLAG in sys.argv[1:]
+    )
     exit_code = _exit_code(result)
     _schedule_optional_telemetry(result)
     return exit_code
