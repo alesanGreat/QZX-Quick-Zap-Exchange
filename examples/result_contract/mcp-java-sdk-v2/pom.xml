@@ -22,18 +22,18 @@
       <version>2.0.1</version>
     </dependency>
     <!--
-      MCP 2.0.1 resolves Jackson 3.1.4. Keep the compatible 3.1 line but
-      raise the security floor to 3.1.7, which contains the current fixes.
+      MCP 2.0.1 resolves Jackson 3.1.4. Override Jackson's parsing modules
+      together at 3.2.3 to include current security and maintenance fixes.
     -->
     <dependency>
       <groupId>tools.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>3.1.7</version>
+      <version>3.2.3</version>
     </dependency>
     <dependency>
       <groupId>tools.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-yaml</artifactId>
-      <version>3.1.7</version>
+      <version>3.2.3</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

@@ -24,13 +24,13 @@ DEPENDABOT = REPOSITORY_ROOT / ".github" / "dependabot.yml"
 def test_official_mcp_go_sdk_example_locks_the_stable_sdk():
     go_mod = GO_MOD.read_text(encoding="utf-8")
     assert "go 1.25.0" in go_mod
-    assert "github.com/modelcontextprotocol/go-sdk v1.6.1" in go_mod
+    assert "github.com/modelcontextprotocol/go-sdk v1.8.0" in go_mod
     assert "golang.org/x/sys v0.44.0" in go_mod
 
     go_sum = GO_SUM.read_text(encoding="utf-8")
     assert (
-        "github.com/modelcontextprotocol/go-sdk v1.6.1 "
-        "h1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=" in go_sum
+        "github.com/modelcontextprotocol/go-sdk v1.8.0 "
+        "h1:KIvahhYqwtbeniWVPs3TcXEA7b8jEtwfBpOTAI+Urx4=" in go_sum
     )
 
 
@@ -83,9 +83,9 @@ def test_ci_executes_validates_and_preserves_the_go_sdk_evidence():
         "go run -mod=readonly",
         "go mod verify",
         "profile: mcp-2025-11-25",
-        "success: qzx-mcp-go-sdk-v1.6.1-evidence/success.json",
-        "qzx-mcp-go-sdk-v1.6.1-conformance.json",
-        "name: qzx-mcp-go-sdk-v1.6.1-evidence",
+        "success: qzx-mcp-go-sdk-v1.8.0-evidence/success.json",
+        "qzx-mcp-go-sdk-v1.8.0-conformance.json",
+        "name: qzx-mcp-go-sdk-v1.8.0-evidence",
         "examples/result_contract/mcp-go-sdk-v1/main.go",
         "retention-days: 14",
     ):

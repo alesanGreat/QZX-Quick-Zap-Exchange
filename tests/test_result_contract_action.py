@@ -408,7 +408,7 @@ def test_nonconformance_receipt_is_preserved_by_ci_and_documented_for_callers():
     assert "qzx-nonconforming-receipt.json" in workflow
     assert "steps.qzx-nonconforming.outputs.failure_kind == 'conformance'" in workflow
     assert (
-        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+        "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
         in workflow
     )
     assert "Verify nonconformance Action failure and receipt" in workflow
@@ -419,7 +419,7 @@ def test_nonconformance_receipt_is_preserved_by_ci_and_documented_for_callers():
     assert "steps.qzx-conformance.outputs.failure_kind == 'none'" in quickstart
     assert "steps.qzx-conformance.outputs.failure_kind == 'conformance'" in quickstart
     assert "steps.qzx-conformance.outcome == 'failure'" in quickstart
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in quickstart
+    assert "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9" in quickstart
 
 
 def test_public_workflow_examples_avoid_duplicate_ci_and_moving_runner_defaults():

@@ -302,7 +302,7 @@ func main() {
 	}
 	result := map[string]any{
 		"success": true,
-		"message": "Official MCP Go SDK v1.6.1 reference evidence generated.",
+		"message": "Official MCP Go SDK v1.8.0 reference evidence generated.",
 		"details": metadata,
 	}
 	encoder := json.NewEncoder(os.Stdout)
