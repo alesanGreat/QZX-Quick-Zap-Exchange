@@ -248,7 +248,7 @@ jobs:
 
       - name: Preserve the official MCP TypeScript SDK v2 evidence
         if: always() && steps.generate-mcp-typescript-sdk-evidence.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qzx-mcp-typescript-sdk-v2-evidence
           path: |
@@ -286,7 +286,7 @@ jobs:
 
       - name: Preserve the official MCP Python SDK v2 evidence
         if: always() && steps.generate-mcp-python-sdk-evidence.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qzx-mcp-python-sdk-v2-evidence
           path: |
@@ -317,7 +317,7 @@ jobs:
 
       - name: Preserve the official MCP Go SDK v1.6.1 evidence
         if: always() && steps.generate-mcp-go-sdk-evidence.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qzx-mcp-go-sdk-v1.6.1-evidence
           path: |
@@ -356,7 +356,7 @@ jobs:
 
       - name: Preserve the official MCP C# SDK 2.2.0 evidence
         if: always() && steps.generate-mcp-csharp-sdk-evidence.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qzx-mcp-csharp-sdk-v2.2.0-evidence
           path: |
@@ -413,7 +413,7 @@ jobs:
 
       - name: Preserve the official MCP Java SDK 2.0.1 evidence
         if: always() && steps.generate-mcp-java-sdk-evidence.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qzx-mcp-java-sdk-v2.0.1-evidence
           path: |
@@ -444,7 +444,7 @@ jobs:
         if: >-
           always() &&
           steps.qzx-nonconforming.outputs.failure_kind == 'conformance'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qzx-nonconformance-receipt
           path: qzx-nonconforming-receipt.json
@@ -697,7 +697,7 @@ jobs:
           --environment-name "${{ matrix.platform.name }}"
 
       - name: Upload Golden Core platform evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: golden-core-platform-${{ matrix.platform.runner }}-${{ matrix.platform.python_architecture }}
           path: ${{ runner.temp }}/golden-core-platform-evidence.json
@@ -720,7 +720,7 @@ jobs:
           python-version: "3.13"
 
       - name: Download every matrix evidence record
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: golden-core-platform-*
           path: ${{ runner.temp }}/golden-core-platform-records
@@ -732,7 +732,7 @@ jobs:
           --output "${{ runner.temp }}/golden-core-platform-summary.json"
 
       - name: Publish the validated evidence summary
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: golden-core-platform-evidence-summary
           path: ${{ runner.temp }}/golden-core-platform-summary.json
