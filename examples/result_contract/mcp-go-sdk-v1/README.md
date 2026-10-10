@@ -1,10 +1,13 @@
-# Official MCP Go SDK v1.6.1 interoperability evidence
+# Official MCP Go SDK v1.8.0 interoperability evidence
 
 This QZX-maintained reference executes one successful and one failed tool call
 through the [official MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk)
-stable release `v1.6.1`. The official client and server negotiate MCP
+stable release `v1.8.0`. The official client and server negotiate MCP
 `2025-11-25` and communicate through the SDK's paired in-memory transport,
-which exercises newline-delimited JSON-RPC framing. The resulting official SDK
+which exercises newline-delimited JSON-RPC framing. The server explicitly
+restricts the offered protocol revisions to `2025-11-25`, because the SDK also
+supports a newer revision that would otherwise change this example's claim.
+The resulting official SDK
 models are serialized with Go's `encoding/json` and validated against QZX
 Result Contract v1.
 
@@ -43,7 +46,7 @@ CPython 3.13:
 ```powershell
 $env:GOMODCACHE = Join-Path $env:LOCALAPPDATA "ValisIdealis\QZX\dependencies\go-mod-cache"
 $env:GOCACHE = Join-Path $env:LOCALAPPDATA "ValisIdealis\QZX\cache\go-build"
-$evidence = Join-Path $env:TEMP "ValisIdealis\QZX\runs\mcp-go-sdk-v1.6.1-evidence"
+$evidence = Join-Path $env:TEMP "ValisIdealis\QZX\runs\mcp-go-sdk-v1.8.0-evidence"
 go -C examples/result_contract/mcp-go-sdk-v1 run -mod=readonly . $evidence
 go -C examples/result_contract/mcp-go-sdk-v1 mod verify
 python -B scripts/validate_result_contract_evidence.py `
@@ -60,7 +63,7 @@ python -B scripts/validate_result_contract_evidence.py `
 ```bash
 export GOMODCACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ValisIdealis/QZX/dependencies/go-mod-cache"
 export GOCACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ValisIdealis/QZX/cache/go-build"
-evidence="${TMPDIR:-/tmp}/ValisIdealis/QZX/runs/mcp-go-sdk-v1.6.1-evidence"
+evidence="${TMPDIR:-/tmp}/ValisIdealis/QZX/runs/mcp-go-sdk-v1.8.0-evidence"
 go -C examples/result_contract/mcp-go-sdk-v1 run -mod=readonly . "$evidence"
 go -C examples/result_contract/mcp-go-sdk-v1 mod verify
 python3.13 -B scripts/validate_result_contract_evidence.py \

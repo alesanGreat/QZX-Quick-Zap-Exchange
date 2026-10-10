@@ -173,7 +173,7 @@ a failed conformance check into a passing gate**:
           always() &&
           (steps.qzx-conformance.outputs.failure_kind == 'none' ||
           steps.qzx-conformance.outputs.failure_kind == 'conformance')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qzx-conformance-receipt
           path: result-contract-evidence/qzx-conformance.json

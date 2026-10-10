@@ -19,14 +19,14 @@ WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "test.yml"
 
 def test_official_mcp_python_sdk_example_locks_the_stable_sdk():
     requirements = REQUIREMENTS_INPUT.read_text(encoding="utf-8")
-    assert "mcp==2.2.0" in requirements
+    assert "mcp==2.3.0" in requirements
     assert 'pywin32==312 ; sys_platform == "win32"' in requirements
 
     lockfile = REQUIREMENTS_LOCK.read_text(encoding="utf-8")
     assert "--generate-hashes" in lockfile
-    assert "mcp==2.2.0" in lockfile
-    assert "mcp-types==2.2.0" in lockfile
-    assert "colorama==0.4.6" in lockfile
+    assert "mcp==2.3.0" in lockfile
+    assert "mcp-types==2.3.0" in lockfile
+    assert "httpx2==2.12.0" in lockfile
     assert 'pywin32==312 ; sys_platform == "win32"' in lockfile
 
 

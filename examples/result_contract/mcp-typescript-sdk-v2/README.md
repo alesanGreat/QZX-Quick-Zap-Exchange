@@ -1,7 +1,7 @@
 # Official MCP TypeScript SDK v2 interoperability evidence
 
 This example runs one success and one tool-execution failure through the
-official MCP TypeScript SDK 2.2.0, captures the actual MCP 2026-07-28 wire
+official MCP TypeScript SDK 2.3.1, captures the actual MCP 2026-07-28 wire
 results, and produces inputs for the QZX Result Contract evidence validator.
 
 It is maintained QZX reference evidence, **not independent adoption**, an MCP

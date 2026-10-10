@@ -33,7 +33,7 @@ def test_official_mcp_java_sdk_example_locks_sdk_maven_and_dependencies():
         "<version>2.0.1</version>",
         "<artifactId>jackson-databind</artifactId>",
         "<artifactId>jackson-dataformat-yaml</artifactId>",
-        "<version>3.1.7</version>",
+        "<version>3.2.3</version>",
         "<artifactId>slf4j-nop</artifactId>",
         "<version>2.0.20</version>",
         "<directory>${qzx.build.directory}</directory>",
@@ -57,7 +57,7 @@ def test_official_mcp_java_sdk_example_locks_sdk_maven_and_dependencies():
 
     dependency_tree = DEPENDENCY_TREE.read_text(encoding="utf-8")
     assert "io.modelcontextprotocol.sdk:mcp:jar:2.0.1:compile" in dependency_tree
-    assert "tools.jackson.core:jackson-databind:jar:3.1.7:compile" in dependency_tree
+    assert "tools.jackson.core:jackson-databind:jar:3.2.3:compile" in dependency_tree
     assert "org.slf4j:slf4j-nop:jar:2.0.20:runtime" in dependency_tree
 
 
