@@ -40,6 +40,7 @@ def test_official_mcp_go_sdk_example_uses_real_jsonrpc_transport():
     for required_fragment in (
         'protocolVersion = "2025-11-25"',
         "mcp.NewServer(",
+        "SupportedProtocolVersions: []string{protocolVersion}",
         "mcp.AddTool(server",
         "OutputSchema: json.RawMessage(schemaBytes)",
         "mcp.NewInMemoryTransports()",

@@ -4,7 +4,10 @@ This QZX-maintained reference executes one successful and one failed tool call
 through the [official MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk)
 stable release `v1.8.0`. The official client and server negotiate MCP
 `2025-11-25` and communicate through the SDK's paired in-memory transport,
-which exercises newline-delimited JSON-RPC framing. The resulting official SDK
+which exercises newline-delimited JSON-RPC framing. The server explicitly
+restricts the offered protocol revisions to `2025-11-25`, because the SDK also
+supports a newer revision that would otherwise change this example's claim.
+The resulting official SDK
 models are serialized with Go's `encoding/json` and validated against QZX
 Result Contract v1.
 

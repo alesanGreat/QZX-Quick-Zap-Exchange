@@ -101,7 +101,7 @@ func loadContractSchema() ([]byte, map[string]any, error) {
 func newEvidenceServer(schemaBytes []byte) *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{Name: "qzx-result-contract-go-sdk-evidence", Version: "1.0.0"},
-		nil,
+		&mcp.ServerOptions{SupportedProtocolVersions: []string{protocolVersion}},
 	)
 	mcp.AddTool(server, &mcp.Tool{
 		Name:         toolName,
