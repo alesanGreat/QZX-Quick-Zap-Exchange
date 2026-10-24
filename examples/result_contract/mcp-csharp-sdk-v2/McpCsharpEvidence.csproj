@@ -8,7 +8,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol.Core" Version="[2.2.0]" />
+    <PackageReference Include="ModelContextProtocol.Core" Version="[2.3.0]" />
   </ItemGroup>
   <!-- GOD_CODE_GUARD_HOOK -->
   <Target Name="GodCodeGuard" BeforeTargets="BeforeBuild"
