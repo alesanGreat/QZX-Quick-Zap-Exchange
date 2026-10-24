@@ -19,7 +19,7 @@
     <dependency>
       <groupId>io.modelcontextprotocol.sdk</groupId>
       <artifactId>mcp</artifactId>
-      <version>2.0.1</version>
+      <version>2.1.0</version>
     </dependency>
     <!--
       MCP 2.0.1 resolves Jackson 3.1.4. Override Jackson's parsing modules
