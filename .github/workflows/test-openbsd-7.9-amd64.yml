@@ -25,7 +25,7 @@ jobs:
 
       - name: Start VM | OpenBSD 7.9 amd64
         id: start-openbsd-7-9-amd64
-        uses: vmactions/openbsd-vm@5f7b2c933b8846a138361d6843c52af4bef5d945 # v1.4.8
+        uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3 # v1.4.9
         with:
           release: "7.9"
           # The action calls this x86_64; OpenBSD reports the architecture as amd64.
