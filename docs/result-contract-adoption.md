@@ -351,7 +351,7 @@ validators.
 
 For a maintained end-to-end producer example, see the locked
 [`mcp-typescript-sdk-v2`](../examples/result_contract/mcp-typescript-sdk-v2/README.md)
-integration. It drives the official MCP TypeScript SDK 2.3.1 over its modern
+integration. It drives the official MCP TypeScript SDK 2.4.0 over its modern
 in-process HTTP entry, captures actual MCP 2026-07-28 wire results, and validates
 them as `canonical_inline`. The public SDK client intentionally consumes the
 wire-only `resultType` field before returning `CallToolResult`, so reviewable

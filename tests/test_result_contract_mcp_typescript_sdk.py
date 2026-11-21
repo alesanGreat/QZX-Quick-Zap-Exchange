@@ -27,9 +27,9 @@ def test_official_mcp_sdk_example_has_locked_maintained_dependencies():
     assert package["packageManager"] == "pnpm@10.29.2"
     assert package["engines"] == {"node": ">=20"}
     assert package["dependencies"] == {
-        "@modelcontextprotocol/client": "2.3.1",
-        "@modelcontextprotocol/server": "2.3.1",
-        "zod": "4.6.5",
+        "@modelcontextprotocol/client": "2.4.0",
+        "@modelcontextprotocol/server": "2.4.0",
+        "zod": "4.6.7",
     }
     lockfile = LOCKFILE.read_text(encoding="utf-8")
     for dependency, version in package["dependencies"].items():
